@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, SVGProps } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { highlightMatch } from "@/features/data-explorer/data-explorer-model";
 import type {
   CategoryKey,
@@ -35,15 +35,15 @@ function ResourceMetadata({
       {item.badge ? (
         <span
           className={cn(
-            "shrink-0 rounded border px-1.5 py-px font-mono text-[0.625rem] uppercase tracking-wider",
+            "text-(length:--text-micro) shrink-0 rounded border px-1.5 py-px font-mono uppercase tracking-wider",
             item.badge.tone === "amber" &&
-              "border-amber-400/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+              "border-warning-400/40 bg-warning-500/10 text-warning-700 dark:text-warning-400",
             item.badge.tone === "blue" &&
-              "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+              "border-info-400/40 bg-info-500/10 text-info-700 dark:text-info-400",
             item.badge.tone === "muted" &&
               "border-border bg-muted text-muted-foreground",
             item.badge.tone === "violet" &&
-              "border-violet-400/40 bg-violet-500/10 text-violet-600 dark:text-violet-400"
+              "border-permission-400/40 bg-permission-500/10 text-permission-600 dark:text-permission-400"
           )}
         >
           {item.badge.label}
@@ -52,7 +52,7 @@ function ResourceMetadata({
       {item.sizeLabel ? (
         <span
           className={cn(
-            "@max-[15rem]/object-browser:hidden w-16 text-right font-mono text-[0.6875rem] tabular-nums",
+            "text-(length:--text-label-sm) @max-[15rem]/object-browser:hidden w-16 text-right font-mono tabular-nums",
             isItemSelected ? "text-foreground/80" : "text-muted-foreground"
           )}
         >
@@ -85,11 +85,10 @@ export function ExplorerResourceButton({
   const ResolvedIcon = resolveResourceIcon(item, Icon);
   return (
     <Button
-      className={cn(
-        "h-[26px] w-full justify-start @max-[14rem]/object-browser:gap-1.5 gap-2 px-2 py-0 font-normal text-[0.8125rem] hover:bg-accent/60",
-        isItemSelected && "bg-accent hover:bg-accent"
-      )}
+      className="h-[26px] w-full justify-start"
+      data-selected={isItemSelected}
       onClick={() => onSelectResource(category, item.name)}
+      presentation="resource-row"
       title={item.name}
       variant="ghost"
     >

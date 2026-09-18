@@ -3,7 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 
@@ -12,12 +12,14 @@ interface RetryActionButtonProps {
   label: string;
   onRetry: () => Promise<unknown> | undefined;
   pendingLabel?: string;
+  presentation?: React.ComponentProps<typeof Button>["presentation"];
   size?: React.ComponentProps<typeof Button>["size"];
   variant?: React.ComponentProps<typeof Button>["variant"];
 }
 
 export function RetryActionButton({
   className,
+  presentation,
   label,
   onRetry,
   pendingLabel = "Retrying…",
@@ -71,6 +73,7 @@ export function RetryActionButton({
         className={className}
         disabled={showPending}
         onClick={handleRetry}
+        presentation={presentation}
         size={size}
         variant={variant}
       >

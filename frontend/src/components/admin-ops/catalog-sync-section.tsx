@@ -1,9 +1,9 @@
 import { AdminSectionError } from "@/components/admin-ops/admin-section-error";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { SectionCard } from "@/components/console-pages/console-layout";
+import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import type { DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
-import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useListCatalogSyncStatesQuery } from "@/hooks/api/admin";
@@ -39,7 +39,7 @@ const CATALOG_SYNC_COLUMNS: DataTableColumnDef<CatalogSyncState>[] = [
   {
     accessorKey: "scope",
     cell: ({ row }) => (
-      <OverflowTooltip className="block max-w-80 truncate font-mono text-xs">
+      <OverflowTooltip className="block max-w-80" presentation="identifier">
         {row.original.scope}
       </OverflowTooltip>
     ),
@@ -68,7 +68,7 @@ const CATALOG_SYNC_COLUMNS: DataTableColumnDef<CatalogSyncState>[] = [
     accessorKey: "syncError",
     cell: ({ row }) =>
       row.original.syncError ? (
-        <OverflowTooltip className="block max-w-72 truncate font-mono text-destructive text-xs">
+        <OverflowTooltip className="block max-w-72" presentation="error">
           {row.original.syncError}
         </OverflowTooltip>
       ) : (

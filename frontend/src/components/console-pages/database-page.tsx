@@ -16,9 +16,10 @@ import {
 } from "@/components/console-pages/database-overview-sections";
 import { DatabaseQueryInsightsDrawer } from "@/components/console-pages/database-query-insights-drawer";
 import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/querylane-ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -76,9 +77,9 @@ function DatabaseOverviewHeader({
   // carries properties no card repeats.
   const insightsButton = (
     <Button
-      className="gap-2"
       disabled={insightsUnavailable}
       onClick={onViewQueryInsights}
+      presentation="icon-label"
       size="sm"
       type="button"
       variant="outline"
@@ -204,16 +205,16 @@ function seriesFor(
 function overviewGridLayout(schemaCount: number) {
   if (schemaCount >= MIN_SCHEMAS_FOR_WIDE_LAYOUT) {
     return {
-      otherDatabasesClassName: "md:col-span-2 lg:col-span-1",
-      schemasClassName: "md:col-span-2",
       schemasWide: true,
+      schemasLayout: "wide",
+      databasesLayout: "single",
     } as const;
   }
 
   return {
-    otherDatabasesClassName: "md:col-span-2 lg:col-span-2",
-    schemasClassName: "md:col-span-2 lg:col-span-1",
     schemasWide: false,
+    schemasLayout: "single",
+    databasesLayout: "double",
   } as const;
 }
 
@@ -331,17 +332,17 @@ function BackendDatabasePage({
             />
             <SchemasCard
               catalog={catalog}
-              className={overviewGrid.schemasClassName}
               isPending={catalogPending}
+              layout={overviewGrid.schemasLayout}
               params={params}
               wide={overviewGrid.schemasWide}
             />
             <OtherDatabasesCard
-              className={overviewGrid.otherDatabasesClassName}
               currentDatabaseId={databaseId}
               databases={databasesQuery.data?.databases ?? []}
               instanceId={instanceId}
               isPending={databasesQuery.isPending}
+              layout={overviewGrid.databasesLayout}
             />
           </div>
           <DatabaseObjectsSection

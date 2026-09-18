@@ -1,10 +1,10 @@
 import { ArrowDown, ArrowUp, Columns3 } from "lucide-react";
 import { useId } from "react";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import { Label } from "@/components/querylane-ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -74,7 +74,8 @@ function ColumnsPopover({
             {hiddenColumnKeys.size > 0 ? (
               <Badge
                 aria-hidden={true}
-                className="ml-0.5 h-4 px-1 font-mono text-xs"
+                className="ml-0.5 h-4"
+                presentation="count"
                 title={`${hiddenColumnKeys.size} hidden`}
                 variant="secondary"
               >
@@ -94,9 +95,10 @@ function ColumnsPopover({
           <p className="font-medium text-xs">Columns</p>
           <Button
             aria-label="Reset columns"
-            className="h-6 px-2 text-xs"
+            className="h-6"
             disabled={!isCustomized}
             onClick={onReset}
+            presentation="compact"
             size="sm"
             type="button"
             variant="ghost"
@@ -130,9 +132,10 @@ function ColumnsPopover({
             const visibilityControl = (
               <Label
                 className={cn(
-                  "min-w-0 flex-1 gap-2 font-normal",
+                  "min-w-0 flex-1",
                   isLastVisible ? "cursor-not-allowed" : "cursor-pointer"
                 )}
+                presentation="column"
               >
                 <Checkbox
                   aria-describedby={
@@ -173,9 +176,10 @@ function ColumnsPopover({
                 <span className="ml-auto flex shrink-0 items-center gap-0.5">
                   <Button
                     aria-label={`Move ${column.columnName} up`}
-                    className="size-7 p-0"
+                    className="size-7"
                     disabled={index === 0}
                     onClick={() => moveAt(index, index - 1)}
+                    presentation="unpadded"
                     type="button"
                     variant="ghost"
                   >
@@ -183,9 +187,10 @@ function ColumnsPopover({
                   </Button>
                   <Button
                     aria-label={`Move ${column.columnName} down`}
-                    className="size-7 p-0"
+                    className="size-7"
                     disabled={index === orderedColumns.length - 1}
                     onClick={() => moveAt(index, index + 1)}
+                    presentation="unpadded"
                     type="button"
                     variant="ghost"
                   >

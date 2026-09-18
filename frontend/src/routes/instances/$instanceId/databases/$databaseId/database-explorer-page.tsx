@@ -1,7 +1,7 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { Suspense, useLayoutEffect } from "react";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/querylane-ui/skeleton";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import {
   isExplorerSearchNormalized,
@@ -25,9 +25,9 @@ function DatabaseExplorerLoadingShell() {
           role="status"
         >
           <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
-            <Skeleton className="h-8 rounded-md" />
-            <Skeleton className="h-8 rounded-md" />
-            <Skeleton className="h-8 rounded-md" />
+            <Skeleton className="h-8" presentation="control" />
+            <Skeleton className="h-8" presentation="control" />
+            <Skeleton className="h-8" presentation="control" />
           </div>
           <p className="px-3 py-6 text-center text-muted-foreground text-sm">
             Loading schemas…

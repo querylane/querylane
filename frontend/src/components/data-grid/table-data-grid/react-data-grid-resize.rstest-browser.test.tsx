@@ -75,7 +75,7 @@ test("batches continuous grid resizes", async () => {
         resizeCommitCount += 1;
       }}
     >
-      <div style={{ width: 1000 }}>
+      <div className="w-250">
         <DataGrid columns={COLUMNS} rows={ROWS} />
       </div>
     </Profiler>

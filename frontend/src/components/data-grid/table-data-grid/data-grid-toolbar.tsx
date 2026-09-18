@@ -6,8 +6,8 @@ import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-pop
 import { FilterChips } from "@/components/data-grid/table-data-grid/filter-popover-chips";
 import { SelectionActions } from "@/components/data-grid/table-data-grid/selection-actions";
 import { SortPopover } from "@/components/data-grid/table-data-grid/sort-popover";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
 import { RefreshControl } from "@/components/ui/refresh-control";
 import type {
   TableFilterLogic,
@@ -86,7 +86,8 @@ function ActiveSortSummary({ summary }: { summary: string | null }) {
   return (
     <Badge
       aria-label="Active sort summary"
-      className="@3xl/data-grid-toolbar:inline-flex hidden h-8 min-w-0 max-w-[min(34rem,42cqw)] justify-start gap-1.5 rounded-md border-border bg-muted/40 px-2.5 font-normal text-muted-foreground"
+      className="@3xl/data-grid-toolbar:inline-flex hidden h-8 min-w-0 max-w-[min(34rem,42cqw)] justify-start"
+      presentation="grid-count"
       role="group"
       title={`Active sort: ${summary}`}
       variant="outline"
@@ -121,8 +122,9 @@ function SelectionSummary({
       </span>
       <Button
         aria-label="Clear selection"
-        className="size-7 p-0"
+        className="size-7"
         onClick={onClearSelection}
+        presentation="unpadded"
         size="sm"
         type="button"
         variant="ghost"

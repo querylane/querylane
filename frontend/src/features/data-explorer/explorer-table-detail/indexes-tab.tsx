@@ -13,8 +13,8 @@ import {
   Table2,
 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   type DataTableColumnDef,
@@ -299,7 +299,8 @@ function CacheHitHeader() {
         render={
           <Button
             aria-label={`Cache hit. ${CACHE_HIT_DESCRIPTION}`}
-            className="h-auto cursor-help rounded-none p-0 font-medium text-inherit underline decoration-dotted underline-offset-2"
+            className="h-auto cursor-help"
+            presentation="reference"
             size="sm"
             type="button"
             variant="link"
@@ -401,7 +402,7 @@ function IndexMethodBadge({ method }: { method: string }) {
   const Icon = INDEX_METHOD_ICONS[normalizeIndexMethod(method)] ?? Table2;
   return (
     <Badge
-      className="gap-1 rounded-full px-2 py-1 font-mono text-xs"
+      presentation="index"
       title={`${methodMeta.label}. ${methodMeta.summary}`}
       variant="outline"
     >

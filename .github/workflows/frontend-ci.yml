@@ -52,7 +52,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Run Biome on changed files
+      - name: Run Biome and shadcn lint
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
         run: bun run lint:changed

@@ -7,10 +7,10 @@ import { OrdinaryRoleKpis } from "@/components/console-pages/role-detail-kpis";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
 import { OrdinaryRoleTabs } from "@/components/console-pages/role-detail-tabs";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import {
   type deriveRoleKind,
-  expiryToneClass,
+  expiryPresentation,
   type PredefinedRoleInfo,
   type passwordExpiryStatus,
   ROLE_KIND_LABEL,
@@ -27,11 +27,7 @@ function OwnerBadge({ count, partial }: { count: number; partial: boolean }) {
     ? `Showing ${count} owned object${count === 1 ? "" : "s"} from available results; more may exist`
     : `Owns ${count} object${count === 1 ? "" : "s"} — implicit full privileges on each`;
   return (
-    <Badge
-      className="gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
-      title={title}
-      variant="outline"
-    >
+    <Badge presentation="warning" title={title} variant="outline">
       <Crown className="size-3" />
       OWNER · {count}
       {partial ? " Partial" : null}
@@ -84,7 +80,10 @@ function RoleHero({
           ) : null}
           <OwnerBadge count={ownedCount} partial={ownedPartial} />
           {attributes?.validUntil ? (
-            <Badge className={expiryToneClass(expiry.state)} variant="outline">
+            <Badge
+              presentation={expiryPresentation(expiry.state)}
+              variant="outline"
+            >
               {expiry.label}
             </Badge>
           ) : null}

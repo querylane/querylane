@@ -3,7 +3,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/querylane-ui/dropdown-menu";
 
 interface CellContextMenuProps {
   left: number;
@@ -56,16 +56,16 @@ function CellContextMenu({
         finalFocus={() => returnFocusTo}
         sideOffset={0}
       >
-        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyCell}>
+        <DropdownMenuItem onClick={onCopyCell} presentation="compact">
           <Copy className="size-3.5" />
           Copy cell
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRow}>
+        <DropdownMenuItem onClick={onCopyRow} presentation="compact">
           <Rows3 className="size-3.5" />
           Copy row
         </DropdownMenuItem>
         {onCopyRowAsSql ? (
-          <DropdownMenuItem className="gap-2 text-xs" onClick={onCopyRowAsSql}>
+          <DropdownMenuItem onClick={onCopyRowAsSql} presentation="compact">
             <FileCode2 className="size-3.5" />
             Copy row as INSERT
           </DropdownMenuItem>

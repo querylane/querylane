@@ -1,5 +1,5 @@
 import { Check, Circle, Loader2, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import { cn } from "@/lib/utils";
 import {
   type SetupProgressEvent,
@@ -46,7 +46,7 @@ function getStepStateLabel(state: StepState): string {
 function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
-      <span className="flex size-8 items-center justify-center rounded-full border border-emerald-400/45 bg-emerald-500/14 text-emerald-300">
+      <span className="flex size-8 items-center justify-center rounded-full border border-positive-400/45 bg-positive-500/14 text-positive-300">
         <Check aria-hidden="true" className="size-4" />
       </span>
     );
@@ -63,50 +63,37 @@ function StepStateIcon({ state }: { state: StepState }) {
   }
   if (state === StepState.FAILED) {
     return (
-      <span className="flex size-8 items-center justify-center rounded-full border border-red-400/40 bg-red-500/12 text-red-200">
+      <span className="flex size-8 items-center justify-center rounded-full border border-negative-400/40 bg-negative-500/12 text-negative-200">
         <X aria-hidden="true" className="size-4" />
       </span>
     );
   }
   return (
-    <span className="flex size-8 items-center justify-center rounded-full border border-white/16 bg-white/[0.03] text-white/45">
+    <span className="flex size-8 items-center justify-center rounded-full border border-white/16 bg-white/3 text-white/45">
       <Circle aria-hidden="true" className="size-4 fill-current" />
     </span>
   );
 }
 function StepStateBadge({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
-    return (
-      <Badge className="border-emerald-400/40 bg-emerald-500/14 px-2.5 text-emerald-200">
-        Done
-      </Badge>
-    );
+    return <Badge presentation="onboarding-complete">Done</Badge>;
   }
   if (state === StepState.IN_PROGRESS) {
     return (
-      <Badge
-        className="border-white/16 bg-white/10 px-2.5 text-white"
-        variant="outline"
-      >
+      <Badge presentation="onboarding-running" variant="outline">
         Running
       </Badge>
     );
   }
   if (state === StepState.FAILED) {
     return (
-      <Badge
-        className="border-red-400/35 bg-red-500/14 px-2.5 text-red-100"
-        variant="outline"
-      >
+      <Badge presentation="onboarding-error" variant="outline">
         Failed
       </Badge>
     );
   }
   return (
-    <Badge
-      className="border-white/10 bg-white/[0.04] px-2.5 text-white/62"
-      variant="outline"
-    >
+    <Badge presentation="onboarding-pending" variant="outline">
       Pending
     </Badge>
   );
@@ -145,7 +132,7 @@ function ProgressStepItem({
             aria-hidden="true"
             className={cn(
               "absolute top-10 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2",
-              connector === "succeeded" ? "bg-emerald-400/70" : "bg-white/12"
+              connector === "succeeded" ? "bg-positive-400/70" : "bg-white/12"
             )}
           />
         )}
@@ -184,7 +171,7 @@ function getConnector(
 export function ProgressStepList({ events }: { events: SetupProgressEvent[] }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/55">
+      <div className="rounded-xl border border-white/10 bg-white/3 p-4 text-sm text-white/55">
         Waiting for setup progress…
       </div>
     );

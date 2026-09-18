@@ -1,0 +1,7 @@
+.waitingIndicator {
+  background-image: radial-gradient(
+    circle,
+    rgba(98, 122, 255, 0.14),
+    rgba(7, 9, 15, 0) 65%
+  );
+}

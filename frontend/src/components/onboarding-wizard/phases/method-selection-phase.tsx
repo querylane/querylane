@@ -9,10 +9,14 @@ import type { KeyboardEvent } from "react";
 import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/querylane-ui/alert";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
 import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
@@ -73,15 +77,12 @@ function MethodOption({
   return (
     <Button
       aria-checked={isSelected}
-      className={cn(
-        "group flex h-auto w-full min-w-0 items-start gap-3 overflow-hidden whitespace-normal rounded-xl border px-3.5 py-3 text-left transition-all duration-150",
-        isSelected
-          ? "border-blue-400 bg-blue-500/[0.08] ring-1 ring-blue-400/20"
-          : "border-white/10 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.05]"
-      )}
+      className="group flex h-auto w-full min-w-0 items-start overflow-hidden text-left"
+      data-selected={isSelected}
       data-setup-method-card={method}
       onClick={() => onSelect(method)}
       onKeyDown={onKeyDown}
+      presentation="onboarding-method"
       role="radio"
       type="button"
       variant="ghost"
@@ -90,8 +91,8 @@ function MethodOption({
         className={cn(
           "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border",
           isSelected
-            ? "border-blue-400/40 bg-blue-500/10 text-blue-300"
-            : "border-white/10 bg-white/[0.06] text-white/70"
+            ? "border-info-400/40 bg-info-500/10 text-info-300"
+            : "border-white/10 bg-white/6 text-white/70"
         )}
       >
         <Icon className="size-4" />
@@ -103,7 +104,8 @@ function MethodOption({
           </span>
           {content.badge ? (
             <Badge
-              className="max-w-full shrink-0 border-white/10 bg-white/[0.07] px-2 py-0.5 text-white/72 text-xs"
+              className="max-w-full shrink-0"
+              presentation="onboarding"
               variant="outline"
             >
               {content.badge}
@@ -193,11 +195,12 @@ export function MethodSelectionPhase() {
       footer={
         <div className="flex justify-end">
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9"
             disabled={
               selectedMethod === null || !methods.includes(selectedMethod)
             }
             onClick={goToConfigure}
+            presentation="onboarding-primary"
           >
             Continue
             <ChevronRight className="size-4" />
@@ -213,22 +216,19 @@ export function MethodSelectionPhase() {
         variant="setup"
       />
       {onboardingState && !onboardingState.isHomeWritable ? (
-        <Alert
-          className="mb-5 border-amber-400/20 bg-amber-500/[0.06]"
-          role="status"
-        >
-          <AlertTriangle className="text-amber-400" />
-          <AlertTitle className="text-amber-100">
+        <Alert className="mb-5" presentation="onboarding-warning" role="status">
+          <AlertTriangle className="text-warning-400" />
+          <AlertTitle presentation="onboarding-warning">
             Automatic setup unavailable
           </AlertTitle>
-          <AlertDescription className="text-amber-100/70">
+          <AlertDescription presentation="onboarding-warning">
             {manualSetupReason}
           </AlertDescription>
         </Alert>
       ) : null}
       <div aria-label="Setup method" className="space-y-2.5" role="radiogroup">
         {methods.length === 0 ? (
-          <div className="rounded-xl border border-white/12 border-dashed bg-white/[0.03] px-4 py-6 text-center">
+          <div className="rounded-xl border border-white/12 border-dashed bg-white/3 px-4 py-6 text-center">
             <p className="font-medium text-sm text-white">
               No setup methods available
             </p>

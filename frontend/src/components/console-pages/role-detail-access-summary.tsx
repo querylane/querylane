@@ -4,8 +4,8 @@ import type { ComponentType } from "react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { Section } from "@/components/console-pages/role-detail-model";
 import { DatabaseSelect } from "@/components/console-pages/role-grants-tab";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
 
 interface AccessSourceRow {
@@ -24,21 +24,11 @@ function accessIconClassName(row: AccessSourceRow): string {
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     row.active &&
       row.tone === "danger" &&
-      "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+      "bg-warning-500/15 text-warning-600 dark:text-warning-400",
     row.active &&
       row.tone === "active" &&
-      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+      "bg-positive-500/15 text-positive-600 dark:text-positive-400",
     !row.active && "bg-muted text-muted-foreground/40"
-  );
-}
-
-function accessBadgeClassName(row: AccessSourceRow): string {
-  return cn(
-    "shrink-0 rounded-sm font-medium text-[0.65625rem] uppercase tabular-nums tracking-wide",
-    row.active &&
-      row.tone === "danger" &&
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    !row.active && "text-muted-foreground/50"
   );
 }
 
@@ -50,6 +40,8 @@ function AccessSummaryRow({
   row: AccessSourceRow;
 }) {
   const { icon: Icon, jump } = row;
+  const activePresentation =
+    row.tone === "danger" ? "access-warning" : "access-active";
   const inner = (
     <>
       <span className={accessIconClassName(row)}>
@@ -76,7 +68,8 @@ function AccessSummaryRow({
         </p>
       </div>
       <Badge
-        className={accessBadgeClassName(row)}
+        className="shrink-0"
+        presentation={row.active ? activePresentation : "access-inactive"}
         variant={row.active ? "secondary" : "outline"}
       >
         {row.status}
@@ -98,11 +91,11 @@ function AccessSummaryRow({
   if (jump) {
     return (
       <Button
-        className={cn(
-          base,
-          "group h-auto w-full cursor-pointer justify-start transition-colors hover:bg-muted/60"
-        )}
+        className="group flex h-auto w-full cursor-pointer items-center justify-start text-left"
         onClick={() => onJump(jump.section)}
+        presentation={
+          row.active ? "access-summary-active" : "access-summary-inactive"
+        }
         type="button"
         variant="ghost"
       >
@@ -129,7 +122,7 @@ function ScopeGroup({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1 px-1 font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wide">
+      <div className="text-(length:--text-label-sm) flex items-center gap-1 px-1 font-medium text-muted-foreground uppercase tracking-wide">
         {label}
       </div>
       {rows.map((row) => (

@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/querylane-ui/badge";
+import { TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
 import { cn } from "@/lib/utils";
 
 function ObjectDetailHeader({
@@ -70,7 +70,11 @@ function ObjectDetailTabsBar({ children }: { children: ReactNode }) {
   return (
     <div className="shrink-0 overflow-x-auto">
       <div className="min-w-max border-b px-3 sm:px-4">
-        <TabsList className="-mb-px h-9 min-w-max gap-0 p-0" variant="line">
+        <TabsList
+          className="-mb-px h-9 min-w-max"
+          presentation="flush"
+          variant="line"
+        >
           {children}
         </TabsList>
       </div>
@@ -89,13 +93,15 @@ function ObjectDetailTabTrigger({
 }) {
   return (
     <TabsTrigger
-      className="h-full flex-none px-3 group-data-horizontal/tabs:after:bottom-0"
+      className="h-full flex-none group-data-horizontal/tabs:after:bottom-0"
+      presentation="inspector"
       value={value}
     >
       <span>{label}</span>
       {count === undefined ? null : (
         <Badge
-          className="h-5 min-w-5 rounded-full px-1.5 font-mono text-xs"
+          className="h-5 min-w-5"
+          presentation="object-kind"
           variant="secondary"
         >
           {count.toLocaleString()}

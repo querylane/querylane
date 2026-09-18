@@ -1,0 +1,32 @@
+.railGlow {
+  background-image:
+    radial-gradient(
+      circle at 40% 30%,
+      rgba(64, 102, 255, 0.18),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 60% 72%,
+      rgba(129, 71, 255, 0.12),
+      transparent 34%
+    );
+}
+
+.backdrop {
+  background-image:
+    radial-gradient(circle at top, rgba(69, 98, 196, 0.12), transparent 32%),
+    radial-gradient(circle at 50% 45%, rgba(63, 93, 194, 0.12), transparent 28%);
+}
+
+.dotPattern {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px
+  );
+}
+
+.linePattern {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}

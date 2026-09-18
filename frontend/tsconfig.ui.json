@@ -43,7 +43,7 @@
     "skipLibCheck": true,
     "rootDir": "./src"
   },
-  "include": ["src/components/ui"],
+  "include": ["src/components/ui", "src/types/css.d.ts"],
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

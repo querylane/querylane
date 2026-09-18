@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ExternalLink } from "lucide-react";
 import { type CSSProperties, type ReactNode, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import type { VisualizationDirection } from "@/features/database-visualization/database-visualization-store";
 import type {
   VisualizationEdge,
@@ -95,11 +95,6 @@ const FLOW_MIN_ZOOM = {
   compact: 0.04,
   default: 0.08,
 } satisfies Record<FlowCanvasDensity, number>;
-const REACT_FLOW_MINIMAP_STYLE = {
-  backgroundColor: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius-lg)",
-} satisfies CSSProperties;
 
 const REACT_FLOW_CONTROLS_STYLE = {
   "--xy-controls-button-background-color": "var(--card)",
@@ -107,8 +102,6 @@ const REACT_FLOW_CONTROLS_STYLE = {
   "--xy-controls-button-border-color": "var(--border)",
   "--xy-controls-button-color": "var(--foreground)",
   "--xy-controls-button-color-hover": "var(--accent-foreground)",
-  backgroundColor: "var(--card)",
-  color: "var(--foreground)",
 } satisfies ReactFlowControlsStyle;
 
 const FLOW_DIMENSIONS = {
@@ -141,19 +134,19 @@ const FLOW_DIMENSIONS = {
 >;
 
 const NODE_KIND_CLASS = {
-  capability: "border-red-500/35 bg-red-500/5",
+  capability: "border-negative-500/35 bg-negative-500/5",
   column: "border-indigo-500/35 bg-indigo-500/5",
-  constraint: "border-amber-500/35 bg-amber-500/5",
+  constraint: "border-warning-500/35 bg-warning-500/5",
   database: "border-primary/40 bg-primary/5",
-  default: "border-amber-500/35 bg-amber-500/5",
+  default: "border-warning-500/35 bg-warning-500/5",
   index: "border-lime-500/35 bg-lime-500/5",
   key: "border-orange-500/35 bg-orange-500/5",
   object: "border-slate-500/35",
-  policy: "border-red-500/35 bg-red-500/5",
-  public: "border-sky-500/35 bg-sky-500/5",
-  role: "border-violet-500/35 bg-violet-500/5",
-  schema: "border-blue-500/35 bg-blue-500/5",
-  table: "border-emerald-500/35 bg-emerald-500/5",
+  policy: "border-negative-500/35 bg-negative-500/5",
+  public: "border-reference-500/35 bg-reference-500/5",
+  role: "border-permission-500/35 bg-permission-500/5",
+  schema: "border-info-500/35 bg-info-500/5",
+  table: "border-positive-500/35 bg-positive-500/5",
   trigger: "border-fuchsia-500/35 bg-fuchsia-500/5",
   view: "border-cyan-500/35 bg-cyan-500/5",
 } satisfies Record<VisualizationNode["kind"], string>;
@@ -263,8 +256,8 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
               className={cn(
                 "truncate text-muted-foreground uppercase tracking-wider",
                 data.density === "compact"
-                  ? "text-[0.625rem]"
-                  : "text-[0.6875rem]"
+                  ? "text-(length:--text-micro)"
+                  : "text-(length:--text-label-sm)"
               )}
             >
               {data.subtitle}
@@ -288,12 +281,11 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
         <div className="mt-2 flex flex-wrap gap-1">
           {data.badges.map((badge) => (
             <Badge
-              className={cn(
-                data.density === "compact"
-                  ? "h-4 px-1 text-[0.5625rem]"
-                  : "h-5 px-1.5 text-[0.625rem]"
-              )}
+              className={data.density === "compact" ? "h-4" : "h-5"}
               key={badge}
+              presentation={
+                data.density === "compact" ? "map-compact" : "map-default"
+              }
               variant="secondary"
             >
               {badge}
@@ -308,8 +300,8 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
               className={cn(
                 "truncate font-mono text-muted-foreground",
                 data.density === "compact"
-                  ? "text-[0.625rem]"
-                  : "text-[0.6875rem]"
+                  ? "text-(length:--text-micro)"
+                  : "text-(length:--text-label-sm)"
               )}
               key={line}
               title={line}
@@ -318,7 +310,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             </p>
           ))}
           {extraCount > 0 ? (
-            <p className="text-[0.6875rem] text-muted-foreground">
+            <p className="text-(length:--text-label-sm) text-muted-foreground">
               +{extraCount} more
             </p>
           ) : null}
@@ -747,13 +739,13 @@ function FlowCanvas({
         <Background />
         <MiniMap
           ariaLabel="Canvas minimap"
-          className="overflow-hidden shadow-md"
+          bgColor="var(--card)"
+          className="overflow-hidden rounded-lg border border-border shadow-md"
           maskColor="color-mix(in oklab, var(--muted) 72%, transparent)"
           nodeColor="var(--primary)"
           nodeStrokeColor="var(--border)"
           pannable={true}
           position="bottom-left"
-          style={REACT_FLOW_MINIMAP_STYLE}
           zoomable={true}
         />
         <Controls

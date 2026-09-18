@@ -20,9 +20,9 @@ import {
   type OtherObjectsSummary,
   useOtherDatabaseObjectsSummaryQuery,
 } from "@/components/console-pages/other-database-objects-query";
+import { Button } from "@/components/querylane-ui/button";
+import { Card, CardContent, CardHeader } from "@/components/querylane-ui/card";
 import { RetryActionButton } from "@/components/retry-action-button";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 interface DatabaseParams {
@@ -45,8 +45,9 @@ function ViewAllButton({
   return (
     <Button
       aria-label={`View all ${total} ${label.toLowerCase()}`}
-      className="mt-2 self-start text-muted-foreground"
+      className="mt-2 self-start"
       onClick={onOpen}
+      presentation="muted"
       size="xs"
       type="button"
       variant="ghost"
@@ -71,7 +72,7 @@ function ObjectCategoryCard({
 }) {
   const [isBrowseOpen, setIsBrowseOpen] = useState(false);
   return (
-    <Card className="gap-4">
+    <Card presentation="compact">
       <CardHeader>
         <Eyebrow right={String(total)}>{label}</Eyebrow>
       </CardHeader>
@@ -122,7 +123,7 @@ function ExtensionsCard({
       ? "No extensions are installed in this database."
       : null;
   return (
-    <Card className="gap-4">
+    <Card presentation="compact">
       <CardHeader>
         <Eyebrow right={isPending ? undefined : String(installed.length)}>
           Extensions
@@ -131,7 +132,7 @@ function ExtensionsCard({
       <CardContent className="flex flex-col">
         {isPending ? <CardLoadingRows label="Loading extensions" /> : null}
         {emptyText ? (
-          <p className="py-2 text-[0.8125rem] text-muted-foreground">
+          <p className="text-(length:--text-caption) py-2 text-muted-foreground">
             {emptyText}
           </p>
         ) : null}
@@ -176,12 +177,15 @@ function ObjectsErrorCard({
   onRetry?: (() => Promise<unknown>) | undefined;
 }) {
   return (
-    <Card className="gap-4">
+    <Card presentation="compact">
       <CardHeader>
         <Eyebrow>Other objects</Eyebrow>
       </CardHeader>
-      <CardContent className="flex flex-col items-start gap-3">
-        <p className="text-[0.8125rem] text-muted-foreground">
+      <CardContent
+        className="flex flex-col items-start"
+        presentation="compact-row"
+      >
+        <p className="text-(length:--text-caption) text-muted-foreground">
           Failed to load other database objects.
         </p>
         {onRetry ? (
@@ -199,7 +203,7 @@ function ObjectsErrorCard({
 
 function ObjectsLoadingCard() {
   return (
-    <Card className="gap-4">
+    <Card presentation="compact">
       <CardHeader>
         <Eyebrow>Other objects</Eyebrow>
       </CardHeader>

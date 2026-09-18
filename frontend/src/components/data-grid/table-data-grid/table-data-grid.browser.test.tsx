@@ -1,3 +1,4 @@
+import "./header-edge-fixture.css";
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { afterEach, expect, test, vi } from "vitest";
@@ -729,23 +730,6 @@ function renderRefreshingGridSurface() {
 function renderSelectedHeaderEdgeFixture() {
   render(
     <ScreenshotFrame>
-      <style>
-        {`
-          .selected-header-edge-fixture {
-            inline-size: 360px;
-            block-size: 84px;
-          }
-
-          .selected-header-edge-fixture .rdg-header-row {
-            display: contents;
-          }
-
-          .rounded-selected-header-cell {
-            border-start-end-radius: 4px;
-            border-end-end-radius: 4px;
-          }
-        `}
-      </style>
       <table
         aria-label="Selected table header edge fixture"
         className="rdg selected-header-edge-fixture"
@@ -757,7 +741,7 @@ function renderSelectedHeaderEdgeFixture() {
             </th>
             <th
               aria-selected="true"
-              className="rdg-cell rounded-selected-header-cell"
+              className="rdg-cell rounded-se-control-sm rounded-ee-control-sm"
               scope="col"
             >
               created_at
@@ -1913,7 +1897,7 @@ test("page size select shows every option when the footer is near the viewport e
 test("filter popover stays inside the data-grid boundary when the grid is offset", async () => {
   render(
     <ScreenshotFrame>
-      <div className="pl-[320px]">
+      <div className="pl-80">
         <div className="w-[420px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <DataGridToolbar
             {...columnLayoutProps(resultColumns)}
@@ -2016,7 +2000,7 @@ test("sort popover keeps every row control aligned", async () => {
 test("sort popover stays inside the data-grid boundary when the grid is offset", async () => {
   render(
     <ScreenshotFrame>
-      <div className="pl-[320px]">
+      <div className="pl-80">
         <div className="w-[560px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <DataGridToolbar
             {...columnLayoutProps(sortableColumns)}

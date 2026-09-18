@@ -10,7 +10,12 @@ import {
   type RoleDetailViewProps,
 } from "@/components/console-pages/role-detail-model";
 import { RoleOverviewTab } from "@/components/console-pages/role-detail-overview-tab";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const RoleAccessMapTab = lazy(() =>
@@ -23,12 +28,12 @@ function RoleAccessMapFallback() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center" presentation="section">
           <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading access map
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-muted-foreground text-sm">
+      <CardContent presentation="description">
         Loading role access visualization.
       </CardContent>
     </Card>

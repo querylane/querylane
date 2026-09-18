@@ -5,14 +5,14 @@ import {
 } from "@/components/data-grid/table-data-grid/data-cell-preview-format";
 import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
 import { useDataValueDialogState } from "@/components/data-grid/table-data-grid/use-data-value-dialog-state";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/querylane-ui/dialog";
 import {
   keyPostgresArrayItems,
   parsePostgresArrayLiteral,
@@ -102,15 +102,18 @@ function ArrayPreviewDialog({
   }
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col gap-4 overflow-hidden">
-        <DialogHeader className="shrink-0 pr-10">
+      <DialogContent
+        className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col overflow-hidden"
+        presentation="spacious"
+      >
+        <DialogHeader className="shrink-0" presentation="closeable">
           <DialogTitle>{columnName} array</DialogTitle>
           <DialogDescription>
             Formatted {rawType} value with indexed elements.
           </DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-300">
+          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-warning-700 text-xs dark:text-warning-300">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>
@@ -156,13 +159,13 @@ function ArrayPreview({
         data-testid={`${columnName}-array-preview`}
         title={title}
       >
-        <span className="shrink-0 rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-sky-700 text-xs leading-none dark:text-sky-300">
+        <span className="shrink-0 rounded-full border border-reference-500/25 bg-reference-500/10 px-1.5 py-0.5 font-medium text-reference-700 text-xs leading-none dark:text-reference-300">
           {summary}
         </span>
         {firstItems.map(({ item, key }) => (
           <code
             className={cn(
-              "max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[0.625rem]",
+              "text-(length:--text-micro) max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono",
               item.isNull
                 ? "text-muted-foreground italic"
                 : "text-foreground/80"
@@ -175,12 +178,13 @@ function ArrayPreview({
       </span>
       <Button
         aria-label={`View full array for ${columnName}`}
-        className="h-5 shrink-0 px-1.5 text-muted-foreground"
+        className="h-5 shrink-0"
         onClick={(event) => {
           event.stopPropagation();
           openDialog();
         }}
         onMouseDown={(event) => event.stopPropagation()}
+        presentation="preview-toolbar"
         size="xs"
         type="button"
         variant="ghost"

@@ -14,7 +14,7 @@ import {
   privTooltip,
 } from "@/components/console-pages/role-grants-shared";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const PILL_BASE =
-  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none tracking-[0.06em]";
+  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none tracking-section";
 
 export function AbbrPill({
   count,
@@ -148,8 +148,9 @@ export function FilterChip({
   return (
     <Button
       aria-pressed={active}
-      className="h-[22px] rounded-full px-2 font-mono text-xs tracking-[0.06em]"
+      className="h-[22px]"
       onClick={onToggle}
+      presentation="privilege"
       size="xs"
       type="button"
       variant={active ? "secondary" : "outline"}
@@ -169,7 +170,7 @@ export function CountPill({
   value: number;
 }) {
   return (
-    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-[7px] font-medium font-mono text-muted-foreground text-xs tracking-[0.02em]">
+    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-1.75 font-medium font-mono text-muted-foreground text-xs tracking-label">
       {value.toLocaleString()}
       {unit ? (
         <span className="font-normal">
@@ -186,8 +187,9 @@ export function CountPill({
 export function BackBar({ onBack }: { onBack: () => void }) {
   return (
     <Button
-      className="-ml-1 h-7 gap-1 self-start px-1.5 font-normal text-muted-foreground text-xs"
+      className="-ml-1 h-7 self-start"
       onClick={onBack}
+      presentation="privilege-count"
       size="sm"
       type="button"
       variant="ghost"
@@ -240,10 +242,11 @@ export function GrantsEmptyState({
 }) {
   return (
     <EmptyStatePanel
-      className="min-h-36 rounded-md border-dashed"
-      contentClassName="max-w-[520px]"
+      className="min-h-36"
+      contentWidth="wide"
       description={children}
       icon={KeyRound}
+      presentation="panel-dashed"
       title={title}
     />
   );

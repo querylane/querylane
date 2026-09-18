@@ -1,4 +1,4 @@
-import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
+import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import {
@@ -53,7 +53,7 @@ export function LastErrorCell({ lastError }: { lastError: string }) {
     return <span className="text-muted-foreground">{EMPTY_CELL}</span>;
   }
   return (
-    <OverflowTooltip className="block max-w-72 truncate font-mono text-destructive text-xs">
+    <OverflowTooltip className="block max-w-72" presentation="error">
       {lastError}
     </OverflowTooltip>
   );
@@ -65,7 +65,7 @@ export function RunnerNameCell({ runnerName }: { runnerName: string }) {
 
 export function TargetCell({ target }: { target: string }) {
   return (
-    <OverflowTooltip className="block max-w-64 truncate font-mono text-xs">
+    <OverflowTooltip className="block max-w-64" presentation="identifier">
       {target}
     </OverflowTooltip>
   );

@@ -48,23 +48,32 @@ function SslModeIcon({
 
 function SslModeSelectValue({
   className,
-  iconClassName,
+  iconTone,
   labelClassName,
+  presentation,
   placeholder = "Select SSL mode",
   value,
 }: {
   className?: string | undefined;
-  iconClassName?: string | undefined;
+  iconTone?: "onboarding";
   labelClassName?: string | undefined;
+  presentation?: "onboarding-value";
   placeholder?: string | undefined;
   value: string | undefined;
 }) {
   const option = getSslModeOption(value);
   return (
-    <SelectValue className={className} placeholder={placeholder}>
+    <SelectValue
+      className={className}
+      placeholder={placeholder}
+      presentation={presentation}
+    >
       {option ? (
         <span className="flex min-w-0 items-center gap-2">
-          <SslModeIcon className={iconClassName} mode={option.value} />
+          <SslModeIcon
+            className={iconTone === "onboarding" ? "text-white/68" : undefined}
+            mode={option.value}
+          />
           <span className={cn("truncate", labelClassName)}>{option.value}</span>
         </span>
       ) : (
@@ -77,19 +86,19 @@ function SslModeSelectValue({
 function SslModeSelectItems({
   descriptionClassName,
   iconContainerClassName,
-  iconClassName,
-  itemClassName,
+  iconTone,
+  presentation,
 }: {
   descriptionClassName?: string | undefined;
   iconContainerClassName?: string | undefined;
-  iconClassName?: string | undefined;
-  itemClassName?: string | undefined;
+  iconTone?: "onboarding";
+  presentation?: "onboarding";
 }) {
   return SSL_MODE_OPTIONS.map((option) => (
     <SelectItem
-      className={itemClassName}
       key={option.value}
       label={option.value}
+      presentation={presentation}
       value={option.value}
     >
       <span className="flex min-w-0 items-start gap-3">
@@ -99,7 +108,10 @@ function SslModeSelectItems({
             iconContainerClassName
           )}
         >
-          <SslModeIcon className={iconClassName} mode={option.value} />
+          <SslModeIcon
+            className={iconTone === "onboarding" ? "text-white/68" : undefined}
+            mode={option.value}
+          />
         </span>
         <span className="min-w-0">
           <span className="block font-medium">{option.value}</span>

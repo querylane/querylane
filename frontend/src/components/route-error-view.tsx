@@ -17,7 +17,7 @@ import { useSetupStore } from "@/stores/setup-store";
 
 interface RouteErrorViewProps
   extends Pick<ErrorComponentProps, "error" | "reset"> {
-  containerClassName?: string | undefined;
+  fillViewport?: boolean;
   reloadPage?: (() => void) | undefined;
 }
 
@@ -26,7 +26,7 @@ function reloadWindow(): void {
 }
 
 export function RouteErrorView({
-  containerClassName,
+  fillViewport = false,
   error,
   reloadPage = reloadWindow,
   reset,
@@ -58,7 +58,7 @@ export function RouteErrorView({
     return (
       <ChunkLoadRecoveryPage
         autoReloading={autoReloading}
-        containerClassName={containerClassName}
+        containerClassName={fillViewport ? "min-h-[60vh]" : undefined}
         reloadPage={reloadPage}
       />
     );
@@ -76,7 +76,7 @@ export function RouteErrorView({
           <InternalStorageRecoveryDialog configFilePath={configFilePath} />
         ) : undefined
       }
-      containerClassName={containerClassName}
+      containerClassName={fillViewport ? "min-h-[60vh]" : undefined}
       error={uiError}
       onRetry={retry}
       retryLabel="Try again"

@@ -1,11 +1,11 @@
 import type { ComponentProps, CSSProperties } from "react";
-
 import { cn } from "@/lib/utils";
 import {
   QUERYLANE_LOGO_PALETTES,
   type QuerylaneLogoPalette,
   type QuerylaneLogoProps,
 } from "./querylane-logo.constants";
+import styles from "./querylane-logo.module.css";
 
 interface QuerylaneIconRowGeometry {
   height: number;
@@ -71,12 +71,7 @@ const ROW_SWEEP_DURATION_SECONDS = 2.5;
 const ROW_SWEEP_STEP_SECONDS =
   ROW_SWEEP_DURATION_SECONDS / QUERYLANE_ICON_ROWS.length;
 const ROW_PULSE_DURATION_SECONDS = 1.4;
-const CURSOR_SCAN_DURATION_SECONDS = 0.5;
-const ACTIVE_ROW_OPACITY = 1;
-const ACTIVE_ROW_BLINK_OPACITY = 0.58;
-const CHEVRON_TRACK_X_OFFSET = -1.4;
 const MIDDLE_ROW_IDLE_OPACITY = 0.5;
-const CHEVRON_BLUE = "#60a5fa";
 
 function QuerylaneLogoLines({ palette }: { palette: QuerylaneLogoPalette }) {
   return (
@@ -194,158 +189,6 @@ function QuerylaneLogoAnimated({
       {...props}
     >
       <title>{accessibilityLabel}</title>
-      <style>{`
-        .querylane-logo-row-track {
-          transform-box: fill-box;
-          transform-origin: left center;
-          animation: querylane-row-shift ${ROW_PULSE_DURATION_SECONDS}s ease-in-out infinite;
-        }
-
-        .querylane-logo-row {
-          fill: currentColor;
-        }
-
-        .querylane-logo-active-row {
-          fill: currentColor;
-          opacity: 0;
-          animation: querylane-row-sweep-cursor ${ROW_SWEEP_DURATION_SECONDS}s linear infinite;
-        }
-
-        .querylane-logo-chevron-track {
-          animation: querylane-chevron-track ${ROW_SWEEP_DURATION_SECONDS}s linear infinite;
-        }
-
-        .querylane-logo-chevron {
-          fill: ${CHEVRON_BLUE};
-          opacity: 0.9;
-          animation:
-            querylane-chevron-scan ${CURSOR_SCAN_DURATION_SECONDS}s ease-in-out infinite,
-            querylane-chevron-blink 0.85s steps(1, end) infinite;
-        }
-
-        @keyframes querylane-row-shift {
-          0%,
-          100% {
-            transform: translateX(-0.35px);
-          }
-
-          50% {
-            transform: translateX(0.45px);
-          }
-        }
-
-        @keyframes querylane-row-sweep-cursor {
-          0%,
-          100% {
-            opacity: 0;
-          }
-
-          4% {
-            opacity: 0;
-          }
-
-          7% {
-            opacity: ${ACTIVE_ROW_OPACITY};
-          }
-
-          10% {
-            opacity: ${ACTIVE_ROW_BLINK_OPACITY};
-          }
-
-          13% {
-            opacity: ${ACTIVE_ROW_OPACITY};
-          }
-
-          17% {
-            opacity: 0;
-          }
-        }
-
-        @keyframes querylane-chevron-track {
-          0%,
-          16% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, -7.6px);
-          }
-
-          20%,
-          36% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, -3.6px);
-          }
-
-          40%,
-          56% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, 0px);
-          }
-
-          60%,
-          76% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, 3.8px);
-          }
-
-          80%,
-          96% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, 7.8px);
-          }
-
-          100% {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, -7.6px);
-          }
-        }
-
-        @keyframes querylane-chevron-scan {
-          0%,
-          100% {
-            transform: translateX(0px);
-          }
-
-          50% {
-            transform: translateX(1.6px);
-          }
-        }
-
-        @keyframes querylane-chevron-blink {
-          0%,
-          47% {
-            opacity: 1;
-          }
-
-          48%,
-          55% {
-            opacity: 0.45;
-          }
-
-          56%,
-          100% {
-            opacity: 1;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .querylane-logo-row-track,
-          .querylane-logo-active-row,
-          .querylane-logo-chevron-track,
-          .querylane-logo-chevron {
-            animation: none !important;
-          }
-
-          .querylane-logo-active-row {
-            opacity: 0;
-          }
-
-          .querylane-logo-active-row[data-row="${QUERYLANE_ICON_ACTIVE_ROW_INDEX}"] {
-            opacity: ${ACTIVE_ROW_OPACITY};
-          }
-
-          .querylane-logo-chevron-track {
-            transform: translate(${CHEVRON_TRACK_X_OFFSET}px, 0px);
-          }
-
-          .querylane-logo-chevron {
-            opacity: 1;
-            transform: translateX(0.8px);
-          }
-        }
-      `}</style>
 
       {QUERYLANE_ICON_ROWS.map((row, index) => {
         const rowBaseOpacity =
@@ -353,20 +196,20 @@ function QuerylaneLogoAnimated({
             ? MIDDLE_ROW_IDLE_OPACITY
             : row.opacity;
         const rowPulseStyle = {
-          animationDelay: `${(index * ROW_PULSE_DURATION_SECONDS) / QUERYLANE_ICON_ROWS.length}s`,
-        } satisfies CSSProperties;
+          "--row-pulse-delay": `${(index * ROW_PULSE_DURATION_SECONDS) / QUERYLANE_ICON_ROWS.length}s`,
+        } satisfies CSSProperties & Record<`--${string}`, string>;
         const rowSweepStyle = {
-          animationDelay: `${(index * ROW_SWEEP_STEP_SECONDS).toFixed(2)}s`,
-        } satisfies CSSProperties;
+          "--row-sweep-delay": `${(index * ROW_SWEEP_STEP_SECONDS).toFixed(2)}s`,
+        } satisfies CSSProperties & Record<`--${string}`, string>;
 
         return (
           <g
-            className="querylane-logo-row-track"
+            className={styles["rowTrack"]}
             key={`${row.x}-${row.y}-${row.width}`}
             style={rowPulseStyle}
           >
             <rect
-              className="querylane-logo-row"
+              className={styles["row"]}
               data-row={index}
               data-testid="querylane-logo-row"
               height={row.height}
@@ -377,7 +220,7 @@ function QuerylaneLogoAnimated({
               y={row.y}
             />
             <rect
-              className="querylane-logo-active-row"
+              className={styles["activeRow"]}
               data-row={index}
               data-testid="querylane-logo-active-row"
               height={row.height}
@@ -391,9 +234,9 @@ function QuerylaneLogoAnimated({
         );
       })}
 
-      <g className="querylane-logo-chevron-track">
+      <g className={styles["chevronTrack"]}>
         <path
-          className="querylane-logo-chevron"
+          className={styles["chevron"]}
           d={QUERYLANE_ICON_CHEVRON_PATH}
           data-testid="querylane-logo-chevron"
         />

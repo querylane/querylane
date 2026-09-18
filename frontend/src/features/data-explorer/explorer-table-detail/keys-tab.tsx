@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import {
   type DataTableColumnDef,
   SortableHeader,
@@ -27,7 +27,7 @@ const keyColumns: DataTableColumnDef<TableKeyRow>[] = [
   {
     accessorFn: (row) => row.kindLabel,
     cell: ({ row }) => (
-      <Badge className="font-mono text-xs" variant="outline">
+      <Badge presentation="identifier" variant="outline">
         {row.original.kindLabel}
       </Badge>
     ),

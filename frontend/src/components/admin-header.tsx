@@ -4,10 +4,6 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, Lock, Monitor, Plus } from "lucide-react";
 import React from "react";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
-import { SidebarTrigger } from "@/components/querylane-ui/sidebar";
-import { SearchEmptyState } from "@/components/search-empty-state";
-import { ThemeModeMenu } from "@/components/theme-mode-menu";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -16,7 +12,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command";
+} from "@/components/querylane-ui/command";
 import {
   Empty,
   EmptyContent,
@@ -24,14 +20,18 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
-import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
+} from "@/components/querylane-ui/empty";
+import { OverflowAwareText } from "@/components/querylane-ui/overflow-tooltip";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Spinner } from "@/components/ui/spinner";
+} from "@/components/querylane-ui/popover";
+import { SidebarTrigger } from "@/components/querylane-ui/sidebar";
+import { Spinner } from "@/components/querylane-ui/spinner";
+import { SearchEmptyState } from "@/components/search-empty-state";
+import { ThemeModeMenu } from "@/components/theme-mode-menu";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -115,21 +115,6 @@ function HeaderStatusDot({ status }: { status: ConnectionStatus }) {
     </Tooltip>
   );
 }
-function OverflowAwareText({
-  children,
-  className,
-  disabled = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-}) {
-  if (disabled) {
-    return <span className={className}>{children}</span>;
-  }
-  return <OverflowTooltip className={className}>{children}</OverflowTooltip>;
-}
-
 type BreadcrumbDropdownChildren = (close: () => void) => React.ReactNode;
 
 function BreadcrumbDropdownList({
@@ -174,10 +159,11 @@ function BreadcrumbDropdownList({
           <span>{`Refreshing ${label.toLowerCase()}…`}</span>
         </output>
       ) : null}
-      <CommandEmpty className="p-0">
+      <CommandEmpty presentation="flush">
         {emptyContent ?? (
           <SearchEmptyState
-            className="min-h-24 py-6"
+            className="min-h-24"
+            presentation="search-header"
             resourceName={emptyResourceName}
           />
         )}
@@ -225,16 +211,14 @@ function BreadcrumbTriggerBody({
     <span className="flex min-w-0 items-center gap-1.5">
       {hasValue ? valuePrefix : null}
       <OverflowAwareText
-        className={cn(
-          "min-w-0 truncate font-medium text-sm",
-          hasValue ? "text-foreground" : "text-muted-foreground"
-        )}
+        className="min-w-0"
         disabled={disabled}
+        presentation={hasValue ? "breadcrumb" : "breadcrumb-empty"}
       >
         {triggerValue}
       </OverflowAwareText>
       {shouldShowBreadcrumbSpinner(loading, refreshing) ? (
-        <Spinner className="size-3 shrink-0 text-muted-foreground" />
+        <Spinner className="size-3 shrink-0" presentation="muted" />
       ) : null}
       <ChevronsUpDown
         aria-hidden="true"
@@ -254,13 +238,13 @@ function BreadcrumbDropdown({
   loading = false,
   loadingMessage,
   refreshing = false,
-  triggerClassName,
+  triggerWidth,
   value,
   valuePrefix,
   placeholder,
 }: {
   children: BreadcrumbDropdownChildren;
-  contentWidth: string;
+  contentWidth: "instance" | "database";
   disabledReason?: string | null;
   emptyContent?: React.ReactNode;
   emptyResourceName: string;
@@ -268,7 +252,7 @@ function BreadcrumbDropdown({
   loading?: boolean;
   loadingMessage?: string;
   refreshing?: boolean;
-  triggerClassName?: string;
+  triggerWidth?: "instance" | "database";
   value: string | null;
   valuePrefix?: React.ReactNode;
   placeholder: string;
@@ -299,7 +283,9 @@ function BreadcrumbDropdown({
             <div
               className={cn(
                 "flex min-w-0 cursor-not-allowed items-center gap-1.5 rounded-md px-2 py-1.5 opacity-50",
-                triggerClassName
+                triggerWidth === "instance"
+                  ? "max-w-[11rem] sm:max-w-[14rem]"
+                  : "max-w-[12rem] sm:max-w-[14rem]"
               )}
             />
           }
@@ -315,21 +301,20 @@ function BreadcrumbDropdown({
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         aria-label={breadcrumbTriggerAriaLabel(label, value)}
-        className={cn(
-          "flex min-w-0 max-w-[14rem] items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          triggerClassName
-        )}
+        breadcrumbWidth={triggerWidth}
+        className="flex min-w-0 items-center"
+        presentation="breadcrumb"
       >
         {triggerBody}
       </PopoverTrigger>
-      <PopoverContent align="start" className={cn(contentWidth, "gap-0 p-0")}>
+      <PopoverContent align="start" presentation="detail" width={contentWidth}>
         <Command
           filter={(optionValue, search) =>
             optionValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }
         >
           <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />
-          <CommandList className="pt-1">
+          <CommandList presentation="search">
             <BreadcrumbDropdownList
               close={close}
               emptyContent={emptyContent}
@@ -353,7 +338,7 @@ function InstanceSelectorEmptyState({
   canCreateInstance: boolean;
 }) {
   return (
-    <Empty className="min-h-44 border-0 p-4">
+    <Empty className="min-h-44" presentation="compact">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <Monitor aria-hidden="true" />
@@ -420,10 +405,13 @@ function InstanceCommandItem({
     >
       <StatusDot status={instance.status} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <OverflowAwareText className="min-w-0 truncate text-sm">
+        <OverflowAwareText className="min-w-0" presentation="resource">
           {instance.name}
         </OverflowAwareText>
-        <OverflowAwareText className="min-w-0 truncate font-mono text-muted-foreground text-xs">
+        <OverflowAwareText
+          className="min-w-0"
+          presentation="resource-description"
+        >
           {instance.host}:{instance.port}
         </OverflowAwareText>
         {instance.credentialsUnreadable ? (
@@ -462,10 +450,11 @@ function RegisterInstanceCommand({
     return isModeLoaded ? null : (
       <CommandItem
         aria-disabled={true}
-        className="cursor-wait opacity-60"
+        className="cursor-wait"
+        presentation="secondary"
         value="register new instance loading"
       >
-        <Spinner className="size-4 text-muted-foreground" />
+        <Spinner className="size-4" presentation="muted" />
         <span className="text-muted-foreground text-sm">
           Checking instance management
         </span>
@@ -480,8 +469,8 @@ function RegisterInstanceCommand({
       <Tooltip>
         <TooltipTrigger render={<div className="cursor-not-allowed" />}>
           <CommandItem
-            className="opacity-60"
             disabled={true}
+            presentation="secondary"
             value="register new instance config managed"
           >
             <Lock className="size-4 text-muted-foreground" />
@@ -532,7 +521,7 @@ function InstanceSelector({
   const hasInstances = instances.length > 0;
   return (
     <BreadcrumbDropdown
-      contentWidth="w-72"
+      contentWidth="instance"
       emptyContent={
         <InstanceSelectorEmptyState
           canCreateInstance={isModeLoaded && !isConfigManaged}
@@ -544,7 +533,7 @@ function InstanceSelector({
       loadingMessage="Loading instances…"
       placeholder="Select instance"
       refreshing={breadcrumbState.refreshing}
-      triggerClassName="max-w-[11rem] sm:max-w-[14rem]"
+      triggerWidth="instance"
       value={selectedInstance?.name ?? null}
       valuePrefix={
         selectedInstance ? (
@@ -604,7 +593,7 @@ function DatabaseSelector({
         className={hideLeadingSeparatorOnMobile ? "hidden lg:flex" : undefined}
       />
       <BreadcrumbDropdown
-        contentWidth="w-64"
+        contentWidth="database"
         disabledReason={getDisabledReason(selectedInstance.status)}
         emptyResourceName="databases"
         label="Database"
@@ -612,7 +601,7 @@ function DatabaseSelector({
         loadingMessage="Loading databases…"
         placeholder="Select database"
         refreshing={breadcrumbState.refreshing}
-        triggerClassName="max-w-[12rem] sm:max-w-[14rem]"
+        triggerWidth="database"
         value={selectedDatabase?.name ?? null}
         valuePrefix={
           <span className="shrink-0 font-medium text-muted-foreground text-sm">
@@ -632,11 +621,14 @@ function DatabaseSelector({
               value={database.name}
             >
               <div className="flex min-w-0 flex-1 flex-col">
-                <OverflowAwareText className="min-w-0 truncate text-sm">
+                <OverflowAwareText className="min-w-0" presentation="resource">
                   {database.name}
                 </OverflowAwareText>
                 {database.owner ? (
-                  <OverflowAwareText className="min-w-0 truncate text-muted-foreground text-xs">
+                  <OverflowAwareText
+                    className="min-w-0"
+                    presentation="resource-hint"
+                  >
                     owner {database.owner}
                   </OverflowAwareText>
                 ) : null}
@@ -692,7 +684,7 @@ function RoleBreadcrumbSegment({
         aria-current="page"
         className="flex min-w-0 items-center gap-1.5 px-1"
       >
-        <OverflowAwareText className="min-w-0 truncate font-medium font-mono text-foreground text-sm">
+        <OverflowAwareText className="min-w-0" presentation="database">
           {role?.roleName ?? roleId}
         </OverflowAwareText>
         {role ? <RoleKindBadge role={role} /> : null}

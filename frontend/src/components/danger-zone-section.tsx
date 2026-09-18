@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/querylane-ui/card";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 
 interface DangerZoneAction {
@@ -25,11 +25,8 @@ function DangerZoneSection({
     return null;
   }
   return (
-    <Card
-      className="border-destructive/30 bg-destructive/[0.03]"
-      data-testid={testId}
-    >
-      <CardHeader className="gap-2">
+    <Card data-testid={testId} presentation="danger">
+      <CardHeader presentation="compact-row">
         <div className="space-y-1">
           <h2 className="font-medium text-base text-destructive">
             Danger zone
@@ -41,7 +38,7 @@ function DangerZoneSection({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent presentation="stacked">
         {actions.map((action) => {
           const disabledReason = action.disabledReason ?? null;
           return (

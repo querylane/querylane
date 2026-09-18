@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 function shouldShowUnpopulatedStatus(
@@ -43,11 +43,11 @@ export function CatalogKindBadge({
 
   return (
     <span className="flex items-center gap-1.5">
-      <Badge className="font-mono text-xs" variant={variant}>
+      <Badge presentation="identifier" variant={variant}>
         {label}
       </Badge>
       {isSystem ? (
-        <Badge className="font-mono text-xs" variant="ghost">
+        <Badge presentation="identifier" variant="ghost">
           SYS
         </Badge>
       ) : null}

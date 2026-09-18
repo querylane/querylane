@@ -5,10 +5,9 @@ import {
   JSON_TITLE_MAX_LENGTH,
   truncateForAttribute,
 } from "@/components/data-grid/table-data-grid/data-cell-preview-format";
-import { DataValueDialog } from "@/components/data-grid/table-data-grid/data-value-dialog";
 import { useDataValueDialogState } from "@/components/data-grid/table-data-grid/use-data-value-dialog-state";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/querylane-ui/button";
+import { DataValuePreviewDialog } from "./data-value-preview-dialog";
 
 interface JsonPreviewProps {
   columnName: string;
@@ -31,7 +30,7 @@ function JsonPreview({
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2">
       <code
-        className="block min-w-0 flex-1 truncate whitespace-nowrap font-mono text-violet-600 text-xs dark:text-violet-400"
+        className="block min-w-0 flex-1 truncate whitespace-nowrap font-mono text-permission-600 text-xs dark:text-permission-400"
         data-testid={`${columnName}-json-preview`}
         title={title}
       >
@@ -39,12 +38,13 @@ function JsonPreview({
       </code>
       <Button
         aria-label={`View full JSON for ${columnName}`}
-        className="h-5 shrink-0 px-1.5 text-muted-foreground"
+        className="h-5 shrink-0"
         onClick={(event) => {
           event.stopPropagation();
           openDialog();
         }}
         onMouseDown={(event) => event.stopPropagation()}
+        presentation="preview-toolbar"
         size="xs"
         type="button"
         variant="ghost"
@@ -52,24 +52,16 @@ function JsonPreview({
         <Maximize2 className="size-3" />
       </Button>
       {open ? (
-        <DataValueDialog
-          copyLabel="Copy JSON"
-          description={`Formatted ${rawType} value. Scroll the preview for large payloads.`}
+        <DataValuePreviewDialog
+          columnName={columnName}
+          format="JSON"
           isTruncated={isTruncated}
           onOpenChange={onOpenChange}
-          open={open}
           raw={raw}
-          title={`${columnName} JSON`}
+          rawType={rawType}
         >
-          <pre
-            className={cn(
-              "min-h-0 flex-1 overflow-auto rounded-md border bg-muted/30 p-3",
-              "whitespace-pre font-mono text-violet-600 text-xs dark:text-violet-400"
-            )}
-          >
-            {pretty}
-          </pre>
-        </DataValueDialog>
+          {pretty}
+        </DataValuePreviewDialog>
       ) : null}
     </span>
   );

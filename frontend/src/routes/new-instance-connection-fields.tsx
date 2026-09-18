@@ -55,7 +55,10 @@ function ConnectionStringFeedback({
         </p>
       ) : null}
       {warning ? (
-        <p className="text-amber-700 text-sm dark:text-amber-300" role="status">
+        <p
+          className="text-sm text-warning-700 dark:text-warning-300"
+          role="status"
+        >
           {warning}
         </p>
       ) : null}

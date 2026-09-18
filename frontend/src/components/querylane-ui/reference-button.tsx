@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
 
 // Querylane-specific look for buttons that jump to another catalog resource
@@ -13,7 +13,7 @@ function ReferenceButton({
   return (
     <Button
       className={cn(
-        "text-reference underline decoration-dotted underline-offset-4 hover:underline hover:[color:color-mix(in_oklch,var(--reference)_82%,var(--foreground))]",
+        "text-reference underline decoration-dotted underline-offset-4 hover:text-reference-hover hover:underline",
         className
       )}
       variant="link"

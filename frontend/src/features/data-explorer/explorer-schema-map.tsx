@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
-import { Input } from "@/components/ui/input";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import {
   buildSchemaMapModel,
@@ -244,7 +244,7 @@ function SchemaMapToolbar({
       <div className="mr-1 flex items-center gap-2">
         <Network aria-hidden="true" className="size-4 text-primary" />
         <h2 className="font-semibold text-base tracking-tight">Schema map</h2>
-        <Badge className="h-5 font-mono text-xs" variant="outline">
+        <Badge className="h-5" presentation="identifier" variant="outline">
           {databaseLabel}
         </Badge>
       </div>
@@ -266,9 +266,10 @@ function SchemaMapToolbar({
           />
           <Input
             aria-label="Find a table"
-            className="h-8 pl-8"
+            className="h-8"
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             placeholder="Find a table…"
+            presentation="search"
             type="search"
             value={query}
           />
@@ -276,8 +277,9 @@ function SchemaMapToolbar({
         <div className="flex h-8 items-center overflow-hidden rounded-md border">
           <Button
             aria-label="Zoom out"
-            className="h-8 rounded-none border-0"
+            className="h-8"
             onClick={onZoomOut}
+            presentation="segmented"
             size="icon-sm"
             type="button"
             variant="ghost"
@@ -289,8 +291,9 @@ function SchemaMapToolbar({
           </span>
           <Button
             aria-label="Zoom in"
-            className="h-8 rounded-none border-0"
+            className="h-8"
             onClick={onZoomIn}
+            presentation="segmented"
             size="icon-sm"
             type="button"
             variant="ghost"
@@ -346,11 +349,9 @@ function TableNode({
     >
       <Button
         aria-label={`${node.schemaName}.${node.name}`}
-        className={cn(
-          "h-full w-full flex-col items-stretch justify-start gap-0 overflow-hidden rounded-xl border bg-card p-0 text-left font-normal text-foreground shadow-sm hover:bg-card",
-          selected && "ring-2",
-          selected && tone.ring
-        )}
+        className="h-full w-full flex-col items-stretch justify-start overflow-hidden text-left"
+        data-selected={selected}
+        graphTone={node.tone}
         onClick={onSelect}
         onDoubleClick={onOpen}
         onKeyDown={(event) => {
@@ -359,12 +360,13 @@ function TableNode({
             onOpen();
           }
         }}
+        presentation="schema-node"
         type="button"
         variant="ghost"
       >
         <span className="flex h-9 items-center gap-2 border-b bg-muted px-3">
           <span className={cn("size-2 rounded-full", tone.dot)} />
-          <span className="min-w-0 truncate font-mono font-semibold text-[0.8125rem]">
+          <span className="text-(length:--text-caption) min-w-0 truncate font-mono font-semibold">
             {node.name}
           </span>
           <span className="ml-auto shrink-0 font-mono text-muted-foreground text-xs">
@@ -382,7 +384,8 @@ function TableNode({
                   <span className="truncate">{column.name}</span>
                   {column.isPrimaryKey ? (
                     <Badge
-                      className="h-4 shrink-0 bg-chart-4/15 px-1 text-chart-4 text-xs"
+                      className="h-4 shrink-0"
+                      presentation="schema-warning"
                       variant="secondary"
                     >
                       PRIMARY KEY
@@ -390,7 +393,8 @@ function TableNode({
                   ) : null}
                   {column.isForeignKey ? (
                     <Badge
-                      className="h-4 shrink-0 bg-chart-1/15 px-1 text-chart-1 text-xs"
+                      className="h-4 shrink-0"
+                      presentation="schema-info"
                       variant="secondary"
                     >
                       FOREIGN KEY
@@ -433,7 +437,11 @@ function ViewNode({ node }: { node: SchemaMapViewNode }) {
           <span className="min-w-0 truncate font-mono font-semibold text-xs">
             {node.name}
           </span>
-          <Badge className="ml-auto h-4 px-1 text-xs" variant="outline">
+          <Badge
+            className="ml-auto h-4"
+            presentation="compact"
+            variant="outline"
+          >
             View
           </Badge>
         </div>
@@ -538,7 +546,10 @@ function SchemaMapCanvas({
   return (
     <section
       aria-label="Schema relationship map"
-      className="relative min-h-0 flex-1 overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_8%,transparent)_1px,transparent_1px)] bg-[size:22px_22px] bg-background"
+      className={cn(
+        "relative min-h-0 flex-1 overflow-auto bg-background",
+        styles["canvas"]
+      )}
     >
       <svg
         className="block"
@@ -566,7 +577,7 @@ function SchemaMapCanvas({
             />
             <text
               className={cn(
-                "fill-current stroke-background font-mono font-semibold text-[0.75rem]",
+                "text-(length:--text-xs) fill-current stroke-background font-mono font-semibold",
                 TONE_CLASSES[hull.tone].text
               )}
               paintOrder="stroke"
@@ -589,13 +600,13 @@ function SchemaMapCanvas({
             <path
               aria-label={`${edge.fromLabel} references ${edge.toLabel}`}
               className={cn(
-                "fill-none",
                 TONE_CLASSES[edge.tone].edge,
                 selectedTable === null && "opacity-50",
                 isConnected && cn(styles["connected-edge"], "opacity-95"),
                 isDimmed && "opacity-10"
               )}
               d={edge.d}
+              fill="none"
               key={edge.id}
               strokeDasharray={isConnected ? "7 5" : undefined}
               strokeLinecap="round"

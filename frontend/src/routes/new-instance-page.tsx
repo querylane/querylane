@@ -2,14 +2,14 @@
 
 import { Navigate } from "@tanstack/react-router";
 import { Database } from "lucide-react";
-import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/querylane-ui/card";
+import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import type { CreateInstanceWorkflowState } from "@/features/new-instance-workflow";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
 import { CreateInstanceConnectionFields } from "@/routes/new-instance-connection-fields";
@@ -56,7 +56,7 @@ export function CreateInstancePageInner({
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center" presentation="icon">
               <Database className="size-4" />
               Managed Postgres connection
             </CardTitle>
@@ -65,7 +65,7 @@ export function CreateInstancePageInner({
               Querylane internal storage from setup.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent presentation="spacious">
             <SetupFlowExplainer tone="surface" variant="managed" />
             <CreateInstanceConnectionFields
               formErrors={formErrors}

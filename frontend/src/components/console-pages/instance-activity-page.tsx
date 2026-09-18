@@ -16,10 +16,23 @@ import {
   presentSessionTimeline,
 } from "@/components/console-pages/instance-activity-model";
 import { EmptyState } from "@/components/empty-state";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/querylane-ui/sheet";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import {
   DataTable,
@@ -30,17 +43,8 @@ import {
   type DataTableFilterFacet,
   DataTableFilterToolbar,
 } from "@/components/ui/data-table-filter-toolbar";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
-import { DETAIL_DRAWER_WIDTH_CLASS } from "@/lib/drawer-width";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
@@ -53,20 +57,12 @@ type ActivityStat = ReturnType<typeof presentActivityStats>[number];
 type ActivitySessionRow = ReturnType<typeof presentActivitySessionRows>[number];
 type BlockingChain = ReturnType<typeof getActivityBlockingChains>[number];
 
-// Status-badge tones layered on top of the shared `secondary` badge variant,
-// mirroring how RoleKindBadge tints a status without overriding the component.
-const STATE_TONE_CLASS: Record<ActivitySessionRow["stateTone"], string> = {
-  default: "",
-  success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-};
-
 function ActivityStatValue({ tone, value }: ActivityStat) {
   return (
     <span
       className={cn(
         "font-bold font-mono text-xl tabular-nums tracking-tight",
-        tone === "warning" && "text-amber-600 dark:text-amber-400",
+        tone === "warning" && "text-warning-600 dark:text-warning-400",
         tone === "danger" && "text-destructive"
       )}
     >
@@ -118,10 +114,7 @@ function ActivityStatsBar({
 
 function ActivityStateBadge({ row }: { row: ActivitySessionRow }) {
   return (
-    <Badge
-      className={cn("font-mono", STATE_TONE_CLASS[row.stateTone])}
-      variant="secondary"
-    >
+    <Badge presentation="activity" tone={row.stateTone} variant="secondary">
       {row.state}
     </Badge>
   );
@@ -133,13 +126,13 @@ function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
       <Badge variant="outline">waiting · pid {row.pid}</Badge>
       <div className="min-w-0 flex-1 opacity-80">
         <SqlCodeBlock
-          className="text-xs"
           copyable={false}
+          presentation="compact"
           sql={row.query}
           variant="inline"
         />
       </div>
-      <span className="shrink-0 font-mono text-amber-700 text-xs tabular-nums dark:text-amber-300">
+      <span className="shrink-0 font-mono text-warning-700 text-xs tabular-nums dark:text-warning-300">
         waiting {row.duration}
       </span>
     </div>
@@ -175,8 +168,9 @@ function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
         </span>
       </div>
       <SqlCodeBlock
-        className="mt-2 text-xs"
+        className="mt-2"
         copyable={false}
+        presentation="compact"
         sql={chain.blocker.query}
         wrap={true}
       />
@@ -197,7 +191,7 @@ function BlockingChainCard({ chains }: { chains: BlockingChain[] }) {
     <Card size="sm">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <LockKeyhole className="size-4 text-amber-600 dark:text-amber-400" />
+          <LockKeyhole className="size-4 text-warning-600 dark:text-warning-400" />
           <CardTitle>Blocking chains</CardTitle>
           <WarningBadge>
             {chains.length.toLocaleString()}{" "}
@@ -206,7 +200,7 @@ function BlockingChainCard({ chains }: { chains: BlockingChain[] }) {
           </WarningBadge>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-2">
+      <CardContent className="grid" presentation="tight-row">
         {chains.map((chain) => (
           <BlockingChainGroup chain={chain} key={chain.blockerPid} />
         ))}
@@ -271,7 +265,7 @@ const ACTIVITY_COLUMNS: DataTableColumnDef<ActivitySessionRow>[] = [
         className={cn(
           "font-mono text-sm tabular-nums",
           row.original.durationHot
-            ? "text-amber-700 dark:text-amber-300"
+            ? "text-warning-700 dark:text-warning-300"
             : "text-muted-foreground"
         )}
       >
@@ -289,8 +283,8 @@ const ACTIVITY_COLUMNS: DataTableColumnDef<ActivitySessionRow>[] = [
     cell: ({ row }) => (
       <div className="min-w-0 max-w-[420px] overflow-hidden">
         <SqlCodeBlock
-          className="text-xs"
           copyable={false}
+          presentation="compact"
           sql={row.original.query}
           variant="inline"
         />
@@ -325,7 +319,7 @@ function SessionTimelineList({ row }: { row: ActivitySessionRow }) {
             <span
               className={cn(
                 "block size-full rounded-full",
-                item.hot ? "bg-amber-500" : "bg-border"
+                item.hot ? "bg-warning-500" : "bg-border"
               )}
             />
           </span>
@@ -334,7 +328,7 @@ function SessionTimelineList({ row }: { row: ActivitySessionRow }) {
             className={cn(
               "font-mono text-sm tabular-nums",
               item.muted && "text-muted-foreground",
-              item.hot && "text-amber-700 dark:text-amber-300"
+              item.hot && "text-warning-700 dark:text-warning-300"
             )}
           >
             {item.value}
@@ -374,8 +368,8 @@ function SessionPeerCard({
       </div>
       <div className="opacity-80">
         <SqlCodeBlock
-          className="text-xs"
           copyable={false}
+          presentation="compact"
           sql={row.query}
           variant="inline"
         />
@@ -504,11 +498,9 @@ function SessionInspector({
   const isSpinning = useMinimumSpin(refreshing);
   return (
     <>
-      <SheetHeader className="border-border border-b pr-12">
+      <SheetHeader presentation="inspector">
         <div className="flex flex-wrap items-center gap-2">
-          <SheetTitle className="font-mono font-semibold text-sm">
-            Session {row.pid}
-          </SheetTitle>
+          <SheetTitle presentation="query">Session {row.pid}</SheetTitle>
           <CopyIconButton
             ariaLabel="Copy PID"
             size="icon-xs"
@@ -518,9 +510,9 @@ function SessionInspector({
           {row.blockedByPid > 0 ? <WarningBadge>blocked</WarningBadge> : null}
           <Button
             aria-label="Refresh session"
-            className="text-muted-foreground"
             disabled={refreshing}
             onClick={onRefresh}
+            presentation="muted"
             size="icon-xs"
             variant="ghost"
           >
@@ -534,7 +526,7 @@ function SessionInspector({
             />
           </Button>
         </div>
-        <SheetDescription className="break-words font-mono text-xs">
+        <SheetDescription className="break-words" presentation="identifier">
           {row.user} · {row.app} · {row.database} · {row.client}
         </SheetDescription>
       </SheetHeader>
@@ -560,10 +552,8 @@ function SessionInspector({
 function SessionEndedContent({ pid }: { pid: number }) {
   return (
     <>
-      <SheetHeader className="border-border border-b pr-12">
-        <SheetTitle className="font-mono font-semibold text-sm">
-          Session {pid}
-        </SheetTitle>
+      <SheetHeader presentation="inspector">
+        <SheetTitle presentation="query">Session {pid}</SheetTitle>
         <SheetDescription>
           This session is no longer visible in pg_stat_activity.
         </SheetDescription>
@@ -669,11 +659,13 @@ function ActivitySessionSheet({
       open={selectedPid !== null}
     >
       <SheetContent
+        className="overflow-hidden"
+        presentation="detail"
+        side="right"
         // Registry sheets cap at sm:max-w-sm; the session inspector needs a
         // wide drawer, and `ui/` must stay native shadcn output, so the width
         // override lives here.
-        className={cn("gap-0 overflow-hidden p-0", DETAIL_DRAWER_WIDTH_CLASS)}
-        side="right"
+        width="detail"
       >
         <SessionSheetContent
           onRefresh={onRefresh}

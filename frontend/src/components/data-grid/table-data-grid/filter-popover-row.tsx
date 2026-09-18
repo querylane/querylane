@@ -1,14 +1,10 @@
 import { X } from "lucide-react";
 import { useEffect, useEffectEvent, useId, useState } from "react";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
+import { SelectContent, SelectTrigger } from "@/components/querylane-ui/select";
 import { SelectValue } from "@/components/select-extensions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   FILTER_OPERATOR_META,
   getOperatorsForColumn,
@@ -248,22 +244,24 @@ function FilterRow({
       >
         <Input
           aria-label="Filter value"
-          className="h-8 min-w-0 font-mono"
+          className="h-8 min-w-0"
           onBlur={commitValueDraft}
           onChange={(event) => setDraftValue(event.target.value)}
           onKeyDown={(event) => applyOnEnter(event, commitValueDraft)}
           placeholder={getValuePlaceholder(rule, column)}
+          presentation="identifier"
           value={draftValue}
           {...invalidInputProps}
         />
         {operatorMeta.valueCount === 2 ? (
           <Input
             aria-label="Filter end value"
-            className="h-8 min-w-0 font-mono"
+            className="h-8 min-w-0"
             onBlur={commitValue2Draft}
             onChange={(event) => setDraftValue2(event.target.value)}
             onKeyDown={(event) => applyOnEnter(event, commitValue2Draft)}
             placeholder="And"
+            presentation="identifier"
             value={draftValue2}
             {...invalidInputProps}
           />
@@ -278,7 +276,8 @@ function FilterRow({
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
-            className="@lg/filter-popover:col-span-1 col-span-2 w-full font-mono"
+            className="@lg/filter-popover:col-span-1 col-span-2 w-full"
+            presentation="identifier"
             size="sm"
           >
             <SelectValue />
@@ -310,8 +309,9 @@ function FilterRow({
           <Button
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}
-            className="h-8 px-2 text-xs"
+            className="h-8"
             onClick={() => onChange({ negated: !rule.negated })}
+            presentation="compact"
             type="button"
             variant={rule.negated ? "secondary" : "outline"}
           >

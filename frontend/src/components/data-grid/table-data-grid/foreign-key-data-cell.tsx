@@ -5,9 +5,6 @@ import type {
   RenderOpenReferencedTableLink,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
-import { ReferenceButton } from "@/components/querylane-ui/reference-button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -15,7 +12,10 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/querylane-ui/popover";
+import { ReferenceButton } from "@/components/querylane-ui/reference-button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableCell } from "@/features/data-explorer/table-data/table-value-format";
 import {
@@ -189,8 +189,8 @@ function ForeignKeyReferenceContent({
 
   return (
     <>
-      <PopoverHeader className="min-w-0 break-all border-b p-4">
-        <PopoverTitle className="min-w-0 break-all font-mono text-sm">
+      <PopoverHeader className="min-w-0 break-all" presentation="detail">
+        <PopoverTitle className="min-w-0 break-all" presentation="identifier">
           {preview.targetLabel}
         </PopoverTitle>
         <PopoverDescription className="min-w-0 break-all">
@@ -372,12 +372,13 @@ function ForeignKeyDataCell({
           <ReferenceButton
             aria-busy={isAwaitingOpen || undefined}
             aria-label={`Open ${column.columnName} reference ${formatted.display}`}
-            className="h-auto max-w-full justify-start p-0 font-mono text-xs"
+            className="h-auto max-w-full justify-start"
             onBlur={cancelPendingOpenOnBlur}
             onClick={(event) => event.stopPropagation()}
             onFocus={prefetchReferencedRowOnFocus}
             onPointerEnter={scheduleReferencedRowPrefetch}
             onPointerLeave={cancelPendingHoverPrefetch}
+            presentation="reference-cell"
             ref={triggerRef}
             size="xs"
             title={`Open referenced row for ${column.columnName}`}
@@ -390,7 +391,8 @@ function ForeignKeyDataCell({
       {open ? (
         <PopoverContent
           align="start"
-          className="max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] gap-0 overflow-hidden p-0"
+          className="max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-hidden"
+          presentation="detail"
           sideOffset={6}
         >
           <ForeignKeyReferenceContent

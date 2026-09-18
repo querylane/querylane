@@ -55,7 +55,7 @@ export function highlightMatch(text: string, query: string): React.ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded bg-amber-200/40 px-0.5 text-foreground">
+      <mark className="rounded bg-warning-200/40 px-0.5 text-foreground">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}

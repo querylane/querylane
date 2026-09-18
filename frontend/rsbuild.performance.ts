@@ -54,7 +54,7 @@ const managedChunkCacheGroups = {
     name: "shared-ui",
     priority: 28,
     reuseExistingChunk: true,
-    test: /[/\\]src[/\\]components[/\\]ui[/\\]/,
+    test: /[/\\]src[/\\]components[/\\](?:querylane-ui|ui)[/\\]/,
   },
   sqlHighlighter: {
     chunks: "async",

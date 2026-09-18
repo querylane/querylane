@@ -99,6 +99,16 @@ function biomeOverrideBlock(config: string, includeMarker: string): string {
 }
 
 describe("strict tooling policy", () => {
+  test("formats before Biome assists to avoid mixed-line JSX attribute corruption", () => {
+    const scripts = readJsonRecord("package.json")["scripts"];
+    if (!isJsonRecord(scripts)) {
+      throw new Error("Package scripts must be an object.");
+    }
+    expect(scripts["lint:fix"]).toBe(
+      "biome format --write . && ultracite fix && bun run lint:shadcn && bun run suppressions:check"
+    );
+  });
+
   test("pins every audited static-analysis release", () => {
     const packageJson = readJsonRecord("package.json");
     const devDependencies = packageJson["devDependencies"];
@@ -109,6 +119,8 @@ describe("strict tooling policy", () => {
 
     expect(devDependencies).toMatchObject({
       "@biomejs/biome": "2.5.14",
+      "@shadcn/lint": "0.1.0",
+      oxlint: "1.83.0",
       "react-doctor": "0.9.14",
       typescript: "7.0.2",
       ultracite: "7.12.0",

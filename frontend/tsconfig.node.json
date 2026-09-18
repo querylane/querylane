@@ -44,6 +44,7 @@
   },
   "include": [
     "src/import-meta-env.d.ts",
+    "oxlint.config.ts",
     "rsbuild.config.ts",
     "rsbuild.performance.ts",
     "scripts/react-performance-mode.ts",

@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -38,10 +38,7 @@ function GridStatusBadge({ item }: { item: GridStatusItem }) {
   return (
     <Tooltip>
       <TooltipTrigger render={<span />}>
-        <Badge
-          className="gap-1.5 border-destructive/40 text-destructive"
-          variant="outline"
-        >
+        <Badge presentation="error" variant="outline">
           <AlertTriangle className="size-3" />
           {item.label}
         </Badge>

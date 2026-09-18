@@ -8,6 +8,9 @@
     "ultracite/biome/type-aware",
     "ultracite/biome/tanstack"
   ],
+  "css": {
+    "parser": { "cssModules": true }
+  },
   "javascript": {
     "globals": [
       "__API_BASE_URL__",
