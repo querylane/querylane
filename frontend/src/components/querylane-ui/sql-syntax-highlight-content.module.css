@@ -1,9 +1,7 @@
-@reference "../../index.css";
-
 @layer utilities {
   .token {
     color: var(--querylane-sql-token-light, currentColor);
-    @variant dark {
+    &:is(:global(.dark) *) {
       color: var(
         --querylane-sql-token-dark,
         var(--querylane-sql-token-light, currentColor)

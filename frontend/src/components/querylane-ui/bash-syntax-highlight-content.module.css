@@ -1,9 +1,7 @@
-@reference "../../index.css";
-
 @layer utilities {
   .token {
     color: var(--querylane-bash-token-light, currentColor);
-    @variant dark {
+    &:is(:global(.dark) *) {
       color: var(
         --querylane-bash-token-dark,
         var(--querylane-bash-token-light, currentColor)
