@@ -9,7 +9,7 @@ import { logger } from "@/lib/diagnostics";
 type RoutePrefetchClient = Pick<QueryClient, "query">;
 
 /** Start deferred data work; mounted Query observers own loading/error UI. */
-function prefetchRouteQuery<
+async function prefetchRouteQuery<
   QueryFnData,
   QueryError,
   QueryData,
@@ -22,18 +22,17 @@ function prefetchRouteQuery<
     QueryData,
     PrefetchQueryKey
   >
-) {
+): Promise<void> {
   // Query owns freshness, invalidation, in-flight deduplication and errors.
-  return queryClient
-    .query({
+  try {
+    await queryClient.query({
       ...options,
       meta: { ...options.meta, appErrorSurface: "silent" },
-    })
-    .then(() => undefined)
-    .catch((error: unknown) => {
-      // The cache retains the error for mounted observers and their retry UI.
-      logger.warn("Route data prefetch failed", { error });
     });
+  } catch (error) {
+    // The cache retains the error for mounted observers and their retry UI.
+    logger.warn("Route data prefetch failed", { error });
+  }
 }
 
 export type { RoutePrefetchClient };
