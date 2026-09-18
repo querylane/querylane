@@ -24,7 +24,7 @@ const emptyPresentations = cva("", {
       "search-compact": "rounded-md border-0 px-4 py-3.5",
       "search-header": "rounded-md border-0 px-4 py-6",
       "search-bordered": "rounded-md border px-4 py-8",
-      "search-rounded": "rounded-control border px-4 py-8",
+      "search-rounded": "rounded-lg border px-4 py-8",
       chart: "border-0 bg-transparent",
     },
   },

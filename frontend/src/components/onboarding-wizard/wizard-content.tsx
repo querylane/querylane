@@ -22,6 +22,7 @@ import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
+import styles from "./wizard-content.module.css";
 
 const PLACEHOLDER_CARD_IDS = ["queries", "history", "connections"] as const;
 const PROGRESS_RAIL_CARDS = [
@@ -70,7 +71,7 @@ function RailSurface({ children }: { children: ReactNode }) {
       className="relative isolate flex min-h-[240px] w-full max-w-[300px] items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/3 px-5 py-6 shadow-(--shadow-onboarding-panel)"
       data-onboarding-rail-visual=""
     >
-      <div className="onboarding-preview-glow absolute inset-0" />
+      <div className={cn("absolute inset-0", styles["railGlow"])} />
       {children}
     </div>
   );
@@ -81,12 +82,12 @@ function SelectionRail() {
       <div className="relative flex w-full max-w-[320px] flex-col items-center gap-5">
         <div className="relative h-[220px] w-full">
           <div className="absolute top-0 left-6 h-20 w-[76%] rounded-card border border-white/14 bg-white/8 backdrop-blur-md" />
-          <div className="absolute top-16 left-0 h-32 w-full rounded-dialog border border-white/14 bg-white/8 p-5 backdrop-blur-md">
+          <div className="absolute top-16 left-0 h-32 w-full rounded-3xl border border-white/14 bg-white/8 p-5 backdrop-blur-md">
             <div className="mb-4 h-3.5 w-28 rounded-full bg-onboarding-accent" />
             <div className="grid grid-cols-3 gap-4">
               {PLACEHOLDER_CARD_IDS.map((cardId) => (
                 <div
-                  className="h-20 rounded-panel-lg border border-white/8 bg-white/6"
+                  className="h-20 rounded-2xl border border-white/8 bg-white/6"
                   key={cardId}
                 />
               ))}
@@ -156,11 +157,11 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-panel border border-white/8 bg-white/5 p-3 text-center">
+            <div className="rounded-xl border border-white/8 bg-white/5 p-3 text-center">
               <div className="font-semibold text-white text-xl">4</div>
               <div className="text-white/45 text-xs">steps</div>
             </div>
-            <div className="rounded-panel border border-white/8 bg-white/5 p-3 text-center">
+            <div className="rounded-xl border border-white/8 bg-white/5 p-3 text-center">
               <div className="font-semibold text-white text-xl">OK</div>
               <div className="text-white/45 text-xs">status</div>
             </div>
@@ -203,7 +204,7 @@ function ProgressRail({ success = false }: { success?: boolean }) {
             const isDone = index < doneCount;
             return (
               <div
-                className="flex items-center justify-between rounded-panel border border-white/10 bg-white/5 px-3.5 py-2.5"
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5"
                 key={card.key}
               >
                 <div className="space-y-0.5">
@@ -410,8 +411,18 @@ export function OnboardingWizardContent() {
         className="relative min-h-dvh overflow-hidden bg-onboarding-backdrop px-4 py-6 sm:px-6 sm:py-8"
         data-onboarding-shell=""
       >
-        <div className="onboarding-page-glow pointer-events-none absolute inset-0" />
-        <div className="onboarding-dot-grid pointer-events-none absolute inset-0 opacity-20 [background-size:40px_40px]" />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0",
+            styles["backdrop"]
+          )}
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 opacity-20 [background-size:40px_40px]",
+            styles["dotPattern"]
+          )}
+        />
         <div className="relative mx-auto flex min-h-[calc(100dvh-3rem)] w-full max-w-4xl items-center justify-center xl:max-w-5xl">
           <Card
             className="relative w-full overflow-hidden"
@@ -438,7 +449,12 @@ export function OnboardingWizardContent() {
                   className="relative hidden border-white/10 bg-onboarding-grid lg:block lg:border-l"
                   data-onboarding-rail=""
                 >
-                  <div className="onboarding-line-grid pointer-events-none absolute inset-0 opacity-35 [background-size:64px_64px]" />
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute inset-0 opacity-35 [background-size:64px_64px]",
+                      styles["linePattern"]
+                    )}
+                  />
                   <div className="relative flex h-full flex-col items-center justify-center gap-5 px-5 py-6">
                     {railModel.visual}
                     <p className="max-w-[300px] text-center text-white/58 text-xs leading-5 xl:text-sm xl:leading-6">

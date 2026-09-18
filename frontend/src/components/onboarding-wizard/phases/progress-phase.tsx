@@ -7,8 +7,10 @@ import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
+import { cn } from "@/lib/utils";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
+import styles from "./progress-phase.module.css";
 
 const COPY_RESET_MS = 1500;
 function WaitingForConfigBody({
@@ -35,7 +37,12 @@ function WaitingForConfigBody({
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="onboarding-progress-glow relative flex size-24 items-center justify-center rounded-full border border-white/8">
+        <div
+          className={cn(
+            "relative flex size-24 items-center justify-center rounded-full border border-white/8",
+            styles["waitingIndicator"]
+          )}
+        >
           <div className="absolute inset-3 rounded-full border border-white/7" />
           <div className="relative z-10 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/6 text-white/78">
             <FileCog className="size-5" />

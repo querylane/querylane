@@ -7,6 +7,7 @@ import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
 import { createHighlighterCoreSync } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import styles from "./bash-syntax-highlight-content.module.css";
 import { keyedTokenLines } from "./keyed-token-lines";
 
 interface BashSyntaxHighlightProps {
@@ -64,7 +65,7 @@ function BashSyntaxHighlight({ code }: BashSyntaxHighlightProps) {
         <span data-shiki-line="" key={line.key}>
           {line.tokens.map(({ key, token }) => (
             <span
-              className="syntax-bash-token"
+              className={styles["token"]}
               data-shiki-token=""
               key={key}
               style={

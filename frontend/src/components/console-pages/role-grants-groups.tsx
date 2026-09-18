@@ -103,7 +103,7 @@ function ObjectRow({
             <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
               <span className="text-muted-foreground text-xs">granted by</span>
               <span
-                className="text-(length:--text-label) font-mono text-foreground/85"
+                className="text-(length:--text-xs) font-mono text-foreground/85"
                 title={grantor.title}
               >
                 {grantor.text}

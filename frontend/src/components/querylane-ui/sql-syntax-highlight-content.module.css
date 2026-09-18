@@ -1,0 +1,13 @@
+@reference "../../index.css";
+
+@layer utilities {
+  .token {
+    color: var(--querylane-sql-token-light, currentColor);
+    @variant dark {
+      color: var(
+        --querylane-sql-token-dark,
+        var(--querylane-sql-token-light, currentColor)
+      );
+    }
+  }
+}

@@ -8,6 +8,7 @@ import type { ThemedTokenWithVariants } from "shiki";
 import { createHighlighterCoreSync } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import { keyedTokenLines } from "./keyed-token-lines";
+import styles from "./sql-syntax-highlight-content.module.css";
 
 interface SqlSyntaxHighlightProps {
   sql: string;
@@ -67,7 +68,7 @@ export function SqlSyntaxHighlight({ sql: sqlText }: SqlSyntaxHighlightProps) {
         <span data-shiki-line="" key={line.key}>
           {line.tokens.map(({ key, token }) => (
             <span
-              className="syntax-sql-token"
+              className={styles["token"]}
               data-shiki-token=""
               key={key}
               style={

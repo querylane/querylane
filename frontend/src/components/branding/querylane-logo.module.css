@@ -1,27 +1,28 @@
-.querylane-logo-row-track {
+.rowTrack {
   transform-box: fill-box;
   transform-origin: left center;
   animation: querylane-row-shift 1.4s ease-in-out infinite;
   animation-delay: var(--row-pulse-delay);
 }
 
-.querylane-logo-row {
+.row {
   fill: currentColor;
 }
 
-.querylane-logo-active-row {
+.activeRow {
   fill: currentColor;
   opacity: 0;
   animation: querylane-row-sweep-cursor 2.5s linear infinite;
   animation-delay: var(--row-sweep-delay);
 }
 
-.querylane-logo-chevron-track {
+.chevronTrack {
   animation: querylane-chevron-track 2.5s linear infinite;
 }
 
-.querylane-logo-chevron {
-  fill: var(--color-brand-cursor);
+.chevron {
+  --brand-cursor: #60a5fa;
+  fill: var(--brand-cursor);
   opacity: 0.9;
   animation:
     querylane-chevron-scan 0.5s ease-in-out infinite,
@@ -126,26 +127,26 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .querylane-logo-row-track,
-  .querylane-logo-active-row,
-  .querylane-logo-chevron-track,
-  .querylane-logo-chevron {
+  .rowTrack,
+  .activeRow,
+  .chevronTrack,
+  .chevron {
     animation: none;
   }
 
-  .querylane-logo-active-row {
+  .activeRow {
     opacity: 0;
   }
 
-  .querylane-logo-active-row[data-row="2"] {
+  .activeRow[data-row="2"] {
     opacity: 1;
   }
 
-  .querylane-logo-chevron-track {
+  .chevronTrack {
     transform: translate(-1.4px, 0px);
   }
 
-  .querylane-logo-chevron {
+  .chevron {
     opacity: 1;
     transform: translateX(0.8px);
   }

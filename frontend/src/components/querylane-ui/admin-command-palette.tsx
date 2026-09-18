@@ -413,7 +413,7 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="rounded-panel! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
+      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
       label="Search tables, screens, roles, or saved queries"
       shouldFilter={false}
     >
@@ -484,7 +484,7 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
     <CommandPaletteContext.Provider value={controller}>
       {children}
       <CommandDialog
-        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-panel! border border-border p-0 shadow-lg sm:max-w-[600px]"
+        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border border-border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
         onOpenChange={setOpen}
         open={open}

@@ -1,11 +1,11 @@
 import type { ComponentProps, CSSProperties } from "react";
-
 import { cn } from "@/lib/utils";
 import {
   QUERYLANE_LOGO_PALETTES,
   type QuerylaneLogoPalette,
   type QuerylaneLogoProps,
 } from "./querylane-logo.constants";
+import styles from "./querylane-logo.module.css";
 
 interface QuerylaneIconRowGeometry {
   height: number;
@@ -204,12 +204,12 @@ function QuerylaneLogoAnimated({
 
         return (
           <g
-            className="querylane-logo-row-track"
+            className={styles["rowTrack"]}
             key={`${row.x}-${row.y}-${row.width}`}
             style={rowPulseStyle}
           >
             <rect
-              className="querylane-logo-row"
+              className={styles["row"]}
               data-row={index}
               data-testid="querylane-logo-row"
               height={row.height}
@@ -220,7 +220,7 @@ function QuerylaneLogoAnimated({
               y={row.y}
             />
             <rect
-              className="querylane-logo-active-row"
+              className={styles["activeRow"]}
               data-row={index}
               data-testid="querylane-logo-active-row"
               height={row.height}
@@ -234,9 +234,9 @@ function QuerylaneLogoAnimated({
         );
       })}
 
-      <g className="querylane-logo-chevron-track">
+      <g className={styles["chevronTrack"]}>
         <path
-          className="querylane-logo-chevron"
+          className={styles["chevron"]}
           d={QUERYLANE_ICON_CHEVRON_PATH}
           data-testid="querylane-logo-chevron"
         />

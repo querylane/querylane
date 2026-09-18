@@ -546,7 +546,10 @@ function SchemaMapCanvas({
   return (
     <section
       aria-label="Schema relationship map"
-      className="schema-dot-grid relative min-h-0 flex-1 overflow-auto bg-background"
+      className={cn(
+        "relative min-h-0 flex-1 overflow-auto bg-background",
+        styles["canvas"]
+      )}
     >
       <svg
         className="block"
@@ -574,7 +577,7 @@ function SchemaMapCanvas({
             />
             <text
               className={cn(
-                "text-(length:--text-label) fill-current stroke-background font-mono font-semibold",
+                "text-(length:--text-xs) fill-current stroke-background font-mono font-semibold",
                 TONE_CLASSES[hull.tone].text
               )}
               paintOrder="stroke"

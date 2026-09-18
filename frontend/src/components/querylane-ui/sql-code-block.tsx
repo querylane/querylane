@@ -9,7 +9,7 @@ const sqlCodeBlockPresentations = cva("", {
   variants: {
     presentation: {
       definition:
-        "text-(length:--text-label) rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10",
+        "text-(length:--text-xs) rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10",
       compact: "text-xs",
     },
   },
@@ -22,7 +22,7 @@ const sqlCodeBlockVariants = cva("min-w-0 max-w-full font-mono", {
         "rounded-md border bg-muted/40 p-3 text-foreground text-xs leading-relaxed",
       compact:
         "overflow-x-auto whitespace-pre-wrap break-words rounded-md border-0 bg-muted/55 px-3 py-2 text-foreground text-xs leading-relaxed",
-      inline: "text-(length:--text-label) truncate leading-normal",
+      inline: "text-(length:--text-xs) truncate leading-normal",
     },
     copyable: { true: "", false: "" },
     wrap: { true: "", false: "" },

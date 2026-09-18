@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./components/branding/querylane-logo.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
@@ -170,7 +169,6 @@
 }
 
 @theme inline {
-  --color-brand-cursor: #60a5fa;
   --color-permission-700: var(--color-violet-700);
   --color-reference-hover: color-mix(
     in oklch,
@@ -221,7 +219,6 @@
   --text-micro-lg: 0.65625rem;
   --text-label-sm: 0.6875rem;
   --text-label-md: 0.71875rem;
-  --text-label: 0.75rem;
   --text-label-lg: 0.78125rem;
   --text-caption: 0.8125rem;
   --text-caption-lg: 0.84375rem;
@@ -229,14 +226,10 @@
   --text-heading-sm: 1.375rem;
   --radius-control-xs: 3px;
   --radius-control-sm: 4px;
-  --radius-control: 10px;
   --radius-panel-sm: 12px;
-  --radius-panel: 14px;
-  --radius-panel-lg: 16px;
   --radius-card-sm: 18px;
   --radius-card: 20px;
   --radius-dialog-sm: 22px;
-  --radius-dialog: 24px;
   --tracking-label: 0.02em;
   --tracking-control: 0.04em;
   --tracking-section: 0.06em;
@@ -395,89 +388,5 @@
   .route-progress-bar-fill {
     transform: translateX(120%) scaleX(1.4);
     animation: none;
-  }
-}
-
-@utility onboarding-progress-glow {
-  background-image: radial-gradient(
-    circle,
-    rgba(98, 122, 255, 0.14),
-    rgba(7, 9, 15, 0) 65%
-  );
-}
-@utility onboarding-preview-glow {
-  background-image:
-    radial-gradient(
-      circle at 40% 30%,
-      rgba(64, 102, 255, 0.18),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 60% 72%,
-      rgba(129, 71, 255, 0.12),
-      transparent 34%
-    );
-}
-@utility onboarding-page-glow {
-  background-image:
-    radial-gradient(circle at top, rgba(69, 98, 196, 0.12), transparent 32%),
-    radial-gradient(circle at 50% 45%, rgba(63, 93, 194, 0.12), transparent 28%);
-}
-@utility onboarding-dot-grid {
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.08) 1px,
-    transparent 1px
-  );
-}
-@utility onboarding-line-grid {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-}
-@utility schema-dot-grid {
-  background-image: radial-gradient(
-    color-mix(in oklch, var(--foreground) 8%, transparent) 1px,
-    transparent 1px
-  );
-  background-size: 22px 22px;
-}
-@utility transition-sidebar-width {
-  transition-property: width;
-  transition-timing-function: var(--default-transition-timing-function);
-  transition-duration: var(--default-transition-duration);
-}
-@utility transition-sidebar-reveal {
-  transition-property: transform, width;
-  transition-timing-function: var(--default-transition-timing-function);
-  transition-duration: var(--default-transition-duration);
-}
-@utility transition-sidebar-label {
-  transition-property: margin, opacity;
-  transition-timing-function: var(--default-transition-timing-function);
-  transition-duration: var(--default-transition-duration);
-}
-@utility transition-sidebar-menu {
-  transition-property: width, height, padding;
-  transition-timing-function: var(--default-transition-timing-function);
-  transition-duration: var(--default-transition-duration);
-}
-
-@utility syntax-sql-token {
-  color: var(--querylane-sql-token-light, currentColor);
-  @variant dark {
-    color: var(
-      --querylane-sql-token-dark,
-      var(--querylane-sql-token-light, currentColor)
-    );
-  }
-}
-
-@utility syntax-bash-token {
-  color: var(--querylane-bash-token-light, currentColor);
-  @variant dark {
-    color: var(
-      --querylane-bash-token-dark,
-      var(--querylane-bash-token-light, currentColor)
-    );
   }
 }

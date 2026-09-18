@@ -218,7 +218,7 @@ function TriggerCard({
   const whenExpression = triggerWhenExpression(trigger);
   return (
     <div
-      className="flex-none rounded-control border bg-card px-3.5 py-2.75 shadow-xs"
+      className="flex-none rounded-lg border bg-card px-3.5 py-2.75 shadow-xs"
       data-trigger-name={trigger.triggerName}
     >
       <div className="flex flex-wrap items-center gap-2">
