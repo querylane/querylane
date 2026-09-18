@@ -227,8 +227,9 @@ function collectBundleBudgetStats({
         deferredChartsPaths.has(asset.path)
       )
   );
+  const initialPaths = new Set(files);
   const asyncScripts = allAssets.filter(
-    (asset) => asset.path.endsWith(".js") && !files.includes(asset.path)
+    (asset) => asset.path.endsWith(".js") && !initialPaths.has(asset.path)
   );
 
   const initialGzip = initialAssets.reduce((sum, asset) => sum + asset.gzip, 0);

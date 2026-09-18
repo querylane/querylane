@@ -1,0 +1,26 @@
+diff --git a/dist/cli/chunk-4ae4f395.js b/dist/cli/chunk-4ae4f395.js
+index 37f4114918925e796a2e885b79a462abc3ca02ba..97f88482b6bf8d5c53058fed5539bc29b999acb2 100644
+--- a/dist/cli/chunk-4ae4f395.js
++++ b/dist/cli/chunk-4ae4f395.js
+@@ -1174,7 +1174,7 @@ export function getStaticPaths() {
+   return navVariants(data, hiddenDefaultLocale(data.config.i18n)).flatMap(
+     ({ locale, navigation, version }) =>
+       [...navGroupIds(navigation.sidebar)]
+-        .filter(([node]) => (node.display ?? "flat") !== "flat")
++        .filter(([node]) => node.kind === "group" && (node.display ?? "flat") !== "flat")
+         .map(([, id]) => ({ params: { id, locale, version } }))
+   );
+ }
+diff --git a/src/astro/templates.ts b/src/astro/templates.ts
+index 0058857afbd9a7b00ec1a53eef32a372edc81a73..376d2fc3c055688b48a521ba50058e4ab27e93ed 100644
+--- a/src/astro/templates.ts
++++ b/src/astro/templates.ts
+@@ -1728,7 +1728,7 @@ export function getStaticPaths() {
+   return navVariants(data, hiddenDefaultLocale(data.config.i18n)).flatMap(
+     ({ locale, navigation, version }) =>
+       [...navGroupIds(navigation.sidebar)]
+-        .filter(([node]) => (node.display ?? "flat") !== "flat")
++        .filter(([node]) => node.kind === "group" && (node.display ?? "flat") !== "flat")
+         .map(([, id]) => ({ params: { id, locale, version } }))
+   );
+ }

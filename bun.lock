@@ -11,6 +11,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "blume@1.7.1": "patches/blume@1.7.1.patch",
+  },
   "overrides": {
     "@scalar/openapi-parser": "0.29.1",
   },

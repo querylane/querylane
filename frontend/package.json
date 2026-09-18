@@ -22,6 +22,7 @@
     "fix": "bun run lint:fix",
     "format": "bun run lint:fix",
     "postinstall": "if [ \"$NODE_ENV\" = \"production\" ] || [ \"$npm_config_production\" = \"true\" ] || ! command -v tsc >/dev/null 2>&1; then exit 0; fi; bun run type:check:ui",
+    "lighthouse:autorun": "lhci autorun --config lighthouserc.cjs",
     "lighthouse:ci": "bun run scripts/run-lighthouse-ci.ts",
     "lighthouse:public": "LIGHTHOUSE_RUNS=1 LIGHTHOUSE_UPLOAD_TARGET=temporary-public-storage bun run scripts/run-lighthouse-ci.ts",
     "lighthouse:summary": "bun run scripts/lighthouse-summary.ts ./dist/lighthouse",

@@ -438,21 +438,22 @@ function useResourceListVirtualizer({
   virtualItems: VirtualItem[];
 } {
   "use no memo";
-  const [, rerender] = useReducer((tick: number) => tick + 1, 0);
-  const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(
-    null
+  const [{ virtualizer }, rerender] = useReducer(
+    (state: { virtualizer: Virtualizer<HTMLDivElement, Element> }) => ({
+      ...state,
+    }),
+    null,
+    () => ({
+      virtualizer: new Virtualizer<HTMLDivElement, Element>({
+        count: items.length,
+        estimateSize: (index) => estimateResourceListItemSize(items[index]),
+        getScrollElement: () => scrollElement,
+        observeElementOffset,
+        observeElementRect: observeResourceListRect,
+        scrollToFn: elementScroll,
+      }),
+    })
   );
-  if (virtualizerRef.current === null) {
-    virtualizerRef.current = new Virtualizer<HTMLDivElement, Element>({
-      count: items.length,
-      estimateSize: (index) => estimateResourceListItemSize(items[index]),
-      getScrollElement: () => scrollElement,
-      observeElementOffset,
-      observeElementRect: observeResourceListRect,
-      scrollToFn: elementScroll,
-    });
-  }
-  const virtualizer = virtualizerRef.current;
   virtualizer.setOptions({
     count: items.length,
     estimateSize: (index) => estimateResourceListItemSize(items[index]),

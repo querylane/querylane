@@ -107,20 +107,20 @@ function lintableChangedFiles(
   repoPaths: readonly string[],
   fileSystem: FileSystemAccess = nodeFileSystem
 ) {
-  return repoPaths
-    .map(frontendRelativePath)
-    .filter((path): path is string => path !== null)
-    .filter((path) => !isGeneratedOrRegistryPath(path))
-    .filter(hasLintableExtension)
-    .filter((path) => {
-      try {
-        return (
-          fileSystem.existsSync(path) && fileSystem.statSync(path).isFile()
-        );
-      } catch {
-        return false;
-      }
-    });
+  return repoPaths.map(frontendRelativePath).filter((path): path is string => {
+    if (
+      path === null ||
+      isGeneratedOrRegistryPath(path) ||
+      !hasLintableExtension(path)
+    ) {
+      return false;
+    }
+    try {
+      return fileSystem.existsSync(path) && fileSystem.statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  });
 }
 
 function changedRepoFiles(baseRef: string, runner: CommandRunner) {
