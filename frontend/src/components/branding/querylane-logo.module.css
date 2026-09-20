@@ -21,7 +21,7 @@
 }
 
 .chevron {
-  --brand-cursor: #60a5fa;
+  composes: palette from "./brand-tokens.module.css";
   fill: var(--brand-cursor);
   opacity: 0.9;
   animation:

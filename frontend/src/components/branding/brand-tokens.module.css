@@ -1,0 +1,4 @@
+/* Keep the established sRGB brand color; Tailwind 4 blue-400 differs. */
+.palette {
+  --brand-cursor: #60a5fa;
+}

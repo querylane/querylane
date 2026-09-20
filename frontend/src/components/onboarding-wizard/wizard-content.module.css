@@ -1,32 +1,52 @@
 .railGlow {
+  composes: palette from "./onboarding-tokens.module.css";
   background-image:
     radial-gradient(
       circle at 40% 30%,
-      rgba(64, 102, 255, 0.18),
+      var(--onboarding-rail-blue-glow),
       transparent 40%
     ),
     radial-gradient(
       circle at 60% 72%,
-      rgba(129, 71, 255, 0.12),
+      var(--onboarding-rail-violet-glow),
       transparent 34%
     );
 }
 
 .backdrop {
+  composes: palette from "./onboarding-tokens.module.css";
   background-image:
-    radial-gradient(circle at top, rgba(69, 98, 196, 0.12), transparent 32%),
-    radial-gradient(circle at 50% 45%, rgba(63, 93, 194, 0.12), transparent 28%);
+    radial-gradient(
+      circle at top,
+      var(--onboarding-backdrop-top-glow),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 50% 45%,
+      var(--onboarding-backdrop-center-glow),
+      transparent 28%
+    );
 }
 
 .dotPattern {
+  composes: palette from "./onboarding-tokens.module.css";
   background-image: radial-gradient(
-    rgba(255, 255, 255, 0.08) 1px,
+    var(--onboarding-pattern-ink) 1px,
     transparent 1px
   );
 }
 
 .linePattern {
+  composes: palette from "./onboarding-tokens.module.css";
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      var(--onboarding-pattern-ink) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--onboarding-pattern-ink) 1px,
+      transparent 1px
+    );
 }
