@@ -112,7 +112,7 @@ describe("Rsbuild config loading", () => {
           chunks: "all",
           maxAsyncRequests: 30,
           maxInitialRequests: 20,
-          minSize: 20 * 1024,
+          minSize: 10 * 1024,
         },
       });
     } finally {

@@ -4,7 +4,8 @@ const KIB = 1024;
 const ENFORCED_SPLIT_SIZE_KIB = 80;
 const MAX_ASYNC_CHUNK_REQUESTS = 30;
 const MAX_INITIAL_CHUNK_REQUESTS = 20;
-const MIN_SPLIT_SIZE_KIB = 20;
+// Extract smaller shared modules instead of duplicating them across route chunks.
+const MIN_SPLIT_SIZE_KIB = 10;
 
 const managedChunkCacheGroups = {
   databaseVisualization: {
