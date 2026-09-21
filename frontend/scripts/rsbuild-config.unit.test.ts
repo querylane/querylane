@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createRsbuild, loadConfig } from "@rsbuild/core";
 import { describe, expect, rs, test } from "@rstest/core";
+import { managedSplitChunksConfig } from "../rsbuild.performance";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
 
@@ -29,6 +30,26 @@ function isRsdoctorPlugin(
 }
 
 describe("Rsbuild config loading", () => {
+  test("shares registry and Querylane UI without collecting feature modules", () => {
+    const { sharedUi } = managedSplitChunksConfig.cacheGroups;
+    expect(sharedUi).toMatchObject({ chunks: "async", minChunks: 2 });
+
+    for (const source of [
+      "/app/src/components/ui/button.tsx",
+      "/app/src/components/querylane-ui/button.tsx",
+      "C:\\app\\src\\components\\ui\\button.tsx",
+      "C:\\app\\src\\components\\querylane-ui\\button.tsx",
+    ]) {
+      expect(sharedUi.test.test(source)).toBe(true);
+    }
+    for (const source of [
+      "/app/src/features/data-explorer/data-explorer-page.tsx",
+      "/app/src/components/querylane-ui-extra/button.tsx",
+    ]) {
+      expect(sharedUi.test.test(source)).toBe(false);
+    }
+  });
+
   test("tracks imported config files for cache invalidation and restarts", async () => {
     const rsbuild = await createLoadedRsbuild();
 
@@ -91,7 +112,7 @@ describe("Rsbuild config loading", () => {
           chunks: "all",
           maxAsyncRequests: 30,
           maxInitialRequests: 20,
-          minSize: 20 * 1024,
+          minSize: 10 * 1024,
         },
       });
     } finally {

@@ -48,7 +48,7 @@ test("initializes once on first SQL tab activation and reuses it on remount", as
     "shiki/engine/javascript"
   );
   const { SqlCodeBlock, SqlSyntaxHighlight } = await import(
-    "@/components/ui/sql-code-block"
+    "@/components/querylane-ui/sql-code-block"
   );
   const sql = "-- Customers\nSELECT '台北' AS city;";
 

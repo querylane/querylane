@@ -38,13 +38,13 @@ function ColumnHeader({
         {isFrozen ? (
           <Lock
             aria-label="Frozen column"
-            className="size-3 shrink-0 text-sky-500 dark:text-sky-400"
+            className="size-3 shrink-0 text-reference-500 dark:text-reference-400"
           />
         ) : null}
         {isPrimaryKey ? (
           <KeyRound
             aria-label="Primary key"
-            className="size-3 shrink-0 text-amber-500"
+            className="size-3 shrink-0 text-warning-500"
           />
         ) : null}
         <span
@@ -55,7 +55,7 @@ function ColumnHeader({
         >
           {column.columnName}
         </span>
-        <span className="min-w-0 truncate font-mono text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+        <span className="text-(length:--text-micro) min-w-0 truncate font-mono text-muted-foreground uppercase tracking-wide">
           {column.rawType}
         </span>
         {sortDirection ? (

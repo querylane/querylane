@@ -2,7 +2,7 @@ import { Funnel, Plus } from "lucide-react";
 import { useEffect, useEffectEvent, useId, useReducer } from "react";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
 import { RulesEditor } from "@/components/data-grid/table-data-grid/filter-popover-rules-editor";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -176,7 +176,8 @@ function FilterPopover({
             Filter
             {rules.length > 0 ? (
               <Badge
-                className="ml-0.5 h-4 px-1 font-mono text-xs"
+                className="ml-0.5 h-4"
+                presentation="count"
                 variant="secondary"
               >
                 {rules.length}

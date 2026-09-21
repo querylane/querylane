@@ -14,8 +14,8 @@ import {
   ratioToPercent,
   toSortedSchemas,
 } from "@/components/console-pages/database-overview-model";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/querylane-ui/button";
+import { Card, CardContent, CardHeader } from "@/components/querylane-ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRows } from "@/features/data-explorer/format-rows";
@@ -60,7 +60,7 @@ function Eyebrow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
+      <span className="text-(length:--text-label-sm) font-medium text-muted-foreground uppercase tracking-heading">
         {children}
       </span>
       {right ? (
@@ -163,11 +163,11 @@ function StatCell({
         </div>
       ) : null}
       <div className="relative flex flex-col gap-1.5">
-        <span className="font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-[0.08em]">
+        <span className="text-(length:--text-label-sm) font-medium text-muted-foreground uppercase tracking-heading">
           {label}
         </span>
         <div className="flex flex-col gap-0.5">
-          <span className="font-mono font-semibold text-[1.375rem] text-foreground tabular-nums leading-none tracking-tight">
+          <span className="text-(length:--text-heading-sm) font-mono font-semibold text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
           {sub ? (
@@ -243,7 +243,10 @@ function DatabaseStatStrip({
   const cellBorders =
     "border-border max-md:odd:border-r max-md:nth-[-n+2]:border-b";
   return (
-    <Card className="grid grid-cols-2 gap-0 overflow-hidden py-0 md:grid-cols-4 md:divide-x md:divide-border">
+    <Card
+      className="grid grid-cols-2 overflow-hidden md:grid-cols-4"
+      presentation="split"
+    >
       <StatCell
         className={cellBorders}
         label="Total size"
@@ -280,7 +283,10 @@ function DatabaseStatStrip({
 
 function SlowQueriesEmptyState() {
   return (
-    <CardContent className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
+    <CardContent
+      className="flex flex-1 flex-col items-center justify-center text-center"
+      presentation="empty"
+    >
       <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
         <Gauge aria-hidden="true" className="size-5 text-muted-foreground" />
       </div>
@@ -288,7 +294,7 @@ function SlowQueriesEmptyState() {
         <p className="font-medium text-foreground text-sm">
           Query statistics are off
         </p>
-        <p className="max-w-sm text-[0.8125rem] text-muted-foreground">
+        <p className="text-(length:--text-caption) max-w-sm text-muted-foreground">
           Install pg_stat_statements to rank queries by execution time.
         </p>
       </div>
@@ -308,12 +314,13 @@ function SlowQueryRow({
 }) {
   return (
     <Button
-      className="h-auto w-full flex-col items-start gap-1.5 whitespace-normal rounded-none px-6 py-3 text-left font-normal"
+      className="h-auto w-full flex-col items-start whitespace-normal text-left"
       onClick={onOpen}
+      presentation="overview-tab"
       type="button"
       variant="ghost"
     >
-      <code className="w-full truncate font-mono text-[0.8125rem] text-foreground">
+      <code className="text-(length:--text-caption) w-full truncate font-mono text-foreground">
         {query.query || "(query text unavailable)"}
       </code>
       <span className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
@@ -350,7 +357,7 @@ function SlowQueriesBody({
     return <SlowQueriesEmptyState />;
   }
   return (
-    <CardContent className="flex flex-col divide-y divide-border/60 p-0">
+    <CardContent className="flex flex-col" presentation="divided">
       {insights.topQueries.map((query) => (
         <SlowQueryRow
           key={`${query.queryId}-${query.query}`}
@@ -374,7 +381,7 @@ function SlowQueriesCard({
   onOpenInsights: () => void;
 }) {
   return (
-    <Card className={cn("@container flex-1 gap-4", className)}>
+    <Card className={cn("@container flex-1", className)} presentation="compact">
       <CardHeader>
         <Eyebrow
           right={
@@ -431,11 +438,11 @@ function TopTableRow({
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="min-w-0 flex-1 truncate font-mono text-[0.8125rem]">
+      <code className="text-(length:--text-caption) min-w-0 flex-1 truncate font-mono">
         <span className="text-muted-foreground">{object.schemaId}.</span>
         <span className="text-foreground">{object.objectId}</span>
       </code>
-      <span className="w-16 shrink-0 text-right font-mono text-[0.8125rem] text-foreground tabular-nums">
+      <span className="text-(length:--text-caption) w-16 shrink-0 text-right font-mono text-foreground tabular-nums">
         {formatBytes(object.sizeBytes)}
       </span>
     </Link>
@@ -462,7 +469,7 @@ function TopTablesBody({
   }
   if (objects.length === 0) {
     return (
-      <p className="px-6 pb-2 text-[0.8125rem] text-muted-foreground">
+      <p className="text-(length:--text-caption) px-6 pb-2 text-muted-foreground">
         {partial
           ? "No user tables or views appear in this catalog sample."
           : "No user tables or views found."}
@@ -496,11 +503,11 @@ function TopTablesCard({
     context = partial ? "partial sample" : "by size";
   }
   return (
-    <Card className={cn("gap-4", className)}>
+    <Card className={className} presentation="compact">
       <CardHeader>
         <Eyebrow right={context}>Top tables</Eyebrow>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent presentation="flush">
         <TopTablesBody
           isPending={isPending}
           objects={objects}
@@ -539,7 +546,7 @@ function SchemaCardRow({
           aria-hidden="true"
           className="size-3.5 shrink-0 text-muted-foreground"
         />
-        <code className="truncate font-medium font-mono text-[0.8125rem] text-foreground">
+        <code className="text-(length:--text-caption) truncate font-medium font-mono text-foreground">
           {schema.schemaId}
         </code>
       </span>
@@ -574,7 +581,7 @@ function SchemasCardBody({
   }
   if (schemas.length === 0) {
     return (
-      <p className="px-6 pb-2 text-[0.8125rem] text-muted-foreground">
+      <p className="text-(length:--text-caption) px-6 pb-2 text-muted-foreground">
         {partial
           ? "No schemas appear in this catalog sample."
           : "No schemas found."}
@@ -624,12 +631,14 @@ function SchemasCardBody({
 function SchemasCard({
   catalog,
   className,
+  layout,
   isPending,
   params,
   wide,
 }: {
   catalog: DatabaseCatalogResult | undefined;
   className?: string | undefined;
+  layout?: React.ComponentProps<typeof Card>["layout"];
   isPending: boolean;
   params: ExplorerParams;
   wide: boolean;
@@ -640,11 +649,15 @@ function SchemasCard({
     ? undefined
     : formatCatalogCount(schemas.length, partial);
   return (
-    <Card className={cn("@container gap-4", className)}>
+    <Card
+      className={cn("@container", className)}
+      layout={layout}
+      presentation="compact"
+    >
       <CardHeader>
         <Eyebrow right={count}>Schemas</Eyebrow>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent presentation="flush">
         <SchemasCardBody
           isPending={isPending}
           params={params}
@@ -685,11 +698,11 @@ function OtherDatabaseRow({
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="min-w-0 flex-1 truncate font-medium font-mono text-[0.8125rem] text-foreground">
+      <code className="text-(length:--text-caption) min-w-0 flex-1 truncate font-medium font-mono text-foreground">
         {database.displayName}
       </code>
       {database.isSystemDatabase ? (
-        <span className="shrink-0 text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+        <span className="text-(length:--text-micro) shrink-0 text-muted-foreground uppercase tracking-wide">
           system
         </span>
       ) : null}
@@ -702,12 +715,14 @@ function OtherDatabaseRow({
 
 function OtherDatabasesCard({
   className,
+  layout,
   currentDatabaseId,
   databases,
   instanceId,
   isPending,
 }: {
   className?: string | undefined;
+  layout?: React.ComponentProps<typeof Card>["layout"];
   currentDatabaseId: string;
   databases: Database[];
   instanceId: string;
@@ -717,13 +732,13 @@ function OtherDatabasesCard({
   const visible =
     overflow > 0 ? databases.slice(0, MAX_DATABASE_ROWS) : databases;
   return (
-    <Card className={cn("gap-4", className)}>
+    <Card className={className} layout={layout} presentation="compact">
       <CardHeader>
         <Eyebrow right={isPending ? undefined : String(databases.length)}>
           Databases on this instance
         </Eyebrow>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent presentation="flush">
         {isPending ? (
           <div className="px-6 pb-2">
             <CardLoadingRows label="Loading databases" />

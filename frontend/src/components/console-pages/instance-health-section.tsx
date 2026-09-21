@@ -15,9 +15,9 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/components/querylane-ui/collapsible";
+import { Skeleton } from "@/components/querylane-ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import { cn } from "@/lib/utils";
 import type { Status } from "@/protogen/google/rpc/status_pb";
@@ -30,7 +30,7 @@ const TONE_DOT_CLASS: Record<HealthRowTone, string> = {
   error: "bg-destructive",
   muted: "bg-muted-foreground/40",
   ok: "bg-success",
-  warning: "bg-amber-500",
+  warning: "bg-warning-500",
 };
 
 const TONE_SR_LABEL: Record<HealthRowTone, string> = {
@@ -45,12 +45,14 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
   return (
     <li className="list-none">
       <Collapsible
-        className="group/health-check rounded-md data-[tone=error]:border data-[tone=error]:border-destructive/30 data-[tone=error]:bg-destructive/5"
+        className="group/health-check"
         data-tone={row.tone}
+        presentation="health"
       >
         <CollapsibleTrigger
           aria-controls={detailId}
-          className="group/health-row flex w-full items-center gap-3 rounded-md p-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 group-data-[tone=error]/health-check:focus-visible:ring-destructive/30 group-data-[tone=error]/health-check:hover:bg-destructive/10"
+          className="group/health-row flex w-full items-center text-left"
+          presentation="health"
         >
           {row.tone === "error" ? (
             <AlertCircle
@@ -70,7 +72,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
           <span className="w-32 shrink-0 truncate font-medium text-foreground text-sm sm:w-40">
             {row.label}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
+          <span className="text-(length:--text-caption) min-w-0 flex-1 truncate text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
             {row.summary}
           </span>
           <ChevronDown
@@ -88,7 +90,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
                 <dt className="text-muted-foreground text-xs group-data-[tone=error]/health-check:text-destructive/80">
                   {entry.label}
                 </dt>
-                <dd className="min-w-0 break-words text-[0.8125rem] text-foreground tabular-nums [overflow-wrap:anywhere] group-data-[tone=error]/health-check:text-destructive">
+                <dd className="text-(length:--text-caption) min-w-0 break-words text-foreground tabular-nums [overflow-wrap:anywhere] group-data-[tone=error]/health-check:text-destructive">
                   {entry.value}
                 </dd>
               </div>
@@ -113,7 +115,7 @@ function HealthRowsSkeleton() {
     <output aria-label="Loading health checks" className="flex flex-col">
       {SKELETON_ROW_KEYS.map((key) => (
         <div className="flex items-center gap-3 px-2 py-2.5" key={key}>
-          <Skeleton className="size-2 rounded-full" />
+          <Skeleton className="size-2" presentation="round" />
           <Skeleton className="h-3.5 w-32 sm:w-40" />
           <Skeleton className="h-3.5 max-w-72 flex-1" />
         </div>
@@ -124,7 +126,7 @@ function HealthRowsSkeleton() {
 
 function InstanceFactsHeader({ facts }: { facts: string[] }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-foreground/90">
+    <p className="text-(length:--text-caption) flex flex-wrap items-center gap-x-2 gap-y-1 text-foreground/90">
       {facts.map((fact, index) => (
         <span className="inline-flex items-center gap-2" key={fact}>
           {index > 0 ? (

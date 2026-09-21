@@ -89,6 +89,7 @@ describe("changed-file lint selection", () => {
       "frontend/biome.jsonc",
       "frontend/bun.lock",
       "frontend/doctor.config.ts",
+      "frontend/oxlint.config.ts",
       "frontend/package.json",
       "frontend/react-doctor.config.json",
       "frontend/scripts/lint-changed.ts",

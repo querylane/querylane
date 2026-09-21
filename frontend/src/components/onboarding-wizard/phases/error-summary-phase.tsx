@@ -2,8 +2,8 @@ import { AlertTriangle, ArrowLeft, RefreshCw, Settings2 } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
 import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
+import { Button } from "@/components/querylane-ui/button";
 import { RetryActionButton } from "@/components/retry-action-button";
-import { Button } from "@/components/ui/button";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
@@ -101,13 +101,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
 
   if (errorKind === "configuration") {
     return (
-      <div className="flex items-start gap-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+      <div className="flex items-start gap-4 rounded-xl border border-warning-400/20 bg-warning-500/6 px-4 py-3">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-400" />
         <div className="space-y-1">
-          <div className="font-medium text-amber-100 text-base">
+          <div className="font-medium text-base text-warning-100">
             Likely a configuration issue
           </div>
-          <p className="text-amber-100/70 text-sm">
+          <p className="text-sm text-warning-100/70">
             This error usually means the connection details need adjusting.
             Click <strong>Reconfigure</strong> to update your settings.
           </p>
@@ -117,13 +117,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
   }
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-blue-400/20 bg-blue-500/[0.06] px-4 py-3">
-      <RefreshCw className="mt-0.5 size-4 shrink-0 text-blue-400" />
+    <div className="flex items-start gap-4 rounded-xl border border-info-400/20 bg-info-500/6 px-4 py-3">
+      <RefreshCw className="mt-0.5 size-4 shrink-0 text-info-400" />
       <div className="space-y-1">
-        <div className="font-medium text-base text-blue-100">
+        <div className="font-medium text-base text-info-100">
           May be a transient issue
         </div>
-        <p className="text-blue-100/70 text-sm">
+        <p className="text-info-100/70 text-sm">
           This could be a temporary problem. Try clicking <strong>Retry</strong>{" "}
           first. If it persists, reconfigure your connection.
         </p>
@@ -149,11 +149,12 @@ function ErrorSummaryFooter({
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-2">
         <Button
-          className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+          className="h-9"
           onClick={() => {
             clearStreamFailure();
             goBackToMethodSelection();
           }}
+          presentation="onboarding-secondary"
           variant="ghost"
         >
           <ArrowLeft className="size-4" />
@@ -161,11 +162,12 @@ function ErrorSummaryFooter({
         </Button>
         {errorKind === "storage_full" ? null : (
           <Button
-            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9"
             onClick={() => {
               clearStreamFailure();
               goToConfigure();
             }}
+            presentation="onboarding-secondary"
             variant="ghost"
           >
             <Settings2 className="size-4" />
@@ -174,7 +176,7 @@ function ErrorSummaryFooter({
         )}
       </div>
       <RetryActionButton
-        className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+        className="h-9"
         label="Retry"
         onRetry={() =>
           waitForNextFrame().then(() => {
@@ -182,6 +184,7 @@ function ErrorSummaryFooter({
           })
         }
         pendingLabel="Retrying…"
+        presentation="onboarding-primary"
         variant="default"
       />
     </div>
@@ -246,10 +249,10 @@ export function ErrorSummaryPhase() {
 
         {/* Failed step detail */}
         {failedStepName ? (
-          <div className="rounded-xl border border-red-400/18 bg-red-500/[0.06] px-4 py-3">
+          <div className="rounded-xl border border-negative-400/18 bg-negative-500/6 px-4 py-3">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="rounded-full bg-red-500/18 px-3 py-1 font-medium text-red-200 text-sm">
+                <span className="rounded-full bg-negative-500/18 px-3 py-1 font-medium text-negative-200 text-sm">
                   Failed step
                 </span>
                 <span className="font-medium text-base text-white">
@@ -257,7 +260,9 @@ export function ErrorSummaryPhase() {
                 </span>
               </div>
               {failedStepError && errorKind !== "storage_full" ? (
-                <p className="text-red-200/80 text-sm">{failedStepError}</p>
+                <p className="text-negative-200/80 text-sm">
+                  {failedStepError}
+                </p>
               ) : null}
             </div>
           </div>

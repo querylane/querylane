@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { DataTable } from "@/components/querylane-ui/data-table";
 import {
-  DataTable,
   type DataTableColumnDef,
   DataTableFilter,
   SortableHeader,
@@ -362,8 +362,8 @@ function ColumnsInventoryTable({
       <DataTable
         columns={columnInventoryColumns}
         data={visibleRows}
+        density="metadata"
         emptyResourceName="columns"
-        tableClassName="text-sm"
         tableKey="data-explorer-table-columns"
       />
     </div>

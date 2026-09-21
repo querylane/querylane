@@ -1,6 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "@rstest/core";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 
 afterEach(() => {
   cleanup();
@@ -17,7 +17,9 @@ SELECT 'active' AS status;`;
     const { container } = render(<SqlCodeBlock sql={sql} />);
 
     await waitFor(() => {
-      expect(container.querySelector("[data-syntax-highlighter]")).not.toBeNull();
+      expect(
+        container.querySelector("[data-syntax-highlighter]")
+      ).not.toBeNull();
     });
     const code = container.querySelector(
       'code.language-sql[data-syntax-highlighter="shiki"]'
@@ -31,9 +33,7 @@ SELECT 'active' AS status;`;
     expect(tokenSpans.length).toBeGreaterThan(8);
     expect(
       tokenSpans.some((token) =>
-        token
-          .getAttribute("style")
-          ?.includes("--querylane-sql-token-light")
+        token.getAttribute("style")?.includes("--querylane-sql-token-light")
       )
     ).toBe(true);
     expect(

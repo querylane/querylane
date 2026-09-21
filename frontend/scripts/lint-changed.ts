@@ -32,7 +32,7 @@ const LINTABLE_EXTENSIONS = new Set([
 const GENERATED_OR_REGISTRY_PREFIXES = ["src/components/ui/", "src/protogen/"];
 const GENERATED_FILES = new Set(["src/routeTree.gen.ts"]);
 const FULL_STATIC_ANALYSIS_PATH_PATTERN =
-  /^(?:\.github\/workflows\/frontend-ci\.yml|frontend\/(?:biome\.jsonc|bun\.lock|doctor\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|strict-tooling-policy\.unit\.test)\.ts))$/u;
+  /^(?:\.github\/workflows\/frontend-ci\.yml|frontend\/(?:biome\.jsonc|bun\.lock|doctor\.config\.ts|oxlint\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|strict-tooling-policy\.unit\.test)\.ts))$/u;
 
 interface FileSystemAccess {
   existsSync: (path: string) => boolean;
@@ -107,18 +107,22 @@ function lintableChangedFiles(
   repoPaths: readonly string[],
   fileSystem: FileSystemAccess = nodeFileSystem
 ) {
-  return repoPaths.map(frontendRelativePath).filter((path): path is string => {
+  return repoPaths.flatMap((repoPath) => {
+    const path = frontendRelativePath(repoPath);
     if (
       path === null ||
       isGeneratedOrRegistryPath(path) ||
       !hasLintableExtension(path)
     ) {
-      return false;
+      return [];
     }
     try {
-      return fileSystem.existsSync(path) && fileSystem.statSync(path).isFile();
+      return fileSystem.existsSync(path) && fileSystem.statSync(path).isFile()
+        ? [path]
+        : [];
     } catch {
-      return false;
+      // A concurrently removed file is no longer a lint target.
+      return [];
     }
   });
 }

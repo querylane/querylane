@@ -1,14 +1,14 @@
 "use client";
 
 import { RefreshCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
-} from "@/components/ui/card";
+} from "@/components/querylane-ui/card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ChunkLoadRecoveryPageProps {
@@ -36,7 +36,7 @@ export function ChunkLoadRecoveryPage({
       )}
     >
       <Card className={cn("w-full max-w-xl", className)}>
-        <CardHeader className="gap-3">
+        <CardHeader presentation="spacious">
           <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
             <RefreshCcw aria-hidden="true" className="size-5" />
           </div>
@@ -51,7 +51,7 @@ export function ChunkLoadRecoveryPage({
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent presentation="stacked">
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-muted-foreground text-sm">
             Your browser tried to open an app file from an older deployment. A
             refresh loads the newest files and keeps you on this page.

@@ -1,18 +1,18 @@
 import { Layers, type LucideIcon, RefreshCw, Terminal } from "lucide-react";
 import { useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/querylane-ui/alert";
 import { BashSyntaxHighlight } from "@/components/querylane-ui/bash-syntax-highlight";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
   CardContent,
   CardDescription,
   CardHeader,
-} from "@/components/ui/card";
+} from "@/components/querylane-ui/card";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
+import { Tabs, TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
+import { Button } from "@/components/ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   type DefinitionSection,
   deriveDefinitionSections,
@@ -45,22 +45,19 @@ import type {
 
 function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
   return (
-    <Card className="min-w-0 gap-0 py-0" size="sm">
-      <CardHeader className="border-b bg-muted/40 py-3">
+    <Card className="min-w-0" presentation="flush" size="sm">
+      <CardHeader presentation="definition">
         <h2 className="flex items-center gap-2 font-medium text-sm">
           {section.title}
         </h2>
-        <CardDescription className="font-mono text-xs">
+        <CardDescription presentation="identifier">
           {section.detail}
         </CardDescription>
       </CardHeader>
       {section.kind === "code" ? (
-        <SqlCodeBlock
-          className="rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10 text-[0.75rem]"
-          sql={section.content}
-        />
+        <SqlCodeBlock presentation="definition" sql={section.content} />
       ) : (
-        <CardContent className="py-4 text-muted-foreground text-sm leading-relaxed">
+        <CardContent presentation="definition-description">
           {section.content}
         </CardContent>
       )}
@@ -80,15 +77,15 @@ function DefinitionSideCard({
   title: string;
 }) {
   return (
-    <Card className="min-w-0 gap-0 py-0" size="sm">
-      <CardHeader className="border-b bg-muted/40 py-3">
+    <Card className="min-w-0" presentation="flush" size="sm">
+      <CardHeader presentation="definition">
         <h2 className="flex items-center gap-2 font-medium text-sm">
           <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
           {title}
         </h2>
         {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
-      <CardContent className="py-3">{children}</CardContent>
+      <CardContent presentation="compact">{children}</CardContent>
     </Card>
   );
 }
@@ -111,8 +108,12 @@ function dependencyReferences(constraints: TableConstraint[]) {
 
 function ReferencedTablesCard({ references }: { references: string[] }) {
   return (
-    <Card className="min-w-0 gap-0 py-0" size="sm">
-      <CardHeader className={cn("py-3", references.length > 0 && "border-b")}>
+    <Card className="min-w-0" presentation="flush" size="sm">
+      <CardHeader
+        presentation={
+          references.length > 0 ? "definition-separated" : "definition-plain"
+        }
+      >
         <h2 className="flex items-center gap-2 font-medium text-sm">
           <Layers aria-hidden="true" className="size-4 text-muted-foreground" />
           Referenced tables
@@ -124,7 +125,7 @@ function ReferencedTablesCard({ references }: { references: string[] }) {
         </CardDescription>
       </CardHeader>
       {references.length > 0 ? (
-        <CardContent className="py-3">
+        <CardContent presentation="compact">
           <ul className="space-y-1">
             {references.map((reference) => (
               <li className="font-mono text-xs" key={reference}>
@@ -240,13 +241,25 @@ function ReproduceLocallyCard({
             aria-label="Reproduction scope"
             className="grid w-full grid-cols-3"
           >
-            <TabsTrigger className="min-w-0 truncate" value="table">
+            <TabsTrigger
+              className="min-w-0"
+              presentation="truncated"
+              value="table"
+            >
               {tableName}
             </TabsTrigger>
-            <TabsTrigger className="min-w-0 truncate" value="schema">
+            <TabsTrigger
+              className="min-w-0"
+              presentation="truncated"
+              value="schema"
+            >
               {schemaName}
             </TabsTrigger>
-            <TabsTrigger className="min-w-0 truncate" value="database">
+            <TabsTrigger
+              className="min-w-0"
+              presentation="truncated"
+              value="database"
+            >
               {databaseId}
             </TabsTrigger>
           </TabsList>
@@ -269,8 +282,8 @@ function ReproduceLocallyCard({
           number={3}
           title="Restore"
         />
-        <Alert className="px-3 py-2">
-          <AlertDescription className="text-xs leading-relaxed">
+        <Alert presentation="compact">
+          <AlertDescription presentation="compact">
             Related foreign key targets are not included with --table; dump the
             schema scope if you need them.
           </AlertDescription>

@@ -12,8 +12,14 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/querylane-ui/alert";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
+import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import { SqlNotices } from "@/components/sql/sql-notices";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -33,8 +39,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { isConcurrentRefreshReady } from "@/features/data-explorer/explorer-materialized-view-model";
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { ColumnsTab } from "@/features/data-explorer/explorer-table-detail/columns-tab";
@@ -53,10 +57,7 @@ import {
   ObjectDetailTabsBar,
   ObjectDetailTabTrigger,
 } from "@/features/data-explorer/object-detail-chrome";
-import {
-  OBJECT_DETAIL_PANEL_FILL_CLASS,
-  OBJECT_DETAIL_PANEL_PADDED_CLASS,
-} from "@/features/data-explorer/object-detail-panel-classes";
+import { OBJECT_DETAIL_PANEL_PADDED_CLASS } from "@/features/data-explorer/object-detail-panel-classes";
 import { viewTypeLabel } from "@/features/data-explorer/view-type-label";
 import { useExplainQuery } from "@/hooks/api/sql";
 import {
@@ -127,7 +128,11 @@ function SourceRelationsCard({ definition }: { definition: string }) {
             ))}
           </div>
         ) : (
-          <EmptyStatePanel className="min-h-24 rounded-md px-4 py-6" icon={Eye}>
+          <EmptyStatePanel
+            className="min-h-24"
+            icon={Eye}
+            presentation="panel-compact"
+          >
             No source relations could be inferred from the definition.
           </EmptyStatePanel>
         )}
@@ -278,7 +283,7 @@ function StandardViewDetail({
     <div className="flex h-full min-h-0 flex-col">
       <ObjectDetailHeader
         icon={Eye}
-        iconClassName="bg-sky-500/10 text-sky-600 dark:text-sky-400"
+        iconClassName="bg-reference-500/10 text-reference-600 dark:text-reference-400"
         stats={
           <HeaderStat
             label="Last DDL"
@@ -485,7 +490,7 @@ function DependenciesTab({
       <Alert variant="destructive">
         <TriangleAlert />
         <AlertTitle>Could not load dependencies</AlertTitle>
-        <AlertDescription className="space-y-3">
+        <AlertDescription presentation="stacked">
           <p>{query.error.message}</p>
           <Button
             onClick={() => {
@@ -770,7 +775,7 @@ function MaterializedViewHeader({
         />
       }
       icon={Eye}
-      iconClassName="bg-sky-500/10 text-sky-600 dark:text-sky-400"
+      iconClassName="bg-reference-500/10 text-reference-600 dark:text-reference-400"
       stats={
         <>
           <HeaderStat
@@ -857,12 +862,13 @@ function MaterializedViewTabs({
 }) {
   return (
     <Tabs
-      className="min-h-0 w-full min-w-0 flex-1 flex-col gap-0"
+      className="min-h-0 w-full min-w-0 flex-1 flex-col"
       onValueChange={(value) => {
         if (isMaterializedViewTab(value)) {
           onTabChange(value);
         }
       }}
+      presentation="flush"
       value={activeTab}
     >
       <ObjectDetailTabsBar>
@@ -880,17 +886,17 @@ function MaterializedViewTabs({
           {view.comment}
         </p>
       ) : null}
-      <TabsContent className={OBJECT_DETAIL_PANEL_FILL_CLASS} value="data">
+      <TabsContent presentation="object-fill" value="data">
         <MaterializedDataPanel grid={grid} isPopulated={view.isPopulated} />
       </TabsContent>
-      <TabsContent className={OBJECT_DETAIL_PANEL_PADDED_CLASS} value="columns">
+      <TabsContent presentation="object-padded" value="columns">
         <ColumnsTab
           columnsQuery={columnsQuery}
           constraintsQuery={constraintsQuery}
           indexesQuery={indexesQuery}
         />
       </TabsContent>
-      <TabsContent className={OBJECT_DETAIL_PANEL_PADDED_CLASS} value="indexes">
+      <TabsContent presentation="object-padded" value="indexes">
         <div className="flex flex-col gap-3">
           <ConcurrentReadinessAlert readiness={readiness} />
           <IndexesTab
@@ -902,20 +908,14 @@ function MaterializedViewTabs({
           />
         </div>
       </TabsContent>
-      <TabsContent
-        className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-        value="dependencies"
-      >
+      <TabsContent presentation="object-padded" value="dependencies">
         <DependenciesTab
           databaseId={databaseId}
           instanceId={instanceId}
           query={dependenciesQuery}
         />
       </TabsContent>
-      <TabsContent
-        className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-        value="definition"
-      >
+      <TabsContent presentation="object-padded" value="definition">
         <DefinitionCard definition={copyableDefinition} />
       </TabsContent>
     </Tabs>

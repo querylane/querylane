@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
 import { buildConfigPreview } from "@/components/onboarding-wizard/phases/manual-yaml-config-preview";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 
@@ -74,16 +74,18 @@ export function ManualYamlPhase() {
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button
-            className="h-9 rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/[0.04] hover:text-white"
+            className="h-9"
             onClick={goBackToMethodSelection}
+            presentation="onboarding-secondary"
             variant="ghost"
           >
             <ArrowLeft className="size-4" />
             Back
           </Button>
           <Button
-            className="h-9 rounded-lg bg-white px-4 font-medium text-[#11151f] text-sm hover:bg-white/90"
+            className="h-9"
             onClick={startProgress}
+            presentation="onboarding-primary"
           >
             Continue
             <ChevronRight className="size-4" />
@@ -92,27 +94,25 @@ export function ManualYamlPhase() {
       }
       title="YAML Configuration"
       titleBadge={
-        <Badge
-          className="border-emerald-400/28 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200 text-xs"
-          variant="outline"
-        >
+        <Badge presentation="onboarding-success" variant="outline">
           Recommended for file-based setups
         </Badge>
       }
     >
       <div className="space-y-5">
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-xl border border-white/10 bg-white/3 p-4">
           <div className="font-medium text-base text-white/84">
             Default path
           </div>
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-[#080b12] px-4 py-3">
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-onboarding-preview px-4 py-3">
             <span className="min-w-0 flex-1 break-all font-mono text-white/92 text-xs">
               {configFilePath}
             </span>
             <Button
               aria-label="Copy config file path"
-              className="h-8 shrink-0 rounded-lg border-white/10 px-3 text-white/68 text-xs hover:bg-white/[0.06] hover:text-white"
+              className="h-8 shrink-0"
               onClick={copyPath}
+              presentation="onboarding-copy"
               variant="ghost"
             >
               {pathCopyState === "copied" ? (
@@ -125,22 +125,22 @@ export function ManualYamlPhase() {
           </div>
           <p className="mt-3 text-sm text-white/54 leading-6">
             Override with{" "}
-            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/72 text-xs">
+            <code className="rounded bg-white/6 px-1.5 py-0.5 text-white/72 text-xs">
               {"--config <path>"}
             </code>{" "}
             or{" "}
-            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/72 text-xs">
+            <code className="rounded bg-white/6 px-1.5 py-0.5 text-white/72 text-xs">
               QUERYLANE_CONFIG
             </code>
             .
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/3">
           <div className="flex items-center justify-between border-white/8 border-b px-5 py-4">
             <div className="font-medium text-base text-white">config.yaml</div>
             <Button
-              className="h-8 rounded-lg border-white/10 px-3 text-white/78 text-xs hover:bg-white/[0.05] hover:text-white"
+              className="h-8"
               onClick={async () => {
                 try {
                   await writeClipboard(configPreview);
@@ -149,6 +149,7 @@ export function ManualYamlPhase() {
                   setCopyState("idle");
                 }
               }}
+              presentation="onboarding-download"
               variant="ghost"
             >
               {copyState === "copied" ? (
@@ -166,7 +167,7 @@ export function ManualYamlPhase() {
           </pre>
         </div>
 
-        <div className="rounded-xl border border-[#4d72d8]/24 bg-[#0d1324] px-4 py-3 text-sm text-white/70 leading-6">
+        <div className="rounded-xl border border-onboarding-accent/24 bg-onboarding-detail px-4 py-3 text-sm text-white/70 leading-6">
           Querylane will begin watching the configured path on step 3. Once the
           file is saved, it will validate the contents and continue setup
           automatically.

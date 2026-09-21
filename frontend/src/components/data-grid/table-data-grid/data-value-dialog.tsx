@@ -1,14 +1,14 @@
 import { Copy } from "lucide-react";
 import type { ReactNode } from "react";
 import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/querylane-ui/dialog";
 
 interface DataValueDialogProps {
   children: ReactNode;
@@ -33,13 +33,16 @@ export function DataValueDialog({
 }: DataValueDialogProps) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100vw-2rem))] flex-col gap-4 overflow-hidden">
-        <DialogHeader className="shrink-0 pr-10">
+      <DialogContent
+        className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100vw-2rem))] flex-col overflow-hidden"
+        presentation="spacious"
+      >
+        <DialogHeader className="shrink-0" presentation="closeable">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 text-xs dark:text-amber-300">
+          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-warning-700 text-xs dark:text-warning-300">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>

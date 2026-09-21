@@ -3,16 +3,12 @@ import type { CSSProperties, DragEvent } from "react";
 import { useId, useState } from "react";
 import type { SortColumn } from "react-data-grid";
 import { DataGridPopoverContent } from "@/components/data-grid/table-data-grid/data-grid-popover-content";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import { SelectContent, SelectTrigger } from "@/components/querylane-ui/select";
 import { SelectValue } from "@/components/select-extensions";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -152,7 +148,8 @@ function SortPopover({
             Sort
             {sortColumns.length > 0 ? (
               <Badge
-                className="ml-0.5 h-4 px-1 font-mono text-xs"
+                className="ml-0.5 h-4"
+                presentation="count"
                 variant="secondary"
               >
                 {sortColumns.length}
@@ -172,8 +169,8 @@ function SortPopover({
           <span className="font-medium">Sort by</span>
           {sortColumns.length > 0 ? (
             <Button
-              className="text-muted-foreground"
               onClick={() => onChange([])}
+              presentation="muted"
               size="xs"
               type="button"
               variant="ghost"
@@ -317,7 +314,8 @@ function SortRow({
       </Button>
       <Select onValueChange={swapColumn} value={sort.columnKey}>
         <SelectTrigger
-          className="w-[min(var(--sort-column-select-width),calc(100vw-12rem))] max-w-full font-mono"
+          className="w-[min(var(--sort-column-select-width),calc(100vw-12rem))] max-w-full"
+          presentation="identifier"
           size="sm"
         >
           <SelectValue />

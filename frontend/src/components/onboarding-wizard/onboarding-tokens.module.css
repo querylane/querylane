@@ -1,0 +1,10 @@
+/* Feature-scoped palette preserves the established gradient colors and alpha. */
+.palette {
+  --onboarding-waiting-glow: rgba(98, 122, 255, 0.14);
+  --onboarding-waiting-fade: rgba(7, 9, 15, 0);
+  --onboarding-rail-blue-glow: rgba(64, 102, 255, 0.18);
+  --onboarding-rail-violet-glow: rgba(129, 71, 255, 0.12);
+  --onboarding-backdrop-top-glow: rgba(69, 98, 196, 0.12);
+  --onboarding-backdrop-center-glow: rgba(63, 93, 194, 0.12);
+  --onboarding-pattern-ink: rgba(255, 255, 255, 0.08);
+}

@@ -43,7 +43,7 @@ export function PaginationFooter({
       data-slot="pagination-footer"
     >
       <div className="flex items-center gap-2">
-        <span className="text-[0.6875rem]">{pageSizeLabel}</span>
+        <span className="text-(length:--text-label-sm)">{pageSizeLabel}</span>
         <Select
           onValueChange={(value) => {
             if (!value) {

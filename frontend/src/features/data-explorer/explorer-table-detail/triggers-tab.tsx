@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
+import { Badge } from "@/components/querylane-ui/badge";
+import { Button } from "@/components/querylane-ui/button";
+import { RefreshControl } from "@/components/querylane-ui/refresh-control";
+import { SqlSyntaxHighlight } from "@/components/querylane-ui/sql-code-block";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTableFilter } from "@/components/ui/data-table";
-import { RefreshControl } from "@/components/ui/refresh-control";
-import { SqlSyntaxHighlight } from "@/components/ui/sql-code-block";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {
   isTriggerStateFilter,
@@ -189,8 +189,9 @@ function TriggerSqlCopyButton({
     <>
       <Button
         aria-label={`Copy SQL for ${triggerName}`}
-        className="h-6 px-2 text-xs"
+        className="h-6"
         onClick={handleCopyTriggerSql}
+        presentation="compact"
         size="xs"
         type="button"
         variant="ghost"
@@ -217,7 +218,7 @@ function TriggerCard({
   const whenExpression = triggerWhenExpression(trigger);
   return (
     <div
-      className="flex-none rounded-[10px] border bg-card px-[14px] py-[11px] shadow-xs"
+      className="flex-none rounded-lg border bg-card px-3.5 py-2.75 shadow-xs"
       data-trigger-name={trigger.triggerName}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -231,27 +232,22 @@ function TriggerCard({
         <span className="sr-only">
           {trigger.enabled ? "Enabled trigger" : "Disabled trigger"}
         </span>
-        <span className="font-mono font-semibold text-[0.78125rem]">
+        <span className="text-(length:--text-label-lg) font-mono font-semibold">
           {trigger.triggerName}
         </span>
         {trigger.timing ? (
-          <Badge
-            className="h-[18px] rounded-full px-2 text-xs"
-            variant="secondary"
-          >
+          <Badge className="h-[18px]" presentation="pill" variant="secondary">
             {trigger.timing}
           </Badge>
         ) : null}
         <Badge
-          className="h-[18px] rounded-full px-2 font-mono text-xs"
+          className="h-[18px]"
+          presentation="identifier-pill"
           variant="outline"
         >
           {triggerEventsLabel(trigger)}
         </Badge>
-        <Badge
-          className="h-[18px] rounded-full px-2 text-muted-foreground text-xs"
-          variant="ghost"
-        >
+        <Badge className="h-[18px]" presentation="muted-pill" variant="ghost">
           {triggerLevelLabel(trigger)}
         </Badge>
         {trigger.enabled ? null : (
@@ -274,7 +270,7 @@ function TriggerCard({
         </div>
       ) : null}
       <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
-        <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[0.6875rem] leading-[1.55]">
+        <pre className="text-(length:--text-label-sm) m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono leading-relaxed-copy">
           <SqlSyntaxHighlight sql={formatTriggerSqlForDisplay(sql)} />
         </pre>
         <TriggerSqlCopyButton sql={sql} triggerName={trigger.triggerName} />
@@ -377,16 +373,16 @@ function TriggersTab({
           />
         </div>
         <RefreshControl
-          className="text-muted-foreground text-xs"
           isRefreshing={toolbar.isRefreshing}
           labelClassName="sm:not-sr-only"
           lastFetchedLabel={toolbar.lastFetchedLabel}
           onRefresh={toolbar.handleRefresh}
+          presentation="compact"
         />
       </div>
       {filteredTriggers.length === 0 ? (
         <SearchEmptyState
-          className="rounded-[10px] border"
+          presentation="search-rounded"
           resourceName="triggers"
         />
       ) : null}

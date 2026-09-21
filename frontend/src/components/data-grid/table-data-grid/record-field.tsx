@@ -11,7 +11,7 @@ import {
   type ResolvedCell,
   resolveEffectiveCell,
 } from "@/components/data-grid/table-data-grid/record-field-state";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   cellNeedsFullValue,
   READ_CELL_MAX_BYTES,
@@ -145,25 +145,25 @@ function RecordField({
           {column.columnName}
         </span>
         {isPrimaryKey ? (
-          <span className="text-amber-600 dark:text-amber-400">
+          <span className="text-warning-600 dark:text-warning-400">
             <KeyRound
               aria-hidden={true}
               className="mr-0.5 inline size-3 align-[-0.15em]"
             />
-            <span className="font-medium text-[0.625rem] uppercase tracking-wide">
+            <span className="text-(length:--text-micro) font-medium uppercase tracking-wide">
               PK
             </span>
           </span>
         ) : null}
-        <span className="font-mono text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+        <span className="text-(length:--text-micro) font-mono text-muted-foreground uppercase tracking-wide">
           {column.rawType}
         </span>
         {column.isNullable ? (
-          <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+          <span className="text-(length:--text-micro) text-muted-foreground uppercase tracking-wide">
             nullable
           </span>
         ) : (
-          <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+          <span className="text-(length:--text-micro) text-muted-foreground uppercase tracking-wide">
             not null
           </span>
         )}
@@ -179,9 +179,10 @@ function RecordField({
           {canExpand ? (
             <Button
               aria-label={`Load full value for ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
+              className="shrink-0"
               disabled={fullValueMutation.isPending}
               onClick={handleLoadFullValue}
+              presentation="muted"
               size="icon-sm"
               type="button"
               variant="ghost"
@@ -192,8 +193,9 @@ function RecordField({
           {canCopy ? (
             <Button
               aria-label={`Copy ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
+              className="shrink-0"
               onClick={handleCopy}
+              presentation="muted"
               size="icon-sm"
               type="button"
               variant="ghost"
@@ -204,9 +206,10 @@ function RecordField({
           {canDownload ? (
             <Button
               aria-label={`Download ${column.columnName}`}
-              className="shrink-0 text-muted-foreground"
+              className="shrink-0"
               disabled={fullValueMutation.isPending}
               onClick={handleDownload}
+              presentation="muted"
               size="icon-sm"
               type="button"
               variant="ghost"
@@ -240,7 +243,7 @@ function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
           {formatted.display === "true" ? (
             <Check
               aria-hidden={true}
-              className="size-3 text-emerald-500 dark:text-emerald-400"
+              className="size-3 text-positive-500 dark:text-positive-400"
             />
           ) : (
             <Minus
@@ -297,7 +300,7 @@ function ArrayValue({ raw }: { raw: string }) {
       <pre
         className={cn(
           "max-h-96 w-full overflow-auto whitespace-pre-wrap break-all",
-          "font-mono text-sky-700 text-xs dark:text-sky-300"
+          "font-mono text-reference-700 text-xs dark:text-reference-300"
         )}
       >
         {raw}
@@ -309,7 +312,7 @@ function ArrayValue({ raw }: { raw: string }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 font-medium text-sky-700 text-xs leading-none dark:text-sky-300">
+        <span className="rounded-full border border-reference-500/25 bg-reference-500/10 px-1.5 py-0.5 font-medium text-reference-700 text-xs leading-none dark:text-reference-300">
           {count.toLocaleString()} {count === 1 ? "item" : "items"}
         </span>
       </div>
@@ -330,7 +333,7 @@ function ArrayValue({ raw }: { raw: string }) {
                   SQL NULL
                 </span>
               ) : (
-                <code className="break-all font-mono text-sky-700 text-xs dark:text-sky-300">
+                <code className="break-all font-mono text-reference-700 text-xs dark:text-reference-300">
                   {item.display}
                 </code>
               )}
@@ -355,8 +358,8 @@ function JsonValue({ raw }: { raw: string }) {
     <pre
       className={cn(
         "max-h-96 w-full overflow-auto whitespace-pre-wrap break-all",
-        "font-mono text-violet-600 text-xs",
-        "dark:text-violet-400"
+        "font-mono text-permission-600 text-xs",
+        "dark:text-permission-400"
       )}
     >
       {pretty}

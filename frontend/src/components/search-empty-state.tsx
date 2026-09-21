@@ -5,22 +5,30 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
+} from "@/components/querylane-ui/empty";
 import { cn } from "@/lib/utils";
 
 interface SearchEmptyStateProps {
   className?: string;
+  presentation?:
+    | "search"
+    | "search-compact"
+    | "search-header"
+    | "search-bordered"
+    | "search-rounded";
   resourceName?: string;
 }
 
 function SearchEmptyState({
   className,
   resourceName = "results",
+  presentation = "search",
 }: SearchEmptyStateProps) {
   return (
     <Empty
-      className={cn("min-h-24 rounded-md border-0 px-4 py-8", className)}
+      className={cn("min-h-24", className)}
       data-slot="search-empty-state"
+      presentation={presentation}
     >
       <EmptyHeader>
         <EmptyMedia variant="icon">

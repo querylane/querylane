@@ -6,10 +6,15 @@ import { AppErrorView } from "@/components/app-error-view";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { NotFoundState } from "@/components/not-found-state";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
+import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
+import { Progress } from "@/components/querylane-ui/progress";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import { OverflowTooltip } from "@/components/ui/overflow-tooltip";
-import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
@@ -46,8 +51,11 @@ interface ResourcePageStateProps {
 }
 export function SummaryCard({ label, value }: SummaryCardProps) {
   return (
-    <Card className="h-16 border-border" size="sm">
-      <CardContent className="flex h-full flex-col justify-center gap-y-1 px-4 py-0">
+    <Card className="h-16" presentation="bordered" size="sm">
+      <CardContent
+        className="flex h-full flex-col justify-center"
+        presentation="metric"
+      >
         <p className="text-muted-foreground text-xs uppercase tracking-wide">
           {label}
         </p>
@@ -154,10 +162,10 @@ export function InstanceStatItem({
           ) : null}
         </div>
         {progress === undefined ? null : (
-          <Progress className="gap-0" value={progress} />
+          <Progress density="compact" value={progress} />
         )}
         {notice ? (
-          <div className="text-amber-600 text-xs leading-snug dark:text-amber-400">
+          <div className="text-warning-600 text-xs leading-snug dark:text-warning-400">
             {notice}
           </div>
         ) : null}
@@ -170,8 +178,9 @@ export function CopyableHost({ host, port }: { host: string; port?: number }) {
   return (
     <span className="inline-flex min-w-0 max-w-full items-center gap-1">
       <OverflowTooltip
-        className="min-w-0 max-w-[min(18rem,calc(100vw-6rem))] truncate font-mono text-foreground text-xs"
+        className="min-w-0 max-w-[min(18rem,calc(100vw-6rem))]"
         forceTooltip={true}
+        presentation="metric"
         tooltipContent={fullHost}
       >
         {fullHost}
@@ -195,7 +204,7 @@ export function PageHeader({
 }) {
   return (
     <div className="min-w-0 max-w-full space-y-2">
-      <p className="text-muted-foreground text-xs uppercase tracking-[0.24em]">
+      <p className="text-muted-foreground text-xs uppercase tracking-brand">
         {eyebrow}
       </p>
       <div className="space-y-1">
@@ -216,8 +225,11 @@ export function SectionCard({
   title,
 }: SectionCardProps) {
   return (
-    <Card className="border-border">
-      <CardHeader className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+    <Card presentation="bordered">
+      <CardHeader
+        className="flex flex-col items-start justify-between sm:flex-row"
+        presentation="section"
+      >
         <div className="min-w-0 space-y-1">
           <CardTitle>{title}</CardTitle>
           {description ? (
@@ -238,11 +250,11 @@ export function MetadataCard({
   title: string;
 }) {
   return (
-    <Card className="border-border" size="sm">
-      <CardHeader className="px-4">
+    <Card presentation="bordered" size="sm">
+      <CardHeader presentation="inset">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent presentation="inset">
         <dl className="grid gap-x-6 gap-y-2 md:grid-cols-3">
           {items.map((item) => (
             <div className="min-w-0 space-y-1" key={item.label}>

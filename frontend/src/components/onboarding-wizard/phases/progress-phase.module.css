@@ -1,0 +1,8 @@
+.waitingIndicator {
+  composes: palette from "../onboarding-tokens.module.css";
+  background-image: radial-gradient(
+    circle,
+    var(--onboarding-waiting-glow),
+    var(--onboarding-waiting-fade) 65%
+  );
+}

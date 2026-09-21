@@ -2,9 +2,7 @@
 
 import { AlertTriangle, Bug, Copy, SearchCode } from "lucide-react";
 import { useState } from "react";
-import { RetryActionButton } from "@/components/retry-action-button";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/querylane-ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/querylane-ui/dialog";
+import { Textarea } from "@/components/querylane-ui/textarea";
+import { RetryActionButton } from "@/components/retry-action-button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
@@ -143,13 +143,13 @@ function ReportBugLink({
 function ErrorDetailsDialog({
   error,
   retryAvailable,
-  triggerClassName,
+  standalone = false,
   triggerSize = "sm",
   triggerVariant = "outline",
 }: {
   error: AppUiError;
   retryAvailable: boolean;
-  triggerClassName?: string | undefined;
+  standalone?: boolean;
   triggerSize?: React.ComponentProps<typeof Button>["size"];
   triggerVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
@@ -158,7 +158,7 @@ function ErrorDetailsDialog({
       <DialogTrigger
         render={
           <Button
-            className={triggerClassName}
+            className={standalone ? "-ml-2.5" : undefined}
             size={triggerSize}
             variant={triggerVariant}
           >
@@ -167,7 +167,10 @@ function ErrorDetailsDialog({
           </Button>
         }
       />
-      <DialogContent className="flex max-h-[85vh] flex-col gap-4 overflow-hidden sm:max-w-3xl">
+      <DialogContent
+        className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-3xl"
+        presentation="spacious"
+      >
         <DialogHeader className="shrink-0">
           <DialogTitle>{error.title}</DialogTitle>
           <DialogDescription>{error.message}</DialogDescription>
@@ -185,7 +188,8 @@ function ErrorDetailsDialog({
             <h3 className="font-medium text-sm">Technical details</h3>
             <Textarea
               aria-label="Technical details JSON"
-              className="h-96 max-h-96 resize-none whitespace-pre bg-muted/40 font-mono text-muted-foreground text-xs"
+              className="h-96 max-h-96 resize-none whitespace-pre"
+              presentation="diagnostic"
               readOnly={true}
               spellCheck={false}
               value={error.technicalDetails}
@@ -212,10 +216,14 @@ function AppPageError({
       className={cn("flex items-center justify-center p-4", containerClassName)}
     >
       <Card
-        className={cn("w-full max-w-lg border-destructive/30", className)}
+        className={cn("w-full max-w-lg", className)}
+        presentation="error"
         role="alert"
       >
-        <CardContent className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+        <CardContent
+          className="flex flex-col items-center text-center"
+          presentation="recovery"
+        >
           <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
             <AlertTriangle className="size-6 text-destructive" />
           </div>
@@ -292,11 +300,7 @@ function AppCompactError({
               <ErrorDetailsDialog
                 error={error}
                 retryAvailable={Boolean(onRetry)}
-                triggerClassName={
-                  onRetry || actions || reportBug === false
-                    ? undefined
-                    : "-ml-2.5"
-                }
+                standalone={!(onRetry || actions || reportBug === false)}
                 triggerVariant="ghost"
               />
             </div>

@@ -17,10 +17,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import {
@@ -392,8 +392,8 @@ function ObjectTreeList({
       ref={setScrollElement}
     >
       <ul
-        className="relative m-0 w-full list-none p-0"
-        style={{ height: `${totalSize}px` }}
+        className="relative m-0 h-(--virtual-height) w-full list-none p-0"
+        style={{ "--virtual-height": `${totalSize}px` }}
       >
         {virtualItems.map((virtualItem) => {
           const listItem = flatItems[virtualItem.index];
@@ -402,11 +402,11 @@ function ObjectTreeList({
           }
           return (
             <li
-              className="absolute top-0 left-0 w-full"
+              className="transform-(--virtual-transform) absolute top-0 left-0 h-(--virtual-height) w-full"
               key={virtualItem.key}
               style={{
-                height: `${virtualItem.size}px`,
-                transform: `translateY(${virtualItem.start}px)`,
+                "--virtual-height": `${virtualItem.size}px`,
+                "--virtual-transform": `translateY(${virtualItem.start}px)`,
               }}
             >
               <ResourceListItem controls={itemControls} item={listItem} />
@@ -745,15 +745,14 @@ function SchemaTreeButton({
   return (
     <Button
       aria-expanded={isExpanded}
-      className={cn(
-        "h-7 w-full justify-start gap-2 px-2 py-0 font-normal",
-        isActive ? "text-foreground" : "text-muted-foreground"
-      )}
+      className="h-7 w-full justify-start"
+      data-active={isActive}
       onClick={() =>
         isActive
           ? controls.onToggleActiveSchema()
           : controls.onSelectSchema(schema)
       }
+      presentation="tree-row"
       title={schema.name}
       variant="ghost"
     >
@@ -777,11 +776,11 @@ function SchemaTreeButton({
 }
 
 const SCHEMA_SKELETON_ROWS = [
-  { id: "first", width: "w-2/3" },
-  { id: "second", width: "w-1/2" },
-  { id: "third", width: "w-3/5" },
-  { id: "fourth", width: "w-2/5" },
-  { id: "fifth", width: "w-1/2" },
+  { id: "first", width: "calc(100% * 2 / 3)" },
+  { id: "second", width: "50%" },
+  { id: "third", width: "60%" },
+  { id: "fourth", width: "40%" },
+  { id: "fifth", width: "50%" },
 ];
 
 /**
@@ -800,7 +799,10 @@ function SchemaLoadingRows() {
         <div className="flex h-7 items-center gap-2 px-2" key={row.id}>
           <Skeleton className="size-3.5 shrink-0" />
           <Skeleton className="size-4 shrink-0" />
-          <Skeleton className={cn("h-3.5", row.width)} />
+          <Skeleton
+            className="h-3.5 w-(--skeleton-width)"
+            style={{ "--skeleton-width": row.width }}
+          />
         </div>
       ))}
       <span className="sr-only">Loading schemas</span>
@@ -888,8 +890,9 @@ function CategoryListItem({
           // Kind headers are labels, not rows: hover brightens the text only
           // (per the concept design), so they read differently from the
           // background-highlighted object rows around them.
-          className="h-6 w-full justify-start gap-2 px-2 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground dark:hover:bg-transparent"
+          className="h-6 w-full justify-start"
           onClick={() => controls.toggleCategory(item.category)}
+          presentation="tree-disclosure"
           variant="ghost"
         >
           <ChevronRight
@@ -1072,16 +1075,18 @@ function ExplorerSidebar({
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="h-7 pr-7 pl-8 text-[0.8125rem]"
+            className="h-7"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Filter…"
+            presentation="search-clearable"
             value={query}
           />
           {query ? (
             <Button
               aria-label="Clear filter"
-              className="absolute top-1/2 right-1.5 size-5 -translate-y-1/2 p-0"
+              className="absolute top-1/2 right-1.5 size-5 -translate-y-1/2"
               onClick={() => setQuery("")}
+              presentation="unpadded"
               size="icon"
               variant="ghost"
             >

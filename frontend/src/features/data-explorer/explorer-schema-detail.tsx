@@ -10,6 +10,7 @@ import {
   catalogObjectKindValue,
   presentCatalogObjectKindOptions,
 } from "@/components/console-pages/database-overview-filters";
+import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import {
   DataTable,
   type DataTableColumnDef,
@@ -21,7 +22,6 @@ import {
   DataTableFilterToolbar,
 } from "@/components/ui/data-table-filter-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
@@ -32,7 +32,6 @@ import {
   ObjectDetailTabsBar,
   ObjectDetailTabTrigger,
 } from "@/features/data-explorer/object-detail-chrome";
-import { OBJECT_DETAIL_PANEL_PADDED_CLASS } from "@/features/data-explorer/object-detail-panel-classes";
 import type { SchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import {
@@ -130,7 +129,7 @@ function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
         aria-hidden="true"
         className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <span className="truncate font-mono text-[0.8125rem]">
+      <span className="text-(length:--text-caption) truncate font-mono">
         {row.displayName}
       </span>
     </span>
@@ -414,7 +413,7 @@ function SchemaDetailNotices({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
       {hasObjectsError ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[0.8125rem] text-destructive">
+        <div className="text-(length:--text-caption) rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive">
           Failed to load some objects in this schema. Refresh the page to try
           again.
         </div>
@@ -497,7 +496,7 @@ function SchemaDetail({
     <div className="flex h-full min-h-0 flex-col">
       <ObjectDetailHeader
         icon={DatabaseIcon}
-        iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+        iconClassName="bg-positive-500/10 text-positive-600 dark:text-positive-400"
         stats={
           <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:gap-5">
             <HeaderStat
@@ -533,12 +532,13 @@ function SchemaDetail({
       />
 
       <Tabs
-        className="min-h-0 flex-1 flex-col gap-0"
+        className="min-h-0 flex-1 flex-col"
         onValueChange={(next) => {
           if (next === "objects" || next === "map") {
             onTabChange(next);
           }
         }}
+        presentation="flush"
         value={activeTab}
       >
         <ObjectDetailTabsBar>
@@ -549,10 +549,7 @@ function SchemaDetail({
           />
           <ObjectDetailTabTrigger label="Schema map" value="map" />
         </ObjectDetailTabsBar>
-        <TabsContent
-          className={OBJECT_DETAIL_PANEL_PADDED_CLASS}
-          value="objects"
-        >
+        <TabsContent presentation="object-padded" value="objects">
           {isLoading ? (
             <SchemaObjectsLoading />
           ) : (
@@ -565,7 +562,8 @@ function SchemaDetail({
           )}
         </TabsContent>
         <TabsContent
-          className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4"
+          className="min-h-0 flex-1 overflow-y-auto"
+          presentation="inspector"
           value="map"
         >
           {activeTab === "map" ? (

@@ -1,6 +1,6 @@
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, test, rs } from "@rstest/core";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 
 const highlighter = rs.hoisted(() => ({
   creations: 0,

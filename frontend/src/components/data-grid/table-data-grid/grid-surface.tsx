@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/querylane-ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +37,13 @@ export function GridSurface({
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-6">
           <Card
             aria-label="Refreshing data"
-            className="w-[min(22rem,calc(100%-2rem))] border bg-background/95 shadow-lg backdrop-blur-sm"
+            className="w-[min(22rem,calc(100%-2rem))]"
+            presentation="floating"
             role="status"
             size="sm"
           >
             <CardHeader className="items-center text-center">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center" presentation="icon">
                 <Spinner
                   aria-hidden="true"
                   className="size-5"

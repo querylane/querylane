@@ -80,7 +80,7 @@ const DEFAULT_DATABASE_OBJECT_LIMIT = 5;
 const SEARCH_DATABASE_OBJECT_LIMIT = 10;
 const SEARCH_ROLE_LIMIT = 5;
 const COMMAND_GROUP_CLASS_NAME =
-  "p-0 **:[[cmdk-group-heading]]:px-4 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-[0.65625rem] **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-[0.06em]";
+  "p-0 **:[[cmdk-group-heading]]:px-4 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-(length:--text-micro-lg) **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-section";
 const COMMAND_ITEM_CLASS_NAME =
   "rounded-none! px-4 py-2 [&>svg:last-child]:hidden";
 
@@ -158,8 +158,8 @@ function NavigationTargetGroup({
           value={target.label}
         >
           <ChevronRight className="size-3.5 text-muted-foreground" />
-          <span className="text-[0.8125rem]">{target.label}</span>
-          <span className="ml-auto text-[0.71875rem] text-muted-foreground">
+          <span className="text-(length:--text-caption)">{target.label}</span>
+          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
             {target.summary}
           </span>
         </CommandItem>
@@ -199,8 +199,10 @@ function DatabaseObjectGroup({
             value={label}
           >
             <ChevronRight className="size-3.5 text-muted-foreground" />
-            <span className="font-mono text-[0.8125rem]">{label}</span>
-            <span className="ml-auto text-[0.71875rem] text-muted-foreground">
+            <span className="text-(length:--text-caption) font-mono">
+              {label}
+            </span>
+            <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
               {databaseObjectRowCount(object)}
             </span>
           </CommandItem>
@@ -230,8 +232,10 @@ function RoleCommandGroup({
           value={role.roleName}
         >
           <ChevronRight className="size-3.5 text-muted-foreground" />
-          <span className="font-mono text-[0.8125rem]">{role.roleName}</span>
-          <span className="ml-auto text-[0.71875rem] text-muted-foreground">
+          <span className="text-(length:--text-caption) font-mono">
+            {role.roleName}
+          </span>
+          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
             {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
           </span>
         </CommandItem>
@@ -409,7 +413,7 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="rounded-[14px]! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
+      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
       label="Search tables, screens, roles, or saved queries"
       shouldFilter={false}
     >
@@ -480,7 +484,7 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
     <CommandPaletteContext.Provider value={controller}>
       {children}
       <CommandDialog
-        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-[14px]! border border-border p-0 shadow-lg sm:max-w-[600px]"
+        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border border-border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
         onOpenChange={setOpen}
         open={open}

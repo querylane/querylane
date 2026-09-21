@@ -329,17 +329,24 @@ function renderAdminShell() {
   );
 }
 
-function renderAdminShellAtViewport({ width }: { width: 320 | 768 }) {
+function renderAdminShellAtViewport({
+  width,
+  theme = "dark",
+}: {
+  width: 320 | 768;
+  theme?: "light" | "dark";
+}) {
   const widthClassName = width === 320 ? "w-[320px]" : "w-[768px]";
   render(
     <ThemeProvider
-      defaultTheme="dark"
+      defaultTheme={theme}
       storageKey={`querylane-admin-shell-browser-test-theme-${width}`}
     >
       <TooltipProvider>
         <div
           className={cn(
-            "dark h-[760px]",
+            "h-[760px]",
+            theme === "dark" && "dark",
             widthClassName,
             "origin-top-left overflow-hidden rounded-2xl border border-border bg-background text-foreground"
           )}
@@ -757,3 +764,25 @@ test("admin shell tablet viewport keeps compact header without desktop sidebar",
     .element(page.getByTestId("admin-shell-visual-root-768"))
     .toMatchScreenshot("admin-shell-tablet-compact");
 });
+
+test.each([320, 768] as const)(
+  "admin navigation at %ipx preserves drawer width and keyboard dismissal",
+  async (width) => {
+    await page.viewport(width, 900);
+    const theme =
+      document.documentElement.dataset["visualTheme"] === "light"
+        ? "light"
+        : "dark";
+    renderAdminShellAtViewport({ width, theme });
+    const trigger = page.getByRole("button", { name: "Open navigation menu" });
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect.element(dialog).toBeVisible();
+    expect(document.documentElement.classList.contains(theme)).toBe(true);
+    expect(dialog.element().getBoundingClientRect().width).toBe(288);
+    await expect(dialog).toMatchScreenshot(`admin-navigation-open-${width}`);
+    await userEvent.keyboard("{Escape}");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(trigger).toHaveFocus();
+  }
+);

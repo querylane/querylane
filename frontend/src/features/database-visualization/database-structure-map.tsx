@@ -15,16 +15,19 @@ import {
 import { lazy, type ReactNode, Suspense, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MapFacetFilters } from "@/components/map-facet-filters";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/querylane-ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -32,7 +35,9 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/querylane-ui/popover";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   useDatabaseVisualizationStore,
   type VisualizationDetailScope,
@@ -173,7 +178,7 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="flex items-center gap-3 p-4">
+      <CardContent className="flex items-center" presentation="canvas">
         <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-4" />
         </div>
@@ -211,12 +216,12 @@ function DatabaseMapLoadingCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center" presentation="section">
           <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading database map
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-muted-foreground text-sm">
+      <CardContent presentation="description">
         Collecting catalog metadata in the browser.
       </CardContent>
     </Card>
@@ -337,7 +342,7 @@ function DatabaseMapCanvasActions({
               {hiddenNodeKindCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="rounded-full bg-muted px-1.5 font-mono text-[0.625rem] text-muted-foreground"
+                  className="text-(length:--text-micro) rounded-full bg-muted px-1.5 font-mono text-muted-foreground"
                 >
                   {hiddenNodeKindCount}
                 </span>
@@ -347,7 +352,8 @@ function DatabaseMapCanvasActions({
         />
         <PopoverContent
           align="end"
-          className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-3"
+          className="w-80 max-w-[calc(100vw-2rem)]"
+          presentation="compact"
         >
           <PopoverHeader>
             <PopoverTitle>Resource filters</PopoverTitle>
@@ -715,8 +721,11 @@ function DatabaseStructureMap({
       />
 
       <Dialog onOpenChange={setIsMapExpanded} open={isMapExpanded}>
-        <DialogContent className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-3 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:p-4">
-          <DialogHeader className="shrink-0 pr-10">
+        <DialogContent
+          className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]"
+          presentation="canvas"
+        >
+          <DialogHeader className="shrink-0" presentation="closeable">
             <DialogTitle>Expanded database map</DialogTitle>
             <DialogDescription>
               Use the same schema scope, layout, and selected resource with more

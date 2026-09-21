@@ -2,7 +2,7 @@ import type { RowData } from "@tanstack/react-table";
 import { RefreshCw, X } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,12 +49,13 @@ function FacetFilterBar({ filters }: { filters: FacetFilterDefinition[] }) {
       ))}
       {hasActiveFilter ? (
         <Button
-          className="h-8 px-2 text-xs"
+          className="h-8"
           onClick={() => {
             for (const filter of visibleFilters) {
               filter.handleSelectedValuesChange([]);
             }
           }}
+          presentation="compact"
           size="sm"
           type="button"
           variant="ghost"
@@ -83,8 +84,8 @@ function Pill({
     <span
       className={cn(
         "inline-flex items-center rounded font-semibold uppercase tracking-wider",
-        size === "md" && "h-5 px-1.5 text-[0.625rem]",
-        size === "sm" && "h-4 px-1 font-mono text-[0.5625rem]",
+        size === "md" && "text-(length:--text-micro) h-5 px-1.5",
+        size === "sm" && "text-(length:--text-micro-sm) h-4 px-1 font-mono",
         mono && "font-mono normal-case tracking-normal",
         PILL_TONE_CLASSES[tone]
       )}
@@ -236,7 +237,6 @@ function MetadataTabResult<Row extends RowData>({
   filterPlaceholder,
   filters,
   hasUnfilteredData = data.length > 0,
-  tableClassName,
   tableKey,
   toolbar,
 }: {
@@ -247,7 +247,6 @@ function MetadataTabResult<Row extends RowData>({
   filterPlaceholder: string;
   filters?: React.ReactNode;
   hasUnfilteredData?: boolean | undefined;
-  tableClassName?: string | undefined;
   tableKey: string;
   toolbar: MetadataToolbar;
 }) {
@@ -264,7 +263,6 @@ function MetadataTabResult<Row extends RowData>({
         isRefreshing={toolbar.isRefreshing}
         lastFetchedLabel={toolbar.lastFetchedLabel}
         onRefresh={toolbar.handleRefresh}
-        tableClassName={tableClassName}
         tableKey={tableKey}
         toolbarFilters={filters}
       />

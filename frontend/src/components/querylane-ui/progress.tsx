@@ -6,19 +6,27 @@ type ProgressVariant = "default" | "warning";
 
 const progressIndicatorVariants: Record<ProgressVariant, string> = {
   default: "bg-primary",
-  warning: "bg-amber-500",
+  warning: "bg-warning-500",
 };
 
 function Progress({
   className,
   children,
   variant = "default",
+  density = "default",
   value,
   ...props
-}: ProgressPrimitive.Root.Props & { variant?: ProgressVariant }) {
+}: ProgressPrimitive.Root.Props & {
+  variant?: ProgressVariant;
+  density?: "default" | "compact";
+}) {
   return (
     <ProgressPrimitive.Root
-      className={cn("flex flex-wrap gap-3", className)}
+      className={cn(
+        "flex flex-wrap",
+        density === "compact" ? "gap-0" : "gap-3",
+        className
+      )}
       data-slot="progress"
       value={value}
       {...props}

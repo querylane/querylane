@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import {
   type DataTableColumnDef,
   SortableHeader,
@@ -22,7 +22,6 @@ import {
   parseResourceLeafId,
   parseTableQualifiedName,
 } from "@/lib/console-resources";
-import { cn } from "@/lib/utils";
 import type { TableConstraint } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import { ConstraintType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -79,7 +78,7 @@ function ReferencedTableTarget({
   }
   return (
     <Link
-      className="inline-flex h-[18px] items-center rounded-sm font-mono text-blue-700 text-xs focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
+      className="inline-flex h-[18px] items-center rounded-sm font-mono text-info-700 text-xs focus-visible:ring-2 focus-visible:ring-ring dark:text-info-300"
       params={{ databaseId, instanceId }}
       search={{
         category: "tables",
@@ -101,14 +100,12 @@ function ConstraintBadge({
   children: React.ReactNode;
   tone?: "ghost" | "outline" | "secondary" | "warning" | undefined;
 }) {
+  const badgeTone = tone === "ghost" ? "ghost" : "default";
   return (
     <Badge
-      className={cn(
-        "h-[18px] font-mono text-xs",
-        tone === "ghost" && "border-transparent text-muted-foreground",
-        tone === "warning" &&
-          "border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300"
-      )}
+      className="h-[18px]"
+      presentation="identifier"
+      tone={tone === "warning" ? "constraint-warning" : badgeTone}
       variant={tone === "outline" ? "outline" : "secondary"}
     >
       {children}

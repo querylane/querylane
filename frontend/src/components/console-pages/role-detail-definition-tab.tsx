@@ -2,7 +2,7 @@
 
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 
 function RoleDefinitionTab({ sql }: RoleDetailViewProps) {
   return (

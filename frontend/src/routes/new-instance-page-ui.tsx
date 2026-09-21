@@ -5,7 +5,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@/components/querylane-ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -139,7 +139,6 @@ export function CreateInstanceAdvancedSection({
   const instanceIdInputId = useId();
   return (
     <Accordion
-      className="border-t"
       multiple={true}
       onValueChange={(value) => {
         const values = Array.isArray(value) ? value : [value].filter(Boolean);
@@ -148,13 +147,14 @@ export function CreateInstanceAdvancedSection({
           onToggleAdvanced();
         }
       }}
+      presentation="separated"
       value={showAdvanced ? ["advanced-options"] : []}
     >
       <AccordionItem value="advanced-options">
-        <AccordionTrigger className="py-4">
+        <AccordionTrigger presentation="spacious">
           {showAdvanced ? "Hide" : "Show"} advanced options
         </AccordionTrigger>
-        <AccordionContent className="space-y-4">
+        <AccordionContent presentation="stacked">
           <div className="space-y-2">
             <label className="text-sm" htmlFor={instanceIdInputId}>
               Instance ID (optional)
@@ -212,7 +212,7 @@ export function CreateInstanceInlineNotice({
       className={cn(
         "rounded-md px-3 py-2 text-sm",
         notice.variant === "success"
-          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+          ? "bg-positive-500/10 text-positive-700 dark:text-positive-300"
           : "bg-destructive/10 text-destructive"
       )}
       role={notice.variant === "success" ? "status" : "alert"}

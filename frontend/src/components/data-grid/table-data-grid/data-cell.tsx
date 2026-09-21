@@ -44,7 +44,7 @@ function renderCell(
         <span className="inline-flex items-center gap-1.5 font-mono">
           <Check
             aria-label="true"
-            className="size-3 text-emerald-500 dark:text-emerald-400"
+            className="size-3 text-positive-500 dark:text-positive-400"
           />
           <span>true</span>
         </span>

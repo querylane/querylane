@@ -12,8 +12,13 @@ import type {
 import { ChartRangePicker } from "@/components/charts/chart-range-picker";
 import { MetricChart } from "@/components/charts/metric-chart";
 import { EmptyState } from "@/components/empty-state";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/querylane-ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/querylane-ui/tabs";
 import {
   assessMetricsCoverage,
   CHART_COLORS,
@@ -115,7 +120,8 @@ function TabTrigger({
 
   return (
     <TabsTrigger
-      className="h-auto flex-col items-start justify-start gap-1.5 rounded-none border-0 px-4 py-3 text-left before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-primary before:opacity-0 hover:bg-muted/50 data-active:bg-transparent data-active:before:opacity-100 group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:bg-transparent"
+      className="h-auto flex-col items-start justify-start text-left before:absolute before:inset-x-0 before:top-0 before:h-0.5"
+      presentation="metric"
       value={tab.key}
     >
       <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
@@ -247,7 +253,6 @@ function comparisonOverlay(
  * chart's own height: a bordered box inside the card read as a second card,
  * and a shorter box made the panel jump between tabs.
  */
-const CHART_EMPTY_STATE_CLASS = "h-72 min-h-0 border-0 bg-transparent";
 
 function TabChart({
   tab,
@@ -278,9 +283,10 @@ function TabChart({
   if (present.length === 0) {
     return (
       <EmptyState
-        className={CHART_EMPTY_STATE_CLASS}
+        className="h-72 min-h-0"
         description="These samples require PostgreSQL 16+, or none have been collected yet for this window."
         icon={ChartNoAxesColumn}
+        presentation="chart"
         title="No data for this metric"
       />
     );
@@ -304,9 +310,10 @@ function TabChart({
   if (!hasRenderableSpan(mergeSeriesData(dataSeries))) {
     return (
       <EmptyState
-        className={CHART_EMPTY_STATE_CLASS}
+        className="h-72 min-h-0"
         description="Charts appear once a few samples have been collected for this window."
         icon={ChartNoAxesColumn}
+        presentation="chart"
         title="Not enough samples yet"
       />
     );
@@ -410,7 +417,7 @@ export function InstanceMetricsPanel({
 
   if (isPending && !response) {
     return (
-      <Card className="border-border">
+      <Card presentation="bordered">
         <CardContent>
           <div className="h-96 w-full animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
         </CardContent>
@@ -422,13 +429,14 @@ export function InstanceMetricsPanel({
   // "collecting metrics" state and promise data that will never arrive.
   if (isError && !response) {
     return (
-      <Card className="gap-0 border-border py-0">
+      <Card presentation="bordered-flush">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
         <div className="pb-6">
           <EmptyState
-            className={CHART_EMPTY_STATE_CLASS}
+            className="h-72 min-h-0"
             description="Querylane couldn't load metrics. Refresh to retry."
             icon={ChartNoAxesColumn}
+            presentation="chart"
             title="Metrics unavailable"
           />
         </div>
@@ -440,7 +448,7 @@ export function InstanceMetricsPanel({
 
   if (coverage.nascent) {
     return (
-      <Card className="gap-0 border-border py-0">
+      <Card presentation="bordered-flush">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
         <div className="grid w-full grid-cols-2 divide-x divide-y divide-border border-border border-b sm:grid-cols-4 sm:divide-y-0">
           {METRIC_TABS.map((tab) => (
@@ -449,9 +457,10 @@ export function InstanceMetricsPanel({
         </div>
         <div className="pb-6">
           <EmptyState
-            className={CHART_EMPTY_STATE_CLASS}
+            className="h-72 min-h-0"
             description={collectingDescription(coverage)}
             icon={Activity}
+            presentation="chart"
             title="Collecting metrics"
           />
         </div>
@@ -460,16 +469,19 @@ export function InstanceMetricsPanel({
   }
 
   return (
-    <Card className="gap-0 border-border py-0">
+    <Card presentation="bordered-flush">
       <PanelHeader onRangeChange={onRangeChange} range={range} />
-      <Tabs className="gap-0" defaultValue={METRIC_TABS[0]?.key}>
-        <TabsList className="grid h-auto w-full grid-cols-2 divide-x divide-y divide-border rounded-none border-border border-b bg-transparent p-0 group-data-horizontal/tabs:h-auto sm:grid-cols-4 sm:divide-y-0">
+      <Tabs defaultValue={METRIC_TABS[0]?.key} presentation="flush">
+        <TabsList
+          className="grid h-auto w-full grid-cols-2 group-data-horizontal/tabs:h-auto sm:grid-cols-4"
+          presentation="metrics"
+        >
           {METRIC_TABS.map((tab) => (
             <TabTrigger key={tab.key} range={range} series={series} tab={tab} />
           ))}
         </TabsList>
         {METRIC_TABS.map((tab) => (
-          <TabsContent className="pb-6" key={tab.key} value={tab.key}>
+          <TabsContent key={tab.key} presentation="metrics" value={tab.key}>
             <TabChart
               isRefreshing={isRefreshing}
               previousSeries={previousSeries}

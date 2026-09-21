@@ -7,25 +7,16 @@ import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
 import { createHighlighterCoreSync } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import styles from "./bash-syntax-highlight-content.module.css";
+import { keyedTokenLines } from "./keyed-token-lines";
 
 interface BashSyntaxHighlightProps {
   code: string;
 }
 
-interface KeyedToken {
-  key: string;
-  token: ThemedTokenWithVariants;
-}
-
-interface KeyedTokenLine {
-  key: string;
-  tokens: KeyedToken[];
-  trailingNewline: boolean;
-}
-
 type ShikiTokenStyle = CSSProperties & {
-  "--querylane-bash-token-dark"?: string;
-  "--querylane-bash-token-light"?: string;
+  "--querylane-bash-token-dark"?: string | undefined;
+  "--querylane-bash-token-light"?: string | undefined;
 };
 
 const HIGHLIGHTER = createHighlighterCoreSync({
@@ -61,50 +52,6 @@ function highlightBash(code: string): ThemedTokenWithVariants[][] {
   return tokenLines;
 }
 
-function tokenStyle(
-  token: ThemedTokenWithVariants
-): ShikiTokenStyle | undefined {
-  const dark = token.variants["dark"]?.color;
-  const light = token.variants["light"]?.color;
-  if (!(dark || light)) {
-    return;
-  }
-  const style: ShikiTokenStyle = {};
-  if (dark) {
-    style["--querylane-bash-token-dark"] = dark;
-  }
-  if (light) {
-    style["--querylane-bash-token-light"] = light;
-  }
-  return style;
-}
-
-function keyedTokenLines(
-  tokenLines: ThemedTokenWithVariants[][]
-): KeyedTokenLine[] {
-  let keyOffset = 0;
-  let remainingLines = tokenLines.length;
-  return tokenLines.map((line) => {
-    const lineStart = keyOffset;
-    const tokens = line.map((token) => {
-      const tokenStart = keyOffset;
-      keyOffset += Math.max(token.content.length, 1);
-      return {
-        key: `token-${tokenStart}-${keyOffset}`,
-        token,
-      };
-    });
-    remainingLines -= 1;
-    const keyedLine = {
-      key: `line-${lineStart}-${keyOffset}`,
-      tokens,
-      trailingNewline: remainingLines > 0,
-    };
-    keyOffset += 1;
-    return keyedLine;
-  });
-}
-
 function BashSyntaxHighlight({ code }: BashSyntaxHighlightProps) {
   const tokenLines = keyedTokenLines(highlightBash(code));
 
@@ -118,10 +65,16 @@ function BashSyntaxHighlight({ code }: BashSyntaxHighlightProps) {
         <span data-shiki-line="" key={line.key}>
           {line.tokens.map(({ key, token }) => (
             <span
-              className="[color:var(--querylane-bash-token-light,currentColor)] dark:[color:var(--querylane-bash-token-dark,var(--querylane-bash-token-light,currentColor))]"
+              className={styles["token"]}
               data-shiki-token=""
               key={key}
-              style={tokenStyle(token)}
+              style={
+                {
+                  "--querylane-bash-token-dark": token.variants["dark"]?.color,
+                  "--querylane-bash-token-light":
+                    token.variants["light"]?.color,
+                } satisfies ShikiTokenStyle
+              }
             >
               {token.content}
             </span>

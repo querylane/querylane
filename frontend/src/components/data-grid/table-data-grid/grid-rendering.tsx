@@ -49,7 +49,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
+} from "@/components/querylane-ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -314,12 +314,12 @@ function NoRowsOverlay({ hasActiveFilter }: { hasActiveFilter: boolean }) {
       className="pointer-events-none absolute inset-x-0 top-9 bottom-0 flex items-center justify-center p-6"
       data-slot="grid-no-rows-overlay"
     >
-      <Empty className="flex-none border-0 p-0">
+      <Empty className="flex-none" presentation="borderless">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Icon aria-hidden={true} className="size-5" />
           </EmptyMedia>
-          <EmptyTitle className="text-sm">No rows found</EmptyTitle>
+          <EmptyTitle presentation="compact">No rows found</EmptyTitle>
           <EmptyDescription>
             {hasActiveFilter
               ? "Try a different search or filter."
@@ -555,10 +555,7 @@ function GridBody({
       >
         <DataGrid
           aria-label="Table data"
-          className={cn(
-            "rdg-light dark:rdg-dark",
-            flush && "rounded-none! border-x-0!"
-          )}
+          className={cn("rdg-light", flush && "rounded-none! border-x-0!")}
           columns={columns}
           defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
           // Keep RDG virtualization on. Wide/complex result sets otherwise mount

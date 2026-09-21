@@ -1,15 +1,7 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
-import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/querylane-ui/button";
+import { Input } from "@/components/querylane-ui/input";
 import {
   Table,
   TableBody,
@@ -18,7 +10,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/querylane-ui/table";
+import { StatusBadge } from "@/components/status-badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {
   TabError,
@@ -45,10 +45,10 @@ import type { TablePartitionMetadata } from "@/protogen/querylane/console/v1alph
 
 function partitionShareToneClass(row: PartitionDisplayRow): string {
   if (row.isDefault) {
-    return "bg-amber-500";
+    return "bg-warning-500";
   }
   if (row.isCurrent) {
-    return "bg-emerald-500";
+    return "bg-positive-500";
   }
   return "bg-muted-foreground/45";
 }
@@ -69,7 +69,7 @@ function PartitionSummaryItem({
 }) {
   return (
     <div className="rounded-lg border bg-card/60 p-3">
-      <p className="text-[0.6875rem] text-muted-foreground uppercase tracking-wider">
+      <p className="text-(length:--text-label-sm) text-muted-foreground uppercase tracking-wider">
         {label}
       </p>
       <p className="mt-1 break-words font-mono text-foreground text-xs">
@@ -97,10 +97,11 @@ function PartitionsToolbar({
         />
         <Input
           aria-label="Search partitions…"
-          className="h-8 pl-8 text-sm"
+          className="h-8"
           name="partition-filter"
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search partitions…"
+          presentation="search-body"
           value={search}
         />
       </div>
@@ -130,7 +131,7 @@ function PartitionRowsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="pl-4">Partition</TableHead>
+            <TableHead presentation="inset">Partition</TableHead>
             <TableHead>Bounds</TableHead>
             <TableHead className="text-right">Est. rows</TableHead>
             <TableHead className="text-right">Size</TableHead>
@@ -140,7 +141,7 @@ function PartitionRowsTable({
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.table}>
-              <TableCell className="pl-4">
+              <TableCell presentation="inset">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate font-medium font-mono text-sm">
                     {row.name}
@@ -154,15 +155,16 @@ function PartitionRowsTable({
                 </div>
               </TableCell>
               <TableCell
-                className="max-w-[28rem] whitespace-normal break-words font-mono text-muted-foreground text-xs"
+                className="max-w-[28rem] whitespace-normal break-words"
+                presentation="identifier-muted-small"
                 title={row.partitionBound}
               >
                 {row.boundLabel}
               </TableCell>
-              <TableCell className="text-right font-mono">
+              <TableCell className="text-right" presentation="identifier">
                 {row.rowsLabel}
               </TableCell>
-              <TableCell className="text-right font-mono text-muted-foreground">
+              <TableCell className="text-right" presentation="identifier-muted">
                 {row.sizeLabel}
               </TableCell>
               <TableCell>
@@ -186,13 +188,13 @@ function PartitionRowsTable({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="pl-4 text-muted-foreground" colSpan={2}>
+            <TableCell colSpan={2} presentation="inset-muted">
               Total · {totalPartitionCount.toLocaleString()} partitions
             </TableCell>
-            <TableCell className="text-right font-mono">
+            <TableCell className="text-right" presentation="identifier">
               {totalRowsLabel}
             </TableCell>
-            <TableCell className="text-right font-mono">
+            <TableCell className="text-right" presentation="identifier">
               {totalSizeLabel}
             </TableCell>
             <TableCell />
@@ -256,9 +258,10 @@ function PartitionPaginationFooter({
       <div className="ml-auto flex items-center gap-1">
         <Button
           aria-label="Previous page"
-          className="size-7 p-0"
+          className="size-7"
           disabled={!hasPrevious}
           onClick={onPrevious}
+          presentation="unpadded"
           size="sm"
           type="button"
           variant="outline"
@@ -275,9 +278,10 @@ function PartitionPaginationFooter({
         </span>
         <Button
           aria-label="Next page"
-          className="size-7 p-0"
+          className="size-7"
           disabled={!hasNext}
           onClick={onNext}
+          presentation="unpadded"
           size="sm"
           type="button"
           variant="outline"
@@ -416,10 +420,10 @@ function PartitionsTab({
         totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
       />
       {defaultPartition && defaultPartition.estimatedRows > 0 ? (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm leading-relaxed">
+        <div className="flex items-start gap-2 rounded-lg bg-warning-500/10 p-3 text-sm leading-relaxed">
           <AlertTriangle
             aria-hidden="true"
-            className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-300"
+            className="mt-0.5 size-4 shrink-0 text-warning-600 dark:text-warning-300"
           />
           <span>
             The DEFAULT partition holds {defaultPartition.shareLabel} of

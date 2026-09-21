@@ -13,7 +13,10 @@ function RolesAccessMapNotice(props: RolesAccessMapNoticeProps) {
       return null;
     }
     return (
-      <p className="text-amber-700 text-sm dark:text-amber-300" role="status">
+      <p
+        className="text-sm text-warning-700 dark:text-warning-300"
+        role="status"
+      >
         {`${props.failedRequestCount} access request${
           props.failedRequestCount === 1 ? "" : "s"
         } could not be loaded. The map shows the available data.`}

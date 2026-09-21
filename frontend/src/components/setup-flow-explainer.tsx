@@ -60,11 +60,11 @@ function getToneClasses(tone: SetupFlowExplainerTone) {
   }
 
   return {
-    activeCard: "border-blue-400/25 bg-blue-500/[0.08]",
-    activeKicker: "text-blue-300",
+    activeCard: "border-info-400/25 bg-info-500/8",
+    activeKicker: "text-info-300",
     body: "text-white/58",
     grid: "rounded-2xl",
-    inactiveCard: "border-white/10 bg-white/[0.03]",
+    inactiveCard: "border-white/10 bg-white/3",
     inactiveKicker: "text-white/44",
     title: "font-semibold text-base text-white",
   };
@@ -95,7 +95,7 @@ export function SetupFlowExplainer({
         >
           <span
             className={cn(
-              "text-[10px] uppercase tracking-[0.14em]",
+              "text-(length:--text-micro) uppercase tracking-eyebrow",
               classes.activeKicker
             )}
           >
@@ -114,7 +114,7 @@ export function SetupFlowExplainer({
         >
           <span
             className={cn(
-              "text-[10px] uppercase tracking-[0.14em]",
+              "text-(length:--text-micro) uppercase tracking-eyebrow",
               classes.inactiveKicker
             )}
           >
@@ -141,7 +141,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "text-xs uppercase tracking-[0.18em]",
+            "text-xs uppercase tracking-display",
             classes.activeKicker
           )}
         >
@@ -163,7 +163,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "text-xs uppercase tracking-[0.18em]",
+            "text-xs uppercase tracking-display",
             classes.inactiveKicker
           )}
         >

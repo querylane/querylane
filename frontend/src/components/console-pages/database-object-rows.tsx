@@ -35,7 +35,7 @@ function ObjectRowShell({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 border-border/60 border-b py-2 last:border-0">
-      <code className="min-w-0 truncate font-mono text-[0.8125rem]">
+      <code className="text-(length:--text-caption) min-w-0 truncate font-mono">
         {children}
       </code>
       {tag}
@@ -45,7 +45,7 @@ function ObjectRowShell({
 
 function UppercaseTag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="shrink-0 text-[0.625rem] text-muted-foreground uppercase tracking-wide">
+    <span className="text-(length:--text-micro) shrink-0 text-muted-foreground uppercase tracking-wide">
       {children}
     </span>
   );
@@ -133,7 +133,7 @@ function ExtensionRow({ extension }: { extension: Extension }) {
       className="flex items-baseline justify-between gap-3 border-border/60 border-b py-2 last:border-0"
       title={extension.comment}
     >
-      <code className="min-w-0 truncate font-medium font-mono text-[0.8125rem] text-foreground">
+      <code className="text-(length:--text-caption) min-w-0 truncate font-medium font-mono text-foreground">
         {extension.displayName}
       </code>
       <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">

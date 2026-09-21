@@ -2,7 +2,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { AnyRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 
 /**
  * Remembers, per browser tab, that devtools were opened so they survive dev
@@ -43,11 +43,12 @@ export function TanStackDevtools({ router }: TanStackDevtoolsProps) {
   if (!isMounted) {
     return (
       <Button
-        className="fixed right-4 bottom-4 z-50 opacity-60 hover:opacity-100"
+        className="fixed right-4 bottom-4 z-50"
         onClick={() => {
           persistMount();
           setIsMounted(true);
         }}
+        presentation="devtools"
         size="sm"
         variant="outline"
       >

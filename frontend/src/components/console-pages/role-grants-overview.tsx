@@ -26,7 +26,7 @@ import {
   schemaBreakdownLabel,
   TABLE_LIKE_TYPES,
 } from "@/components/console-pages/role-grants-shared";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
 import {
   GrantObjectType,
@@ -159,7 +159,7 @@ function TotalBadge({
 }) {
   return (
     <span className="flex flex-col items-end whitespace-nowrap">
-      <span className="font-medium font-mono text-[0.9375rem] text-foreground leading-tight tracking-tight">
+      <span className="text-(length:--text-body) font-medium font-mono text-foreground leading-tight tracking-tight">
         {value.toLocaleString()}
       </span>
       <span className="flex items-center gap-1 text-muted-foreground text-xs">
@@ -182,8 +182,9 @@ function DrillRow({
 }) {
   return (
     <Button
-      className="group h-auto w-full items-center justify-start gap-3.5 rounded-none border-0 border-border not-first:border-t px-4 py-3.5 font-normal hover:bg-foreground/[0.03]"
+      className="group h-auto w-full items-center justify-start"
       onClick={onClick}
+      presentation="grant-overview"
       type="button"
       variant="ghost"
     >
@@ -217,7 +218,7 @@ function SchemaListRow({
     >
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate font-medium font-mono text-[0.84375rem] text-foreground">
+        <span className="text-(length:--text-caption-lg) truncate font-medium font-mono text-foreground">
           {name}
         </span>
         <span className="truncate text-muted-foreground text-xs">
@@ -274,7 +275,7 @@ function ReachRow({
     <DrillRow onClick={onClick}>
       <Icon className={cn("size-4 shrink-0", iconClassName)} />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="truncate font-medium font-sans text-[0.84375rem] text-foreground">
+        <span className="text-(length:--text-caption-lg) truncate font-medium font-sans text-foreground">
           {name}
         </span>
         <span
@@ -510,7 +511,7 @@ function GrantsOverview({
                 : ownsPreview(ownedObjects)
             }
             icon={Crown}
-            iconClassName="text-amber-600 dark:text-amber-400"
+            iconClassName="text-warning-600 dark:text-warning-400"
             name="Owns"
             onClick={() => onNavigate({ kind: "reach", reach: "owns" })}
             partial={ownedPartial}
@@ -525,7 +526,7 @@ function GrantsOverview({
                 : defaultsPreview(defaultRules)
             }
             icon={Clock}
-            iconClassName="text-violet-600 dark:text-violet-300"
+            iconClassName="text-permission-600 dark:text-permission-300"
             name="Default privileges"
             onClick={() => onNavigate({ kind: "reach", reach: "defaults" })}
             partial={defaultPrivilegesPartial}
@@ -540,7 +541,7 @@ function GrantsOverview({
                 : publicPreview(publicObjects)
             }
             icon={Globe}
-            iconClassName="text-sky-600 dark:text-sky-400"
+            iconClassName="text-reference-600 dark:text-reference-400"
             name="Granted to PUBLIC"
             onClick={() => onNavigate({ kind: "reach", reach: "public" })}
             partial={publicGrantsPartial}

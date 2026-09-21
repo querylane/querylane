@@ -13,7 +13,7 @@ import {
   RELATION_TYPES,
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import {
   DataTable,
   type DataTableColumnDef,
@@ -84,7 +84,7 @@ function ObjectNameCell({ object }: { object: GrantedObject }) {
   return (
     <span className="flex items-center gap-2">
       <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="font-mono text-[0.8125rem] text-foreground">
+      <span className="text-(length:--text-caption) font-mono text-foreground">
         {showSchema ? (
           <>
             <span className="text-muted-foreground">{object.schemaName}.</span>
@@ -102,7 +102,7 @@ function GrantObjectKindBadge({ type }: { type: GrantObjectType }) {
   const meta =
     GRANT_OBJECT_META[type] ?? GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED];
   return (
-    <Badge className="gap-1.5 rounded-sm px-1.5" variant="secondary">
+    <Badge presentation="grant" variant="secondary">
       <meta.icon className="size-3" />
       {getObjectTypeLabel(type)}
     </Badge>
@@ -116,7 +116,7 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   }
   return (
     <span
-      className="font-mono text-[0.78125rem] text-muted-foreground"
+      className="text-(length:--text-label-lg) font-mono text-muted-foreground"
       title={grantor.title}
     >
       {grantor.text}

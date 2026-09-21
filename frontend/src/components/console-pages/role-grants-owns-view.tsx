@@ -29,17 +29,17 @@ import type {
   SetRoleGrantsTableFilter,
 } from "@/components/console-pages/role-grants-table-filter";
 import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
-import { Button } from "@/components/ui/button";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { SqlCodeBlock } from "@/components/ui/sql-code-block";
+} from "@/components/querylane-ui/popover";
+import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
+import {
+  type DataTableColumnDef,
+  SortableHeader,
+} from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { buildOwnedFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import type { RoleKind } from "@/lib/role-display";
@@ -67,7 +67,7 @@ function OwnershipPill({ name, tone }: { name: string; tone: PrivTone }) {
   return (
     <span
       className={cn(
-        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-xs tracking-[0.06em]",
+        "inline-flex h-[21px] items-center rounded border px-2 font-medium font-mono text-xs tracking-section",
         PRIV_TONE_CLASS[tone]
       )}
     >
@@ -82,7 +82,8 @@ function ImplicitTag() {
       <PopoverTrigger
         render={
           <Button
-            className="h-[22px] gap-1 rounded-full border-amber-500/30 px-2 font-normal text-amber-600 text-xs lowercase hover:bg-amber-500/10 dark:text-amber-400"
+            className="h-[22px]"
+            presentation="ownership"
             size="xs"
             type="button"
             variant="outline"
@@ -92,10 +93,10 @@ function ImplicitTag() {
         implicit
         <Info className="size-2.5 opacity-70" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-96 gap-2.5">
+      <PopoverContent align="start" className="w-96" presentation="ownership">
         <div className="flex items-center gap-2">
-          <Crown className="size-3.5 text-amber-500 dark:text-amber-400" />
-          <span className="font-semibold text-[0.78125rem] text-foreground">
+          <Crown className="size-3.5 text-warning-500 dark:text-warning-400" />
+          <span className="text-(length:--text-label-lg) font-semibold text-foreground">
             What ownership grants
           </span>
         </div>
@@ -137,8 +138,8 @@ function FutureOwnedNote({
   schemas: string[];
 }) {
   return (
-    <div className="flex items-start gap-2 rounded-sm border border-violet-500/20 border-l border-l-violet-500/55 bg-violet-500/[0.04] px-3 py-2 text-muted-foreground text-xs leading-relaxed">
-      <Plus className="mt-0.5 size-3 shrink-0 text-violet-600 dark:text-violet-300" />
+    <div className="flex items-start gap-2 rounded-sm border border-permission-500/20 border-l border-l-permission-500/55 bg-permission-500/4 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
+      <Plus className="mt-0.5 size-3 shrink-0 text-permission-600 dark:text-permission-300" />
       <span>
         Future-owned:{" "}
         <span className="font-mono text-foreground/80">{roleName}</span> can{" "}
@@ -168,7 +169,7 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   return (
     <span className="flex items-center gap-2">
       <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="font-mono text-[0.78125rem]">
+      <span className="text-(length:--text-label-lg) font-mono">
         {showSchema ? (
           <span className="text-muted-foreground">{object.schemaName}.</span>
         ) : null}
@@ -316,8 +317,8 @@ DROP OWNED BY ${quoted};`;
           <span className="font-mono">DROP ROLE</span>
         </span>
       </div>
-      <div className="flex flex-col gap-3 rounded-md border border-red-500/25 bg-red-500/[0.04] p-3.5">
-        <p className="text-[0.78125rem] text-foreground/80 leading-relaxed">
+      <div className="flex flex-col gap-3 rounded-md border border-negative-500/25 bg-negative-500/4 p-3.5">
+        <p className="text-(length:--text-label-lg) text-foreground/80 leading-relaxed">
           Postgres refuses <span className="font-mono">DROP ROLE {quoted}</span>{" "}
           while it owns anything. Reassign ownership to another role, then drop
           the leftovers.
@@ -457,7 +458,7 @@ export function OwnsGrantsView({
         count={isEmpty ? undefined : ownedObjects.length}
         countUnit="object"
         icon={Crown}
-        iconClassName="text-amber-500 dark:text-amber-400"
+        iconClassName="text-warning-500 dark:text-warning-400"
         partial={partial}
         title="Owns"
       >

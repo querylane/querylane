@@ -7,7 +7,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/components/querylane-ui/sheet";
 import { KeyboardShortcutRegistrationContext } from "@/hooks/use-keyboard-shortcut";
 import {
   KEYBOARD_SHORTCUTS,
@@ -237,7 +237,7 @@ function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
     <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
       {keys.map((key) => (
         <kbd
-          className="flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-[0.6875rem] text-muted-foreground shadow-xs"
+          className="text-(length:--text-label-sm) flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-muted-foreground shadow-xs"
           key={key}
         >
           {key}
@@ -268,9 +268,13 @@ function KeyboardShortcutHelpSheet({
 
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetContent className="w-full gap-0 sm:max-w-md" side="right">
-        <SheetHeader className="border-b px-5 py-4 pr-14">
-          <SheetTitle className="text-base">Keyboard shortcuts</SheetTitle>
+      <SheetContent
+        className="w-full sm:max-w-md"
+        presentation="flush"
+        side="right"
+      >
+        <SheetHeader presentation="drawer">
+          <SheetTitle presentation="heading">Keyboard shortcuts</SheetTitle>
           <SheetDescription>
             Work faster without leaving the keyboard.
           </SheetDescription>

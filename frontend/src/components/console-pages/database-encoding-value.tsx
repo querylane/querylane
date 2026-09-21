@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/querylane-ui/badge";
 import { cn } from "@/lib/utils";
 
 interface DatabaseEncodingValueProps {
@@ -35,10 +35,7 @@ function DatabaseEncodingValue({
       title={encodingTitle}
     >
       {trimmedCharacterSet ? (
-        <Badge
-          className="h-6 rounded-md px-2 font-mono text-[0.6875rem] tracking-wide"
-          variant="outline"
-        >
+        <Badge className="h-6" presentation="encoding" variant="outline">
           {trimmedCharacterSet}
         </Badge>
       ) : null}

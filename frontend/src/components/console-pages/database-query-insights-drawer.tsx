@@ -7,7 +7,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/components/querylane-ui/sheet";
 
 const DatabaseQueryInsightsContent = lazy(() =>
   import("@/components/console-pages/database-query-insights-content").then(
@@ -39,10 +39,11 @@ function DatabaseQueryInsightsDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
-        className="!w-full !max-w-none sm:!w-[80vw] sm:!max-w-5xl gap-0 overflow-hidden p-0"
+        className="!w-full !max-w-none sm:!w-[80vw] sm:!max-w-5xl overflow-hidden"
+        presentation="detail"
         side="right"
       >
-        <SheetHeader className="shrink-0 border-b px-5 py-4 pr-14">
+        <SheetHeader className="shrink-0" presentation="drawer">
           <SheetTitle>Query insights</SheetTitle>
           <SheetDescription>
             PostgreSQL query and table statistics for this database.

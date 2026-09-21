@@ -16,17 +16,19 @@ import { useShallow } from "zustand/react/shallow";
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { RolePartialAccessAlert } from "@/components/console-pages/role-detail-shared";
 import { MapFacetFilters } from "@/components/map-facet-filters";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/querylane-ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/querylane-ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -34,7 +36,10 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/querylane-ui/popover";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type {
   AccessDefaultPrivilege,
   AccessGrant,
@@ -249,12 +254,12 @@ function AccessMapLoadingCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center" presentation="section">
           <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading access map
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-muted-foreground text-sm">
+      <CardContent presentation="description">
         Preparing the role access canvas.
       </CardContent>
     </Card>
@@ -370,7 +375,7 @@ function AccessMapCanvasActions({
               {hiddenFacetCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="rounded-full bg-muted px-1.5 font-mono text-[0.625rem] text-muted-foreground"
+                  className="text-(length:--text-micro) rounded-full bg-muted px-1.5 font-mono text-muted-foreground"
                 >
                   {hiddenFacetCount}
                 </span>
@@ -380,7 +385,8 @@ function AccessMapCanvasActions({
         />
         <PopoverContent
           align="end"
-          className="w-80 max-w-[calc(100vw-2rem)] gap-3 p-3"
+          className="w-80 max-w-[calc(100vw-2rem)]"
+          presentation="compact"
         >
           <PopoverHeader>
             <PopoverTitle>Access filters</PopoverTitle>
@@ -569,7 +575,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center" presentation="canvas">
             <ShieldCheck className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -582,7 +588,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center" presentation="canvas">
             <KeyRound className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -596,7 +602,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center" presentation="canvas">
             <GitBranch className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -610,7 +616,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
+          <CardContent className="flex items-center" presentation="canvas">
             <AlertCircle className="size-5 text-primary" />
             <div>
               <p className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -660,7 +666,10 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         />
       </Suspense>
       <Dialog onOpenChange={setIsMapExpanded} open={isMapExpanded}>
-        <DialogContent className="h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)] p-4 sm:max-w-[calc(100vw-2rem)]">
+        <DialogContent
+          className="h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-[calc(100vw-2rem)]"
+          presentation="compact"
+        >
           <div className="grid gap-3">
             <DialogHeader>
               <DialogTitle>Expanded access map</DialogTitle>

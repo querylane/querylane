@@ -1,0 +1,52 @@
+.railGlow {
+  composes: palette from "./onboarding-tokens.module.css";
+  background-image:
+    radial-gradient(
+      circle at 40% 30%,
+      var(--onboarding-rail-blue-glow),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 60% 72%,
+      var(--onboarding-rail-violet-glow),
+      transparent 34%
+    );
+}
+
+.backdrop {
+  composes: palette from "./onboarding-tokens.module.css";
+  background-image:
+    radial-gradient(
+      circle at top,
+      var(--onboarding-backdrop-top-glow),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 50% 45%,
+      var(--onboarding-backdrop-center-glow),
+      transparent 28%
+    );
+}
+
+.dotPattern {
+  composes: palette from "./onboarding-tokens.module.css";
+  background-image: radial-gradient(
+    var(--onboarding-pattern-ink) 1px,
+    transparent 1px
+  );
+}
+
+.linePattern {
+  composes: palette from "./onboarding-tokens.module.css";
+  background-image:
+    linear-gradient(
+      to right,
+      var(--onboarding-pattern-ink) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      var(--onboarding-pattern-ink) 1px,
+      transparent 1px
+    );
+}

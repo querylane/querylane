@@ -17,22 +17,22 @@ import type {
   RolesAccessMapRoleNode,
 } from "@/components/console-pages/roles-access-map-model";
 import { RolesAccessMapNotice } from "@/components/console-pages/roles-access-map-notice";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/querylane-ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+} from "@/components/querylane-ui/dialog";
+import { Label } from "@/components/querylane-ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/querylane-ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { assertNever } from "@/lib/assert-never";
 import { cn } from "@/lib/utils";
@@ -150,15 +150,15 @@ function edgePath({
 function edgeToneClass(tone: RolesAccessMapEdge["tone"]): string {
   switch (tone) {
     case "default":
-      return "stroke-emerald-500/80 [stroke-dasharray:2_4]";
+      return "stroke-positive-500/80 [stroke-dasharray:2_4]";
     case "direct":
-      return "stroke-blue-500/80";
+      return "stroke-info-500/80";
     case "member":
       return "stroke-muted-foreground/60";
     case "owner":
-      return "stroke-amber-500/80";
+      return "stroke-warning-500/80";
     case "public":
-      return "stroke-red-500/75 [stroke-dasharray:6_4]";
+      return "stroke-negative-500/75 [stroke-dasharray:6_4]";
     default:
       return assertNever(tone);
   }
@@ -167,16 +167,16 @@ function edgeToneClass(tone: RolesAccessMapEdge["tone"]): string {
 function roleDotClass(kind: RolesAccessMapRoleNode["kind"]): string {
   switch (kind) {
     case "super":
-      return "bg-amber-400";
+      return "bg-warning-400";
     case "login":
-      return "bg-emerald-500";
+      return "bg-positive-500";
     case "repl":
-      return "bg-sky-500";
+      return "bg-reference-500";
     case "group":
     case "builtin":
       return "bg-muted-foreground";
     case "public":
-      return "bg-red-500";
+      return "bg-negative-500";
     default:
       return assertNever(kind);
   }
@@ -219,11 +219,12 @@ function AccessMapEdgePath({
   return (
     <path
       className={cn(
-        "fill-none transition-opacity",
+        "transition-opacity",
         edgeToneClass(edge.tone),
         active ? "opacity-100" : "opacity-15"
       )}
       d={edgePath({ objectIndex, roleIndex, targetRoleIndex })}
+      fill="none"
       strokeWidth={active ? EDGE_ACTIVE_WIDTH : EDGE_DEFAULT_WIDTH}
     />
   );
@@ -246,13 +247,16 @@ function RoleNodeButton({
     <Button
       aria-label={`Trace access for ${node.title}`}
       aria-pressed={selected}
-      className={cn(
-        "absolute h-9 justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
-        selected && "border-primary ring-2 ring-primary/30",
-        dimmed && "opacity-30"
-      )}
+      className="absolute top-(--layout-top) left-(--layout-left) h-9 w-(--layout-width) justify-start text-left"
+      data-dimmed={dimmed}
+      data-selected={selected}
       onClick={() => onSelect(node.id)}
-      style={{ left: ROLE_X, top, width: ROLE_NODE_WIDTH }}
+      presentation="access-node"
+      style={{
+        "--layout-left": `${ROLE_X}px`,
+        "--layout-top": `${top}px`,
+        "--layout-width": `${ROLE_NODE_WIDTH}px`,
+      }}
       type="button"
       variant="ghost"
     >
@@ -287,13 +291,16 @@ function ObjectNodeButton({
     <Button
       aria-label={`Trace access to ${node.title}`}
       aria-pressed={selected}
-      className={cn(
-        "absolute h-[42px] justify-start rounded-lg border bg-background px-3 text-left shadow-xs hover:bg-accent",
-        selected && "border-primary ring-2 ring-primary/30",
-        dimmed && "opacity-30"
-      )}
+      className="absolute top-(--layout-top) left-(--layout-left) h-[42px] w-(--layout-width) justify-start text-left"
+      data-dimmed={dimmed}
+      data-selected={selected}
       onClick={() => onSelect(node.id)}
-      style={{ left: OBJECT_X, top, width: OBJECT_NODE_WIDTH }}
+      presentation="access-node"
+      style={{
+        "--layout-left": `${OBJECT_X}px`,
+        "--layout-top": `${top}px`,
+        "--layout-width": `${OBJECT_NODE_WIDTH}px`,
+      }}
       type="button"
       variant="ghost"
     >
@@ -316,8 +323,12 @@ function ObjectNodeButton({
 function EmptyObjects({ incomplete }: { incomplete: boolean }) {
   return (
     <div
-      className="absolute flex h-36 items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm"
-      style={{ left: OBJECT_X, top: OBJECT_TOP, width: OBJECT_NODE_WIDTH }}
+      className="absolute top-(--layout-top) left-(--layout-left) flex h-36 w-(--layout-width) items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm"
+      style={{
+        "--layout-left": `${OBJECT_X}px`,
+        "--layout-top": `${OBJECT_TOP}px`,
+        "--layout-width": `${OBJECT_NODE_WIDTH}px`,
+      }}
     >
       {incomplete
         ? "Object grants may exist beyond the available results."
@@ -373,7 +384,7 @@ function AccessFiltersPopover({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-72 gap-3 p-3">
+      <PopoverContent align="start" className="w-72" presentation="compact">
         <PopoverHeader>
           <PopoverTitle>Access filters</PopoverTitle>
         </PopoverHeader>
@@ -381,7 +392,7 @@ function AccessFiltersPopover({
           {builtInRoleCount > 0 ? (
             <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted">
               <div className="min-w-0">
-                <Label className="text-xs" htmlFor={builtInRolesSwitchId}>
+                <Label htmlFor={builtInRolesSwitchId} presentation="compact">
                   Built-in roles
                 </Label>
                 <p className="truncate text-muted-foreground text-xs">
@@ -413,7 +424,7 @@ function AccessFiltersPopover({
                     )}
                   />
                   <div className="min-w-0">
-                    <Label className="text-xs" htmlFor={switchId}>
+                    <Label htmlFor={switchId} presentation="compact">
                       {filter.label}
                     </Label>
                     <p className="truncate text-muted-foreground text-xs">
@@ -614,29 +625,29 @@ function RolesAccessMapCanvas({
         ref={viewportRef}
       >
         <div
-          className="overflow-hidden"
+          className="h-(--layout-height) w-(--layout-width) overflow-hidden"
           style={{
-            height: Math.round(height * zoom),
-            width: Math.round(CANVAS_WIDTH * zoom),
+            "--layout-height": `${Math.round(height * zoom)}px`,
+            "--layout-width": `${Math.round(CANVAS_WIDTH * zoom)}px`,
           }}
         >
           <div
-            className="relative origin-top-left"
+            className="transform-(--layout-transform) relative h-(--layout-height) w-(--layout-width) origin-top-left"
             style={{
-              height,
-              transform: `scale(${zoom})`,
-              width: CANVAS_WIDTH,
+              "--layout-height": `${height}px`,
+              "--layout-transform": `scale(${zoom})`,
+              "--layout-width": `${CANVAS_WIDTH}px`,
             }}
           >
             <div
-              className="absolute top-2 font-semibold text-[0.65625rem] text-muted-foreground uppercase tracking-[0.06em]"
-              style={{ left: ROLE_X }}
+              className="text-(length:--text-micro-lg) absolute top-2 left-(--layout-left) font-semibold text-muted-foreground uppercase tracking-section"
+              style={{ "--layout-left": `${ROLE_X}px` }}
             >
               Roles
             </div>
             <div
-              className="absolute top-2 font-semibold text-[0.65625rem] text-muted-foreground uppercase tracking-[0.06em]"
-              style={{ left: OBJECT_X }}
+              className="text-(length:--text-micro-lg) absolute top-2 left-(--layout-left) font-semibold text-muted-foreground uppercase tracking-section"
+              style={{ "--layout-left": `${OBJECT_X}px` }}
             >
               Objects
             </div>
@@ -691,7 +702,10 @@ function RolesAccessMapCanvas({
     <section aria-label="Role access map" className="grid gap-3">
       {collapsedMapSurface}
       <Dialog onOpenChange={setIsExpanded} open={isExpanded}>
-        <DialogContent className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col gap-4 overflow-hidden p-4">
+        <DialogContent
+          className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden"
+          presentation="spacious-padded"
+        >
           <DialogHeader>
             <DialogTitle>Expanded role access map</DialogTitle>
             <DialogDescription>
