@@ -33,6 +33,18 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 		owner: "querylane",
 		repo: "querylane",
 	},
+	i18n: {
+		defaultLocale: "en",
+		locales: [{ code: "en", label: "English" }],
+		ui: {
+			en: {
+				changelog: {
+					description:
+						"Follow Querylane releases, preview updates, and fixes. Each entry explains what changed and where to learn more about using the product.",
+				},
+			},
+		},
+	},
 	reference: [
 		openapi({
 			codeSamples: ["curl", "js", "go"],
@@ -114,11 +126,6 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 	},
 	markdown: {
 		imageZoom: true,
-	},
-	seo: {
-		og: {
-			enabled: false,
-		},
 	},
 	search: {
 		indexing: { includeCodeBlocks: true },
