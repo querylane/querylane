@@ -53,9 +53,21 @@ const reactDoctorRuleOverrides = [
   },
   {
     files: [
+      "src/hooks/use-proto-form/**",
+      "src/lib/core/**",
+      "src/lib/protobuf-provider/**",
+    ],
+    rules: [
+      "deslop/unused-export",
+      "deslop/unused-file",
+      "react-doctor/no-barrel-import",
+    ],
+  },
+  {
+    files: [
       "src/components/onboarding-wizard/phases/manual-yaml-phase.tsx",
       "src/components/onboarding-wizard/wizard-content.tsx",
-      "src/routes/new-instance-connection-fields.tsx",
+      "src/components/new-instance-connection-fields.tsx",
     ],
     rules: ["react-doctor/no-nested-card-surface"],
   },
@@ -128,6 +140,10 @@ const reactDoctorRuleOverrides = [
   },
 ] as const;
 const overrideRationales = {
+  "deslop/unused-export":
+    "Protoform registry source preserves its public library API even when Querylane consumes only part of that API.",
+  "deslop/unused-file":
+    "Protoform registry source is synchronized as a complete upstream module, including optional workflows Querylane does not call.",
   "react-doctor/no-cramped-container-padding":
     "These compact badges and graph annotations need to preserve dense data layouts rather than card-sized padding.",
   "react-doctor/no-decorative-grid-background":
@@ -136,6 +152,8 @@ const overrideRationales = {
     "The chart tooltip needs both a boundary over plotted data and elevation above overlapping chart marks.",
   "react-doctor/no-nested-card-surface":
     "These nested surfaces distinguish form inputs, setup alternatives, and status summaries inside larger workflow panels.",
+  "react-doctor/no-barrel-import":
+    "Protoform registry imports mirror the upstream module so consumer refreshes remain reviewable and deterministic.",
   "react-doctor/no-pass-live-state-to-parent":
     "Canonical TanStack Router search state must be reconciled after async schema loading.",
   "react-doctor/no-pure-black-shadow":

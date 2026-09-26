@@ -82,7 +82,7 @@ function CreateInstanceTextField({
   id: string;
   label: string;
   placeholder?: string | undefined;
-  type?: "password" | "text" | undefined;
+  type?: "number" | "password" | "text" | undefined;
   updateField: (field: CreateInstanceFieldName, value: string) => void;
 }) {
   const error = formErrors[field];
@@ -107,7 +107,7 @@ function CreateInstanceTextField({
       {type === "password" ? (
         <PasswordInput {...sharedProps} />
       ) : (
-        <Input {...sharedProps} />
+        <Input {...sharedProps} type={type} />
       )}
       {error ? (
         <p className="text-destructive text-sm" id={`${id}-error`}>
@@ -243,6 +243,7 @@ function CreateInstanceConnectionFields({
           formState={formState}
           id={portId}
           label="Port"
+          type="number"
           updateField={updateField}
         />
         <CreateInstanceTextField

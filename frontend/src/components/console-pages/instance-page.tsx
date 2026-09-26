@@ -25,16 +25,7 @@ import {
 } from "@/components/console-pages/console-layout";
 import { DatabaseEncodingValue } from "@/components/console-pages/database-encoding-value";
 import { InstanceActivityPage } from "@/components/console-pages/instance-activity-page";
-import {
-  buildInstanceUpdatePaths,
-  type InstanceFormErrors,
-  type InstanceFormInvalidFieldName,
-  type InstanceFormState,
-  type InstanceRecord,
-  labelsToMap,
-  parseInstanceFormPort,
-  trimInstanceFormState,
-} from "@/components/console-pages/instance-config-model";
+import type { InstanceRecord } from "@/components/console-pages/instance-config-model";
 import { InstanceConnectionsCard } from "@/components/console-pages/instance-connections-card";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import {
@@ -60,7 +51,6 @@ import {
   DataTableFilterToolbar,
 } from "@/components/ui/data-table-filter-toolbar";
 import { StatusIndicator } from "@/components/ui/status-indicator";
-import { extractInstanceConfigFieldViolations } from "@/features/create-instance-field-violations";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
 import {
   extensionsForDatabaseQueryInput,
@@ -103,11 +93,7 @@ import {
   seriesByMetric,
 } from "@/lib/metrics";
 import { handleNavigationError } from "@/lib/navigation-errors";
-import {
-  formatReplicationRole,
-  toSslMode,
-  toSslNegotiation,
-} from "@/lib/protobuf-enums";
+import { formatReplicationRole } from "@/lib/protobuf-enums";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
 import { normalizeAppUiError } from "@/lib/ui-error";
@@ -118,6 +104,7 @@ import {
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
   ConnectionActivityHealth,
+  Instance,
   InstanceHealth,
   InstanceOverview,
   ServerInfo,
@@ -230,38 +217,6 @@ function runDeleteNavigationFollowUp(promise: Promise<unknown>) {
       area: "console.instance.delete.navigate-home",
     });
   });
-}
-
-function buildInstanceUpdateInput({
-  formState,
-  instance,
-  nextPort,
-  updatePaths,
-}: {
-  formState: InstanceFormState;
-  instance: InstanceRecord;
-  nextPort: number;
-  updatePaths: string[];
-}) {
-  return {
-    instance: {
-      config: {
-        database: formState.database,
-        host: formState.host,
-        password: formState.password,
-        port: nextPort,
-        sslMode: toSslMode(formState.sslMode),
-        sslNegotiation: toSslNegotiation(formState.sslNegotiation),
-        username: formState.username,
-      },
-      displayName: formState.displayName,
-      labels: labelsToMap(formState.labels),
-      name: instance.name,
-    },
-    updateMask: {
-      paths: updatePaths,
-    },
-  };
 }
 
 const PERCENT_MULTIPLIER = 100;
@@ -907,37 +862,7 @@ function InstanceOverviewContent({
   );
 }
 
-function getInstanceConfigSaveFieldViolationOutcome(error: unknown): {
-  fieldErrors: InstanceFormErrors;
-  firstInvalidField: InstanceFormInvalidFieldName | null;
-  notice: { message: string; variant: "error" };
-} | null {
-  const { fieldErrors, firstInvalidField, generalErrors } =
-    extractInstanceConfigFieldViolations(error);
-  if (!(firstInvalidField || generalErrors.length > 0)) {
-    return null;
-  }
-
-  return {
-    fieldErrors,
-    firstInvalidField,
-    notice: {
-      message:
-        generalErrors.length > 0
-          ? generalErrors.join(" ")
-          : "Fix the highlighted fields, then save again.",
-      variant: "error",
-    },
-  };
-}
-
 type FormNotice = { message: string; variant: "error" | "success" } | null;
-type InstanceSaveResult =
-  | {
-      fieldErrors: InstanceFormErrors;
-      firstInvalidField: InstanceFormInvalidFieldName | null;
-    }
-  | undefined;
 interface RefetchableQuery {
   refetch: () => Promise<unknown>;
 }
@@ -1009,7 +934,8 @@ function refreshInstancePageData({
 }
 
 async function saveInstanceConfiguration(
-  rawFormState: InstanceFormState,
+  editedInstance: Instance,
+  updatePaths: string[],
   {
     instance,
     instanceQuery,
@@ -1029,36 +955,16 @@ async function saveInstanceConfiguration(
     setFormNotice: Dispatch<SetStateAction<FormNotice>>;
     updateInstanceMutation: ReturnType<typeof useUpdateInstanceMutation>;
   }
-): Promise<InstanceSaveResult> {
+): Promise<unknown | undefined> {
   if (!instance || isConfigManaged) {
     return;
   }
-  // Trim once at the boundary so change detection and the payload use the
-  // same values that validation checks.
-  const formState = trimInstanceFormState(rawFormState);
-  const nextPort = parseInstanceFormPort(formState.port);
-  if (nextPort === null) {
-    return;
-  }
-  const updatePaths = buildInstanceUpdatePaths({
-    formState,
-    instance,
-    nextPort,
-  });
-  if (updatePaths.length === 0) {
-    return;
-  }
   setFormNotice(null);
-  let saveResult: InstanceSaveResult;
   try {
-    await updateInstanceMutation.mutateAsync(
-      buildInstanceUpdateInput({
-        formState,
-        instance,
-        nextPort,
-        updatePaths,
-      })
-    );
+    await updateInstanceMutation.mutateAsync({
+      instance: editedInstance,
+      updateMask: { paths: updatePaths },
+    });
     setFormNotice({
       message: "Instance configuration saved.",
       variant: "success",
@@ -1072,25 +978,9 @@ async function saveInstanceConfiguration(
       overviewQuery.refetch();
     }
   } catch (error) {
-    const fieldViolationOutcome =
-      getInstanceConfigSaveFieldViolationOutcome(error);
-    if (fieldViolationOutcome) {
-      setFormNotice(fieldViolationOutcome.notice);
-      saveResult = {
-        fieldErrors: fieldViolationOutcome.fieldErrors,
-        firstInvalidField: fieldViolationOutcome.firstInvalidField,
-      };
-    } else {
-      const uiError = normalizeAppUiError(error, {
-        action: "save instance configuration",
-        area: "console.instance.configuration",
-        source: "mutation",
-        surface: "inline",
-      });
-      setFormNotice({ message: uiError.message, variant: "error" });
-    }
+    return error;
   }
-  return saveResult;
+  return undefined;
 }
 
 async function deleteInstanceFromPage({
@@ -1379,14 +1269,16 @@ function BackendInstancePage({
       showOverviewLiveData: liveDataVisibility.overview,
     });
   };
-  const handleInvalidSave = () => {
+  const handleInvalidSave = (
+    message = "Fix the highlighted fields, then save again."
+  ) => {
     setFormNotice({
-      message: "Fix the highlighted fields, then save again.",
+      message,
       variant: "error",
     });
   };
-  const handleSave = (rawFormState: InstanceFormState) =>
-    saveInstanceConfiguration(rawFormState, {
+  const handleSave = (editedInstance: Instance, updatePaths: string[]) =>
+    saveInstanceConfiguration(editedInstance, updatePaths, {
       instance,
       instanceQuery,
       isConfigManaged,
@@ -1531,7 +1423,9 @@ function renderLoadedInstancePageContent({
   liveData: OverviewLiveData;
   navigateToDatabase: ReturnType<typeof useDb>["navigateToDatabase"];
   onDelete: () => void;
-  onInvalidSave: () => void;
+  onInvalidSave: Parameters<
+    typeof InstanceConfigurationSection
+  >[0]["onInvalidSave"];
   onOpenDeleteDialogChange: (open: boolean) => void;
   onRefresh: () => void;
   onSave: Parameters<typeof InstanceConfigurationSection>[0]["onSave"];
