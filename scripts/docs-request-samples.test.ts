@@ -4,9 +4,16 @@ import { goSampleForValues } from "../docs/components/openapi/go-playground";
 import { querylaneSampleLanguages } from "../docs/components/openapi/request-samples";
 
 test("offers Go instead of Python for API request samples", () => {
-	expect(config.openapi?.codeSamples).toEqual(["curl", "js", "go"]);
+	const reference = config.reference?.[0];
+	expect(reference?.kind).toBe("openapi");
+	if (reference?.kind !== "openapi") {
+		throw new Error("Expected the native OpenAPI reference");
+	}
+	expect(reference.options.codeSamples).toEqual(["curl", "js", "go"]);
 
-	const languages = querylaneSampleLanguages(config.openapi?.codeSamples ?? []);
+	const languages = querylaneSampleLanguages(
+		reference.options.codeSamples ?? [],
+	);
 	expect(languages.map(({ id, label }) => ({ id, label }))).toEqual([
 		{ id: "curl", label: "cURL" },
 		{ id: "js", label: "JavaScript" },
