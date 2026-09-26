@@ -1,13 +1,11 @@
-import { type ComponentOverrides, defineComponents } from "blume";
+import { defineComponents } from "blume";
 import ApiTagOperations from "./docs/components/openapi/ApiTagOperations.astro";
 import Operation from "./docs/components/openapi/Operation.astro";
 import RpcNavTree from "./docs/components/openapi/RpcNavTree.astro";
 
-const components: ComponentOverrides = defineComponents({
+export default defineComponents({
 	mdx: { ApiTagOperations, Operation },
 	layout: {
 		Sidebar: RpcNavTree,
 	},
 });
-
-export default components;

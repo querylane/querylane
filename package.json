@@ -2,7 +2,7 @@
 	"name": "querylane",
 	"devDependencies": {
 		"@types/node": "26.6.1",
-		"blume": "1.7.1",
+		"blume": "^2.0.3",
 		"zod": "4.6.5"
 	},
 	"overrides": {
@@ -24,8 +24,5 @@
 		"docs:validate": "blume validate --strict",
 		"setup:worktree": "bun ./scripts/setup-worktree.mjs"
 	},
-	"type": "module",
-	"patchedDependencies": {
-		"blume@1.7.1": "patches/blume@1.7.1.patch"
-	}
+	"type": "module"
 }

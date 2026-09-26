@@ -1,15 +1,13 @@
 import { defineConfig } from "blume";
+import { node } from "blume/deploy";
+import { openapi } from "blume/reference";
 
 export default defineConfig({
 	title: "Querylane",
 	description: "Get started, configure, deploy, and operate Querylane safely.",
 	logo: "/icon.svg",
-	deployment: {
-		adapter: "node",
-		output: "server",
-		site: "https://docs.querylane.net",
-	},
-	ai: {
+	deployment: node({ site: "https://docs.querylane.net" }),
+	agents: {
 		llmsTxt: {
 			details: `Use these docs to evaluate, configure, deploy, and operate Querylane, a self-hosted PostgreSQL administration workspace.
 
@@ -35,17 +33,18 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 		owner: "querylane",
 		repo: "querylane",
 	},
-	openapi: {
-		codeSamples: ["curl", "js", "go"],
-		enabled: true,
-		sources: [
-			{
-				label: "Experimental API",
-				route: "/api",
-				spec: "./docs/generated/querylane.openapi.yaml",
-			},
-		],
-	},
+	reference: [
+		openapi({
+			codeSamples: ["curl", "js", "go"],
+			sources: [
+				{
+					label: "Experimental API",
+					route: "/api",
+					spec: "./docs/generated/querylane.openapi.yaml",
+				},
+			],
+		}),
+	],
 	redirects: [
 		{
 			from: "/api/calling-the-api",
