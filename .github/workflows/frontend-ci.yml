@@ -20,6 +20,9 @@ env:
   ACTION_UPLOAD_ARTIFACT: &action_upload_artifact actions/upload-artifact@v7.0.1
   BUN_VERSION: &bun_version 1.4.0
   NODE_VERSION: &node_version 24
+  # Keep in sync with the `playwright` version in frontend/package.json. The
+  # visual job fails fast when they drift, because baselines depend on it.
+  PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.63.0-noble
 
 permissions:
   contents: read
@@ -206,6 +209,57 @@ jobs:
           overwrite: true
           if-no-files-found: ignore
           include-hidden-files: true
+
+  visual:
+    name: Frontend Visual
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Same image as `bun run test:visual:update`, so baselines match pixel for pixel.
+    container:
+      image: *playwright_image
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      # Installed through npm, as in scripts/playwright-container.sh: the
+      # Playwright image ships Node but not the unzip that setup-bun relies on.
+      - name: Install Bun
+        run: npm install --global bun@${{ env.BUN_VERSION }}
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check Playwright image matches the installed version
+        shell: bash
+        run: |
+          set -euo pipefail
+          installed="$(bun -e 'console.log(require("playwright/package.json").version)')"
+          case "$PLAYWRIGHT_IMAGE" in
+            *":v${installed}-"*) ;;
+            *) echo "::error::PLAYWRIGHT_IMAGE ($PLAYWRIGHT_IMAGE) does not match playwright ${installed}"; exit 1 ;;
+          esac
+      - name: Run visual regression tests
+        run: bun run test:visual
+      - name: Upload Playwright visual report
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: playwright-visual-report
+          path: |
+            frontend/e2e/playwright-report
+            frontend/e2e/test-results
+          retention-days: 3
+          overwrite: true
+          if-no-files-found: ignore
 
   build:
     name: Frontend Build
