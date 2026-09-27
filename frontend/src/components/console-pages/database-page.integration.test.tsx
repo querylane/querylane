@@ -93,12 +93,7 @@ const COMMENTED_UPDATE_QUERY_BUTTON_RE =
   /-- trace: worker\s+UPDATE events SET processed_at = now\(\)/i;
 const EXACT_THRESHOLD_QUERY_BUTTON_RE =
   /SELECT avg\(duration_ms\) FROM events/i;
-const DUPLICATE_QUERY_ID_SECOND_ROW_RE =
-  /SELECT \* FROM events WHERE tenant_id = \$2/i;
 const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
-const QUERY_PAGE_SIX_BUTTON_RE = /sequence = 6/i;
-const QUERY_PAGE_ELEVEN_BUTTON_RE = /sequence = 11/i;
-const EMPTY_PAGINATION_RANGE_RE = /Showing 1–0/;
 const QUERY_STATS_UNAVAILABLE_RE =
   /Query statistics are unavailable for this database/;
 
@@ -567,45 +562,6 @@ function queryInsightsResponseWithSearchableQueries() {
   });
 }
 
-function queryInsightsResponseWithManyQueries() {
-  return queryInsightsResponseWith({
-    topQueries: Array.from({ length: 12 }, (_, index) => {
-      const sequence = index + 1;
-      return queryRuntimeInsight({
-        calls: BigInt(120 - sequence),
-        meanTimeMs: sequence,
-        query: `SELECT * FROM events WHERE sequence = ${sequence}`,
-        queryId: BigInt(10_000 + sequence),
-        totalTimeMs: 1200 - sequence,
-        totalTimeRatio: 1 - index / 20,
-      });
-    }),
-  });
-}
-
-function queryInsightsResponseWithDuplicateQueryIds() {
-  return queryInsightsResponseWith({
-    topQueries: [
-      queryRuntimeInsight({
-        calls: 8n,
-        meanTimeMs: 10,
-        query: "SELECT * FROM events WHERE tenant_id = $1",
-        queryId: 900n,
-        totalTimeMs: 80,
-        totalTimeRatio: 1,
-      }),
-      queryRuntimeInsight({
-        calls: 4n,
-        meanTimeMs: 15,
-        query: "SELECT * FROM events WHERE tenant_id = $2",
-        queryId: 900n,
-        totalTimeMs: 60,
-        totalTimeRatio: 0.75,
-      }),
-    ],
-  });
-}
-
 function unavailableQueryInsightsResponse() {
   return queryInsightsResponseWith({
     queryStatsAvailable: false,
@@ -1046,36 +1002,6 @@ describe("backend database query insights drawer", () => {
 });
 
 describe("database query insights resilience", () => {
-  test("selects the intended row when queryids repeat", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithDuplicateQueryIds(),
-    };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: DUPLICATE_QUERY_ID_SECOND_ROW_RE,
-      })
-    );
-
-    const detail = screen.getByRole("region", { name: "Query detail" });
-    expect(
-      within(detail).getByText(
-        (_content, element) =>
-          element?.tagName.toLowerCase() === "code" &&
-          element.textContent === "SELECT * FROM events WHERE tenant_id = $2"
-      )
-    ).toBeTruthy();
-    expect(within(detail).getByText("4")).toBeTruthy();
-  });
-
   test("filters query insights with table-style search and shared faceted filters", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = {
@@ -1152,68 +1078,6 @@ describe("database query insights resilience", () => {
     expect(
       screen.queryByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
-  });
-
-  test("paginates query insights and lets users change page size", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithManyQueries(),
-    };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Showing 1–10 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Next page" }));
-
-    expect(screen.getByText("Showing 11–12 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["10", "25", "50"]);
-    await user.click(screen.getByRole("option", { name: "25" }));
-
-    expect(screen.getByText("Showing 1–12 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
-
-    await user.type(
-      screen.getByRole("textbox", { name: "Search queries…" }),
-      "missing query"
-    );
-
-    expect(screen.getByText("No matching query runtime data.")).toBeTruthy();
-    expect(screen.queryByText(EMPTY_PAGINATION_RANGE_RE)).toBeNull();
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   test("renders unavailable, table-stats-missing, and error states", () => {

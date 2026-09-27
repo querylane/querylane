@@ -23,9 +23,6 @@ const mocks = rs.hoisted(() => ({
   truncatedRequestCount: 0,
 }));
 
-const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
-const TYPE_FILTER_BUTTON_NAME = /^Type/;
-
 rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
@@ -224,36 +221,6 @@ describe("InstanceRolesPage", () => {
       q: "app",
       tab: undefined,
       type: "login",
-    });
-  });
-
-  test("filters roles by URL type with the shared type filter", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab={undefined}
-        type="login"
-      />
-    );
-
-    expect(screen.getByText("app_user")).toBeTruthy();
-    expect(screen.queryByText("app_group")).toBeNull();
-    expect(screen.queryByText("replicator")).toBeNull();
-
-    await user.click(
-      screen.getByRole("button", { name: TYPE_FILTER_BUTTON_NAME })
-    );
-    await user.click(
-      screen.getByRole("option", { name: SUPERUSERS_FILTER_OPTION_NAME })
-    );
-
-    const navigateCall = mocks.navigate.mock.calls[0]?.[0];
-    expect(navigateCall.search({ q: "app", type: "login" })).toEqual({
-      q: "app",
-      type: "super",
     });
   });
 

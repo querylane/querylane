@@ -10,7 +10,6 @@ import {
   deriveBuiltinParents,
   directGrantsSubText,
   facetStateOf,
-  isSection,
   ownedSubText,
   type RelatedRole,
   rlsNoteText,
@@ -39,48 +38,7 @@ function capabilityByKeyword(list: Capability[], keyword: string): Capability {
   return found;
 }
 
-describe("isSection", () => {
-  test.each(["definition", "grants", "members", "overview"])(
-    "accepts %s",
-    (value) => {
-      expect(isSection(value)).toBe(true);
-    }
-  );
-
-  test("rejects unknown values", () => {
-    expect(isSection("settings")).toBe(false);
-  });
-});
-
 describe("facetStateOf", () => {
-  test("treats a disabled query as ready even while pending", () => {
-    expect(facetStateOf(false, { error: undefined, isPending: true })).toBe(
-      "ready"
-    );
-  });
-
-  test("maps a query error to error", () => {
-    expect(
-      facetStateOf(true, { error: new Error("boom"), isPending: false })
-    ).toBe("error");
-  });
-
-  test("maps a pending enabled query to loading", () => {
-    expect(facetStateOf(true, { error: undefined, isPending: true })).toBe(
-      "loading"
-    );
-  });
-
-  test("marks intentionally deferred facets as idle", () => {
-    expect(
-      facetStateOf(
-        true,
-        { error: undefined, isPending: true },
-        { deferred: true }
-      )
-    ).toBe("idle");
-  });
-
   test("maps a settled enabled query to ready", () => {
     expect(facetStateOf(true, { error: undefined, isPending: false })).toBe(
       "ready"

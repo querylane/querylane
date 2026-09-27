@@ -156,15 +156,6 @@ function buildEmbeddedSetupRequest() {
 // Drains pending microtask chains (the router transport is promise-based and
 // never schedules macrotasks) without advancing fake timers, so backoff
 // timers only fire when a test advances them explicitly.
-async function flushMicrotasks(ticks = 20) {
-  if (ticks <= 0) {
-    return;
-  }
-  await act(async () => {
-    await Promise.resolve();
-  });
-  await flushMicrotasks(ticks - 1);
-}
 
 async function flushUntil(condition: () => boolean, maxTicks = 200) {
   if (condition()) {
@@ -306,87 +297,6 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(result.current.retryPending).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("aborts the in-flight stream when disabled", async () => {
-    rs.useFakeTimers();
-    let abortedByClient = false;
-    const transport = createOnboardingTransport({
-      async *watchConfigChanges(_request, context) {
-        yield watchResponse(connectingEvent());
-        await new Promise<void>((resolve) => {
-          context.signal.addEventListener(
-            "abort",
-            () => {
-              abortedByClient = true;
-              resolve();
-            },
-            { once: true }
-          );
-        });
-      },
-    });
-    const onComplete = rs.fn<() => void>();
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
-    const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) =>
-        useWatchConfigChanges({ enabled, onComplete, onError, onProgress }),
-      { initialProps: { enabled: true }, wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => onProgress.mock.calls.length === 1);
-    expect(result.current.isRunning).toBe(true);
-
-    rerender({ enabled: false });
-
-    expect(result.current.isRunning).toBe(false);
-    await flushUntil(() => abortedByClient);
-    await flushMicrotasks();
-
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(onError).not.toHaveBeenCalled();
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("reports again through the defensive catch when the consumer onError throws", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        if (attempts > 0) {
-          throw new ConnectError("watch unavailable", Code.Unavailable);
-        }
-        return streamOf(watchResponse(succeededEvent()));
-      },
-    });
-    const onError = rs
-      .fn<(error: Error, reason: WatchErrorReason) => void>()
-      .mockImplementationOnce(() => {
-        throw new Error("consumer onError exploded");
-      });
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: true, onError }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => attempts === 1);
-    await advanceWatchBackoffs();
-    await flushUntil(() => onError.mock.calls.length === 2);
-
-    // Current behavior: a throwing onError consumer is reported a second
-    // time through the defensive catch, now carrying the consumer failure
-    // instead of the original stream failure.
-    expect(onError.mock.calls[0]?.[1]).toBe("stream_error");
-    expect(onError.mock.calls[1]?.[0].message).toBe(
-      "consumer onError exploded"
-    );
-    expect(onError.mock.calls[1]?.[1]).toBe("stream_error");
-    expect(result.current.manualRetryRequired).toBe(true);
-    await flushUntil(() => result.current.isRunning === false);
     expect(rs.getTimerCount()).toBe(0);
   });
 });

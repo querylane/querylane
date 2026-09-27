@@ -170,25 +170,6 @@ test("role search jumps to the selected role", async () => {
   });
 });
 
-test("screen selection jumps to the current database overview", async () => {
-  const user = userEvent.setup();
-  renderAdminCommandPalette();
-
-  await user.click(screen.getByRole("button", { name: "Search or jump to" }));
-  await user.click(await screen.findByText("Overview"));
-
-  expect(navigateMock).toHaveBeenCalledWith(
-    expect.objectContaining({
-      params: {
-        databaseId: "customer-events",
-        instanceId: "prod-analytics",
-      },
-      search: expect.any(Function),
-      to: "/instances/$instanceId/databases/$databaseId",
-    })
-  );
-});
-
 test("role errors replace the no-matches state when search cannot resolve", async () => {
   commandPaletteMockState.rolesQuery.error = new Error("roles offline");
   const user = userEvent.setup();

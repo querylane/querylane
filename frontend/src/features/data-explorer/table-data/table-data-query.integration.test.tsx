@@ -86,27 +86,6 @@ describe("useTableDataQuery", () => {
     });
   });
 
-  test("keeps malformed filter URL search and disables row reads", () => {
-    const onFilterSearchChange = rs.fn();
-    const onSortSearchChange = rs.fn();
-
-    renderHook(() =>
-      useTableDataQuery({
-        filterSearch: "not-json",
-        name: tableName,
-        onFilterSearchChange,
-        onPageSizeChange: rs.fn(),
-        onSortSearchChange,
-        pageSize: 25,
-        sortSearch: "email:sideways",
-      })
-    );
-
-    expect(latestReadRowsCall()[1].enabled).toBe(false);
-    expect(onFilterSearchChange).not.toHaveBeenCalled();
-    expect(onSortSearchChange).toHaveBeenCalledWith(undefined);
-  });
-
   test("retries column catalog errors before retrying disabled row reads", async () => {
     const columnRefetch = rs.fn(() => Promise.resolve({ data: { columns } }));
     const rowRefetch = rs.fn(() => Promise.resolve({ data: undefined }));

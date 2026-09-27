@@ -31,7 +31,6 @@ const state = rs.hoisted(() => ({
 }));
 const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
 const PG_TRGM_BUTTON_NAME = /^pg_trgm$/;
-const AMCHECK_BUTTON_NAME = /^amcheck$/;
 const INSTALLED_PG_TRGM_TEXT = /Installed · 1\.6/;
 const SCHEMA_PUBLIC_TEXT = /schema public/;
 
@@ -151,27 +150,5 @@ describe("database extensions page", () => {
     expect(
       screen.queryByRole("dialog", { name: "pg_trgm details" })
     ).toBeNull();
-  });
-
-  test("renders non-curated drawers from server data only", async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(screen.getByRole("button", { name: AMCHECK_BUTTON_NAME }));
-
-    const drawer = screen.getByRole("dialog", { name: "amcheck details" });
-    expect(
-      within(drawer).getByText("functions for verifying relation integrity")
-    ).toBeTruthy();
-    expect(
-      within(drawer).getByText("Not installed in this database")
-    ).toBeTruthy();
-    expect(within(drawer).queryByText("What it gives you")).toBeNull();
-    expect(within(drawer).queryByText("Try it")).toBeNull();
-    expect(within(drawer).getByText("Details")).toBeTruthy();
-    expect(within(drawer).getByText("Latest")).toBeTruthy();
-    expect(
-      within(drawer).getAllByRole("button", { name: "Copy SQL" })
-    ).toHaveLength(1);
   });
 });

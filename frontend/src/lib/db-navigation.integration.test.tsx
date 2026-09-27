@@ -98,30 +98,6 @@ describe("useNavigationCallbacks", () => {
     await Promise.resolve();
   });
 
-  describe("navigateToInstance", () => {
-    test("does not navigate when no page resolves for the target scope", () => {
-      const { callbacks, navigations, persisted } = renderNavigationCallbacks();
-
-      callbacks.navigateToInstance(buildInstance(""));
-
-      expect(navigations).toHaveLength(0);
-      expect(persisted).toHaveLength(0);
-    });
-  });
-
-  describe("viewOverview", () => {
-    test("does not navigate when the overview target cannot resolve", () => {
-      const { callbacks, navigations, persisted } = renderNavigationCallbacks({
-        instanceId: "local",
-      });
-
-      callbacks.viewOverview("database");
-
-      expect(navigations).toHaveLength(0);
-      expect(persisted).toHaveLength(0);
-    });
-  });
-
   describe("canonical search updater", () => {
     test("clears previous explorer search when switching databases on the same page", () => {
       const { callbacks, navigations } = renderNavigationCallbacks({

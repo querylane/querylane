@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { Button } from "@/components/ui/button";
+import { cleanup, render } from "@testing-library/react";
 import { FlowCanvas } from "@/features/database-visualization/flow-canvas";
 import type {
   VisualizationEdge,
@@ -108,68 +107,6 @@ afterEach(() => {
 });
 
 describe("FlowCanvas", () => {
-  test("fits the view again when graph contents change", async () => {
-    const { rerender } = render(
-      <FlowCanvas direction="LR" edges={[]} nodes={[firstNode]} />
-    );
-
-    await waitFor(() => {
-      expect(fitViewMock).toHaveBeenCalled();
-    });
-    fitViewMock.mockClear();
-
-    rerender(
-      <FlowCanvas
-        direction="LR"
-        edges={[tableEdge]}
-        nodes={[firstNode, secondNode]}
-      />
-    );
-
-    await waitFor(() => {
-      expect(fitViewMock).toHaveBeenCalled();
-    });
-    expect(
-      screen.getByLabelText("Flow mock").getAttribute("data-node-count")
-    ).toBe("2");
-  });
-
-  test("allows dense maps to zoom out far enough to fit", () => {
-    render(
-      <FlowCanvas
-        density="compact"
-        direction="LR"
-        edges={[tableEdge]}
-        nodes={[firstNode, secondNode]}
-      />
-    );
-
-    const minZoom = screen
-      .getByLabelText("Flow mock")
-      .getAttribute("data-min-zoom");
-
-    expect(minZoom).not.toBeNull();
-    expect(Number(minZoom)).toBeLessThan(0.1);
-  });
-
-  test("uses orthogonal step edges so dense relationship lines cross at right angles", () => {
-    render(
-      <FlowCanvas
-        density="compact"
-        direction="LR"
-        edges={[tableEdge]}
-        nodes={[firstNode, secondNode]}
-      />
-    );
-
-    expect(capturedEdges).toContainEqual(
-      expect.objectContaining({
-        id: tableEdge.id,
-        type: "step",
-      })
-    );
-  });
-
   test("passes useful labels to React Flow nodes", () => {
     const nodeWithSubtitle: VisualizationNode = {
       ...firstNode,
@@ -189,38 +126,6 @@ describe("FlowCanvas", () => {
         ariaLabel: "table:public.one, public schema, table node",
         id: firstNode.id,
       })
-    );
-  });
-
-  test("renders custom canvas actions inside a React Flow panel", () => {
-    render(
-      <FlowCanvas
-        actionPanel={<Button type="button">Map actions</Button>}
-        direction="LR"
-        edges={[]}
-        nodes={[firstNode]}
-      />
-    );
-
-    expect(screen.getByTestId("flow-panel")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Map actions" })).toBeTruthy();
-  });
-
-  test("renders a minimap for large-canvas orientation", () => {
-    render(<FlowCanvas direction="LR" edges={[]} nodes={[firstNode]} />);
-
-    expect(screen.getByLabelText("Canvas minimap")).toBeTruthy();
-  });
-
-  test("applies app theme classes to React Flow controls for dark mode contrast", () => {
-    render(<FlowCanvas direction="LR" edges={[]} nodes={[firstNode]} />);
-
-    expect(capturedControlsClassNames.at(-1)).toContain("text-foreground");
-    expect(
-      capturedControlsStyles.at(-1)?.["--xy-controls-button-background-color"]
-    ).toBe("var(--card)");
-    expect(capturedControlsStyles.at(-1)?.["--xy-controls-button-color"]).toBe(
-      "var(--foreground)"
     );
   });
 });

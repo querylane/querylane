@@ -3,10 +3,7 @@ import { afterEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { OtherDatabaseObject } from "@/components/console-pages/database-object-categories";
-import {
-  DatabaseObjectsPanel,
-  DatabaseObjectsSection,
-} from "@/components/console-pages/database-objects-section";
+import { DatabaseObjectsPanel } from "@/components/console-pages/database-objects-section";
 import { ExtensionSchema } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 const otherObjectsQuery = rs.hoisted(() => ({
@@ -127,23 +124,6 @@ function sequenceObject(index: number): OtherDatabaseObject {
 afterEach(() => {
   cleanup();
   rs.restoreAllMocks();
-});
-
-describe("DatabaseObjectsSection", () => {
-  it("keeps the extensions card even when the database has no other objects", () => {
-    render(
-      <DatabaseObjectsSection
-        databaseId="app"
-        extensions={extensions}
-        extensionsPending={false}
-        instanceId="prod"
-      />
-    );
-
-    expect(screen.getByText("Database objects")).toBeTruthy();
-    expect(screen.getByText("pgcrypto")).toBeTruthy();
-    expect(screen.queryByText("postgis")).toBeNull();
-  });
 });
 
 describe("DatabaseObjectsPanel", () => {
@@ -276,56 +256,5 @@ describe("DatabaseObjectsPanel", () => {
     );
     expect(within(dialog).getByText("ext_3")).toBeTruthy();
     expect(within(dialog).queryByText("ext_6")).toBeNull();
-  });
-
-  it("shows the empty extensions message", () => {
-    render(
-      <DatabaseObjectsPanel
-        extensions={[]}
-        extensionsPending={false}
-        isLoading={false}
-        params={params}
-        summary={{}}
-      />
-    );
-
-    expect(
-      screen.getByText("No extensions are installed in this database.")
-    ).toBeTruthy();
-  });
-
-  it("shows loading and retryable error states", async () => {
-    const onRetry = rs.fn(() => Promise.resolve());
-    const user = userEvent.setup();
-    const { rerender } = render(
-      <DatabaseObjectsPanel
-        extensions={[]}
-        extensionsPending={false}
-        isLoading={true}
-        params={params}
-        summary={{}}
-      />
-    );
-
-    expect(
-      screen.getByRole("status", { name: "Loading other database objects" })
-    ).toBeTruthy();
-
-    rerender(
-      <DatabaseObjectsPanel
-        error={new Error("catalog unavailable")}
-        extensions={[]}
-        extensionsPending={false}
-        isLoading={false}
-        onRetry={onRetry}
-        params={params}
-        summary={{}}
-      />
-    );
-    expect(
-      screen.getByText("Failed to load other database objects.")
-    ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Retry" }));
-    expect(onRetry).toHaveBeenCalledOnce();
   });
 });

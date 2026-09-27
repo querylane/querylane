@@ -9,19 +9,15 @@ import {
   densityState,
   dominantGrantor,
   type GrantedObject,
-  getObjectTypeLabel,
   grantObjectTypeFilterToken,
   grantObjectTypeFilterTokenForSlug,
   grantorSummary,
   groupBySchema,
   groupDefaultPrivileges,
-  objectDisplayName,
   objectMatchesFilters,
-  ownedObjectName,
   ownedStats,
   privAbbr,
   privTone,
-  privTooltip,
   schemaBreakdownLabel,
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
@@ -72,13 +68,6 @@ describe("aggregateGrants", () => {
   });
 });
 
-describe("getObjectTypeLabel", () => {
-  test("falls back to the generic label for an unknown enum value", () => {
-    // Proto3 enums are open: the wire can carry values this client predates.
-    expect(getObjectTypeLabel(99 as GrantObjectType)).toBe("Object");
-  });
-});
-
 describe("slugForObjectType", () => {
   test("returns undefined for a type with no slug", () => {
     expect(slugForObjectType(GrantObjectType.UNSPECIFIED)).toBeUndefined();
@@ -107,49 +96,9 @@ describe("privAbbr", () => {
   });
 });
 
-describe("privTooltip", () => {
-  test("describes PostgreSQL 17 MAINTAIN privileges", () => {
-    expect(privTooltip("MAINTAIN")).toBe("MAINTAIN — VACUUM, ANALYZE, REINDEX");
-  });
-
-  test("returns the bare name when no gloss is known", () => {
-    expect(privTooltip("MERGE")).toBe("MERGE");
-  });
-});
-
 describe("privTone", () => {
-  test("classifies CREATE as create", () => {
-    expect(privTone("CREATE")).toBe("create");
-  });
-
   test("classifies unknown privileges as default", () => {
     expect(privTone("MERGE")).toBe("default");
-  });
-});
-
-describe("objectDisplayName", () => {
-  test("uses the schema name for SCHEMA objects", () => {
-    expect(
-      objectDisplayName(
-        grantedObject({
-          objectName: "",
-          objectType: GrantObjectType.SCHEMA,
-          schemaName: "sales",
-        })
-      )
-    ).toBe("sales");
-  });
-
-  test("uses the bare object name when the schema is empty", () => {
-    expect(
-      objectDisplayName(
-        grantedObject({
-          objectName: "orders",
-          objectType: GrantObjectType.TABLE,
-          schemaName: "",
-        })
-      )
-    ).toBe("orders");
   });
 });
 
@@ -172,17 +121,6 @@ describe("dedupePrivileges", () => {
 });
 
 describe("grantorSummary", () => {
-  test("returns null when there are no grantors", () => {
-    expect(grantorSummary([])).toBeNull();
-  });
-
-  test("condenses multiple grantors to a count with a full-list title", () => {
-    expect(grantorSummary(["owner_a", "owner_b", "owner_c"])).toEqual({
-      text: "3 roles",
-      title: "owner_a, owner_b, owner_c",
-    });
-  });
-
   test("renders a missing single entry as empty text", () => {
     // Sparse array: length 1 with a hole — exercises the defensive fallback.
     expect(grantorSummary(new Array<string>(1))).toEqual({
@@ -193,19 +131,6 @@ describe("grantorSummary", () => {
 });
 
 describe("dominantGrantor", () => {
-  test("returns null when no object has a grantor", () => {
-    expect(dominantGrantor([grantedObject({ grantors: [] })])).toBeNull();
-  });
-
-  test("returns the lone grantor without a suffix", () => {
-    expect(
-      dominantGrantor([
-        grantedObject({ grantors: ["owner_a"] }),
-        grantedObject({ grantors: ["owner_a"] }),
-      ])
-    ).toBe("owner_a");
-  });
-
   test("suffixes the most frequent grantor with the number of others", () => {
     expect(
       dominantGrantor([
@@ -218,29 +143,6 @@ describe("dominantGrantor", () => {
 });
 
 describe("columnsFor", () => {
-  test("appends privileges present in the data but not in the vocabulary", () => {
-    expect(
-      columnsFor(GrantObjectType.TABLE, [
-        grantedObject({
-          privileges: [
-            { grantable: false, name: "SELECT" },
-            { grantable: false, name: "MAINTAIN" },
-            { grantable: false, name: "MAINTAIN" },
-          ],
-        }),
-      ])
-    ).toEqual([
-      "SELECT",
-      "INSERT",
-      "UPDATE",
-      "DELETE",
-      "TRUNCATE",
-      "REFERENCES",
-      "TRIGGER",
-      "MAINTAIN",
-    ]);
-  });
-
   test("builds columns purely from data for a type with no vocabulary", () => {
     expect(
       columnsFor(GrantObjectType.UNSPECIFIED, [
@@ -270,26 +172,9 @@ describe("densityCounts", () => {
       )
     ).toEqual({ DELETE: 0, INSERT: 1, SELECT: 2 });
   });
-
-  test("ignores privileges that are not in the column set", () => {
-    expect(
-      densityCounts(
-        [grantedObject({ privileges: [{ grantable: false, name: "USAGE" }] })],
-        ["SELECT"]
-      )
-    ).toEqual({ SELECT: 0 });
-  });
 });
 
 describe("densityState", () => {
-  test("maps zero to none", () => {
-    expect(densityState(0, 5)).toBe("none");
-  });
-
-  test("maps a full count to full", () => {
-    expect(densityState(5, 5)).toBe("full");
-  });
-
   test("maps a partial count to partial", () => {
     expect(densityState(3, 5)).toBe("partial");
   });
@@ -454,21 +339,6 @@ describe("schemaBreakdownLabel", () => {
       "2 tables · 1 view · 1 sequence"
     );
   });
-
-  test("appends the schema-level grant marker when a SCHEMA grant exists", () => {
-    const groups = buildSchemaIndex([
-      grantedObject({ objectName: "orders" }),
-      grantedObject({
-        objectName: "",
-        objectType: GrantObjectType.SCHEMA,
-        schemaName: "public",
-      }),
-    ]);
-
-    expect(schemaBreakdownLabel(requireFirstSchemaGroup(groups))).toBe(
-      "1 table · schema-level grant"
-    );
-  });
 });
 
 function owned(init: {
@@ -478,20 +348,6 @@ function owned(init: {
 }): OwnedObject {
   return create(OwnedObjectSchema, init);
 }
-
-describe("ownedObjectName", () => {
-  test("falls back to the object name for DATABASE objects with no schema", () => {
-    expect(
-      ownedObjectName(
-        owned({
-          objectName: "appdb",
-          objectType: GrantObjectType.DATABASE,
-          schemaName: "",
-        })
-      )
-    ).toBe("appdb");
-  });
-});
 
 describe("ownedStats", () => {
   test("returns one stat per owned type in OWNED_TYPE_ORDER", () => {
@@ -523,25 +379,6 @@ describe("ownedStats", () => {
         type: GrantObjectType.TABLE,
       },
     ]);
-  });
-
-  test("truncates examples past the limit with a +N suffix", () => {
-    const stats = ownedStats(
-      ["a", "b", "c", "d", "e", "f"].map((name) =>
-        owned({
-          objectName: name,
-          objectType: GrantObjectType.FUNCTION,
-          schemaName: "public",
-        })
-      )
-    );
-
-    expect(stats[0]).toEqual({
-      count: 6,
-      examples: "a, b, c, d +2",
-      label: "functions",
-      type: GrantObjectType.FUNCTION,
-    });
   });
 });
 

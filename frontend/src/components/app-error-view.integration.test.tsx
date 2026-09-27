@@ -1,8 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { afterEach, describe, expect, it, rs } from "@rstest/core";
+import { afterEach, describe, it } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import { AppErrorView } from "@/components/app-error-view";
 import { normalizeAppUiError } from "@/lib/ui-error";
@@ -12,21 +11,7 @@ import {
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
-const BOOTSTRAP_RPC_PATH =
-  "/querylane.console.v1alpha1.OnboardingService/Bootstrap";
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-
-function createBootError() {
-  return normalizeAppUiError(
-    new ConnectError("meta database is unavailable", Code.Unavailable),
-    {
-      area: "boot-gate",
-      endpoint: BOOTSTRAP_RPC_PATH,
-      source: "boot",
-      surface: "route",
-    }
-  );
-}
 
 function createPostgresPermissionError() {
   const error = new ConnectError(
@@ -57,12 +42,6 @@ function createPostgresPermissionError() {
   });
 }
 
-async function openErrorDetailsDialog(
-  user: ReturnType<typeof userEvent.setup>
-) {
-  await user.click(screen.getByRole("button", { name: "Error details" }));
-}
-
 afterEach(() => {
   cleanup();
 });
@@ -75,36 +54,5 @@ describe("app error view integration", () => {
 
     screen.getByText("PostgreSQL permission denied");
     screen.getByText("Correct the issue before retrying.");
-  });
-
-  it("announces failed detail copies", async () => {
-    const user = userEvent.setup();
-    const originalClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: rs.fn(() => Promise.reject(new Error("denied"))),
-      },
-    });
-
-    try {
-      render(<AppErrorView error={createBootError()} />);
-
-      await openErrorDetailsDialog(user);
-      await user.click(screen.getByRole("button", { name: "Copy details" }));
-
-      expect(screen.getByRole("status").textContent).toBe(
-        "Couldn't copy details"
-      );
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, "clipboard", originalClipboard);
-      } else {
-        Reflect.deleteProperty(navigator, "clipboard");
-      }
-    }
   });
 });

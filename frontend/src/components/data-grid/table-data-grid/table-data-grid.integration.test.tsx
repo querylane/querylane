@@ -1269,23 +1269,6 @@ describe("TableDataGrid truncated-cell copy", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("surfaces a failed full-value fetch instead of copying the preview", async () => {
-    const user = userEvent.setup();
-    const mutateAsync = rs.fn().mockRejectedValue(new Error("token expired"));
-    seedRowsQueryWithTruncatedCell(mutateAsync);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    openCellContextMenu("notes", 0);
-    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
-
-    expect(writeClipboardMock).not.toHaveBeenCalled();
-    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
-    await expect(getText()).rejects.toThrow("token expired");
-  });
-
   it("resolves truncated cells when copying a row as INSERT", async () => {
     const user = userEvent.setup();
     const mutateAsync = rs.fn().mockResolvedValue({

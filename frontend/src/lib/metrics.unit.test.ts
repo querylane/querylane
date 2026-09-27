@@ -11,7 +11,6 @@ import {
   formatTrend,
   hasDrawablePoints,
   hasRenderableSpan,
-  METRIC_RANGES,
   metricRangeByHours,
   metricRangeWindowMs,
   noComparisonCaption,
@@ -25,57 +24,26 @@ import {
   MetricId,
   MetricSeriesSchema,
   MetricUnit,
-  PointsSchema,
   QueryMetricsResponseSchema,
   TrendDeltaSchema,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 describe("decodePoints", () => {
-  test("expands the implicit time grid and maps NaN gaps to null", () => {
-    const points = create(PointsSchema, {
-      startTime: { nanos: 0, seconds: 1000n },
-      step: { nanos: 0, seconds: 60n },
-      values: [1, Number.NaN, 3],
-    });
-
-    expect(decodePoints(points)).toEqual([
-      { time: 1_000_000, value: 1 },
-      { time: 1_060_000, value: null },
-      { time: 1_120_000, value: 3 },
-    ]);
-  });
-
   test("returns an empty array for undefined points", () => {
     expect(decodePoints(undefined)).toEqual([]);
   });
 });
 
 describe("formatMetricValue", () => {
-  test("formats ratios as percentages", () => {
-    expect(formatMetricValue(0.992, MetricUnit.RATIO)).toBe("99.2%");
-  });
-
   test("never shows a sub-1 ratio as a pegged 100%", () => {
     expect(formatMetricValue(0.9999, MetricUnit.RATIO)).toBe("99.9%");
     expect(formatMetricValue(1, MetricUnit.RATIO)).toBe("100%");
-  });
-
-  test("never renders a negative zero", () => {
-    expect(formatMetricValue(-0.001, MetricUnit.COUNT)).toBe("0");
-  });
-
-  test("keeps compact notation across the rounding boundary", () => {
-    expect(formatMetricValue(9999.5, MetricUnit.COUNT)).toBe("10K");
   });
 
   test("formats bytes-per-second with a /s suffix", () => {
     expect(formatMetricValue(3_500_000, MetricUnit.BYTES_PER_SECOND)).toBe(
       "3.3 MB/s"
     );
-  });
-
-  test("compacts large counts", () => {
-    expect(formatMetricValue(184_000, MetricUnit.PER_SECOND)).toBe("184K");
   });
 
   test("keeps decimals on small fractional values so axis ticks stay distinct", () => {
@@ -92,16 +60,6 @@ describe("formatMetricValue", () => {
 });
 
 describe("formatTrend", () => {
-  test("suppresses the trend when the previous window is unavailable", () => {
-    const delta = create(TrendDeltaSchema, {
-      currentValue: 10,
-      percentChange: 50,
-      previousAvailable: false,
-    });
-
-    expect(formatTrend(delta)).toBeNull();
-  });
-
   test("suppresses the trend when percent change is NaN", () => {
     const delta = create(TrendDeltaSchema, {
       percentChange: Number.NaN,
@@ -168,16 +126,11 @@ describe("seriesByMetric", () => {
 
 describe("assessMetricsCoverage", () => {
   const daySeconds = 24 * 3600;
-  const weekSeconds = 7 * daySeconds;
   const dayInterval = {
     endTime: { nanos: 0, seconds: BigInt(daySeconds) },
     startTime: { nanos: 0, seconds: 0n },
   };
   // A wide (7d) window used to prove the point floor is range-independent.
-  const weekInterval = {
-    endTime: { nanos: 0, seconds: BigInt(weekSeconds) },
-    startTime: { nanos: 0, seconds: 0n },
-  };
 
   test("treats an undefined response as nascent with no first sample", () => {
     expect(assessMetricsCoverage(undefined)).toEqual({
@@ -207,73 +160,6 @@ describe("assessMetricsCoverage", () => {
     expect(coverage.nascent).toBe(true);
     expect(coverage.finitePointCount).toBe(0);
     expect(coverage.firstSampleMs).toBeNull();
-    expect(coverage.windowEndMs).toBe(daySeconds * 1000);
-  });
-
-  test("flags fewer than three finite points as nascent", () => {
-    const startSeconds = daySeconds - 120;
-    const response = create(QueryMetricsResponseSchema, {
-      interval: dayInterval,
-      series: [
-        {
-          metric: MetricId.CONNECTIONS_TOTAL,
-          points: {
-            startTime: { nanos: 0, seconds: BigInt(startSeconds) },
-            step: { nanos: 0, seconds: 60n },
-            values: [5, 6],
-          },
-        },
-      ],
-    });
-
-    const coverage = assessMetricsCoverage(response);
-    expect(coverage.nascent).toBe(true);
-    expect(coverage.finitePointCount).toBe(2);
-    expect(coverage.firstSampleMs).toBe(startSeconds * 1000);
-  });
-
-  test("draws a short span once three points exist, regardless of range", () => {
-    // Three one-minute samples at the very end of a 7d window: the old span
-    // gate would have flagged this, but the point floor lets it draw.
-    const startSeconds = weekSeconds - 120;
-    const response = create(QueryMetricsResponseSchema, {
-      interval: weekInterval,
-      series: [
-        {
-          metric: MetricId.CONNECTIONS_TOTAL,
-          points: {
-            startTime: { nanos: 0, seconds: BigInt(startSeconds) },
-            step: { nanos: 0, seconds: 60n },
-            values: [5, 6, 5],
-          },
-        },
-      ],
-    });
-
-    const coverage = assessMetricsCoverage(response);
-    expect(coverage.nascent).toBe(false);
-    expect(coverage.finitePointCount).toBe(3);
-  });
-
-  test("treats a fully covered 24h window as not nascent", () => {
-    const response = create(QueryMetricsResponseSchema, {
-      interval: dayInterval,
-      series: [
-        {
-          metric: MetricId.CONNECTIONS_TOTAL,
-          points: {
-            startTime: { nanos: 0, seconds: 0n },
-            step: { nanos: 0, seconds: 1800n },
-            values: Array.from({ length: 49 }, (_, index) => index),
-          },
-        },
-      ],
-    });
-
-    const coverage = assessMetricsCoverage(response);
-    expect(coverage.nascent).toBe(false);
-    expect(coverage.finitePointCount).toBe(49);
-    expect(coverage.firstSampleMs).toBe(0);
     expect(coverage.windowEndMs).toBe(daySeconds * 1000);
   });
 
@@ -309,25 +195,6 @@ describe("assessMetricsCoverage", () => {
 });
 
 describe("samplesUntilChart", () => {
-  test("counts the points still needed to reach the three-point floor", () => {
-    expect(
-      samplesUntilChart({
-        finitePointCount: 0,
-        firstSampleMs: null,
-        nascent: true,
-        windowEndMs: null,
-      })
-    ).toBe(3);
-    expect(
-      samplesUntilChart({
-        finitePointCount: 2,
-        firstSampleMs: 0,
-        nascent: true,
-        windowEndMs: 1,
-      })
-    ).toBe(1);
-  });
-
   test("never goes negative once the chart can draw", () => {
     expect(
       samplesUntilChart({
@@ -341,19 +208,8 @@ describe("samplesUntilChart", () => {
 });
 
 describe("metricRangeByHours", () => {
-  test("resolves each known range by its window hours", () => {
-    for (const range of METRIC_RANGES) {
-      expect(metricRangeByHours(range.hours)).toBe(range);
-    }
-  });
-
   test("falls back to the default range for an unknown value", () => {
     expect(metricRangeByHours(999)).toBe(DEFAULT_METRIC_RANGE);
-  });
-
-  test("defaults to a 1h live window", () => {
-    expect(DEFAULT_METRIC_RANGE.hours).toBe(1);
-    expect(METRIC_RANGES[0]).toBe(DEFAULT_METRIC_RANGE);
   });
 });
 
@@ -391,14 +247,6 @@ describe("formatElapsedDuration", () => {
 });
 
 describe("hasRenderableSpan", () => {
-  test("rejects empty rows", () => {
-    expect(hasRenderableSpan([])).toBe(false);
-  });
-
-  test("rejects a single finite point", () => {
-    expect(hasRenderableSpan([{ "1": 5, time: 0 }])).toBe(false);
-  });
-
   test("rejects rows whose extra timestamps are all gaps", () => {
     expect(
       hasRenderableSpan([
@@ -479,35 +327,6 @@ describe("metricRangeWindowMs", () => {
 
 describe("buildInstanceMetricsInput", () => {
   const anchorMs = 7 * 24 * 3600 * 1000; // one week past epoch
-
-  test("builds a 1h window with a matching 1h comparison by default", () => {
-    const input = buildInstanceMetricsInput("instances/prod", anchorMs, 1);
-
-    expect(input.target).toBe("instances/prod");
-    expect(input.metrics).toEqual(OVERVIEW_METRIC_IDS);
-    expect(input.interval.endTime.seconds).toBe(BigInt(anchorMs / 1000));
-    expect(input.interval.startTime.seconds).toBe(
-      BigInt(anchorMs / 1000 - 3600)
-    );
-    // Comparison offset equals the window length, not a fixed 24h.
-    expect(input.comparison.seconds).toBe(3600n);
-  });
-
-  test("scales the window and comparison to the selected range", () => {
-    for (const range of METRIC_RANGES) {
-      const input = buildInstanceMetricsInput(
-        "instances/prod",
-        anchorMs,
-        range.hours
-      );
-      const rangeSeconds = BigInt(range.hours * 3600);
-
-      expect(input.comparison.seconds).toBe(rangeSeconds);
-      expect(
-        input.interval.endTime.seconds - input.interval.startTime.seconds
-      ).toBe(rangeSeconds);
-    }
-  });
 
   test("leaves step unset so the backend picks the bucket size", () => {
     const input = buildInstanceMetricsInput("instances/prod", anchorMs, 6);

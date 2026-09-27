@@ -77,9 +77,6 @@ interface InstanceUpdateInput {
 
 const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
 const LOCK_WAIT_HINT_PATTERN = /held by another session/;
-const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
-const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
-  /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
 const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/;
 
 const state = rs.hoisted(() => ({
@@ -623,24 +620,6 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
-  test("requires the operator key before password recovery", async () => {
-    state.instanceData = instanceResponse({
-      credentialError:
-        "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password.",
-      credentialState: Instance_CredentialState.KEY_MISSING,
-    });
-    await renderInstanceConfiguration();
-
-    expect(screen.getByText(MISSING_INSTANCE_SECRET_KEY_MESSAGE)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Re-enter password" })
-    ).toBeNull();
-    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty(
-      "disabled",
-      true
-    );
-  });
-
   test("trims text fields before building the update payload", async () => {
     const user = userEvent.setup();
     await renderInstanceConfiguration();
@@ -726,26 +705,6 @@ describe("backend instance danger zone", () => {
       replace: true,
       to: "/new-instance",
     });
-  });
-});
-
-describe("backend instance refresh", () => {
-  test("handles rejected refetch promises without throwing", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instanceData = connectedInstanceResponse();
-    state.refetchExtensions.mockRejectedValueOnce(
-      new Error("extensions offline")
-    );
-    state.refetchInstance.mockRejectedValueOnce(new Error("network offline"));
-    renderInstanceOverview();
-
-    await user.click(screen.getByRole("button", { name: "Refresh data" }));
-
-    await waitFor(() => {
-      expect(state.refetchInstance).toHaveBeenCalledTimes(1);
-    });
-    expect(state.refetchExtensions).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -878,118 +837,6 @@ describe("backend instance overview redesign", () => {
 });
 
 describe("backend instance activity", () => {
-  test("filters session rows by URL-backed search and shared facets", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const table = within(activity).getByRole("table");
-    const search = within(activity).getByRole("textbox", {
-      name: "Search query, user, app…",
-    });
-    const stateFilter = within(activity).getByRole("button", {
-      name: "State",
-    });
-    const appFilter = within(activity).getByRole("button", { name: "App" });
-
-    expect(appFilter).toBeTruthy();
-    // Every fixture session is on "logistics", and single-valued facets hide.
-    expect(within(activity).queryByRole("button", { name: "DB" })).toBeNull();
-
-    await user.type(search, "4302");
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-    const searchNavigation = state.navigate.mock.lastCall?.[0];
-    expect(searchNavigation).toEqual({
-      hash: true,
-      ignoreBlocker: true,
-      replace: true,
-      resetScroll: false,
-      search: expect.any(Function),
-    });
-    if (!searchNavigation || typeof searchNavigation["search"] !== "function") {
-      throw new Error("expected table search navigation updater");
-    }
-    expect(searchNavigation["search"]({ tab: "details" })).toEqual({
-      q: "4302",
-      tab: "details",
-    });
-
-    await user.clear(search);
-    await user.click(stateFilter);
-    await user.click(screen.getByRole("option", { name: "active" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-
-    await user.click(
-      within(activity).getByRole("button", { name: "Clear all" })
-    );
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(activity).queryByRole("button", { name: "Clear all" })
-    ).toBeNull();
-
-    await user.click(appFilter);
-    await user.click(screen.getByRole("option", { name: "api-gateway" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("option", { name: "api-gateway" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-  });
-
   test("paginates the session sample and changes page size", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";

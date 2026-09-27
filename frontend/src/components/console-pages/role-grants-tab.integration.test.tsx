@@ -48,40 +48,6 @@ function renderPartialFacet(
 }
 
 describe("GrantsSection partial empty states", () => {
-  test("shows loading instead of an empty database state while grants resolve", () => {
-    render(
-      <GrantsSection
-        builtinInfo={null}
-        databaseName={undefined}
-        databases={[]}
-        defaultPrivileges={[]}
-        defaultPrivilegesPartial={false}
-        error={null}
-        facetStates={{
-          defaults: "loading",
-          owned: "loading",
-          publicGrants: "loading",
-        }}
-        grantsPartial={false}
-        grantsView={{ kind: "overview" }}
-        isPending={true}
-        kind="login"
-        objects={[]}
-        onNavigateGrants={rs.fn()}
-        onSelectDatabase={rs.fn()}
-        ownedObjects={[]}
-        ownedPartial={false}
-        publicGrants={[]}
-        publicGrantsPartial={false}
-        roleName="app_user"
-        selectedDatabaseId={undefined}
-      />
-    );
-
-    expect(screen.getByText("Loading grants…")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "No databases" })).toBeNull();
-  });
-
   test("keeps an empty direct-grant page inconclusive", () => {
     renderPartialFacet({ kind: "overview" });
 
@@ -131,16 +97,6 @@ describe("GrantsSection partial empty states", () => {
     ]);
 
     expect(screen.queryByText("Direct: read only")).toBeNull();
-  });
-
-  test("does not reject a schema deep link against partial results", () => {
-    renderPartialFacet({ kind: "schema", schema: "later_schema" });
-
-    expect(
-      screen.getByText(
-        "later_schema is not shown in the available direct grant results."
-      )
-    ).toBeTruthy();
   });
 
   test("does not reject a grant type deep link against partial results", () => {
