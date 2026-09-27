@@ -7,6 +7,20 @@ import {
   ConsoleSqlstateScenario,
 } from "@/visual-harness/console-scenarios";
 import {
+  DataCellGalleryScenario,
+  DataExplorerControlsScenario,
+  DataGridAdvancedFilterToolbarScenario,
+  DataGridColumnProjectionToolbarScenario,
+  DataGridEmptyFilterToolbarScenario,
+  DataGridFilteredToolbarScenario,
+  DataGridOffsetFilterToolbarScenario,
+  DataTableActiveFilterToolbarScenario,
+  DataTableDefaultScenario,
+  DataTableSortedFilteredScenario,
+  DataValueDialogGuardScenario,
+  RecordDetailDrawerScenario,
+} from "@/visual-harness/data-grid-scenarios";
+import {
   FeedbackFormRecoveryScenario,
   FeedbackSectionStatesScenario,
   PostgresErrorDetailsScenario,
@@ -28,6 +42,18 @@ const VISUAL_SCENARIOS = {
   "console-page-error": ConsolePageErrorScenario,
   "console-resource-overview": ConsoleResourceOverviewScenario,
   "console-sqlstate": ConsoleSqlstateScenario,
+  "data-cell-gallery": DataCellGalleryScenario,
+  "data-explorer-controls": DataExplorerControlsScenario,
+  "data-grid-advanced-filter-toolbar": DataGridAdvancedFilterToolbarScenario,
+  "data-grid-column-projection-toolbar":
+    DataGridColumnProjectionToolbarScenario,
+  "data-grid-empty-filter-toolbar": DataGridEmptyFilterToolbarScenario,
+  "data-grid-filtered-toolbar": DataGridFilteredToolbarScenario,
+  "data-grid-offset-filter-toolbar": DataGridOffsetFilterToolbarScenario,
+  "data-table-active-filter-toolbar": DataTableActiveFilterToolbarScenario,
+  "data-table-default": DataTableDefaultScenario,
+  "data-table-sorted-filtered": DataTableSortedFilteredScenario,
+  "data-value-dialog-guard": DataValueDialogGuardScenario,
   "database-structure-map": DatabaseStructureMapScenario,
   "feedback-form-recovery": FeedbackFormRecoveryScenario,
   "feedback-postgres-error-details": PostgresErrorDetailsScenario,
@@ -40,6 +66,7 @@ const VISUAL_SCENARIOS = {
   "onboarding-progress-success": OnboardingProgressSuccessScenario,
   "onboarding-storage-full": OnboardingStorageFullScenario,
   "onboarding-yaml-waiting": OnboardingYamlWaitingScenario,
+  "record-detail-drawer": RecordDetailDrawerScenario,
 } satisfies Record<string, ComponentType>;
 
 type VisualScenarioName = keyof typeof VISUAL_SCENARIOS;
