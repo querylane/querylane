@@ -2,9 +2,9 @@ import type { Page } from "playwright/test";
 import { expect, test } from "../tests/base";
 
 // Isolated data table and cell states rendered by src/visual-harness. Behavior
-// for the same scenarios is covered in data-table.rstest-browser.test.tsx,
-// data-table-filter-toolbar.rstest-browser.test.tsx, and
-// data-cell-gallery.rstest-browser.test.tsx.
+// for the same scenarios is covered in data-table.browser.test.tsx,
+// data-table-filter-toolbar.browser.test.tsx, and
+// data-cell-gallery.browser.test.tsx.
 async function openScenario(page: Page, scenario: string) {
   await page.goto(`/visual.html?scenario=${scenario}`);
   const frame = page.getByTestId("visual-frame");

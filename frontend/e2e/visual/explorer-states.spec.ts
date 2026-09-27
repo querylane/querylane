@@ -8,8 +8,8 @@ import {
 } from "./explorer-states-fixtures";
 
 // Data Explorer states. Layout and behavior assertions live in
-// src/features/data-explorer/*.rstest-browser.test.tsx and
-// src/features/database-visualization/database-structure-map.rstest-browser.test.tsx.
+// src/features/data-explorer/*.browser.test.tsx and
+// src/features/database-visualization/database-structure-map.browser.test.tsx.
 
 // Page content only: the app shell has its own visual coverage.
 function pageContent(page: Page) {

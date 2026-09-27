@@ -17,8 +17,8 @@ import {
 
 // Instance and database console routes with every RPC mocked. Component-level
 // behavior for the same states is covered in
-// backend-resource-pages.rstest-browser.test.tsx and
-// instance-config.rstest-browser.test.tsx.
+// backend-resource-pages.browser.test.tsx and
+// instance-config.browser.test.tsx.
 
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;

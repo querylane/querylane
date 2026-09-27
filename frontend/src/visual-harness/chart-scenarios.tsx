@@ -1,7 +1,7 @@
 import { MetricChart, MetricSparkline } from "@/components/charts/metric-chart";
 import { METRIC_CHART_SAMPLE_DATA } from "@/visual-harness/chart-scenario-data";
 
-// Shared by metric-chart.rstest-browser.test.tsx and the Playwright visual
+// Shared by metric-chart.browser.test.tsx and the Playwright visual
 // harness, so both runners exercise identical markup.
 function MetricChartKitScenario() {
   return (

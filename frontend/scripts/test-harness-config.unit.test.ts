@@ -27,8 +27,8 @@ describe("test harness config", () => {
   test("keeps Playwright visual baselines explicit and tightly compared", () => {
     expect(playwrightConfig.updateSnapshots).toBe("none");
 
-    const visualProjects = (playwrightConfig.projects ?? []).filter(
-      (project) => VISUAL_PROJECT_NAMES.includes(project.name ?? "")
+    const visualProjects = (playwrightConfig.projects ?? []).filter((project) =>
+      VISUAL_PROJECT_NAMES.includes(project.name ?? "")
     );
     expect(visualProjects.map((project) => project.name)).toEqual(
       VISUAL_PROJECT_NAMES

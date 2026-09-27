@@ -29,7 +29,7 @@ export function createRstestBrowserConfig(browserTheme: BrowserTheme) {
     },
     clearMocks: true,
     env: { PUBLIC_TEST_BROWSER_THEME: browserTheme },
-    include: ["src/**/*.rstest-browser.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.browser.{test,spec}.{ts,tsx}"],
     name: `${RSTEST_PROJECT_NAMES.browser}-${browserTheme}`,
     passWithNoTests: false,
     plugins: [...buildConfig.plugins, pluginTailwindcss()],

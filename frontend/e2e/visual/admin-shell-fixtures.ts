@@ -8,7 +8,7 @@ import {
 } from "./console-resource-fixtures";
 
 // Long display names stress the header, breadcrumbs, and sidebar truncation.
-// Mirrors the fixtures in admin-shell.rstest-browser.test.tsx.
+// Mirrors the fixtures in admin-shell.browser.test.tsx.
 
 const LONG_INSTANCE_NAME = "Production Analytics Writer With Long Display Name";
 const LONG_DATABASE_NAME = "customer_events_with_long_identifier";

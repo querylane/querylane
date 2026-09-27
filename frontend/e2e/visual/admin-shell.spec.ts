@@ -6,7 +6,7 @@ import {
 } from "./admin-shell-fixtures";
 
 // The real app shell (sidebar, header, overlays) around the database overview.
-// Component behavior is covered in admin-shell.rstest-browser.test.tsx; the
+// Component behavior is covered in admin-shell.browser.test.tsx; the
 // viewport-dependent layouts live only here.
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/;

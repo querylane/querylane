@@ -9,7 +9,7 @@ import {
 } from "../tests/helpers";
 
 // Proto3 JSON fixtures for the instance and database console routes. Values
-// mirror the rstest fixtures in backend-resource-pages.rstest-browser.test.tsx
+// mirror the rstest fixtures in backend-resource-pages.browser.test.tsx
 // so both runners describe the same server.
 
 const INSTANCE_ID = "production";

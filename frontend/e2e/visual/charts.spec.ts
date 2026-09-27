@@ -3,7 +3,7 @@ import { CURRENT_LINE_SELECTOR } from "../../src/visual-harness/chart-scenario-d
 import { expect, test } from "../tests/base";
 
 // Isolated chart kit rendered by src/visual-harness. Behavior for the same
-// scenario is covered in src/components/charts/metric-chart.rstest-browser.test.tsx.
+// scenario is covered in src/components/charts/metric-chart.browser.test.tsx.
 
 async function lineEndPoint(page: Page, selector: string) {
   return await page

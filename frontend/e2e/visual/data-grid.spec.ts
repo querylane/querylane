@@ -8,7 +8,7 @@ import {
 } from "./data-grid-fixtures";
 
 // Behavior, geometry, and computed-style checks for these states live in
-// table-data-grid.rstest-browser.test.tsx; this spec owns the pixels.
+// table-data-grid.browser.test.tsx; this spec owns the pixels.
 
 const NARROW_VIEWPORT = { height: 844, width: 390 };
 const FOREIGN_KEY_TRIGGER_NAME = "Open customer_id reference 214";

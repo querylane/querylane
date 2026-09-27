@@ -2,7 +2,7 @@ import type { Page } from "playwright/test";
 import { expect, test } from "../tests/base";
 
 // Isolated presentational states rendered by src/visual-harness. Behavior for
-// the same scenarios is covered in console-pages.rstest-browser.test.tsx.
+// the same scenarios is covered in console-pages.browser.test.tsx.
 async function openScenario(page: Page, scenario: string) {
   await page.goto(`/visual.html?scenario=${scenario}`);
   const frame = page.getByTestId("visual-frame");
