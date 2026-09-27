@@ -81,7 +81,7 @@ test("perf: database overview opens Data Explorer within payload and latency bud
   const recorder = createAssetPayloadRecorder(page);
   recorder.start();
   const startedAt = Date.now();
-  await page.getByRole("link", { name: "Open data explorer" }).click();
+  await page.getByRole("link", { name: "Data explorer", exact: true }).click();
   await expect(page).toHaveURL(DATA_EXPLORER_URL_RE);
   await expect(page.getByRole("heading", { name: "public" })).toBeVisible();
   const readyMs = Date.now() - startedAt;

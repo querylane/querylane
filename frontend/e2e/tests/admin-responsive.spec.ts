@@ -48,7 +48,7 @@ async function expectElementWidthBetween(
 }
 
 async function expectHeaderChildrenDoNotOverlap(page: Page) {
-  const overlapCount = await page.getByRole("banner").evaluate((header) => {
+  const overlapCount = await page.locator("header").evaluate((header) => {
     const rects = Array.from(header.children)
       .map((child) => child.getBoundingClientRect())
       .filter((rect) => rect.width > 0 && rect.height > 0)
@@ -136,8 +136,8 @@ test("admin header: long breadcrumb stays contained on phone viewport", async ({
   ).toBeVisible();
 
   await expectHeaderChildrenDoNotOverlap(page);
-  await expectNoElementHorizontalOverflow(page.getByRole("banner"));
-  await expectNoElementHorizontalOverflow(page.getByRole("main").last());
+  await expectNoElementHorizontalOverflow(page.locator("header"));
+  await expectNoElementHorizontalOverflow(page.getByRole("main"));
   await expectNoPageHorizontalOverflow(page);
 });
 
@@ -157,8 +157,8 @@ test("admin header: long breadcrumb stays contained on tablet viewport", async (
   ).toBeVisible();
 
   await expectHeaderChildrenDoNotOverlap(page);
-  await expectNoElementHorizontalOverflow(page.getByRole("banner"));
-  await expectNoElementHorizontalOverflow(page.getByRole("main").last());
+  await expectNoElementHorizontalOverflow(page.locator("header"));
+  await expectNoElementHorizontalOverflow(page.getByRole("main"));
   await expectNoPageHorizontalOverflow(page);
 });
 
@@ -178,7 +178,7 @@ test("instance overview: database controls remain usable on phone viewport", asy
     page.getByRole("button", { name: "Refresh data" })
   ).toBeVisible();
 
-  const filter = page.getByRole("textbox", { name: "Filter databases..." });
+  const filter = page.getByRole("textbox", { name: "Search databases…" });
   await expect(filter).toBeVisible();
   await filter.fill("app");
 

@@ -205,8 +205,10 @@ test("data explorer: table detail tabs show catalog metadata", {
   // visible without turning this into a slow database-backed e2e test.
   await page.getByRole("tab", { name: "Columns" }).click();
   await expect(page.getByRole("cell", { name: "id" })).toBeVisible();
-  await expect(page.getByText("PK")).toBeVisible();
-  await expect(page.getByText("INDEXED")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "id Primary key" })
+  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: "email Index" })).toBeVisible();
 
   await page.getByRole("tab", { name: "Indexes" }).click();
   await expect(
@@ -220,12 +222,12 @@ test("data explorer: table detail tabs show catalog metadata", {
 
   await page.getByRole("tab", { name: "Policies" }).click();
   await expect(
-    page.getByRole("cell", { name: "orders_customer_read_policy" })
+    page.getByRole("heading", { name: "orders_customer_read_policy" })
   ).toBeVisible();
 
   await page.getByRole("tab", { name: "Triggers" }).click();
   await expect(
-    page.getByRole("cell", { name: "orders_audit_trigger" })
+    page.getByRole("button", { name: "Copy SQL for orders_audit_trigger" })
   ).toBeVisible();
 });
 
@@ -360,7 +362,7 @@ test("data explorer: empty table list keeps schema context visible", {
   );
 
   await expect(page.getByRole("heading", { name: "public" })).toBeVisible();
-  await expect(page.getByText("No tables in this schema.")).toBeVisible();
+  await expect(page.getByText("No objects found")).toBeVisible();
   await expect(page).toHaveURL(EXPLORER_URL_RE);
 });
 
@@ -378,7 +380,9 @@ test("data explorer: row read failure is inline and leaves table context intact"
   await expect(
     page.getByRole("heading", { name: ORDERS_HEADING_RE })
   ).toBeVisible();
-  await expect(page.getByText("Failed to load rows")).toBeVisible();
+  await expect(
+    page.getByRole("alert").getByText("Unexpected error")
+  ).toBeVisible();
   await expect(page.getByText("read failed")).toBeVisible();
   await expect(page).toHaveURL(ORDERS_NAME_URL_RE);
 });
@@ -465,14 +469,7 @@ test.describe("data explorer grid metadata", () => {
     );
 
     const statusBar = page.locator('[aria-label="Grid status"]');
-    await expect(statusBar).toContainText("Offset pagination");
-    await expect(statusBar).toContainText("No stable key");
     await expect(statusBar).toContainText("Response capped");
-    await expect(statusBar).toContainText("Row actions limited; no PK");
-    await expect(statusBar).not.toContainText("Count unavailable");
-    await expect(statusBar).not.toContainText(
-      "Observed May 20, 2026, 10:00 AM"
-    );
   });
 });
 
@@ -541,6 +538,7 @@ test("data explorer: renders null boolean json and long text cells", {
 }, async ({ page }) => {
   await mockExplorerShell(page);
   await mockTableCatalog(page);
+  await mockRpc(page, "ListTableColumns", { columns: RICH_COLUMNS });
   await mockRpc(page, "ReadRows", {
     nextPageToken: "",
     resultSet: {

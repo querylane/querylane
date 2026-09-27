@@ -57,7 +57,7 @@ test("home: ready catalog redirects to first instance overview", {
   await expect(
     page.getByRole("heading", { name: "Production Postgres" })
   ).toBeVisible();
-  await expect(page.getByText("db.local:5432")).toBeVisible();
+  await expect(page.getByText("db.local:5432", { exact: true })).toBeVisible();
   await expect(page.getByText("Primary")).toBeVisible();
 });
 
@@ -115,7 +115,7 @@ test("instance overview: filters databases and opens selected database", {
   await mockDatabaseDetails(page, auditDatabase);
 
   await page.goto("/instances/production");
-  await page.getByPlaceholder("Filter databases...").fill("audit");
+  await page.getByPlaceholder("Search databases…").fill("audit");
 
   await expect(
     page.getByRole("cell", { exact: true, name: "audit" })
