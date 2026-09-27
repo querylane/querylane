@@ -51,7 +51,9 @@ test("home: instanceId search opens the requested instance instead of the first 
   await expect(
     page.getByRole("heading", { name: "Reporting Postgres" })
   ).toBeVisible();
-  await expect(page.getByText("reporting.db.local:5432")).toBeVisible();
+  await expect(
+    page.getByText("reporting.db.local:5432", { exact: true })
+  ).toBeVisible();
 });
 
 test("home: unknown instanceId falls back to the first available instance", {
@@ -85,7 +87,9 @@ test("home: instance catalog failure shows a release-blocking error screen", {
   await page.goto("/");
 
   await expect(page.getByText("catalog offline")).toBeVisible();
-  await expect(page.getByText("Endpoint:")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Error details" })
+  ).toBeVisible();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/");
 });
 

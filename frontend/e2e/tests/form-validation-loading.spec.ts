@@ -47,7 +47,11 @@ test("instance overview defers form validation until configuration opens", {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
     const { pathname } = new URL(request.url());
-    if (request.resourceType() === "script" && pathname.endsWith(".js")) {
+    if (
+      request.resourceType() === "script" &&
+      pathname.startsWith("/static/js/") &&
+      pathname.endsWith(".js")
+    ) {
       scripts.add(pathname.slice(1));
     }
   });

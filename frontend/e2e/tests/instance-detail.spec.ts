@@ -29,7 +29,7 @@ const MISSING_DATABASE_URL_RE =
   /\/instances\/production\/databases\/missing\/?$/;
 const APPDB_EXPLORER_URL_RE =
   /\/instances\/production\/databases\/appdb\/explorer/;
-const LAST_CHECKED_LABEL_RE = /Last checked/;
+const LAST_REFRESHED_LABEL_RE = /Last refreshed/;
 const BUG_REPORT_URL_RE = /issues\/new\?.*template=bug_report\.yml/;
 
 const INSTANCE_HEALTH_CHECK_TIME = "2026-05-21T10:15:00Z";
@@ -44,7 +44,7 @@ function metricPartialError(metric: string, message: string) {
 }
 
 async function expectMainScreenshot(page: Page, name: string) {
-  await expect(page.getByRole("main").nth(1)).toHaveScreenshot(name, {
+  await expect(page.getByRole("main")).toHaveScreenshot(name, {
     animations: "disabled",
     caret: "hide",
     maxDiffPixelRatio: 0.03,
@@ -136,12 +136,17 @@ test("instance overview visual: connection failure details are stable", {
   await mockInstanceDetails(page, disconnectedInstance);
   await mockDatabases(page, []);
 
+  await page.clock.setFixedTime(new Date("2026-05-21T10:15:00Z"));
   await page.goto("/instances/production");
 
   await expect(page.getByText("Connection failed")).toBeVisible();
-  await expect(page.getByText("Connection error:")).toBeVisible();
-  await expect(page.getByLabel("Copy connection error")).toBeVisible();
-  await expect(page.getByText(LAST_CHECKED_LABEL_RE)).toBeVisible();
+  await expect(
+    page.getByRole("alert").getByText("PostgreSQL authentication failed")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Update credentials" })
+  ).toBeVisible();
+  await expect(page.getByText(LAST_REFRESHED_LABEL_RE)).toBeVisible();
   await expectMainScreenshot(page, "instance-health-connection-failed.png");
 });
 
@@ -168,6 +173,7 @@ test("instance overview visual: partial metric errors are stable", {
   });
   await mockDatabases(page, [sampleDatabase]);
 
+  await page.clock.setFixedTime(new Date("2026-05-21T10:15:00Z"));
   await page.goto("/instances/production");
 
   await expect(page.getByText("failed to query cache metrics")).toBeVisible();
@@ -251,7 +257,7 @@ test("database overview: partial metadata renders placeholders", {
 
   await expect(page.getByRole("heading", { name: "emptydb" })).toBeVisible();
   await expect(page.getByText("—").first()).toBeVisible();
-  await expect(page.getByText("No")).toBeVisible();
+  await expect(page.getByText("No user tables or views found.")).toBeVisible();
 });
 
 test("database overview: opens explorer for selected database", {
@@ -261,7 +267,7 @@ test("database overview: opens explorer for selected database", {
   await mockTableCatalog(page);
 
   await page.goto("/instances/production/databases/appdb");
-  await page.getByRole("link", { name: "Open data explorer" }).click();
+  await page.getByRole("link", { name: "Data explorer", exact: true }).click();
 
   await expect(page).toHaveURL(APPDB_EXPLORER_URL_RE);
   await expect(page.getByRole("heading", { name: "public" })).toBeVisible();
@@ -309,7 +315,7 @@ test("roles: mock roles table supports filtering without backend calls", {
   ).toBeVisible();
   await expect(page.getByText("app_user")).toBeVisible();
 
-  await page.getByPlaceholder("Search roles...").fill("replicator");
+  await page.getByPlaceholder("Search roles…").fill("replicator");
 
   await expect(
     page.getByRole("cell", { name: REPLICATOR_ROLE_RE })
@@ -345,10 +351,10 @@ test("roles: empty list renders role-specific empty state", {
   await page.goto("/instances/production/roles");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Roles & Users" })
+    page.getByRole("heading", { level: 1, name: "Roles" })
   ).toBeVisible();
   await expect(
-    page.getByText("0 roles · 0 can log in · 0 groups")
+    page.getByText("0 roles · 0 can log in · 0 groups · 0 built-in")
   ).toBeVisible();
   await expect(page.getByText("No roles found")).toBeVisible();
 });
@@ -423,7 +429,7 @@ test("roles: filter resets after leaving and returning to roles", {
   await mockRoles(page);
   await page.goto("/instances/production/roles");
 
-  await page.getByPlaceholder("Search roles...").fill("replicator");
+  await page.getByPlaceholder("Search roles…").fill("replicator");
   await expect(page.getByText("app_user")).toBeHidden();
 
   // Instance + database nav both expose an "Overview" link (a database is now
@@ -434,7 +440,7 @@ test("roles: filter resets after leaving and returning to roles", {
   ).toBeVisible();
   await page.getByRole("link", { name: "Roles" }).click();
 
-  await expect(page.getByPlaceholder("Search roles...")).toHaveValue("");
+  await expect(page.getByPlaceholder("Search roles…")).toHaveValue("");
   await expect(page.getByText("app_user")).toBeVisible();
   await expect(page.getByText("replicator", { exact: true })).toBeVisible();
 });
@@ -489,7 +495,7 @@ test("instance configuration: config-managed instances render read-only notice",
   await expect(page.getByRole("button", { name: "Save changes" })).toBeHidden();
 });
 
-test("instance configuration: delete confirmation requires matching display name", {
+test("instance configuration: delete confirmation requires matching resource name", {
   tag: ["@feat:instances", "@flow:update"],
 }, async ({ page }) => {
   await mockReadyAppWithDeletableInstance(page);
@@ -504,15 +510,15 @@ test("instance configuration: delete confirmation requires matching display name
   await page.getByRole("button", { name: "Delete instance" }).first().click();
   const dialog = page.getByRole("alertdialog", { name: "Delete instance?" });
   await dialog
-    .getByLabel("Type Production Postgres to confirm")
+    .getByLabel("Type instances/production to confirm")
     .fill("production");
   await expect(
     dialog.getByRole("button", { name: "Delete instance" })
   ).toBeDisabled();
 
   await dialog
-    .getByLabel("Type Production Postgres to confirm")
-    .fill("Production Postgres");
+    .getByLabel("Type instances/production to confirm")
+    .fill("instances/production");
   await dialog.getByRole("button", { name: "Delete instance" }).click();
 
   await expect.poll(() => deleteCalls).toBe(1);
@@ -584,11 +590,13 @@ test("instance configuration: delete API error keeps instance page open", {
   await page.getByRole("button", { name: "Delete instance" }).first().click();
   const dialog = page.getByRole("alertdialog", { name: "Delete instance?" });
   await dialog
-    .getByLabel("Type Production Postgres to confirm")
-    .fill("Production Postgres");
+    .getByLabel("Type instances/production to confirm")
+    .fill("instances/production");
   await dialog.getByRole("button", { name: "Delete instance" }).click();
 
-  await expect(page.getByText("delete failed")).toBeVisible();
+  await expect(
+    page.getByRole("alert").getByText("delete failed")
+  ).toBeVisible();
   await expect(page).toHaveURL(PRODUCTION_CONFIGURATION_URL_RE);
 });
 
@@ -601,13 +609,16 @@ test("instance configuration: delete removes instance and navigates to empty cre
   await routeRpcMethod(page, "DeleteInstance", async (route) =>
     fulfillJson(route, {})
   );
+  await expect(
+    page.getByRole("button", { name: "Delete instance" }).first()
+  ).toBeEnabled();
   await mockInstanceCatalog(page, []);
 
   await page.getByRole("button", { name: "Delete instance" }).first().click();
   const dialog = page.getByRole("alertdialog", { name: "Delete instance?" });
   await dialog
-    .getByLabel("Type Production Postgres to confirm")
-    .fill("Production Postgres");
+    .getByLabel("Type instances/production to confirm")
+    .fill("instances/production");
   await dialog.getByRole("button", { name: "Delete instance" }).click();
 
   await expect(page).toHaveURL(NEW_INSTANCE_URL_RE);

@@ -169,13 +169,16 @@ test("new instance: empty list create flow returns to new instance after deletin
   await page.route("**.DeleteInstance", async (route) =>
     fulfillJson(route, {})
   );
+  await expect(
+    page.getByRole("button", { name: "Delete instance" }).first()
+  ).toBeEnabled();
   await mockInstanceCatalog(page, []);
 
   await page.getByRole("button", { name: "Delete instance" }).first().click();
   await page
     .getByRole("alertdialog", { name: "Delete instance?" })
-    .getByLabel("Type Production Postgres to confirm")
-    .fill("Production Postgres");
+    .getByLabel("Type instances/production to confirm")
+    .fill("instances/production");
   await page
     .getByRole("alertdialog", { name: "Delete instance?" })
     .getByRole("button", { name: "Delete instance" })

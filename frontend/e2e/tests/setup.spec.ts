@@ -49,7 +49,9 @@ test("onboarding boot error renders retryable error state from mocked RPC failur
   await mockOnboardingUnavailableScenario(page);
   await page.goto("/setup");
 
-  await expect(page.getByText("Unexpected error")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cannot reach Querylane" })
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 
@@ -157,7 +159,9 @@ test("setup state: unavailable boot error retries into onboarding", {
   );
 
   await page.goto("/setup");
-  await expect(page.getByText("Unexpected error")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cannot reach Querylane" })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Retry" }).click();
 
