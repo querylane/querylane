@@ -89,4 +89,4 @@ function useUrlTableSearch(
 }
 
 export type { UrlTableSearchRoute };
-export { normalizeSearchText, useUrlTableSearch };
+export { useUrlTableSearch };

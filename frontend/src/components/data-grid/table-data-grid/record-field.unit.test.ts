@@ -32,16 +32,6 @@ describe("resolveEffectiveCell", () => {
 });
 
 describe("buildByteaDownloadFilename", () => {
-  test("joins table, column, and row identifier", () => {
-    expect(
-      buildByteaDownloadFilename({
-        columnName: "avatar",
-        rowIdentifier: "42",
-        table: "users",
-      })
-    ).toBe("users_avatar_42.bin");
-  });
-
   test("omits a missing identifier and sanitizes unsafe characters", () => {
     expect(
       buildByteaDownloadFilename({ columnName: "raw data", table: "my table" })

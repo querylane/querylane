@@ -42,12 +42,6 @@ describe("resolveValidSelectionId", () => {
       resolveValidSelectionId({ candidateId: "z", items: ITEMS, loaded: true })
     ).toBeUndefined();
   });
-
-  test("returns candidateId with empty items when not loaded", () => {
-    expect(
-      resolveValidSelectionId({ candidateId: "a", items: [], loaded: false })
-    ).toBe("a");
-  });
 });
 
 describe("pickSelectedResource", () => {

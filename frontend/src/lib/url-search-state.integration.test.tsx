@@ -93,11 +93,17 @@ describe("url table search state", () => {
       }
     });
 
-    await user.clear(await screen.findByLabelText("Filter roles..."));
+    const input =
+      await screen.findByLabelText<HTMLInputElement>("Filter roles...");
+    await user.clear(input);
 
     await waitFor(() => expect(router.history.location.search).toBe(""));
     expect(router.history.location.pathname).toBe("/instances/prod/roles");
     expect(onReplace).toHaveBeenLastCalledWith("");
+
+    fireEvent.change(input, { target: { value: "   " } });
+    await waitFor(() => expect(input.value).toBe(""));
+    expect(router.history.location.search).toBe("");
   });
 
   it("syncs the input when browser history changes q", async () => {
