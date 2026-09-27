@@ -46,11 +46,14 @@ const buildEnv = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
     PUBLIC_API_BASE_URL: z.string().optional(),
+    QUERYLANE_VISUAL_HARNESS: z.enum(["0", "1"]).optional(),
     RSDOCTOR: z.string().optional(),
   },
 });
 
 const enableRsdoctor = Boolean(buildEnv.RSDOCTOR);
+// Playwright visual specs render isolated scenarios from this test-only entry.
+const enableVisualHarness = buildEnv.QUERYLANE_VISUAL_HARNESS === "1";
 const isProduction =
   buildEnv.NODE_ENV === "production" || process.argv.includes("build");
 const reactPerformanceMode = resolveReactPerformanceMode({
@@ -64,6 +67,7 @@ const buildCacheDigest = [
     rsdoctorEnabled: enableRsdoctor,
   }),
   reactPerformanceMode.buildCacheKey,
+  `visual-harness:${String(enableVisualHarness)}`,
 ];
 const preconnectOrigins = createPreconnectOrigins({
   apiBaseUrl: buildEnv.PUBLIC_API_BASE_URL,
@@ -214,6 +218,9 @@ export default defineConfig({
     // PUBLIC_API_BASE_URL to "" via zod, so no manual `define` is needed.
     entry: {
       index: "./src/main.tsx",
+      ...(enableVisualHarness
+        ? { visual: "./src/visual-harness/main.tsx" }
+        : {}),
     },
     tsconfigPath: "./tsconfig.json",
   },

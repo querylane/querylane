@@ -2,6 +2,10 @@ import type { Page, Route } from "playwright/test";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 interface MockRoleMembership {
   adminOption?: boolean;
   grantor?: string;
@@ -53,6 +57,23 @@ export async function mockRpc(
 ) {
   await page.route(`**/${method}`, async (route) => fulfillJson(route, body));
   await page.route(`**.${method}`, async (route) => fulfillJson(route, body));
+}
+
+/**
+ * Intercept a Connect RPC and build the response from the proto3 JSON request,
+ * for fan-out calls whose answer depends on `parent` or other request fields.
+ */
+export async function mockRpcWith(
+  page: Page,
+  method: string,
+  respond: (request: Record<string, unknown>) => Record<string, unknown>
+) {
+  async function handle(route: Route) {
+    const request: unknown = route.request().postDataJSON();
+    await fulfillJson(route, respond(isJsonObject(request) ? request : {}));
+  }
+  await page.route(`**/${method}`, handle);
+  await page.route(`**.${method}`, handle);
 }
 
 export async function mockRpcOnce(

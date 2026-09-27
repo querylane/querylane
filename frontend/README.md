@@ -6,7 +6,7 @@ React + TypeScript app bundled with Rsbuild.
 
 - Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
-- Rstest runs unit, integration, and selected functional browser tests; Vitest remains for visual snapshots.
+- Rstest runs unit, integration, and functional browser tests. Playwright owns E2E and visual regression (`e2e/visual`). Vitest browser mode remains only for visual suites not yet moved to Playwright.
 - `react-doctor` runs lint/dead-code checks.
 
 ## Scripts
@@ -27,6 +27,8 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run test:integration:watch` - run integration tests in Rstest watch mode
 - `bun run test:browser` - run Vitest visual tests and Rstest functional browser tests through Playwright
 - `bun run test:e2e` - run Playwright end-to-end tests
+- `bun run test:visual` - run Playwright visual regression tests in light and dark
+- `bun run test:visual:update` - regenerate Linux visual baselines in the Playwright container
 - `bun run test:accessibility` - run dedicated Playwright accessibility checks with axe-core
 - `bun run perf:lighthouse` - build and generate local Lighthouse HTML/JSON reports
 - `bun run lint` - run canonical Biome checks
@@ -37,7 +39,7 @@ React + TypeScript app bundled with Rsbuild.
 
 - Rstest automatically selects its compact Markdown reporter for coding agents.
 - Vitest browser tests use native reporters and preserve visual failure artifacts.
-- Vitest browser mode remains because Rstest 0.11.9 does not support the screenshot assertions used by the visual regression suite.
+- Rstest browser mode does not support screenshot assertions, so visual regression moves to Playwright `toHaveScreenshot` (see `e2e/README.md`).
 - Playwright local runs use a compact reporter; CI uses the built-in list reporter plus failure artifacts.
 
 ### Agent boundaries

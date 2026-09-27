@@ -43,15 +43,32 @@ bun run test:e2e:repeat
 bun run test:accessibility
 bun run test:e2e:ui
 bun run test:e2e:debug
+bun run test:visual
 ```
 
 ## Conventions
 
-- Put specs in `e2e/tests/*.spec.ts`.
+- Put behavior specs in `e2e/tests/*.spec.ts` and visual specs in `e2e/visual/*.spec.ts`.
 - Put reusable RPC scenarios in `e2e/tests/querylane-scenarios.ts`.
 - Prefer `getByRole`, then `getByLabel`, then visible text.
 - Keep scenario responses explicit so tests document frontend expectations.
 - Add unhappy paths by fulfilling RPC errors, not by starting a broken backend.
+
+## Visual regression
+
+Pixel comparisons live in `e2e/visual/*.spec.ts` and run in the `visual-light` and `visual-dark` projects. They replace Vitest `toMatchScreenshot`, which Rstest browser mode does not support.
+
+- Prefer the real route with mocked RPCs (`page.goto()` plus `page.route()`). This is what users see.
+- For isolated states no route can reach, add a scenario component under `src/visual-harness/` and register it in `scenarios.tsx`. Specs open `/visual.html?scenario=<name>`. The entry only exists when `QUERYLANE_VISUAL_HARNESS=1`, which the Playwright web server sets. Production builds never include it.
+- Render the same scenario component from the matching `*.rstest-browser.test.tsx` so behavior checks and pixels cover identical markup.
+- Screenshot the smallest stable region (the page `main`, a dialog, or a section), not the whole viewport.
+- Baselines are Linux-only and are captured in the official Playwright image that CI also uses. `updateSnapshots` is `none`, so a missing baseline fails instead of writing a local one.
+
+```bash
+bun run test:visual                 # compare against baselines (macOS uses a looser threshold)
+bun run test:visual:update          # rewrite baselines in the Playwright container (needs Docker)
+bun run test:visual:update e2e/visual/console-roles.spec.ts   # one spec
+```
 
 ## Playwright 1.63 diagnostics
 
