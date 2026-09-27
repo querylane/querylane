@@ -1,0 +1,165 @@
+import { create } from "@bufbuild/protobuf";
+import { Code, ConnectError, type Transport } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { afterEach, describe, expect, test } from "@rstest/core";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { useReadRowsQuery } from "@/hooks/api/table-data";
+import {
+  type ReadRowsRequest,
+  ReadRowsRequestSchema,
+  ReadRowsResponseSchema,
+  TableDataService,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import { createTestQueryClient } from "@/test/query-client";
+import { createTestRouterTransport } from "@/test/router-transport";
+
+const activeQueryClients: QueryClient[] = [];
+
+function createWrapper(transport: Transport, queryClient: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <TransportProvider transport={transport}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </TransportProvider>
+    );
+  };
+}
+
+afterEach(async () => {
+  cleanup();
+  const queryClients = activeQueryClients.splice(0);
+  await Promise.all(
+    queryClients.map((queryClient) => queryClient.cancelQueries())
+  );
+  for (const queryClient of queryClients) {
+    queryClient.clear();
+  }
+});
+
+describe("useReadRowsQuery", () => {
+  test("refetches stale table rows once when the query remounts", async () => {
+    const requests: ReadRowsRequest[] = [];
+    const transport = createTestRouterTransport(({ service }) => {
+      service(TableDataService, {
+        readRows(readRowsRequest) {
+          requests.push(readRowsRequest);
+          return create(ReadRowsResponseSchema);
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    activeQueryClients.push(queryClient);
+    const wrapper = createWrapper(transport, queryClient);
+    const request = create(ReadRowsRequestSchema, {
+      name: "instances/local/databases/postgres/schemas/public/tables/events",
+    });
+
+    const firstMount = renderHook(() => useReadRowsQuery(request), { wrapper });
+
+    await waitFor(() => {
+      expect(firstMount.result.current.isSuccess).toBe(true);
+    });
+    expect(requests).toHaveLength(1);
+
+    firstMount.unmount();
+    const secondMount = renderHook(() => useReadRowsQuery(request), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(requests).toHaveLength(2);
+      expect(queryClient.isFetching()).toBe(0);
+    });
+    expect(secondMount.result.current.fetchStatus).toBe("idle");
+    expect(requests.map(({ name }) => name)).toEqual([
+      request.name,
+      request.name,
+    ]);
+  });
+
+  test("retains the latest same-table result when a new page fails", async () => {
+    const tableName =
+      "instances/local/databases/postgres/schemas/public/tables/events";
+    const transport = createTestRouterTransport(({ service }) => {
+      service(TableDataService, {
+        readRows(request) {
+          if (request.pageToken) {
+            throw new ConnectError("instance unavailable", Code.Unavailable);
+          }
+          return create(ReadRowsResponseSchema, { nextPageToken: "page-2" });
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    activeQueryClients.push(queryClient);
+    const wrapper = createWrapper(transport, queryClient);
+    const firstPage = create(ReadRowsRequestSchema, { name: tableName });
+    const secondPage = create(ReadRowsRequestSchema, {
+      name: tableName,
+      pageToken: "page-2",
+    });
+    const view = renderHook(
+      ({ request }) => useReadRowsQuery(request, { keepPreviousData: true }),
+      { initialProps: { request: firstPage }, wrapper }
+    );
+
+    await waitFor(() => {
+      expect(view.result.current.isSuccess).toBe(true);
+    });
+
+    view.rerender({ request: secondPage });
+
+    await waitFor(() => {
+      expect(view.result.current.isError).toBe(true);
+    });
+    expect(view.result.current.data).toBeUndefined();
+    expect(view.result.current.lastSuccessfulData?.nextPageToken).toBe(
+      "page-2"
+    );
+  });
+
+  test("does not retain rows from a different projection", async () => {
+    const tableName =
+      "instances/local/databases/postgres/schemas/public/tables/events";
+    const transport = createTestRouterTransport(({ service }) => {
+      service(TableDataService, {
+        readRows(request) {
+          if (request.selectedColumns.includes("private_value")) {
+            throw new ConnectError("instance unavailable", Code.Unavailable);
+          }
+          return create(ReadRowsResponseSchema, { nextPageToken: "page-2" });
+        },
+      });
+    });
+    const queryClient = createTestQueryClient();
+    activeQueryClients.push(queryClient);
+    const wrapper = createWrapper(transport, queryClient);
+    const firstProjection = create(ReadRowsRequestSchema, {
+      name: tableName,
+      selectedColumns: ["public_value"],
+    });
+    const secondProjection = create(ReadRowsRequestSchema, {
+      name: tableName,
+      selectedColumns: ["private_value"],
+    });
+    const view = renderHook(
+      ({ request }) => useReadRowsQuery(request, { keepPreviousData: true }),
+      { initialProps: { request: firstProjection }, wrapper }
+    );
+
+    await waitFor(() => {
+      expect(view.result.current.isSuccess).toBe(true);
+    });
+
+    view.rerender({ request: secondProjection });
+
+    await waitFor(() => {
+      expect(view.result.current.isError).toBe(true);
+    });
+    expect(view.result.current.lastSuccessfulData).toBeUndefined();
+  });
+});

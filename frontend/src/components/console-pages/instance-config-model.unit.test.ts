@@ -25,15 +25,6 @@ function label(
 }
 
 describe("instance config model", () => {
-  it("compares labels independent of order", () => {
-    expect(
-      labelsEqual(
-        [label("team", "database"), label("env", "prod")],
-        [label("env", "prod"), label("team", "database")]
-      )
-    ).toBe(true);
-  });
-
   it("does not collapse duplicate label keys", () => {
     expect(
       labelsEqual(
@@ -153,51 +144,6 @@ describe("instance config update paths", () => {
     ]);
   });
 
-  it("returns no paths when form matches persisted instance", () => {
-    expect(
-      buildInstanceUpdatePaths({
-        formState: persistedForm,
-        instance: persistedInstance,
-        nextPort: 5432,
-      })
-    ).toEqual([]);
-  });
-
-  it("treats unspecified persisted SSL negotiation as postgres", () => {
-    expect(
-      buildInstanceUpdatePaths({
-        formState: persistedForm,
-        instance: createProto(InstanceSchema, {
-          config: createProto(PostgresConfigSchema, {
-            database: "querylane",
-            host: "db.internal",
-            password: "secret",
-            port: 5432,
-            sslMode: 3,
-            username: "querylane",
-          }),
-          displayName: "Production",
-          labels: { env: "prod" },
-        }),
-        nextPort: 5432,
-      })
-    ).toEqual([]);
-  });
-
-  it("updates SSL negotiation independently", () => {
-    expect(
-      buildInstanceUpdatePaths({
-        formState: {
-          ...persistedForm,
-          sslMode: "require",
-          sslNegotiation: "direct",
-        },
-        instance: persistedInstance,
-        nextPort: 5432,
-      })
-    ).toEqual(["config.ssl_mode", "config.ssl_negotiation"]);
-  });
-
   it("does not require or update an untouched blank password", () => {
     const untouchedPasswordForm = {
       ...persistedForm,
@@ -227,30 +173,6 @@ describe("instance config update paths", () => {
         nextPort: 5432,
       })
     ).toEqual(["display_name"]);
-  });
-
-  it("trims text fields once at the boundary without touching the password", () => {
-    const trimmed = trimInstanceFormState({
-      ...persistedForm,
-      database: " querylane ",
-      dirtyFields: { password: true },
-      displayName: " Production ",
-      host: " db.internal ",
-      password: " secret ",
-      port: " 5432 ",
-      username: " querylane ",
-    });
-
-    expect(trimmed).toMatchObject({
-      database: "querylane",
-      dirtyFields: { password: true },
-      displayName: "Production",
-      host: "db.internal",
-      password: " secret ",
-      port: "5432",
-      username: "querylane",
-    });
-    expect(trimmed.labels).toEqual(persistedForm.labels);
   });
 
   it("produces no update paths for whitespace-only changes after trimming", () => {

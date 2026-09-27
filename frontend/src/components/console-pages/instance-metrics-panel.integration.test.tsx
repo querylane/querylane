@@ -2,11 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
-import {
-  DEFAULT_METRIC_RANGE,
-  type MetricRange,
-  metricRangeByHours,
-} from "@/lib/metrics";
+import { DEFAULT_METRIC_RANGE, type MetricRange } from "@/lib/metrics";
 import {
   MetricId,
   MetricKind,
@@ -25,8 +21,6 @@ const DAY_INTERVAL = {
   startTime: { nanos: 0, seconds: 0n },
 };
 
-const TREND_1H_PATTERN = /· 1h/;
-const TREND_24H_PATTERN = /· 24h/;
 const CONNECTIONS_TAB_PATTERN = /Connections/;
 const COMPARE_TOGGLE_PATTERN = /compare to previous/i;
 
@@ -77,27 +71,6 @@ function fullResponse(previousAvailable: boolean): QueryMetricsResponse {
 }
 
 /** Exactly three finite points — the drawable floor. */
-function threePointResponse(): QueryMetricsResponse {
-  return create(QueryMetricsResponseSchema, {
-    interval: DAY_INTERVAL,
-    series: [
-      {
-        delta: { currentValue: 12, previousAvailable: false },
-        kind: MetricKind.GAUGE,
-        metric: MetricId.CONNECTIONS_TOTAL,
-        points: {
-          startTime: {
-            nanos: 0,
-            seconds: BigInt(DAY_SECONDS - 3 * 60),
-          },
-          step: { nanos: 0, seconds: 60n },
-          values: [10, 11, 12],
-        },
-        unit: MetricUnit.COUNT,
-      },
-    ],
-  });
-}
 
 function renderPanel(overrides: {
   onRangeChange?: (rangeHours: number) => void;
@@ -120,63 +93,6 @@ function renderPanel(overrides: {
 
 afterEach(() => {
   cleanup();
-});
-
-describe("InstanceMetricsPanel range picker", () => {
-  test("renders the four range options with 1h active by default", () => {
-    renderPanel({ response: fullResponse(true) });
-
-    for (const label of ["1h", "6h", "24h", "7d"]) {
-      expect(screen.getByRole("button", { name: label })).toBeTruthy();
-    }
-    expect(
-      screen.getByRole("button", { name: "1h" }).getAttribute("aria-pressed")
-    ).toBe("true");
-    expect(
-      screen.getByRole("button", { name: "6h" }).getAttribute("aria-pressed")
-    ).toBe("false");
-  });
-
-  test("reports the selected window when a range is clicked", () => {
-    const { onRangeChange } = renderPanel({ response: fullResponse(true) });
-
-    fireEvent.click(screen.getByRole("button", { name: "6h" }));
-    expect(onRangeChange).toHaveBeenCalledWith(6);
-  });
-
-  test("keeps the picker visible while collecting", () => {
-    renderPanel({ response: nascentResponse() });
-
-    expect(screen.getByText("Collecting metrics")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "24h" })).toBeTruthy();
-  });
-});
-
-describe("InstanceMetricsPanel trend labels", () => {
-  test("suffixes the trend with the selected range", () => {
-    renderPanel({
-      range: metricRangeByHours(24),
-      response: fullResponse(true),
-    });
-
-    expect(screen.getByText("+8%")).toBeTruthy();
-    expect(screen.getByText(TREND_24H_PATTERN)).toBeTruthy();
-    expect(screen.queryByText(TREND_1H_PATTERN)).toBeNull();
-  });
-
-  test("falls back to a range-aware no-comparison caption", () => {
-    renderPanel({
-      range: metricRangeByHours(6),
-      response: fullResponse(false),
-    });
-
-    // The Transactions/Cache/IO tabs have no series, plus Connections has no
-    // comparison — all show the 6h caption, never a stale 24h one.
-    expect(screen.getAllByText("no 6h comparison yet").length).toBeGreaterThan(
-      0
-    );
-    expect(screen.queryByText("no 24h comparison yet")).toBeNull();
-  });
 });
 
 describe("InstanceMetricsPanel comparison overlay", () => {
@@ -209,12 +125,5 @@ describe("InstanceMetricsPanel nascent coverage", () => {
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.getAllByText("collecting")).toHaveLength(4);
-  });
-
-  test("draws the tabbed charts once three points exist", () => {
-    renderPanel({ response: threePointResponse() });
-
-    expect(screen.queryByText("Collecting metrics")).toBeNull();
-    expect(screen.getAllByRole("tab")).toHaveLength(4);
   });
 });

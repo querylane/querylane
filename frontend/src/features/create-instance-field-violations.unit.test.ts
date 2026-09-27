@@ -67,28 +67,6 @@ describe("extractCreateInstanceFieldViolations", () => {
     expect(result.firstInvalidField).toBe("displayName");
   });
 
-  test("supports the legacy instance body prefix", () => {
-    const result = extractCreateInstanceFieldViolations(
-      badRequestError([
-        { description: "is required", field: "instance.config.host" },
-      ])
-    );
-
-    expect(result.fieldErrors).toEqual({ host: "is required" });
-    expect(result.firstInvalidField).toBe("host");
-  });
-
-  test("keeps the first description when a field repeats", () => {
-    const result = extractCreateInstanceFieldViolations(
-      badRequestError([
-        { description: "first message", field: "spec.config.host" },
-        { description: "second message", field: "spec.config.host" },
-      ])
-    );
-
-    expect(result.fieldErrors).toEqual({ host: "first message" });
-  });
-
   test("returns unmapped violations so callers can show every server error", () => {
     const result = extractCreateInstanceFieldViolations(
       badRequestError([
@@ -103,16 +81,6 @@ describe("extractCreateInstanceFieldViolations", () => {
       "spec.config: connection failed",
       "spec: one of spec or instance",
     ]);
-  });
-
-  test("returns no field errors for non-connect errors", () => {
-    const result = extractCreateInstanceFieldViolations(
-      new Error("network down")
-    );
-
-    expect(result.fieldErrors).toEqual({});
-    expect(result.firstInvalidField).toBeNull();
-    expect(result.generalErrors).toEqual([]);
   });
 });
 

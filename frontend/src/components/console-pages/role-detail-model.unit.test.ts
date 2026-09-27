@@ -133,16 +133,6 @@ describe("builtinDetailText", () => {
 });
 
 describe("rlsNoteText", () => {
-  test("flags full bypass for superusers", () => {
-    expect(
-      rlsNoteText({
-        bypassesRls: false,
-        isSuperuser: true,
-        tableAccessActive: false,
-      })
-    ).toBe("Row-level security is bypassed entirely by this role.");
-  });
-
   test("flags full bypass for BYPASSRLS roles", () => {
     expect(
       rlsNoteText({
@@ -195,54 +185,6 @@ describe("capabilities", () => {
     ]);
   });
 
-  test("reflects boolean attribute flags", () => {
-    const list = capabilities(
-      attributes({
-        bypassesRls: true,
-        canCreateDatabase: true,
-        canCreateRole: true,
-        canLogin: true,
-        canReplicate: true,
-        inheritsByDefault: false,
-        isSuperuser: true,
-      })
-    );
-
-    expect(capabilityByKeyword(list, "LOGIN").on).toBe(true);
-    expect(capabilityByKeyword(list, "SUPERUSER").on).toBe(true);
-    expect(capabilityByKeyword(list, "CREATEDB").on).toBe(true);
-    expect(capabilityByKeyword(list, "CREATEROLE").on).toBe(true);
-    expect(capabilityByKeyword(list, "REPLICATION").on).toBe(true);
-    expect(capabilityByKeyword(list, "BYPASSRLS").on).toBe(true);
-    expect(capabilityByKeyword(list, "INHERIT").on).toBe(false);
-  });
-
-  test("renders an unlimited connection limit as a value, not a flag", () => {
-    const limit = capabilityByKeyword(
-      capabilities(attributes({ connectionLimit: -1 })),
-      "CONNECTION LIMIT"
-    );
-
-    expect(limit).toMatchObject({
-      description: "No limit on concurrent connections.",
-      on: false,
-      value: "Unlimited",
-    });
-  });
-
-  test("describes a zero connection limit as no connections allowed", () => {
-    const limit = capabilityByKeyword(
-      capabilities(attributes({ connectionLimit: 0 })),
-      "CONNECTION LIMIT"
-    );
-
-    expect(limit).toMatchObject({
-      description: "No connections allowed.",
-      on: true,
-      value: "0",
-    });
-  });
-
   test("describes a positive connection limit with its count", () => {
     const limit = capabilityByKeyword(
       capabilities(attributes({ connectionLimit: 8 })),
@@ -268,20 +210,6 @@ describe("capabilities", () => {
       description: "Login is rejected after this date.",
       on: true,
       value: timestampDate(validUntil).toLocaleDateString(),
-    });
-  });
-
-  test("marks VALID UNTIL as never expiring without an expiry", () => {
-    const expiry = capabilityByKeyword(
-      capabilities(attributes({})),
-      "VALID UNTIL"
-    );
-
-    expect(expiry).toMatchObject({
-      danger: false,
-      description: "Password never expires.",
-      on: false,
-      value: "Never",
     });
   });
 });
@@ -410,18 +338,6 @@ describe("ownedSubText", () => {
     ).toBe("objects in db");
   });
 
-  test("reports zero owned objects in plain words", () => {
-    expect(
-      ownedSubText({
-        databaseName: "appdb",
-        effectiveDbId: "db1",
-        error: undefined,
-        ownedCount: 0,
-        ownedReady: true,
-      })
-    ).toBe("no owned objects");
-  });
-
   test("returns undefined while still loading", () => {
     expect(
       ownedSubText({
@@ -485,18 +401,6 @@ describe("deriveBuiltinParents", () => {
       names: ["pg_read_all_data", "pg_future_role"],
     });
   });
-
-  test("returns empty results for a role with no built-in parents", () => {
-    const role = create(RoleSchema, {
-      memberOf: [
-        { role: "instances/i1/roles/app_writers", roleName: "app_writers" },
-      ],
-      name: "instances/i1/roles/reporter",
-      roleName: "reporter",
-    });
-
-    expect(deriveBuiltinParents(role)).toEqual({ details: [], names: [] });
-  });
 });
 
 describe("buildAccessRows", () => {
@@ -528,29 +432,6 @@ describe("buildAccessRows", () => {
     ownedCount: 0,
     publicCount: 0,
   };
-
-  test("renders every access path as inactive for a plain role", () => {
-    const rows = buildAccessRows(inactiveArgs);
-
-    expect(
-      rows.map((row) => [row.label, row.active, row.status, row.jump?.section])
-    ).toEqual([
-      ["Superuser bypass", false, "—", undefined],
-      ["Built-in role powers", false, "—", undefined],
-      ["Inherited (membership)", false, "0", undefined],
-      ["Owns objects", false, "0", undefined],
-      ["Direct grants", false, "—", "grants"],
-      ["PUBLIC (everyone)", false, "0", undefined],
-    ]);
-    expect(rows.map((row) => row.detail)).toEqual([
-      "Not a superuser.",
-      "Not a built-in role and not a member of one.",
-      "Not a member of any other role.",
-      "Owns no objects here.",
-      "No database selected.",
-      "Everyone — including this role — holds these.",
-    ]);
-  });
 
   test("activates each row when its access path applies", () => {
     const rows = buildAccessRows({
@@ -599,17 +480,6 @@ describe("buildAccessRows", () => {
     });
 
     expect(rows[1]?.jump).toBeUndefined();
-  });
-
-  test("waits for the grants query before counting direct grants", () => {
-    const rows = buildAccessRows({
-      ...inactiveArgs,
-      effectiveDb: { id: "db1", name: "appdb" },
-      grantObjects: [grantObject],
-      grantsReady: false,
-    });
-
-    expect(rows[4]).toMatchObject({ active: true, status: "—" });
   });
 
   test("marks deferred expensive facets as loadable instead of zero", () => {

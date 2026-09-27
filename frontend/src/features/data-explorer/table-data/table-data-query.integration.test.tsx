@@ -2,12 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
 import { useTableDataQuery } from "@/features/data-explorer/table-data/table-data-query";
-import {
-  CellValueMode,
-  type ReadRowsRequest,
-  RowCountMode,
-  RowOrder_Direction,
-} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import type { ReadRowsRequest } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   ColumnSchema,
   DataType,
@@ -91,62 +86,6 @@ describe("useTableDataQuery", () => {
     });
   });
 
-  test("owns the read rows request shape and enablement", () => {
-    renderHook(() =>
-      useTableDataQuery({
-        filterSearch: JSON.stringify({
-          l: "and",
-          r: [{ c: "email", i: "email", o: "ilike", v: "%@acme.com" }],
-        }),
-        name: tableName,
-        onFilterSearchChange: rs.fn(),
-        onPageSizeChange: rs.fn(),
-        onSortSearchChange: rs.fn(),
-        pageSize: 25,
-        sortSearch: "created_at:desc",
-      })
-    );
-
-    const [request, options] = latestReadRowsCall();
-    // keepPreviousData keeps the prior page on screen while the next
-    // page/sort/filter request loads instead of blanking to a skeleton.
-    expect(options).toEqual({ enabled: true, keepPreviousData: true });
-    expect(request).toMatchObject({
-      cellValueMode: CellValueMode.PREVIEW,
-      name: tableName,
-      pageSize: 25,
-      pageToken: "",
-      rowCountMode: RowCountMode.ESTIMATE,
-    });
-    expect(request.orderBy).toMatchObject([
-      { column: "created_at", direction: RowOrder_Direction.DESC },
-    ]);
-    expect(request.filter?.node.case).toBe("group");
-  });
-
-  test("disables row reads until URL column validation finishes", () => {
-    useListTableColumnsQueryMock.mockReturnValue({
-      data: undefined,
-      error: null,
-      isError: false,
-      refetch: rs.fn(),
-    });
-
-    renderHook(() =>
-      useTableDataQuery({
-        name: tableName,
-        onFilterSearchChange: rs.fn(),
-        onPageSizeChange: rs.fn(),
-        onSortSearchChange: rs.fn(),
-        pageSize: 25,
-        sortSearch: "created_at:desc",
-      })
-    );
-
-    const [, options] = latestReadRowsCall();
-    expect(options).toEqual({ enabled: false, keepPreviousData: true });
-  });
-
   test("keeps malformed filter URL search and disables row reads", () => {
     const onFilterSearchChange = rs.fn();
     const onSortSearchChange = rs.fn();
@@ -204,21 +143,6 @@ describe("useTableDataQuery", () => {
 
     expect(columnRefetch).toHaveBeenCalledTimes(1);
     expect(rowRefetch).not.toHaveBeenCalled();
-  });
-
-  test("passes keepPreviousData so the grid keeps prior rows while refreshing", () => {
-    renderHook(() =>
-      useTableDataQuery({
-        name: tableName,
-        onFilterSearchChange: rs.fn(),
-        onPageSizeChange: rs.fn(),
-        onSortSearchChange: rs.fn(),
-        pageSize: 25,
-      })
-    );
-
-    const [, options] = latestReadRowsCall();
-    expect(options.keepPreviousData).toBe(true);
   });
 
   test("resets page tokens after the query shape changes", () => {

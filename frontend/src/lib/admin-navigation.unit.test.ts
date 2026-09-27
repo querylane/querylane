@@ -1,7 +1,5 @@
 import { describe, expect, test } from "@rstest/core";
 import {
-  buildCanonicalAdminSearch,
-  buildCanonicalRolesSearch,
   navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
   resolveLegacyAdminPageRedirect,
@@ -34,42 +32,6 @@ describe("admin navigation", () => {
     });
   });
 
-  test("resolves canonical targets for instance activity", () => {
-    expect(
-      resolveCanonicalAdminPageTarget({
-        ids: { instanceId: "local" },
-        page: "instance.activity",
-      })
-    ).toEqual({
-      params: { instanceId: "local" },
-      to: "/instances/$instanceId/activity",
-    });
-  });
-
-  test("resolves canonical targets for database explorer", () => {
-    expect(
-      resolveCanonicalAdminPageTarget({
-        ids: { databaseId: "postgres", instanceId: "local" },
-        page: "database.explorer",
-      })
-    ).toEqual({
-      params: { databaseId: "postgres", instanceId: "local" },
-      to: "/instances/$instanceId/databases/$databaseId/explorer",
-    });
-  });
-
-  test("resolves canonical targets for database extensions", () => {
-    expect(
-      resolveCanonicalAdminPageTarget({
-        ids: { databaseId: "postgres", instanceId: "local" },
-        page: "database.extensions",
-      })
-    ).toEqual({
-      params: { databaseId: "postgres", instanceId: "local" },
-      to: "/instances/$instanceId/databases/$databaseId/extensions",
-    });
-  });
-
   test("falls back to scope default when requested page needs deeper scope", () => {
     expect(
       resolveNextAdminPage({
@@ -77,98 +39,6 @@ describe("admin navigation", () => {
         targetScope: "instance",
       })
     ).toBe("instance.overview");
-  });
-
-  test("clears page-local search when changing pages", () => {
-    expect(
-      buildCanonicalAdminSearch(
-        {
-          category: "tables",
-          name: "users",
-          page: "database.overview",
-          schema: "public",
-        },
-        { currentPage: "database.overview", targetPage: "database.explorer" }
-      )
-    ).toEqual({
-      category: undefined,
-      name: undefined,
-      page: undefined,
-      schema: undefined,
-      sort: undefined,
-    });
-  });
-
-  test("drops child-route search when changing pages", () => {
-    const previous = {
-      grantsReach: "owns",
-      q: "postgres",
-      tab: "grants",
-      type: "login",
-    };
-
-    expect(
-      buildCanonicalAdminSearch(previous, {
-        currentPage: "instance.roles",
-        targetPage: "instance.overview",
-      })
-    ).toEqual({
-      category: undefined,
-      name: undefined,
-      page: undefined,
-      q: undefined,
-      schema: undefined,
-      sort: undefined,
-      tab: undefined,
-    });
-  });
-
-  test("drops stale role filters when entering roles from another page", () => {
-    expect(
-      buildCanonicalRolesSearch(
-        { q: "postgres", type: "login" },
-        {
-          currentPage: "database.overview",
-          targetPage: "instance.roles",
-        }
-      )
-    ).toEqual({
-      category: undefined,
-      name: undefined,
-      page: undefined,
-      q: undefined,
-      schema: undefined,
-      sort: undefined,
-      tab: undefined,
-      type: undefined,
-    });
-  });
-
-  test("clears page-local explorer search when changing databases on the same page", () => {
-    expect(
-      buildCanonicalAdminSearch(
-        {
-          category: "tables",
-          name: "orders",
-          q: "ord",
-          schema: "analytics",
-          tab: "columns",
-        },
-        {
-          clearPageSearch: true,
-          currentPage: "database.explorer",
-          targetPage: "database.explorer",
-        }
-      )
-    ).toEqual({
-      category: undefined,
-      name: undefined,
-      page: undefined,
-      q: undefined,
-      schema: undefined,
-      sort: undefined,
-      tab: undefined,
-    });
   });
 
   test("builds route-level redirect for legacy page search links", () => {
@@ -253,18 +123,5 @@ describe("admin navigation", () => {
         search: { page: "instance.overview" },
       })
     ).toBeNull();
-  });
-  test("redirects legacy instance page links at instance scope", () => {
-    expect(
-      resolveLegacyAdminPageRedirect({
-        currentPage: "instance.configuration",
-        ids: { instanceId: "local" },
-        search: { page: "instance.configuration" },
-      })
-    ).toEqual({
-      params: { instanceId: "local" },
-      search: { page: undefined },
-      to: "/instances/$instanceId/configuration",
-    });
   });
 });

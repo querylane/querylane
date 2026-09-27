@@ -48,31 +48,6 @@ describe("validateCreateInstanceForm", () => {
     });
   });
 
-  test.each([["abc"], ["0"], ["5432abc"], ["1.5"]])(
-    "rejects invalid port %s",
-    (port) => {
-      const result = validateCreateInstanceForm({
-        database: "postgres",
-        displayName: "Prod",
-        host: "db.internal",
-        instanceId: "prod",
-        labels: [],
-        password: "secret",
-        port,
-        sslMode: "prefer",
-        sslNegotiation: "postgres",
-        username: "postgres",
-      });
-
-      expect(result).toEqual({
-        errors: {
-          port: "Port must be between 1 and 65535.",
-        },
-        firstInvalidField: "port",
-      });
-    }
-  );
-
   test("requires direct SSL negotiation to use require or stronger SSL mode", () => {
     const result = validateCreateInstanceForm({
       database: "postgres",

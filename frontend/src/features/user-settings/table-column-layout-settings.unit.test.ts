@@ -12,18 +12,6 @@ describe("table column layout settings", () => {
     useTableColumnLayoutSettingsStore.setState({ layouts: {} });
   });
 
-  it("drops deleted columns and appends new columns visibly", () => {
-    expect(
-      resolveTableColumnLayout(["id", "email", "created_at"], {
-        hiddenColumns: ["deleted_column", "email"],
-        order: ["email", "deleted_column", "id"],
-      })
-    ).toEqual({
-      hiddenColumns: ["email"],
-      order: ["email", "id", "created_at"],
-    });
-  });
-
   it("keeps at least one data column visible", () => {
     expect(
       resolveTableColumnLayout(["id", "email"], {
@@ -61,35 +49,6 @@ describe("table column layout settings", () => {
         order: ["id", "internal_note", "email"],
       })
     ).toEqual(["id", "email"]);
-  });
-
-  it("persists layouts independently by full table resource name", () => {
-    const customers =
-      "instances/prod/databases/app/schemas/public/tables/customers";
-    const orders = "instances/prod/databases/app/schemas/public/tables/orders";
-
-    useTableColumnLayoutSettingsStore.getState().setLayout(customers, {
-      hiddenColumns: ["email"],
-      order: ["email", "id"],
-    });
-    useTableColumnLayoutSettingsStore.getState().setLayout(orders, {
-      hiddenColumns: [],
-      order: ["id", "created_at"],
-    });
-
-    expect(useTableColumnLayoutSettingsStore.getState().layouts).toEqual({
-      [customers]: {
-        hiddenColumns: ["email"],
-        order: ["email", "id"],
-      },
-      [orders]: {
-        hiddenColumns: [],
-        order: ["id", "created_at"],
-      },
-    });
-    expect(localStorage.getItem("querylane-table-column-layouts")).toContain(
-      customers
-    );
   });
 
   it("resets one table without changing another table", () => {

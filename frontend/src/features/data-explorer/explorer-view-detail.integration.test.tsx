@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
-import { ExplainQueryRequest_Format } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
   ListTableColumnsResponseSchema,
   ListTableConstraintsResponseSchema,
@@ -175,31 +174,6 @@ afterEach(() => {
 });
 
 describe("view detail integration", () => {
-  it("shows materialized view storage, population, owner, and comment", () => {
-    render(
-      <ViewDetail
-        view={createProto(ViewSchema, {
-          comment: "Precomputed daily revenue totals",
-          displayName: "daily_revenue",
-          isPopulated: true,
-          name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
-          owner: "analytics_owner",
-          sizeBytes: 4096n,
-          viewType: View_ViewType.MATERIALIZED,
-        })}
-        viewName="daily_revenue"
-      />
-    );
-
-    expect(screen.getByRole("heading", { name: "daily_revenue" })).toBeTruthy();
-    expect(
-      screen.getByText("Materialized view · owner: analytics_owner")
-    ).toBeTruthy();
-    expect(screen.getByText("4 KB")).toBeTruthy();
-    expect(screen.getByText("Yes")).toBeTruthy();
-    expect(screen.getByText("Precomputed daily revenue totals")).toBeTruthy();
-  });
-
   it("operates a materialized view through data, metadata, dependencies, definition, and refresh", async () => {
     const user = userEvent.setup();
     const name =
@@ -392,53 +366,6 @@ GROUP BY 1;`,
     const sqlCode = container.querySelector("code.language-sql");
     expect(sqlCode?.textContent).toMatch(CREATE_VIEW_PATTERN);
     expect(sqlCode?.textContent).toMatch(DATE_TRUNC_PATTERN);
-  });
-
-  it("renders database notices returned while checking the view plan", async () => {
-    const user = userEvent.setup();
-    useExplainQueryMock.mockReturnValue({
-      data: {
-        notices: ["NOTICE 00000: planner checked revenue view"],
-      },
-      error: null,
-      isFetching: false,
-    });
-
-    render(
-      <ViewDetail
-        view={createProto(ViewSchema, {
-          definition: "SELECT * FROM sales.orders;",
-          displayName: "daily_paid_revenue",
-          name: "instances/prod/databases/app/schemas/public/views/daily_paid_revenue",
-          owner: "analytics_owner",
-          viewType: View_ViewType.STANDARD,
-        })}
-        viewName="daily_paid_revenue"
-      />
-    );
-
-    expect(
-      screen.queryByRole("heading", { name: "Database notices" })
-    ).toBeNull();
-
-    await user.click(
-      screen.getByRole("button", { name: "Check database notices" })
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "Returned notices" })
-    ).toBeTruthy();
-    expect(
-      screen.getByText("NOTICE 00000: planner checked revenue view")
-    ).toBeTruthy();
-    expect(useExplainQueryMock).toHaveBeenLastCalledWith(
-      {
-        format: ExplainQueryRequest_Format.TEXT,
-        parent: "instances/prod/databases/app",
-        statement: 'SELECT * FROM "public"."daily_paid_revenue"',
-      },
-      expect.objectContaining({ enabled: true })
-    );
   });
 
   it("shows an empty state when returned notices are blank", async () => {

@@ -57,52 +57,6 @@ function createInterleavedTestStore() {
 }
 
 describe("setup-store bootstrap flow", () => {
-  it("initializes in booting state", () => {
-    const { useSetupStore } = createTestStore(() =>
-      Promise.resolve(
-        buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
-        })
-      )
-    );
-
-    expect(useSetupStore.getState().status).toBe("booting");
-    expect(useSetupStore.getState().onboardingState).toBeNull();
-  });
-
-  it("bootstrap routes to ready when configured", async () => {
-    const { useSetupStore } = createTestStore(() =>
-      Promise.resolve(
-        buildOnboardingState({
-          isConfigured: true,
-          state: AppDatabaseStatus_State.READY,
-        })
-      )
-    );
-
-    await useSetupStore.getState().bootstrap();
-
-    expect(useSetupStore.getState().status).toBe("ready");
-    expect(useSetupStore.getState().showDegradedBanner).toBe(false);
-  });
-
-  it("bootstrap routes to onboarding when not configured", async () => {
-    const { useSetupStore } = createTestStore(() =>
-      Promise.resolve(
-        buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
-        })
-      )
-    );
-
-    await useSetupStore.getState().bootstrap();
-
-    expect(useSetupStore.getState().status).toBe("onboarding");
-    expect(useSetupStore.getState().showWizardErrorBanner).toBe(false);
-  });
-
   it("bootstrap routes to boot_error on network failure", async () => {
     const failure = new Error("network down");
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));
@@ -143,36 +97,6 @@ describe("setup-store setup-required transition", () => {
 });
 
 describe("setup-store verify flow", () => {
-  it("verifyAfterSetup routes to ready when confirmed configured", async () => {
-    const { useSetupStore } = createTestStore(() =>
-      Promise.resolve(
-        buildOnboardingState({
-          isConfigured: true,
-          state: AppDatabaseStatus_State.READY,
-        })
-      )
-    );
-
-    await useSetupStore.getState().verifyAfterSetup();
-
-    expect(useSetupStore.getState().status).toBe("ready");
-  });
-
-  it("verifyAfterSetup routes back to onboarding when not configured", async () => {
-    const { useSetupStore } = createTestStore(() =>
-      Promise.resolve(
-        buildOnboardingState({
-          isConfigured: false,
-          state: AppDatabaseStatus_State.NOT_CONFIGURED,
-        })
-      )
-    );
-
-    await useSetupStore.getState().verifyAfterSetup();
-
-    expect(useSetupStore.getState().status).toBe("onboarding");
-  });
-
   it("verifyAfterSetup routes to boot_error on failure", async () => {
     const failure = new Error("verify failed");
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));

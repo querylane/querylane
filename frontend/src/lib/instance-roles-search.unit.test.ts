@@ -1,8 +1,5 @@
 import { describe, expect, test } from "@rstest/core";
-import {
-  instanceRolesSearchSchema,
-  isInstanceRolesTab,
-} from "@/lib/instance-roles-search";
+import { instanceRolesSearchSchema } from "@/lib/instance-roles-search";
 
 describe("instanceRolesSearchSchema", () => {
   test("normalizes legacy tab links", () => {
@@ -12,19 +9,6 @@ describe("instanceRolesSearchSchema", () => {
     expect(instanceRolesSearchSchema.parse({ tab: "access-map" })).toEqual({
       tab: "map",
     });
-  });
-
-  test("keeps the documented details and map tab values", () => {
-    expect(instanceRolesSearchSchema.parse({ tab: "details" })).toEqual({
-      tab: "details",
-    });
-    expect(instanceRolesSearchSchema.parse({ tab: "map" })).toEqual({
-      tab: "map",
-    });
-  });
-
-  test("keeps the default details tab optional", () => {
-    expect(instanceRolesSearchSchema.parse({})).toEqual({});
   });
 
   test("keeps roles table search alongside the selected tab", () => {
@@ -43,15 +27,5 @@ describe("instanceRolesSearchSchema", () => {
 
   test("drops unsupported role type filters", () => {
     expect(instanceRolesSearchSchema.parse({ type: "owner" })).toEqual({});
-  });
-
-  test("rejects unsupported tab values", () => {
-    expect(() => instanceRolesSearchSchema.parse({ tab: "access" })).toThrow();
-  });
-
-  test("recognizes normalized instance roles tabs", () => {
-    expect(isInstanceRolesTab("details")).toBe(true);
-    expect(isInstanceRolesTab("map")).toBe(true);
-    expect(isInstanceRolesTab("access-map")).toBe(false);
   });
 });

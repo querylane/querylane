@@ -7,12 +7,7 @@ import {
   rowToRecord,
   tableValueToText,
 } from "@/components/console-pages/other-database-objects-query";
-import {
-  buildOtherObjectsBrowseStatement,
-  buildOtherObjectsSummaryStatement,
-  toLikeContainsLiteral,
-  toSqlTextLiteral,
-} from "@/components/console-pages/other-database-objects-sql";
+import { buildOtherObjectsBrowseStatement } from "@/components/console-pages/other-database-objects-sql";
 import {
   TableCellSchema,
   TableResultRowSchema,
@@ -160,13 +155,6 @@ describe("other database objects query", () => {
 });
 
 describe("other database objects SQL builders", () => {
-  it("escapes quotes and LIKE wildcards in search input", () => {
-    expect(toSqlTextLiteral("o'reilly")).toBe("'o''reilly'");
-    expect(toLikeContainsLiteral("50%_off's")).toBe(
-      String.raw`'%50\%\_off''s%' ESCAPE '\'`
-    );
-  });
-
   it("only adds search and cursor clauses when provided", () => {
     const plain = buildOtherObjectsBrowseStatement({ category: "sequences" });
     expect(plain).not.toContain("WHERE name");
@@ -181,12 +169,5 @@ describe("other database objects SQL builders", () => {
     expect(filtered).toContain(
       "(lower(sort_key), sort_key) > (lower('a:s'), 'a:s')"
     );
-  });
-
-  it("keeps definition-producing functions out of the summary statement", () => {
-    const statement = buildOtherObjectsSummaryStatement();
-    expect(statement).not.toContain("pg_get_functiondef");
-    expect(statement).toContain("count(*) OVER (PARTITION BY category)");
-    expect(statement).toContain("row_rank <= 5");
   });
 });

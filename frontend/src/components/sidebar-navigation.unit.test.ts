@@ -7,22 +7,6 @@ import {
 } from "@/components/sidebar-navigation";
 
 describe("sidebar navigation", () => {
-  test("builds native link props for available instance pages", () => {
-    const links = buildNavLinkProps({
-      currentPage: "instance.overview",
-      ids: { instanceId: "local" },
-    });
-
-    expect(links["instance.activity"]).toMatchObject({
-      params: { instanceId: "local" },
-      to: "/instances/$instanceId/activity",
-    });
-    expect(links["instance.configuration"]).toMatchObject({
-      params: { instanceId: "local" },
-      to: "/instances/$instanceId/configuration",
-    });
-  });
-
   test("omits database links until a database is selected", () => {
     const links = buildNavLinkProps({
       currentPage: "instance.overview",

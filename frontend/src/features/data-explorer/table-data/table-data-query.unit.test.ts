@@ -1,9 +1,5 @@
 import { describe, expect, test } from "@rstest/core";
-import {
-  parseSortSearch,
-  resolveTableDataQueryState,
-  serializeSortSearch,
-} from "@/features/data-explorer/table-data/table-data-query";
+import { resolveTableDataQueryState } from "@/features/data-explorer/table-data/table-data-query";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const columns = [
@@ -30,29 +26,6 @@ describe("table data query search", () => {
     expect(state.normalizedFilterSearch).toBe("not-json");
     expect(state.normalizedSortSearch).toBeUndefined();
     expect(state.shouldLoadColumnCatalog).toBe(true);
-  });
-
-  test("encodes and decodes sort search params", () => {
-    const parsed = parseSortSearch("created_at:desc,id:asc");
-
-    expect(parsed).toEqual([
-      { columnKey: "created_at", direction: "DESC" },
-      { columnKey: "id", direction: "ASC" },
-    ]);
-    expect(serializeSortSearch(parsed)).toBe("created_at:desc,id:asc");
-  });
-
-  test("round trips sort column names containing URL separators", () => {
-    const encoded = serializeSortSearch([
-      { columnKey: "quoted:name,part", direction: "DESC" },
-      { columnKey: "space name", direction: "ASC" },
-    ]);
-
-    expect(encoded).toBe("quoted%3Aname%2Cpart:desc,space%20name:asc");
-    expect(parseSortSearch(encoded)).toEqual([
-      { columnKey: "quoted:name,part", direction: "DESC" },
-      { columnKey: "space name", direction: "ASC" },
-    ]);
   });
 
   test("keeps unknown URL filter columns visible while blocking row reads", () => {

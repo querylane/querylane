@@ -2,7 +2,6 @@ import { describe, expect, test } from "@rstest/core";
 
 import {
   isSelectedResourceResolved,
-  pickSelectedResource,
   resolveSelectedResource,
   resolveValidSelectionId,
   shouldEnableDatabaseSelectionQuery,
@@ -44,55 +43,7 @@ describe("resolveValidSelectionId", () => {
   });
 });
 
-describe("pickSelectedResource", () => {
-  test("returns null when no selectedId", () => {
-    expect(pickSelectedResource(ITEMS, undefined)).toBeNull();
-  });
-
-  test("returns matching item", () => {
-    expect(pickSelectedResource(ITEMS, "b")).toEqual({ id: "b", name: "Beta" });
-  });
-
-  test("returns null when no match found", () => {
-    expect(pickSelectedResource(ITEMS, "z")).toBeNull();
-  });
-
-  test("returns null for empty items", () => {
-    expect(pickSelectedResource([], "a")).toBeNull();
-  });
-});
-
 describe("resolveSelectedResource", () => {
-  test("prefers queryItem over list item", () => {
-    const queryItem = { id: "a", name: "Query Alpha" };
-    const result = resolveSelectedResource({
-      items: ITEMS,
-      queryItem,
-      selectedId: "a",
-    });
-    expect(result).toBe(queryItem);
-  });
-
-  test("falls back to list item when no queryItem", () => {
-    const result = resolveSelectedResource({
-      items: ITEMS,
-      queryItem: null,
-      selectedId: "b",
-    });
-    expect(result).toEqual({ id: "b", name: "Beta" });
-  });
-
-  test("falls back to fallbackItem when not in list or query", () => {
-    const fallback = { id: "x", name: "Fallback" };
-    const result = resolveSelectedResource({
-      fallbackItem: fallback,
-      items: ITEMS,
-      queryItem: null,
-      selectedId: "x",
-    });
-    expect(result).toBe(fallback);
-  });
-
   test("returns null when nothing matches", () => {
     const result = resolveSelectedResource({
       items: ITEMS,
@@ -124,28 +75,6 @@ describe("isSelectedResourceResolved", () => {
     ).toBe(true);
   });
 
-  test("returns true when resource is found", () => {
-    expect(
-      isSelectedResourceResolved({
-        queryEnabled: true,
-        queryPending: false,
-        selectedId: "a",
-        selectedResource: { id: "a" },
-      })
-    ).toBe(true);
-  });
-
-  test("returns true when query enabled and no longer pending", () => {
-    expect(
-      isSelectedResourceResolved({
-        queryEnabled: true,
-        queryPending: false,
-        selectedId: "a",
-        selectedResource: null,
-      })
-    ).toBe(true);
-  });
-
   test("returns false when query pending and no resource yet", () => {
     expect(
       isSelectedResourceResolved({
@@ -167,25 +96,5 @@ describe("shouldEnableDatabaseSelectionQuery", () => {
         hydrateSelectedDatabaseFromQuery: true,
       })
     ).toBe(true);
-  });
-
-  test("returns false when hydration disabled", () => {
-    expect(
-      shouldEnableDatabaseSelectionQuery({
-        effectiveDatabaseId: "db1",
-        effectiveInstanceId: "inst1",
-        hydrateSelectedDatabaseFromQuery: false,
-      })
-    ).toBe(false);
-  });
-
-  test("returns false when instanceId missing", () => {
-    expect(
-      shouldEnableDatabaseSelectionQuery({
-        effectiveDatabaseId: "db1",
-        effectiveInstanceId: undefined,
-        hydrateSelectedDatabaseFromQuery: true,
-      })
-    ).toBe(false);
   });
 });

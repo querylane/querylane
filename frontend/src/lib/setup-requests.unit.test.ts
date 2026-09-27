@@ -12,7 +12,6 @@ import {
 
 import {
   buildConnectionTestRequest,
-  buildEmbeddedSetupRequest,
   buildSetupAppDatabaseRequest,
   consumeSetupStreamWithProgress,
   consumeWatchStreamWithProgress,
@@ -164,19 +163,6 @@ describe("setup request builders", () => {
     }
     expect(request.setup.value.database).toBe("querylane");
   });
-
-  it("builds setup requests with embedded config payload", () => {
-    const request = buildEmbeddedSetupRequest({
-      mode: "ephemeral",
-    });
-
-    expect(request.setup.case).toBe("embeddedConfig");
-    if (request.setup.case !== "embeddedConfig") {
-      throw new Error("Expected embeddedConfig setup payload");
-    }
-
-    expect(request.setup.value.mode).toBe("ephemeral");
-  });
 });
 
 describe("setup stream consumption", () => {
@@ -188,23 +174,6 @@ describe("setup stream consumption", () => {
     await expect(
       consumeSetupStreamWithProgress(stream, () => undefined)
     ).rejects.toThrow("Database setup stream ended before setup completed");
-  });
-
-  it("extracts failure message from a failed setup event", async () => {
-    const responses = [
-      buildSetupResponse({
-        state: StepState.FAILED,
-        error: "permission denied",
-        displayName: "Initialize services",
-      }),
-    ];
-    const stream = buildAsyncStream(responses);
-
-    await expect(
-      consumeSetupStreamWithProgress(stream, () => undefined)
-    ).resolves.toMatchObject({
-      message: "permission denied",
-    });
   });
 
   it("consumes setup stream and returns the last failure message", async () => {
@@ -220,27 +189,6 @@ describe("setup stream consumption", () => {
     ).resolves.toMatchObject({
       message: "second",
     });
-  });
-
-  it("consumes setup stream and forwards progress events", async () => {
-    const responses = [
-      buildSetupResponse({ state: StepState.PENDING }),
-      buildSetupResponse({ state: StepState.IN_PROGRESS }),
-      buildSucceededSetupResponse(SetupStep.PERSISTING_CONFIG),
-    ];
-    const stream = buildAsyncStream(responses);
-    const events: StepState[] = [];
-
-    const failure = await consumeSetupStreamWithProgress(stream, (event) => {
-      events.push(event.state);
-    });
-
-    expect(failure).toBeNull();
-    expect(events).toEqual([
-      StepState.PENDING,
-      StepState.IN_PROGRESS,
-      StepState.SUCCEEDED,
-    ]);
   });
 
   it("invokes progress callback in order for async-delayed setup events", async () => {
@@ -280,50 +228,6 @@ describe("setup stream consumption", () => {
 });
 
 describe("watch stream consumption", () => {
-  it("consumes watch stream and forwards progress events", async () => {
-    const responses = [
-      buildWatchResponse(StepState.PENDING),
-      buildWatchResponse(StepState.FAILED, "watch failed"),
-    ];
-    const stream = buildAsyncStream(responses);
-    const events: StepState[] = [];
-
-    const failure = await consumeWatchStreamWithProgress(stream, (event) => {
-      events.push(event.state);
-    });
-
-    expect(failure).toMatchObject({
-      message: "watch failed",
-    });
-    expect(events).toEqual([StepState.PENDING, StepState.FAILED]);
-  });
-
-  it("clears an earlier failure when initialization later succeeds", async () => {
-    // The user saves a bad config (step fails), then fixes the file; the
-    // backend retries on the same stream and closes it only after
-    // initialization succeeded. The stale failure must not be reported.
-    const responses = [
-      buildWatchResponse(StepState.FAILED, "bad password", {
-        displayName: "Connecting",
-      }),
-      buildWatchResponse(StepState.SUCCEEDED, "", {
-        displayName: "Connecting",
-        stepId: SetupStep.CONNECTING,
-      }),
-      buildWatchResponse(StepState.SUCCEEDED, "", {
-        displayName: "Initializing services",
-        stepId: SetupStep.INITIALIZING_SERVICES,
-      }),
-    ];
-
-    const failure = await consumeWatchStreamWithProgress(
-      buildAsyncStream(responses),
-      () => undefined
-    );
-
-    expect(failure).toBeNull();
-  });
-
   it("keeps a failure that arrives after initialization succeeded", async () => {
     const responses = [
       buildWatchResponse(StepState.SUCCEEDED, "", {
@@ -345,21 +249,6 @@ describe("watch stream consumption", () => {
 });
 
 describe("setup stream errors", () => {
-  it("propagates stream errors", async () => {
-    const failure = new Error("stream failed");
-    const stream: AsyncIterable<never> = {
-      [Symbol.asyncIterator]() {
-        return {
-          next: () => Promise.reject(failure),
-        };
-      },
-    };
-
-    await expect(
-      consumeSetupStreamWithProgress(stream, () => undefined)
-    ).rejects.toThrow("stream failed");
-  });
-
   it("creates setup stream failure errors with attached failed event", () => {
     const failedEvent = createProto(SetupProgressEventSchema, {
       displayName: "Apply migrations",

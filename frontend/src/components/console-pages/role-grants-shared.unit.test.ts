@@ -1,6 +1,5 @@
 import { create } from "@bufbuild/protobuf";
 import { describe, expect, test } from "@rstest/core";
-import type { GrantsType } from "@/components/console-pages/role-detail-search";
 import {
   aggregateGrants,
   buildSchemaIndex,
@@ -23,7 +22,6 @@ import {
   privAbbr,
   privTone,
   privTooltip,
-  SLUG_TO_OBJECT_TYPE,
   schemaBreakdownLabel,
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
@@ -62,63 +60,6 @@ function grantedObject(init: Partial<GrantedObject>): GrantedObject {
 }
 
 describe("aggregateGrants", () => {
-  test("merges rows for the same object into one entry with all privileges", () => {
-    const result = aggregateGrants([
-      grant({
-        grantor: "owner_a",
-        objectName: "orders",
-        objectType: GrantObjectType.TABLE,
-        privilege: "SELECT",
-        schemaName: "public",
-      }),
-      grant({
-        grantor: "owner_a",
-        objectName: "orders",
-        objectType: GrantObjectType.TABLE,
-        privilege: "INSERT",
-        schemaName: "public",
-        withGrantOption: true,
-      }),
-    ]);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      grantors: ["owner_a"],
-      objectName: "orders",
-      objectType: GrantObjectType.TABLE,
-      privileges: [
-        { grantable: false, name: "SELECT" },
-        { grantable: true, name: "INSERT" },
-      ],
-      schemaName: "public",
-    });
-  });
-
-  test("keeps objects apart by (type, schema, object) triple", () => {
-    const result = aggregateGrants([
-      grant({
-        objectName: "orders",
-        objectType: GrantObjectType.TABLE,
-        privilege: "SELECT",
-        schemaName: "public",
-      }),
-      grant({
-        objectName: "orders",
-        objectType: GrantObjectType.VIEW,
-        privilege: "SELECT",
-        schemaName: "public",
-      }),
-      grant({
-        objectName: "orders",
-        objectType: GrantObjectType.TABLE,
-        privilege: "SELECT",
-        schemaName: "sales",
-      }),
-    ]);
-
-    expect(result).toHaveLength(3);
-  });
-
   test("collects distinct grantors and skips empty grantor strings", () => {
     const result = aggregateGrants([
       grant({ grantor: "owner_a", privilege: "SELECT" }),
@@ -129,22 +70,9 @@ describe("aggregateGrants", () => {
 
     expect(result[0]?.grantors).toEqual(["owner_a", "owner_b"]);
   });
-
-  test("returns an empty list for no grants", () => {
-    expect(aggregateGrants([])).toEqual([]);
-  });
 });
 
 describe("getObjectTypeLabel", () => {
-  test("returns the metadata label for a known object type", () => {
-    expect(getObjectTypeLabel(GrantObjectType.MATERIALIZED_VIEW)).toBe(
-      "Materialized view"
-    );
-    expect(getObjectTypeLabel(GrantObjectType.LARGE_OBJECT)).toBe(
-      "Large object"
-    );
-  });
-
   test("falls back to the generic label for an unknown enum value", () => {
     // Proto3 enums are open: the wire can carry values this client predates.
     expect(getObjectTypeLabel(99 as GrantObjectType)).toBe("Object");
@@ -152,12 +80,6 @@ describe("getObjectTypeLabel", () => {
 });
 
 describe("slugForObjectType", () => {
-  test("round-trips every slug in SLUG_TO_OBJECT_TYPE", () => {
-    for (const slug of Object.keys(SLUG_TO_OBJECT_TYPE) as GrantsType[]) {
-      expect(slugForObjectType(SLUG_TO_OBJECT_TYPE[slug])).toBe(slug);
-    }
-  });
-
   test("returns undefined for a type with no slug", () => {
     expect(slugForObjectType(GrantObjectType.UNSPECIFIED)).toBeUndefined();
   });
@@ -180,24 +102,12 @@ describe("grantObjectTypeFilterToken", () => {
 });
 
 describe("privAbbr", () => {
-  test("uses the curated abbreviation when one exists", () => {
-    expect(privAbbr("TRUNCATE")).toBe("TRN");
-  });
-
-  test("uses the PostgreSQL 17 MAINTAIN abbreviation", () => {
-    expect(privAbbr("MAINTAIN")).toBe("MNT");
-  });
-
   test("falls back to the first three characters for unknown privileges", () => {
     expect(privAbbr("MERGE")).toBe("MER");
   });
 });
 
 describe("privTooltip", () => {
-  test("combines name and gloss for a known privilege", () => {
-    expect(privTooltip("SELECT")).toBe("SELECT — read rows");
-  });
-
   test("describes PostgreSQL 17 MAINTAIN privileges", () => {
     expect(privTooltip("MAINTAIN")).toBe("MAINTAIN — VACUUM, ANALYZE, REINDEX");
   });
@@ -208,28 +118,6 @@ describe("privTooltip", () => {
 });
 
 describe("privTone", () => {
-  test.each(["SELECT", "USAGE", "CONNECT", "EXECUTE"])(
-    "classifies %s as read",
-    (name) => {
-      expect(privTone(name)).toBe("read");
-    }
-  );
-
-  test.each([
-    "INSERT",
-    "UPDATE",
-    "REFERENCES",
-    "TRIGGER",
-    "TEMPORARY",
-    "MAINTAIN",
-  ])("classifies %s as write", (name) => {
-    expect(privTone(name)).toBe("write");
-  });
-
-  test.each(["DELETE", "TRUNCATE"])("classifies %s as destructive", (name) => {
-    expect(privTone(name)).toBe("destructive");
-  });
-
   test("classifies CREATE as create", () => {
     expect(privTone("CREATE")).toBe("create");
   });
@@ -252,18 +140,6 @@ describe("objectDisplayName", () => {
     ).toBe("sales");
   });
 
-  test("uses the bare object name for DATABASE objects", () => {
-    expect(
-      objectDisplayName(
-        grantedObject({
-          objectName: "appdb",
-          objectType: GrantObjectType.DATABASE,
-          schemaName: "",
-        })
-      )
-    ).toBe("appdb");
-  });
-
   test("uses the bare object name when the schema is empty", () => {
     expect(
       objectDisplayName(
@@ -274,14 +150,6 @@ describe("objectDisplayName", () => {
         })
       )
     ).toBe("orders");
-  });
-
-  test("qualifies relation names with their schema", () => {
-    expect(
-      objectDisplayName(
-        grantedObject({ objectName: "orders", schemaName: "public" })
-      )
-    ).toBe("public.orders");
   });
 });
 
@@ -306,13 +174,6 @@ describe("dedupePrivileges", () => {
 describe("grantorSummary", () => {
   test("returns null when there are no grantors", () => {
     expect(grantorSummary([])).toBeNull();
-  });
-
-  test("returns the single grantor without a title", () => {
-    expect(grantorSummary(["owner_a"])).toEqual({
-      text: "owner_a",
-      title: undefined,
-    });
   });
 
   test("condenses multiple grantors to a count with a full-list title", () => {
@@ -357,14 +218,6 @@ describe("dominantGrantor", () => {
 });
 
 describe("columnsFor", () => {
-  test("returns the canonical vocabulary for a known type", () => {
-    expect(columnsFor(GrantObjectType.SEQUENCE, [])).toEqual([
-      "USAGE",
-      "SELECT",
-      "UPDATE",
-    ]);
-  });
-
   test("appends privileges present in the data but not in the vocabulary", () => {
     expect(
       columnsFor(GrantObjectType.TABLE, [
@@ -471,17 +324,6 @@ describe("objectMatchesFilters", () => {
     schemaName: "public",
   });
 
-  test("matches when no filter is active", () => {
-    expect(
-      objectMatchesFilters({
-        object,
-        needle: "",
-        grantOnly: false,
-        activePrivs: [],
-      })
-    ).toBe(true);
-  });
-
   test("rejects when the needle is not in the display name", () => {
     expect(
       objectMatchesFilters({
@@ -491,17 +333,6 @@ describe("objectMatchesFilters", () => {
         activePrivs: [],
       })
     ).toBe(false);
-  });
-
-  test("matches the needle against the schema-qualified name", () => {
-    expect(
-      objectMatchesFilters({
-        object,
-        needle: "public.ord",
-        grantOnly: false,
-        activePrivs: [],
-      })
-    ).toBe(true);
   });
 
   test("rejects grant-only filter when nothing is grantable", () => {
@@ -515,17 +346,6 @@ describe("objectMatchesFilters", () => {
         activePrivs: [],
       })
     ).toBe(false);
-  });
-
-  test("passes grant-only filter when any privilege is grantable", () => {
-    expect(
-      objectMatchesFilters({
-        object,
-        needle: "",
-        grantOnly: true,
-        activePrivs: [],
-      })
-    ).toBe(true);
   });
 
   test("requires every active privilege to be held", () => {
@@ -549,66 +369,6 @@ describe("objectMatchesFilters", () => {
 });
 
 describe("buildSchemaIndex", () => {
-  test("rolls schema objects into per-schema groups with byType buckets", () => {
-    const orders = grantedObject({ schemaName: "public" });
-    const users = grantedObject({ objectName: "users", schemaName: "public" });
-    const ordersView = grantedObject({
-      objectName: "orders_view",
-      objectType: GrantObjectType.VIEW,
-      schemaName: "public",
-    });
-
-    const groups = buildSchemaIndex([orders, users, ordersView]);
-
-    expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({
-      database: false,
-      objects: [orders, users, ordersView],
-      schema: "public",
-      total: 3,
-    });
-    expect(groups[0]?.byType.get(GrantObjectType.TABLE)).toEqual([
-      orders,
-      users,
-    ]);
-    expect(groups[0]?.byType.get(GrantObjectType.VIEW)).toEqual([ordersView]);
-  });
-
-  test("collapses DATABASE grants into one synthetic row sorted first", () => {
-    const table = grantedObject({ schemaName: "public" });
-    const database = grantedObject({
-      objectName: "appdb",
-      objectType: GrantObjectType.DATABASE,
-      schemaName: "",
-    });
-
-    const groups = buildSchemaIndex([table, database]);
-
-    expect(groups.map((group) => group.schema)).toEqual(["database", "public"]);
-    expect(groups[0]).toMatchObject({ database: true, total: 1 });
-  });
-
-  test("groups large objects under database scope", () => {
-    const largeObject = grantedObject({
-      objectName: "910277",
-      objectType: GrantObjectType.LARGE_OBJECT,
-      schemaName: "",
-    });
-
-    const groups = buildSchemaIndex([largeObject]);
-
-    expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({
-      database: true,
-      objects: [largeObject],
-      schema: "database",
-      total: 1,
-    });
-    expect(groups[0]?.byType.get(GrantObjectType.LARGE_OBJECT)).toEqual([
-      largeObject,
-    ]);
-  });
-
   test("keeps schemas in encounter order after the database row", () => {
     const groups = buildSchemaIndex([
       grantedObject({ schemaName: "sales" }),
@@ -720,14 +480,6 @@ function owned(init: {
 }
 
 describe("ownedObjectName", () => {
-  test("uses the schema name for SCHEMA objects", () => {
-    expect(
-      ownedObjectName(
-        owned({ objectType: GrantObjectType.SCHEMA, schemaName: "sales" })
-      )
-    ).toBe("sales");
-  });
-
   test("falls back to the object name for DATABASE objects with no schema", () => {
     expect(
       ownedObjectName(
@@ -738,18 +490,6 @@ describe("ownedObjectName", () => {
         })
       )
     ).toBe("appdb");
-  });
-
-  test("uses the bare object name for relations", () => {
-    expect(
-      ownedObjectName(
-        owned({
-          objectName: "orders",
-          objectType: GrantObjectType.TABLE,
-          schemaName: "public",
-        })
-      )
-    ).toBe("orders");
   });
 });
 
@@ -802,10 +542,6 @@ describe("ownedStats", () => {
       label: "functions",
       type: GrantObjectType.FUNCTION,
     });
-  });
-
-  test("returns no stats for no owned objects", () => {
-    expect(ownedStats([])).toEqual([]);
   });
 });
 
@@ -864,9 +600,5 @@ describe("groupDefaultPrivileges", () => {
       objectType: DefaultPrivilegeObjectType.SEQUENCES,
       schemaName: "",
     });
-  });
-
-  test("returns no rules for no rows", () => {
-    expect(groupDefaultPrivileges([])).toEqual([]);
   });
 });

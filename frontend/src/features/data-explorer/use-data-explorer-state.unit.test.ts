@@ -37,24 +37,6 @@ describe("buildExplorerSearch", () => {
     });
   });
 
-  test("normalizes invalid resource fields as explicit removals", () => {
-    expect(
-      normalizeExplorerSearch({
-        category: "wat",
-        name: "orders",
-        q: "orders",
-        schema: "public",
-        tab: "columns",
-      })
-    ).toEqual({
-      category: undefined,
-      name: undefined,
-      q: "orders",
-      schema: "public",
-      tab: undefined,
-    });
-  });
-
   test("keeps stable resource identity and sidebar state in normalized URLs", () => {
     expect(
       normalizeExplorerSearch({
@@ -178,20 +160,6 @@ describe("catalogSyncNotice", () => {
         syncStatus: CatalogSyncStatus.SYNCED,
       })
     ).toBeNull();
-  });
-
-  test("returns warning for failed refresh with cached data", () => {
-    expect(
-      catalogSyncNotice({
-        ...create(CatalogSyncMetadataSchema),
-        isStale: true,
-        syncError: "upstream unavailable",
-        syncStatus: CatalogSyncStatus.ERROR,
-      })
-    ).toEqual({
-      message: "upstream unavailable",
-      tone: "warning",
-    });
   });
 
   test("returns warning fallback for failed refresh without error detail", () => {

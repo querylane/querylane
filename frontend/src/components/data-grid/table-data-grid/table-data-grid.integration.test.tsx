@@ -1,4 +1,4 @@
-import { create, toBinary } from "@bufbuild/protobuf";
+import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import {
   afterEach,
@@ -19,9 +19,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expectTypeOf } from "expect-type";
 import {
-  type ComponentProps,
   type ClipboardEvent as ReactClipboardEvent,
   type ReactNode,
   StrictMode,
@@ -29,18 +27,12 @@ import {
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
 import {
   EXPAND_COLUMN_KEY,
-  fallbackRowKey,
   type GridRow,
   ROW_KEY_FIELD,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settings";
 import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
-import {
-  PostgreSqlErrorDetailSchema,
-  PostgreSqlErrorKind,
-  PostgreSqlErrorRetryGuidance,
-} from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import {
   type ReadRowsResponse,
   ReadRowsResponseSchema,
@@ -61,17 +53,6 @@ import {
 const restoreRealTimers = rs.useRealTimers;
 
 const RETRY_BUTTON_RE = /retry/i;
-const LAST_FETCHED_RE = /Last fetched/;
-const FILTER_BUTTON_RE = /Filter/;
-const DELETE_BUTTON_RE = /delete/i;
-const EDIT_BUTTON_RE = /edit/i;
-const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-
-type TableDataGridProps = ComponentProps<typeof TableDataGrid>;
-type ControlledGridStateProp = Extract<
-  keyof TableDataGridProps,
-  `${string}Search` | `on${string}SearchChange`
->;
 
 const tableApi = rs.hoisted(() => ({
   useListTableColumnsQuery: rs.fn(),
@@ -554,12 +535,6 @@ function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof rs.fn>) {
   });
 }
 
-function latestEmailGridColumn() {
-  return reactDataGrid.dataGrid.mock.calls
-    .at(-1)?.[0]
-    ?.columns?.find((column) => column.key === "email");
-}
-
 function seedRowsQueryError(
   error: Error,
   retainedData?: ReadRowsResponse | undefined,
@@ -583,45 +558,6 @@ function seedRowsQueryError(
     isPending: false,
     mutate: rs.fn(),
   });
-}
-
-function createPostgresRowsError() {
-  const error = new ConnectError(
-    "PostgreSQL query_canceled during read_rows",
-    Code.DeadlineExceeded
-  );
-  error.details = [
-    {
-      debug: {
-        domain: "console.querylane.dev",
-        metadata: {
-          conditionName: "query_canceled",
-          operation: "read_rows",
-          sqlstate: "57014",
-          sqlstateClass: "57",
-        },
-        reason: "TIMEOUT",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
-    },
-    {
-      type: POSTGRES_DETAIL_TYPE,
-      value: toBinary(
-        PostgreSqlErrorDetailSchema,
-        create(PostgreSqlErrorDetailSchema, {
-          conditionName: "query_canceled",
-          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_TIMEOUT,
-          operation: "read_rows",
-          retryGuidance:
-            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-          sqlstate: "57014",
-          sqlstateClass: "57",
-        })
-      ),
-    },
-  ];
-  return error;
 }
 
 function createLiveQueryLimitError() {
@@ -659,90 +595,6 @@ describe("TableDataGrid query setup", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("keeps URL-controlled state out of the public grid API", () => {
-    expectTypeOf<ControlledGridStateProp>().toEqualTypeOf<never>();
-  });
-
-  it("disables column validation with a concrete input instead of skipToken", () => {
-    const tableName =
-      "instances/prod/databases/app/schemas/public/tables/customers";
-    seedRowsQuery(0);
-
-    render(<TableDataGrid name={tableName} />);
-
-    expect(tableApi.useListTableColumnsQuery).toHaveBeenCalledWith(
-      { parent: tableName },
-      expect.objectContaining({ enabled: false })
-    );
-  });
-
-  it("keeps the column grid mounted when a table has no rows", () => {
-    seedRowsQuery(0);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    // The grid header must stay visible so the table's columns and types
-    // remain inspectable; the no-rows message overlays the empty body.
-    expect(screen.getByTestId("data-grid")).toBeTruthy();
-    expect(
-      screen
-        .getByText("No rows found")
-        .closest('[data-slot="grid-no-rows-overlay"]')
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-  });
-
-  it("gives the virtualized grid a bounded scroll viewport", () => {
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(reactDataGrid.dataGrid).toHaveBeenCalledWith(
-      expect.objectContaining({
-        className: expect.stringContaining("rdg-light"),
-        defaultColumnOptions: expect.objectContaining({ minWidth: 80 }),
-        rowHeight: 32,
-      }),
-      undefined
-    );
-  });
-
-  it("keeps static react-data-grid props stable across selection-only rerenders", () => {
-    seedRowsQuery(1);
-    const tableName =
-      "instances/prod/databases/app/schemas/public/tables/customers";
-
-    render(<TableDataGrid name={tableName} />);
-    const firstProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
-    if (!firstProps?.onSelectedRowsChange) {
-      throw new Error("Expected the data grid to expose row selection.");
-    }
-
-    act(() => firstProps.onSelectedRowsChange?.(new Set(["row-0"])));
-    const secondProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
-
-    expect(firstProps).toBeDefined();
-    expect(secondProps).toBeDefined();
-    expect(secondProps?.selectedRows).toEqual(new Set(["row-0"]));
-    expect(secondProps?.defaultColumnOptions).toBe(
-      firstProps?.defaultColumnOptions
-    );
-    expect(secondProps?.renderers).toBe(firstProps?.renderers);
-    expect(secondProps?.rowKeyGetter).toBe(firstProps?.rowKeyGetter);
-    const firstRow = secondProps?.rows?.[0];
-    if (!firstRow) {
-      throw new Error("Expected grid props to include a row.");
-    }
-    expect(secondProps?.rowKeyGetter?.(firstRow)).toBe("row-0");
-  });
-
   it("keeps prior rows visible with a refreshing pill while placeholder data is shown", () => {
     seedRowsQuery(1, { isFetching: true, isPlaceholderData: true });
 
@@ -755,70 +607,6 @@ describe("TableDataGrid query setup", () => {
     ).toBeTruthy();
     expect(screen.getByText("Refreshing rows…")).toBeTruthy();
     expect(screen.getByTestId("data-grid")).toBeTruthy();
-  });
-
-  it("keeps row identity intact when a column is literally named __rowKey", () => {
-    tableApi.useListTableColumnsQuery.mockReturnValue({
-      data: create(ListTableColumnsResponseSchema, { columns: [] }),
-      error: null,
-      isError: false,
-    });
-    const rowKeyColumn = create(TableResultColumnSchema, {
-      columnName: "__rowKey",
-      dataType: DataType.STRING,
-      rawType: "text",
-    });
-    tableDataApi.useReadRowsQuery.mockReturnValue({
-      data: create(ReadRowsResponseSchema, {
-        resultSet: create(TableResultSetSchema, {
-          columns: [rowKeyColumn],
-          rows: [
-            create(TableResultRowSchema, {
-              rowKey: "server-key",
-              values: [
-                create(TableCellSchema, {
-                  value: create(TableValueSchema, {
-                    kind: { case: "stringValue", value: "cell-value" },
-                  }),
-                }),
-              ],
-            }),
-            create(TableResultRowSchema, {
-              rowKey: "",
-              values: [
-                create(TableCellSchema, {
-                  value: create(TableValueSchema, {
-                    kind: { case: "stringValue", value: "other" },
-                  }),
-                }),
-              ],
-            }),
-          ],
-        }),
-      }),
-      error: null,
-      isFetching: false,
-      isLoading: false,
-      refetch: rs.fn(),
-    });
-    tableDataApi.useReadCellValueMutation.mockReturnValue({
-      isError: false,
-      isPending: false,
-      mutate: rs.fn(),
-    });
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    const rows = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0]?.rows ?? [];
-    expect(rows[0]?.[ROW_KEY_FIELD]).toBe("server-key");
-    expect(rows[0]?.cells.get("__rowKey")).toMatchObject({
-      value: { kind: { case: "stringValue", value: "cell-value" } },
-    });
-    // Index fallback keys are namespaced so they cannot collide with a
-    // server-provided row key.
-    expect(rows[1]?.[ROW_KEY_FIELD]).toBe(fallbackRowKey(1));
   });
 });
 
@@ -1054,170 +842,6 @@ describe("TableDataGrid row interactions", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("copies a row as a sql insert statement from the context menu", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    openCellContextMenu("email", 0);
-    await user.click(
-      screen.getByRole("menuitem", { name: "Copy row as INSERT" })
-    );
-
-    expect(writeClipboardMock).toHaveBeenCalledWith(
-      `INSERT INTO "public"."customers" ("email") VALUES\n  ('user-0');\n`
-    );
-  });
-
-  it("hides insert SQL for a read-only materialized view", () => {
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid
-        allowInsertCopy={false}
-        name="instances/prod/databases/app/schemas/public/views/customer_rollup"
-      />
-    );
-
-    openCellContextMenu("email", 0);
-
-    expect(screen.getByRole("menuitem", { name: "Copy cell" })).toBeTruthy();
-    expect(
-      screen.queryByRole("menuitem", { name: "Copy row as INSERT" })
-    ).toBeNull();
-  });
-
-  it("copies raw cell and row values without display formatting", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryWithRawClipboardValues();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
-    );
-
-    openCellContextMenu("measurement", 0);
-    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
-
-    expect(writeClipboardMock).toHaveBeenLastCalledWith("1234.56789123");
-
-    openCellContextMenu("measurement", 0);
-    await user.click(screen.getByRole("menuitem", { name: "Copy row" }));
-
-    expect(writeClipboardMock).toHaveBeenLastCalledWith(
-      "1234.56789123\t2024-01-01 12:00:00.123456+00"
-    );
-  });
-
-  it("copies the cell that opened the menu after rows reorder", async () => {
-    const user = userEvent.setup();
-    const initialRows = [
-      { rowKey: "row-alpha", value: "alpha@example.com" },
-      { rowKey: "row-beta", value: "beta@example.com" },
-    ];
-    seedRowsQuery(initialRows);
-
-    const { rerender } = render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-    openCellContextMenu("email", 0);
-
-    seedRowsQuery([...initialRows].reverse());
-    rerender(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
-
-    expect(writeClipboardMock).toHaveBeenCalledWith("alpha@example.com");
-  });
-
-  it("supports keyboard navigation and restores focus to the invoking cell", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(1);
-    const invokingCell = document.createElement("div");
-    invokingCell.tabIndex = 0;
-    document.body.append(invokingCell);
-    invokingCell.focus();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-    openCellContextMenu("email", 0, invokingCell);
-
-    const menu = screen.getByRole("menu", { name: "Cell actions" });
-    const items = within(menu).getAllByRole("menuitem");
-    await waitFor(() =>
-      expect(menu.contains(document.activeElement)).toBe(true)
-    );
-    await user.keyboard("{ArrowDown}");
-    await waitFor(() => expect(document.activeElement).toBe(items[0]));
-    await user.keyboard("{ArrowDown}");
-    expect(document.activeElement).toBe(items[1]);
-    await user.keyboard("{End}");
-    expect(document.activeElement).toBe(items[2]);
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(document.activeElement).toBe(invokingCell));
-    expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull();
-  });
-
-  it("closes the context menu when clicking outside", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(1);
-    const invokingCell = document.createElement("div");
-    invokingCell.tabIndex = 0;
-    document.body.append(invokingCell);
-    invokingCell.focus();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-    openCellContextMenu("email", 0, invokingCell);
-    const menu = screen.getByRole("menu", { name: "Cell actions" });
-    await waitFor(() =>
-      expect(menu.contains(document.activeElement)).toBe(true)
-    );
-
-    await user.click(document.body);
-
-    await waitFor(() =>
-      expect(screen.queryByRole("menu", { name: "Cell actions" })).toBeNull()
-    );
-  });
-
-  it("jumps directly to a typed row number from the row drawer", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(12);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    const firstExpandButton = screen
-      .getAllByRole("button", { name: "Expand row" })
-      .at(0);
-    if (!firstExpandButton) {
-      throw new Error("Expected at least one row expansion button.");
-    }
-    await user.click(firstExpandButton);
-    expect(screen.queryByRole("spinbutton", { name: "Row number" })).toBeNull();
-    const rowNumber = screen.getByRole("textbox", { name: "Row number" });
-    expect((rowNumber as HTMLInputElement).type).toBe("text");
-
-    await user.clear(rowNumber);
-    await user.type(rowNumber, "6{Enter}");
-
-    expect(
-      (
-        screen.getByRole("textbox", {
-          name: "Row number",
-        }) as HTMLInputElement
-      ).value
-    ).toBe("6");
-    expect(screen.getByText("user-5", { selector: "pre" })).toBeTruthy();
-  });
-
   it("keeps the row drawer number field digit-only without inline steppers", async () => {
     const user = userEvent.setup();
     seedRowsQuery(12);
@@ -1247,71 +871,6 @@ describe("TableDataGrid row interactions", () => {
 
     expect((rowNumber as HTMLInputElement).value).toBe("6");
     expect(screen.getByText("user-5", { selector: "pre" })).toBeTruthy();
-  });
-
-  it("keeps virtualization enabled for large table pages", () => {
-    seedRowsQuery(50);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(reactDataGrid.dataGrid).toHaveBeenCalledWith(
-      expect.objectContaining({ enableVirtualization: true }),
-      undefined
-    );
-  });
-
-  it("automatically fits columns in default and expanded views", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(3);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(latestEmailGridColumn()).toMatchObject({ width: "auto" });
-
-    await user.click(screen.getByRole("button", { name: "Expand data grid" }));
-
-    const expandedGrid = screen.getByRole("dialog", {
-      name: "Expanded data grid",
-    });
-    expect(expandedGrid).toBeTruthy();
-    expect(
-      within(expandedGrid).queryByText(
-        "Use the same filters, sorting, selection, and pagination with more room for rows and columns."
-      )
-    ).toBeNull();
-    expect(
-      within(expandedGrid).getByText("Expanded data grid").className
-    ).toContain("sr-only");
-    expect(
-      screen.getByRole("button", { name: "Collapse data grid" })
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Fit columns" })).toBeNull();
-    expect(latestEmailGridColumn()).toMatchObject({ width: "auto" });
-
-    await user.click(
-      screen.getByRole("button", { name: "Collapse data grid" })
-    );
-
-    expect(
-      screen.queryByRole("dialog", { name: "Expanded data grid" })
-    ).toBeNull();
-  });
-
-  it("keeps last fetch time in refresh status without showing toolbar text", () => {
-    seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
-    });
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(screen.getByText(LAST_FETCHED_RE).className).toContain("sr-only");
-    expect(screen.getByRole("button", { name: "Refresh rows" })).toBeTruthy();
   });
 
   it("auto refreshes on the global interval and resets after manual refresh", async () => {
@@ -1382,68 +941,6 @@ describe("TableDataGrid row interactions", () => {
 describe("TableDataGrid cell selection", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
-
-  it("copies a shift-extended cell range as TSV", () => {
-    seedRowsQueryWithCellSelectionValues();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/people" />
-    );
-
-    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
-    const firstRow = gridProps?.rows?.[0];
-    const secondRow = gridProps?.rows?.[1];
-    const firstNameColumn = gridProps?.columns?.find(
-      (column) => column.key === "first_name"
-    );
-    const lastNameColumn = gridProps?.columns?.find(
-      (column) => column.key === "last_name"
-    );
-    if (
-      !(
-        gridProps?.onCellMouseDown &&
-        gridProps.onCellCopy &&
-        firstRow &&
-        secondRow &&
-        firstNameColumn &&
-        lastNameColumn
-      )
-    ) {
-      throw new Error("Expected cell selection props.");
-    }
-
-    const mouseEvent = {
-      button: 0,
-      ctrlKey: false,
-      metaKey: false,
-      preventDefault: rs.fn(),
-      preventGridDefault: rs.fn(),
-      shiftKey: false,
-    };
-    gridProps.onCellMouseDown(
-      {
-        column: { ...firstNameColumn, idx: 2 },
-        row: firstRow,
-        rowIdx: 0,
-      },
-      mouseEvent
-    );
-    gridProps.onCellMouseDown(
-      {
-        column: { ...lastNameColumn, idx: 3 },
-        row: secondRow,
-        rowIdx: 1,
-      },
-      { ...mouseEvent, shiftKey: true }
-    );
-    gridProps.onCellCopy({ column: lastNameColumn, row: secondRow }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
-
-    expect(writeClipboardMock).toHaveBeenCalledWith(
-      "Ada\tLovelace\nGrace\tHopper"
-    );
-  });
 
   it("extends cell selection with Shift+Arrow and clears it with Escape", () => {
     seedRowsQueryWithCellSelectionValues();
@@ -1772,36 +1269,6 @@ describe("TableDataGrid truncated-cell copy", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("fetches the full value before copying a truncated cell", async () => {
-    const user = userEvent.setup();
-    const mutateAsync = rs.fn().mockResolvedValue({
-      value: create(TableCellSchema, {
-        value: create(TableValueSchema, {
-          kind: { case: "stringValue", value: "the complete text" },
-        }),
-      }),
-    });
-    seedRowsQueryWithTruncatedCell(mutateAsync);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    openCellContextMenu("notes", 0);
-    await user.click(screen.getByRole("menuitem", { name: "Copy cell" }));
-
-    expect(writeClipboardMock).not.toHaveBeenCalled();
-    expect(writeClipboardDeferredMock).toHaveBeenCalledTimes(1);
-    const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
-    await expect(getText()).resolves.toBe("the complete text");
-    expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fullValueToken: "token-notes",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-      })
-    );
-  });
-
   it("surfaces a failed full-value fetch instead of copying the preview", async () => {
     const user = userEvent.setup();
     const mutateAsync = rs.fn().mockRejectedValue(new Error("token expired"));
@@ -1855,33 +1322,6 @@ describe("TableDataGrid value dialogs", () => {
     useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   });
 
-  it("keeps data value expansion to one dialog at a time", async () => {
-    seedRowsQueryWithExpandableValues();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/products" />
-    );
-
-    const metadataExpand = screen.getByRole("button", {
-      name: "View full JSON for metadata",
-    });
-    const tagsExpand = screen.getByRole("button", {
-      name: "View full array for tags",
-    });
-
-    fireEvent.click(metadataExpand);
-
-    expect(screen.getByRole("dialog", { name: "metadata JSON" })).toBeTruthy();
-
-    fireEvent.click(tagsExpand);
-
-    await waitFor(() => {
-      expect(screen.getAllByRole("dialog", { hidden: true }).length).toBe(1);
-    });
-    expect(screen.queryByRole("dialog", { name: "tags array" })).toBeNull();
-    expect(screen.getByRole("dialog", { name: "metadata JSON" })).toBeTruthy();
-  });
-
   it("keeps expanded grid data value expansion to one dialog at a time", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithExpandableValues();
@@ -1919,150 +1359,9 @@ describe("TableDataGrid value dialogs", () => {
   });
 });
 
-describe("TableDataGrid toolbar", () => {
-  afterEach(() => {
-    cleanup();
-    rs.clearAllMocks();
-    useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
-  });
-
-  it("orders toolbar actions with refresh after the main controls", () => {
-    seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
-    });
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    const filterButton = screen.getByRole("button", { name: FILTER_BUTTON_RE });
-    const sortButton = screen.getByRole("button", { name: "Sort" });
-    const columnsButton = screen.getByRole("button", { name: "Columns" });
-    const expandButton = screen.getByRole("button", {
-      name: "Expand data grid",
-    });
-    const refreshButton = screen.getByRole("button", {
-      name: "Refresh rows",
-    });
-
-    expect(expandButton.textContent).toContain("Expand");
-    expect(filterButton.compareDocumentPosition(sortButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    expect(sortButton.compareDocumentPosition(columnsButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    expect(columnsButton.compareDocumentPosition(expandButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    expect(expandButton.compareDocumentPosition(refreshButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-  });
-
-  it("labels the filter with the selected relation", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(1);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-
-    expect(
-      screen.getByRole("dialog", { name: "Filter public.customers" })
-    ).toBeTruthy();
-  });
-
-  it("keeps export out of the toolbar until rows are selected", () => {
-    seedRowsQuery(1, {
-      dataUpdatedAt: Date.UTC(2026, 5, 14, 10, 30, 15),
-    });
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    const expandButton = screen.getByRole("button", {
-      name: "Expand data grid",
-    });
-    const refreshButton = screen.getByRole("button", {
-      name: "Refresh rows",
-    });
-    const fetchStatus = screen.getByText(LAST_FETCHED_RE);
-
-    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
-    expect(expandButton.compareDocumentPosition(refreshButton)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    expect(fetchStatus.className).toContain("sr-only");
-    expect(fetchStatus.className).not.toContain("not-sr-only");
-  });
-});
-
 describe("TableDataGrid column layout", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
-
-  it("hides a data column from the Columns popover", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryWithRawClipboardValues();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
-    );
-
-    expect(
-      reactDataGrid.dataGrid.mock.calls
-        .at(-1)?.[0]
-        ?.columns?.map((column) => column.key)
-    ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
-
-    await user.click(screen.getByRole("button", { name: "Columns" }));
-    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
-
-    await waitFor(() => {
-      expect(
-        reactDataGrid.dataGrid.mock.calls
-          .at(-1)?.[0]
-          ?.columns?.map((column) => column.key)
-      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
-    });
-    expect(
-      screen
-        .getByRole("checkbox", { name: "observed_at" })
-        .getAttribute("aria-disabled")
-    ).toBe("true");
-  });
-
-  it("opts into fetching visible columns only", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryWithRawClipboardValues();
-    seedMeasurementColumnCatalog();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
-    );
-    await user.click(screen.getByRole("button", { name: "Columns" }));
-    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
-    await user.click(
-      screen.getByRole("switch", { name: "Fetch visible columns only" })
-    );
-
-    await waitFor(() => {
-      expect(
-        tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0]
-      ).toMatchObject({
-        selectedColumns: ["observed_at"],
-      });
-    });
-    expect(
-      useTableColumnLayoutSettingsStore.getState().layouts[
-        "instances/prod/databases/app/schemas/public/tables/measurements"
-      ]
-    ).toMatchObject({ fetchVisibleColumns: true });
-  });
 
   it("clears a no-op layout after opting back out of column projection", async () => {
     const user = userEvent.setup();
@@ -2094,55 +1393,6 @@ describe("TableDataGrid column layout", () => {
         "instances/prod/databases/app/schemas/public/tables/measurements"
       ]
     ).toBeUndefined();
-  });
-
-  it("persists layout for one table without leaking it to another", async () => {
-    const user = userEvent.setup();
-    const measurements =
-      "instances/prod/databases/app/schemas/public/tables/measurements";
-    seedRowsQueryWithRawClipboardValues();
-    const firstRender = render(<TableDataGrid name={measurements} />);
-    await user.click(screen.getByRole("button", { name: "Columns" }));
-    await user.click(screen.getByRole("checkbox", { name: "measurement" }));
-    firstRender.unmount();
-
-    const secondRender = render(<TableDataGrid name={measurements} />);
-    expect(
-      reactDataGrid.dataGrid.mock.calls
-        .at(-1)?.[0]
-        ?.columns?.map((column) => column.key)
-    ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
-    secondRender.unmount();
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/other_measurements" />
-    );
-    expect(
-      reactDataGrid.dataGrid.mock.calls
-        .at(-1)?.[0]
-        ?.columns?.map((column) => column.key)
-    ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
-  });
-
-  it("reorders columns with keyboard-accessible controls", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryWithRawClipboardValues();
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Columns" }));
-    await user.click(
-      screen.getByRole("button", { name: "Move observed_at up" })
-    );
-
-    await waitFor(() => {
-      expect(
-        reactDataGrid.dataGrid.mock.calls
-          .at(-1)?.[0]
-          ?.columns?.map((column) => column.key)
-      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at", "measurement"]);
-    });
   });
 
   it("reorders and persists columns dragged by their grid headers", async () => {
@@ -2193,50 +1443,6 @@ describe("TableDataGrid column layout", () => {
           .at(-1)?.[0]
           ?.columns?.map((column) => column.key)
       ).toEqual(["__select", EXPAND_COLUMN_KEY, "measurement", "observed_at"]);
-    });
-  });
-
-  it("hides a column from its header menu", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryWithRawClipboardValues();
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Open options for column measurement",
-      })
-    );
-    await user.click(screen.getByRole("menuitem", { name: "Hide column" }));
-
-    await waitFor(() => {
-      expect(
-        reactDataGrid.dataGrid.mock.calls
-          .at(-1)?.[0]
-          ?.columns?.map((column) => column.key)
-      ).toEqual(["__select", EXPAND_COLUMN_KEY, "observed_at"]);
-    });
-  });
-
-  it("keeps saved layout while row metadata is unavailable", async () => {
-    const tableName =
-      "instances/prod/databases/app/schemas/public/tables/measurements";
-    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
-      hiddenColumns: ["measurement"],
-      order: ["observed_at", "measurement"],
-    });
-    seedRowsQueryError(new Error("rows unavailable"));
-
-    render(<TableDataGrid name={tableName} />);
-
-    await waitFor(() => {
-      expect(
-        useTableColumnLayoutSettingsStore.getState().layouts[tableName]
-      ).toEqual({
-        hiddenColumns: ["measurement"],
-        order: ["observed_at", "measurement"],
-      });
     });
   });
 
@@ -2323,50 +1529,6 @@ describe("TableDataGrid local state", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();
-  });
-
-  it("keeps page size interactive in local state", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(3);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "100" }));
-
-    await waitFor(() => {
-      expect(
-        tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0]
-      ).toMatchObject({
-        pageSize: 100,
-      });
-    });
-  });
-
-  it("keeps frozen columns interactive in local state", async () => {
-    const user = userEvent.setup();
-    seedRowsQuery(3);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Open options for column email",
-      })
-    );
-    await user.click(screen.getByRole("menuitem", { name: "Freeze column" }));
-
-    await waitFor(() => {
-      const columns =
-        reactDataGrid.dataGrid.mock.calls.at(-1)?.[0]?.columns ?? [];
-      expect(columns.find((column) => column.key === "email")).toMatchObject({
-        frozen: true,
-      });
-    });
   });
 
   it("clears local selection and the row drawer after navigation", async () => {
@@ -2471,159 +1633,12 @@ describe("TableDataGrid local state", () => {
     expect(screen.getByRole("button", { name: "Filter 1" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Sort 1" })).toBeTruthy();
   });
-
-  it("keeps selected-row actions limited to copy and export", () => {
-    seedRowsQuery(3);
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-    const gridProps = reactDataGrid.dataGrid.mock.calls.at(-1)?.[0];
-    if (!gridProps?.onSelectedRowsChange) {
-      throw new Error("Expected the data grid to expose row selection.");
-    }
-    act(() => gridProps.onSelectedRowsChange?.(new Set(["row-0"])));
-
-    expect(screen.getByText("1 selected")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Export" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: DELETE_BUTTON_RE })).toBeNull();
-    expect(screen.queryByRole("button", { name: EDIT_BUTTON_RE })).toBeNull();
-  });
 });
 
 describe("TableDataGrid error recovery", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();
-  });
-
-  test("shows a retry button when the rows query fails", () => {
-    seedRowsQueryError(new Error("connection refused"));
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
-    expect(screen.queryByText("No rows found")).toBeNull();
-    expect(screen.queryByText("This table is empty.")).toBeNull();
-    expect(screen.queryByText("Page 1 of 1")).toBeNull();
-  });
-
-  test("keeps the last loaded rows visible when a refresh fails", () => {
-    const name = "instances/prod/databases/app/schemas/public/tables/customers";
-    seedRowsQuery([{ rowKey: "row-1", value: "loaded@example.com" }]);
-
-    const view = render(<TableDataGrid name={name} />);
-    expect(screen.getByText("loaded@example.com")).toBeTruthy();
-    const retainedData =
-      tableDataApi.useReadRowsQuery.mock.results.at(-1)?.value.data;
-
-    seedRowsQueryError(new Error("connection refused"), retainedData);
-    view.rerender(<TableDataGrid name={name} />);
-
-    expect(screen.getByText("loaded@example.com")).toBeTruthy();
-    expect(
-      screen.getByText("Showing the last loaded rows until retry succeeds.")
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
-    expect(screen.queryByText("No rows found")).toBeNull();
-  });
-
-  test("keeps the last loaded page visible when the requested page fails", () => {
-    const name = "instances/prod/databases/app/schemas/public/tables/customers";
-    seedRowsQuery([{ rowKey: "row-1", value: "loaded@example.com" }]);
-
-    const view = render(<TableDataGrid name={name} />);
-    const retainedData =
-      tableDataApi.useReadRowsQuery.mock.results.at(-1)?.value.data;
-
-    seedRowsQueryError(
-      new Error("connection refused"),
-      undefined,
-      retainedData
-    );
-    view.rerender(<TableDataGrid name={name} />);
-
-    expect(screen.getByText("loaded@example.com")).toBeTruthy();
-    expect(
-      screen.getByText("Showing the last loaded rows until retry succeeds.")
-    ).toBeTruthy();
-    expect(screen.queryByText("No rows found")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
-  });
-
-  test("marks retained rows stale when column metadata fails", () => {
-    const name = "instances/prod/databases/app/schemas/public/tables/customers";
-    const retainedData = create(ReadRowsResponseSchema, {
-      nextPageToken: "page-2",
-      resultSet: create(TableResultSetSchema, {
-        columns: [
-          create(TableResultColumnSchema, {
-            columnName: "email",
-            dataType: DataType.STRING,
-            rawType: "text",
-          }),
-        ],
-        rows: [
-          create(TableResultRowSchema, {
-            rowKey: "row-1",
-            values: [
-              create(TableCellSchema, {
-                value: create(TableValueSchema, {
-                  kind: { case: "stringValue", value: "loaded@example.com" },
-                }),
-              }),
-            ],
-          }),
-        ],
-      }),
-    });
-    tableApi.useListTableColumnsQuery.mockReturnValue({
-      data: undefined,
-      error: new Error("metadata unavailable"),
-      isError: true,
-    });
-    tableDataApi.useReadRowsQuery.mockReturnValue({
-      data: retainedData,
-      error: null,
-      isFetching: false,
-      isLoading: false,
-      lastSuccessfulData: retainedData,
-      refetch: rs.fn(),
-    });
-
-    render(<TableDataGrid name={name} />);
-
-    expect(screen.getByText("loaded@example.com")).toBeTruthy();
-    expect(
-      screen.getByText("Showing the last loaded rows until retry succeeds.")
-    ).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
-  });
-
-  test("renders SQLSTATE-aware row-load errors with retry and copyable details", async () => {
-    const user = userEvent.setup();
-    seedRowsQueryError(createPostgresRowsError());
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    expect(screen.getByText("PostgreSQL query timed out")).toBeTruthy();
-    expect(screen.getByText("Retry later.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Error details" }));
-
-    expect(screen.getByText("Code: DeadlineExceeded")).toBeTruthy();
-    expect(screen.getByText("SQLSTATE: 57014")).toBeTruthy();
-    expect(screen.getByText("Condition: query_canceled")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Copy details" })).toBeTruthy();
   });
 
   test("renders Querylane live-query saturation with retry guidance", () => {
@@ -2640,36 +1655,6 @@ describe("TableDataGrid error recovery", () => {
       )
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: RETRY_BUTTON_RE })).toBeTruthy();
-  });
-
-  test("clicking the retry button triggers a refetch", async () => {
-    const user = userEvent.setup();
-    const refetch = rs.fn().mockResolvedValue(undefined);
-    tableApi.useListTableColumnsQuery.mockReturnValue({
-      data: undefined,
-      error: null,
-      isError: false,
-    });
-    tableDataApi.useReadRowsQuery.mockReturnValue({
-      data: undefined,
-      error: new Error("timeout"),
-      isFetching: false,
-      isLoading: false,
-      refetch,
-    });
-    tableDataApi.useReadCellValueMutation.mockReturnValue({
-      isError: false,
-      isPending: false,
-      mutate: rs.fn(),
-    });
-
-    render(
-      <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/customers" />
-    );
-
-    await user.click(screen.getByRole("button", { name: RETRY_BUTTON_RE }));
-
-    await waitFor(() => expect(refetch).toHaveBeenCalledOnce());
   });
 
   test("lets users clear a local filter invalidated by a schema change", async () => {

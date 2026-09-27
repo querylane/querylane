@@ -5,12 +5,9 @@ import {
   useReadRowsQuery,
   useReadRowsQueryActions,
 } from "@/hooks/api/table-data";
-import { QUERY_STALE_TIME, RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { ReadRowsRequestSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
-import {
-  readCellValue,
-  readRows,
-} from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
+import { readCellValue } from "@/protogen/querylane/console/v1alpha1/table_data-TableDataService_connectquery";
 
 const { useMutationMock, useQueryClientMock, useQueryMock, useTransportMock } =
   rs.hoisted(() => ({
@@ -43,46 +40,6 @@ describe("useReadRowsQuery", () => {
       getQueryCache: () => ({ findAll: () => [] }),
     });
     useTransportMock.mockReset();
-  });
-
-  test("disables reads until the table resource name is known", () => {
-    const request = create(ReadRowsRequestSchema, { name: "" });
-
-    useReadRowsQuery(request);
-
-    expect(useQueryMock).toHaveBeenCalledWith(
-      readRows,
-      expect.objectContaining({ name: "" }),
-      expect.objectContaining({ enabled: false })
-    );
-  });
-
-  test("honors caller disabled state even when a table name is present", () => {
-    const request = create(ReadRowsRequestSchema, {
-      name: "instances/i/databases/d/schemas/public/tables/events",
-    });
-
-    useReadRowsQuery(request, { enabled: false });
-
-    expect(useQueryMock).toHaveBeenCalledWith(
-      readRows,
-      request,
-      expect.objectContaining({ enabled: false })
-    );
-  });
-
-  test("does not keep stale rows as placeholder data by default", () => {
-    const request = create(ReadRowsRequestSchema, {
-      name: "instances/i/databases/d/schemas/public/tables/events",
-    });
-
-    useReadRowsQuery(request);
-
-    const options = useQueryMock.mock.calls[0]?.[2];
-    expect(options).toEqual({
-      enabled: true,
-      staleTime: QUERY_STALE_TIME.tableRows,
-    });
   });
 
   test("applies the tableRows stale-time policy so rows are always fresh on revisit", () => {

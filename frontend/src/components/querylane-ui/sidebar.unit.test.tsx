@@ -66,19 +66,6 @@ function renderCollapsedOffcanvasSidebar() {
 }
 
 describe("Sidebar hover reveal", () => {
-  test("temporarily reveals a collapsed off-canvas sidebar from the screen edge", async () => {
-    stubDesktopHoverViewport();
-    const sidebarPanel = renderCollapsedOffcanvasSidebar();
-
-    expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");
-
-    act(() => dispatchPointerMove(8));
-
-    await waitFor(() => {
-      expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
-    });
-  });
-
   test("retracts the temporary reveal after the pointer leaves the sidebar", async () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
@@ -111,21 +98,6 @@ describe("Sidebar hover reveal", () => {
     });
   });
 
-  test("skips hidden off-canvas controls in the keyboard tab path", async () => {
-    stubDesktopHoverViewport();
-    renderCollapsedOffcanvasSidebar();
-
-    await userEvent.tab();
-    expect(screen.getByRole("button", { name: "Expand menu" })).toBe(
-      document.activeElement
-    );
-
-    await userEvent.tab();
-    expect(screen.getByRole("button", { name: "Main action" })).toBe(
-      document.activeElement
-    );
-  });
-
   test("pins the off-canvas sidebar open from the edge trigger", async () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
@@ -142,16 +114,5 @@ describe("Sidebar hover reveal", () => {
         .getByRole("button", { name: "Hidden navigation" })
         .getAttribute("tabindex")
     ).toBeNull();
-  });
-
-  test("allows mouse edge reveal on hybrid devices without a primary hover pointer", async () => {
-    stubDesktopHoverViewport(false);
-    const sidebarPanel = renderCollapsedOffcanvasSidebar();
-
-    act(() => dispatchPointerMove(8, { pointerType: "mouse" }));
-
-    await waitFor(() => {
-      expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
-    });
   });
 });

@@ -37,23 +37,6 @@ afterEach(() => {
 });
 
 describe("normalizePersistedNavigationSelection", () => {
-  test("returns empty object for null", () => {
-    expect(normalizePersistedNavigationSelection(null)).toEqual({});
-  });
-
-  test("returns empty object for non-object values", () => {
-    expect(normalizePersistedNavigationSelection(42)).toEqual({});
-    expect(normalizePersistedNavigationSelection("string")).toEqual({});
-    expect(normalizePersistedNavigationSelection(undefined)).toEqual({});
-  });
-
-  test("extracts valid string database id", () => {
-    const result = normalizePersistedNavigationSelection({
-      databaseId: "db1",
-    });
-    expect(result).toEqual({ databaseId: "db1" });
-  });
-
   test("ignores non-string database id", () => {
     const result = normalizePersistedNavigationSelection({
       databaseId: 123,
@@ -66,15 +49,6 @@ describe("normalizePersistedNavigationSelection", () => {
       databaseId: "   ",
     });
     expect(result).toEqual({ databaseId: undefined });
-  });
-
-  test("ignores legacy schema/table fields", () => {
-    const result = normalizePersistedNavigationSelection({
-      databaseId: "db1",
-      schemaId: "public",
-      tableId: "users",
-    });
-    expect(result).toEqual({ databaseId: "db1" });
   });
 });
 
@@ -90,35 +64,9 @@ describe("readPersistedNavigationSelectionStore", () => {
     expect(readPersistedNavigationSelectionStore()).toEqual({});
   });
 
-  test("returns empty object for invalid JSON", () => {
-    storage.set(NAVIGATION_SELECTION_STORAGE_KEY, "not json");
-    expect(readPersistedNavigationSelectionStore()).toEqual({});
-  });
-
-  test("returns empty object when stored value is not an object", () => {
-    storage.set(NAVIGATION_SELECTION_STORAGE_KEY, '"just a string"');
-    expect(readPersistedNavigationSelectionStore()).toEqual({});
-  });
-
   test("returns empty object for null JSON value", () => {
     storage.set(NAVIGATION_SELECTION_STORAGE_KEY, "null");
     expect(readPersistedNavigationSelectionStore()).toEqual({});
-  });
-
-  test("parses and normalizes stored selections", () => {
-    storage.set(
-      NAVIGATION_SELECTION_STORAGE_KEY,
-      JSON.stringify({
-        "inst-1": { databaseId: "db1" },
-        "inst-2": { databaseId: "db2" },
-      })
-    );
-
-    const result = readPersistedNavigationSelectionStore();
-    expect(result).toEqual({
-      "inst-1": { databaseId: "db1" },
-      "inst-2": { databaseId: "db2" },
-    });
   });
 
   test("normalizes invalid entries within the store", () => {

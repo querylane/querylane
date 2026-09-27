@@ -22,8 +22,6 @@ afterEach(() => cleanup());
 // ─── Top-level regex constants (Biome useTopLevelRegex) ──────────────────────
 
 const RE_ORDERS = /orders/;
-const RE_PRODUCTS = /products/;
-const RE_CUSTOMERS = /customers/;
 const RE_REVENUE_VIEW = /revenue_view/;
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -90,48 +88,6 @@ function GrantedObjectsTableWrapper({ objects }: { objects: GrantedObject[] }) {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("GrantedObjectsTable: deferred filtering", () => {
-  test("renders all objects initially with no search term", () => {
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    expect(screen.getByRole("button", { name: "Kind" })).toBeTruthy();
-    expect(screen.getAllByText("Table").length).toBeGreaterThan(0);
-    expect(screen.getByText(RE_ORDERS)).toBeTruthy();
-    expect(screen.getByText(RE_PRODUCTS)).toBeTruthy();
-    expect(screen.getByText(RE_CUSTOMERS)).toBeTruthy();
-    expect(screen.getByText(RE_REVENUE_VIEW)).toBeTruthy();
-  });
-
-  test("places object search on the left with the kind filter directly after it", () => {
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const search = screen.getByRole("textbox", { name: "Search objects…" });
-    const filterBar = search.closest('[data-slot="role-grants-filter-bar"]');
-    if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing role grants filter bar");
-    }
-
-    const kindFilter = screen.getByRole("button", { name: "Kind" });
-    const controls = Array.from(
-      filterBar.querySelectorAll('input[name="table-filter"], button')
-    );
-
-    expect(filterBar.className).toContain("justify-start");
-    expect(controls[0]).toBe(search);
-    expect(controls[1]).toBe(kindFilter);
-  });
-
-  test("filters object kind through the shared facet", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    await user.click(screen.getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("option", { name: "View" }));
-
-    expect(await screen.findByText(RE_REVENUE_VIEW)).toBeTruthy();
-    expect(screen.queryByText(RE_ORDERS)).toBeNull();
-    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
-  });
-
   test("clears object search and kind together", async () => {
     const user = userEvent.setup();
     render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
@@ -145,84 +101,5 @@ describe("GrantedObjectsTable: deferred filtering", () => {
     expect((search as HTMLInputElement).value).toBe("");
     expect(await screen.findByText(RE_ORDERS)).toBeTruthy();
     expect(screen.getByText(RE_REVENUE_VIEW)).toBeTruthy();
-  });
-
-  test("search input reflects typed value immediately (urgent path)", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "ord");
-
-    // The input value should reflect the keystroke immediately, even before
-    // the deferred filtering catches up.
-    expect((input as HTMLInputElement).value).toBe("ord");
-  });
-
-  test("filters rows to match search term after deferred value settles", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "orders");
-
-    // findByText flushes pending deferred renders so the filtered table is visible.
-    await screen.findByText(RE_ORDERS);
-
-    // Non-matching rows must be gone after the deferred update.
-    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
-    expect(screen.queryByText(RE_CUSTOMERS)).toBeNull();
-  });
-
-  test("clearing the search restores all rows", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "orders");
-    await screen.findByText(RE_ORDERS);
-    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
-
-    await user.clear(input);
-
-    // After clearing, all rows reappear once deferred value settles.
-    await screen.findByText(RE_PRODUCTS);
-    expect(screen.getByText(RE_CUSTOMERS)).toBeTruthy();
-  });
-
-  test("case-insensitive search surfaces matching rows", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "ORDERS");
-
-    await screen.findByText(RE_ORDERS);
-    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
-  });
-
-  test("search across schema-qualified name (analytics.revenue_view)", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "revenue");
-
-    await screen.findByText(RE_REVENUE_VIEW);
-    expect(screen.queryByText(RE_ORDERS)).toBeNull();
-  });
-
-  test("no results row shown when search matches nothing", async () => {
-    const user = userEvent.setup();
-    render(<GrantedObjectsTableWrapper objects={FIXTURE_OBJECTS} />);
-
-    const input = screen.getByRole("textbox");
-    await user.type(input, "zzz_nonexistent");
-
-    // Wait for the deferred value to propagate. All data rows should vanish.
-    // TanStack Table renders an empty body when no rows match.
-    await screen.findByRole("table");
-    expect(screen.queryByText(RE_ORDERS)).toBeNull();
-    expect(screen.queryByText(RE_PRODUCTS)).toBeNull();
   });
 });

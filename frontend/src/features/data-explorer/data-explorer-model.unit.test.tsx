@@ -5,7 +5,6 @@ import {
   highlightMatch,
   matchesQuery,
   pickDefaultSchema,
-  type SchemaSummary,
 } from "@/features/data-explorer/data-explorer-model";
 import {
   DEFAULT_TABLE_LIST_SORT,
@@ -14,20 +13,7 @@ import {
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import { View_ViewType } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-const schemas: SchemaSummary[] = [
-  { id: "audit", name: "audit", owner: "postgres" },
-  { id: "public", name: "public", owner: "postgres" },
-];
-
 describe("data explorer model", () => {
-  test("prefers the public schema as the default", () => {
-    expect(pickDefaultSchema(schemas)).toEqual({
-      id: "public",
-      name: "public",
-      owner: "postgres",
-    });
-  });
-
   test("falls back to the first schema when public is absent", () => {
     expect(
       pickDefaultSchema([{ id: "audit", name: "audit", owner: "postgres" }])

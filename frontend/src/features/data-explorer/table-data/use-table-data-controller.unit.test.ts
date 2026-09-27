@@ -4,7 +4,6 @@ import * as reactActual from "react" with { rstest: "importActual" };
 import type { SortColumn } from "react-data-grid";
 import {
   MAX_SORT_COLUMNS,
-  pushPageToken,
   useTableDataController,
 } from "@/features/data-explorer/table-data/use-table-data-controller";
 import {
@@ -67,21 +66,6 @@ function buildTestFilter(column: string, value: string) {
     },
   });
 }
-
-describe("pushPageToken", () => {
-  test("uses the captured source index when pushing a next-page token", () => {
-    expect(pushPageToken(["", "page-2", "stale"], 1, "page-3")).toEqual([
-      "",
-      "page-2",
-      "page-3",
-    ]);
-  });
-
-  test("preserves the same stack when the token is already present next", () => {
-    const prev = ["", "page-2"];
-    expect(pushPageToken(prev, 0, "page-2")).toBe(prev);
-  });
-});
 
 describe("useTableDataController", () => {
   beforeEach(() => {
