@@ -1,5 +1,5 @@
-import { expect, test } from "vitest";
-import { render } from "vitest-browser-react";
+import { render } from "@rstest/browser-react";
+import { expect, test } from "@rstest/core";
 import brandStyles from "./branding/querylane-logo.module.css";
 import progressStyles from "./onboarding-wizard/phases/progress-phase.module.css";
 import wizardStyles from "./onboarding-wizard/wizard-content.module.css";

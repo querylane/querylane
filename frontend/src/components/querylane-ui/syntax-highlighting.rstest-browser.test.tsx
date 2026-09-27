@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
+import { cleanup, render } from "@rstest/browser-react";
+import { afterEach, expect, test } from "@rstest/core";
 import { BashSyntaxHighlight } from "./bash-syntax-highlight";
 import { SqlSyntaxHighlight } from "./sql-code-block";
 
@@ -20,7 +20,7 @@ test.each([
   "$language tokens follow the global theme after lazy loading",
   async ({ language, content }) => {
     const originalClassName = document.documentElement.className;
-    render(content);
+    await render(content);
 
     await expect
       .poll(() => document.querySelectorAll("[data-shiki-token]").length)
