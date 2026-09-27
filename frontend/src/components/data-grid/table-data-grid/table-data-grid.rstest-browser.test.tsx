@@ -63,7 +63,6 @@ const tableDataApi = rs.hoisted(() => ({
   useReadCellValueMutation: rs.fn(),
   useReadRowsQuery: rs.fn(),
   useReadRowsQueryActions: rs.fn(),
-  useStreamRowsExporter: rs.fn(),
 }));
 
 rs.mock("@/hooks/api/table", () => ({
@@ -74,7 +73,6 @@ rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 beforeEach(() => {
@@ -83,7 +81,6 @@ beforeEach(() => {
     isPending: false,
     mutate: rs.fn(),
   }));
-  tableDataApi.useStreamRowsExporter.mockImplementation(() => rs.fn());
 });
 
 afterEach(async () => {

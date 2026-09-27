@@ -43,7 +43,6 @@ const tableDataApi = rs.hoisted(() => ({
     getState: rs.fn(() => undefined),
     prefetch: rs.fn(),
   })),
-  useStreamRowsExporter: rs.fn(() => rs.fn()),
 }));
 const viewApi = rs.hoisted(() => ({
   useListViewDependenciesQuery: rs.fn(() => ({
@@ -73,7 +72,6 @@ rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 rs.mock("@/hooks/api/view", () => ({

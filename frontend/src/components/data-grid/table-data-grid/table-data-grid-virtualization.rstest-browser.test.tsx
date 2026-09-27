@@ -55,7 +55,6 @@ const tableDataApi = rs.hoisted(() => ({
     getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
     prefetch: rs.fn(),
   })),
-  useStreamRowsExporter: rs.fn(() => rs.fn()),
 }));
 
 rs.mock("@/hooks/api/table", () => ({
@@ -71,7 +70,6 @@ rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 const resultColumns = [
