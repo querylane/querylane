@@ -4,6 +4,7 @@ import {
   LONG_INSTANCE_NAME,
   openAdminShell,
 } from "./admin-shell-fixtures";
+import { expectActiveElement } from "./focus";
 
 // The real app shell (sidebar, header, overlays) around the database overview.
 // Component behavior is covered in admin-shell.browser.test.tsx; the
@@ -139,7 +140,7 @@ for (const { name, width } of [
 
       await page.keyboard.press("Escape");
       await expect(drawer).toBeHidden();
-      await expect(trigger).toBeFocused();
+      await expectActiveElement(trigger);
     });
   });
 }

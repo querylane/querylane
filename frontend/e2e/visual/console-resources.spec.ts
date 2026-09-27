@@ -14,6 +14,7 @@ import {
   queryInsightsFixture,
   rejectInstancePassword,
 } from "./console-resource-fixtures";
+import { expectActiveElement } from "./focus";
 
 // Instance and database console routes with every RPC mocked. Component-level
 // behavior for the same states is covered in
@@ -447,7 +448,7 @@ test.describe("instance configuration", () => {
     await expect(
       pageContent(page).getByText(SERVER_PASSWORD_ERROR)
     ).toBeVisible();
-    await expect(password).toBeFocused();
+    await expectActiveElement(password);
     await expect(password).toHaveAttribute("aria-invalid", "true");
     await expect(configurationCard(page)).toHaveScreenshot(
       "instance-config-server-field-errors.png"

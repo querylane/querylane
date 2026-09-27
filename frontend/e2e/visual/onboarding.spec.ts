@@ -4,6 +4,7 @@ import { BadRequestSchema } from "../../src/protogen/google/rpc/error_details_pb
 import { expect, test } from "../tests/base";
 import { fulfillJson, mockReadyEmptyApp, mockRpc } from "../tests/helpers";
 import { mockOnboardingRequiredScenario } from "../tests/querylane-scenarios";
+import { expectActiveElement } from "./focus";
 
 // Setup wizard and create instance visuals. Configure phases and the create
 // instance form run on the real routes; setup progress needs a live server
@@ -153,13 +154,13 @@ test("invalid onboarding fields keep validation styling through keyboard focus",
 
   await test.step("host focused from the keyboard", async () => {
     await page.keyboard.press("Tab");
-    await expect(fields.getByLabel("Host")).toBeFocused();
+    await expectActiveElement(fields.getByLabel("Host"));
     await expect(fields).toHaveScreenshot("invalid-onboarding-host-focus.png");
   });
 
   await test.step("password focused from the keyboard", async () => {
     await page.keyboard.press("Tab");
-    await expect(fields.getByLabel("Password", { exact: true })).toBeFocused();
+    await expectActiveElement(fields.getByLabel("Password", { exact: true }));
     await expect(fields).toHaveScreenshot(
       "invalid-onboarding-password-focus.png"
     );
@@ -267,7 +268,7 @@ test.describe("create instance form", () => {
     await page.getByRole("button", { name: "Add label" }).click();
     await page.getByRole("button", { name: "Test connection" }).click();
     await expect(page.getByText("Label keys cannot be empty.")).toBeVisible();
-    await expect(page.getByPlaceholder("Key")).toBeFocused();
+    await expectActiveElement(page.getByPlaceholder("Key"));
     await expect(createInstanceForm(page)).toHaveScreenshot(
       "create-instance-advanced-label-error.png"
     );
@@ -335,7 +336,7 @@ test.describe("create instance form", () => {
       "aria-invalid",
       "true"
     );
-    await expect(page.getByLabel("Host")).toBeFocused();
+    await expectActiveElement(page.getByLabel("Host"));
     await expect(createInstanceForm(page)).toHaveScreenshot(
       "create-instance-server-field-errors.png"
     );
