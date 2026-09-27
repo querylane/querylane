@@ -17,6 +17,13 @@
     "rules": [],
     "overrides": [
       {
+        "files": ["src/visual-harness/**"],
+        "rules": [
+          "react-doctor/hook-use-state",
+          "react-doctor/no-nested-card-surface"
+        ]
+      },
+      {
         "files": ["src/features/data-explorer/other-database-objects-query.ts"],
         "rules": ["react-doctor/server-sequential-independent-await"]
       },

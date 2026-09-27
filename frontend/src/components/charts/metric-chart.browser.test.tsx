@@ -63,13 +63,12 @@ test("renders the metric chart kit", async () => {
   await expect
     .element(tooltipRow(tooltip, "Previous"))
     .toHaveAttribute("data-active", "false");
-  const activeRow = tooltip.getByText("Current").element().parentElement;
-  if (!activeRow) {
-    throw new Error("Expected an active tooltip row");
-  }
-  expect(getComputedStyle(activeRow).backgroundColor).toBe("rgba(0, 0, 0, 0)");
-  expect(getComputedStyle(activeRow).boxShadow).toBe("none");
-  expect(getComputedStyle(activeRow).fontWeight).toBe("500");
+  const activeRow = tooltipRow(tooltip, "Current");
+  await expect
+    .element(activeRow)
+    .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect.element(activeRow).toHaveCSS("box-shadow", "none");
+  await expect.element(activeRow).toHaveCSS("font-weight", "500");
   await expect.element(tooltip.getByText("10.00 req/s")).toBeVisible();
   await expect.element(tooltip).toHaveAttribute("data-placement", "top");
   expect(
