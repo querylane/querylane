@@ -1,5 +1,8 @@
 import { defineConfig } from "oxlint";
 import shadcn from "ultracite/oxlint/shadcn";
+// Keep an explicit import: Oxlint loads this package from jsPlugins, which
+// React Doctor cannot trace through a string specifier.
+import "@shadcn/lint";
 
 // Biome owns general linting and formatting; Oxlint supplies the shadcn rules.
 export default defineConfig({

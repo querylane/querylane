@@ -53,7 +53,6 @@
         "@rsbuild/plugin-react": "2.1.0",
         "@rsbuild/plugin-tailwindcss": "2.0.3",
         "@rsdoctor/core": "1.6.4",
-        "@rsdoctor/graph": "1.6.4",
         "@rsdoctor/rspack-plugin": "1.6.4",
         "@rsdoctor/types": "1.6.4",
         "@rstest/browser": "0.12.0",
