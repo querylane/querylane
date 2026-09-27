@@ -1,52 +1,56 @@
-# Browser visual regression tests
+# Browser and visual regression tests
 
-Use Vitest browser mode for focused UI snapshots of critical components and routes.
-Use experimental Rstest Browser Mode for component-scoped browser behavior that does
-not need screenshot assertions. Both run in Chromium through Playwright.
+Two runners, one job each:
 
-Use Playwright e2e separately for full user journeys against a served app. E2e
-should validate routing, backend integration, and cross-browser behavior. Do not
-put component visual baselines there.
+- **Rstest browser mode** (`src/**/*.browser.test.tsx`) checks component and route
+  behavior in real Chromium: interactions, layout measurements, and accessibility
+  state. It has no screenshot assertions.
+- **Playwright** (`e2e/visual/*.spec.ts`) owns pixel comparisons with
+  `toHaveScreenshot`, in the `visual-light` and `visual-dark` projects. Full user
+  journeys stay in `e2e/tests/*.spec.ts`.
 
 ## Commands
 
 ```sh
-bun run test:browser             # light theme, default local check
-bun run test:browser:ci          # CI-style light + dark coverage
-bun run test:browser:update      # intentionally update Linux light baselines
-bun run test:browser:ui          # debug light browser tests interactively
-bun run test:browser:rstest      # run only the Rstest browser subset
-bun run test:browser:rstest:ui   # debug the Rstest subset in a visible browser
+bun run test:browser             # rstest browser tests, light then dark
+bun run test:browser:changed     # only files affected since QUALITY_BASE_REF
+bun run test:browser:ui          # rstest watch mode in a visible browser
+bun run test:visual              # Playwright visual comparisons (local, looser threshold)
+bun run test:visual:container    # the same run inside the CI Playwright image
+bun run test:visual:update       # rewrite baselines inside the CI Playwright image
 ```
 
-For an explicit dark-theme local run, call Vitest directly with
-`vitest.browser.dark.config.ts` instead of adding another package script.
+## Where a visual state lives
+
+1. If a route reaches the state, open the real route with `page.goto()` and mock
+   RPCs with `page.route()` (helpers in `e2e/tests/helpers.ts`).
+2. Otherwise add a scenario component under `src/visual-harness/`, register it in
+   `scenarios.tsx`, and open `/visual.html?scenario=<name>`. Use `HarnessProviders`
+   with a `createRouterTransport` transport when the component reads server state.
+   The entry only exists when `QUERYLANE_VISUAL_HARNESS=1`, so production builds
+   never include it.
+3. Render the same scenario component from the matching rstest browser test, so
+   behavior checks and pixels cover identical markup.
 
 ## Stability rules
 
-- Chromium baselines use a canonical Linux screenshot path through Vitest's
-  `resolveScreenshotPath`; cross-browser belongs in e2e.
-- Update baselines from Linux only. The configuration rejects `--update` on macOS/Darwin
-  so local updates cannot overwrite canonical Linux screenshots.
-- Default local browser tests run light mode only for fast feedback. CI uses the
-  all-themes configuration so dark baselines stay required.
-- Reduced motion and CSS animation and transition durations near 0 are applied in
-  `browser-test.setup.css`.
-- Fixed `ScreenshotFrame` dimensions and a fixed browser viewport keep layout
-  deterministic.
-- Assert visible UI before snapshotting.
-- Mock network and timers; no real backend in browser visual tests.
-- Snapshot critical states: empty, happy path, error, loading/progress.
-
-## CI output
-
-CI uses Vitest's built-in verbose reporter for visual tests and Rstest's compact native
-reporter for functional browser tests.
+- Baselines are Linux-only. CI and `test:visual:update` both run in
+  `mcr.microsoft.com/playwright:v<version>-noble`; the config rejects
+  `--update-snapshots` elsewhere and sets `updateSnapshots: "none"` so a missing
+  baseline fails instead of being written.
+- macOS runs use a 5% pixel threshold and can still differ on font wrapping; treat
+  `test:visual:container` as authoritative.
+- Reduced motion, disabled animations, a hidden caret, and a fixed 1280x1000
+  viewport keep captures deterministic. `browser-test.setup.css` zeroes transition
+  and animation durations for rstest.
+- Assert visible UI before capturing, and capture the smallest stable region
+  (page `main`, a dialog, or a section).
+- Mock network and timers; no real backend.
 
 ## Agent capabilities and limitations
 
 This document is agent-facing guidance under `frontend/**/*{.md,_agent.{js,ts,json},agent.{config,schema}.{js,ts,json}}`.
 
-Agents may run Rstest and Vitest browser commands, inspect snapshots, capture failure artifacts, and parse native output to explain failures. Agents may propose or apply baseline updates only when the user explicitly asks or when CI artifacts prove the expected visual state.
+Agents may run rstest and Playwright commands, inspect snapshots, capture failure artifacts, and parse native output to explain failures. Agents may propose or apply baseline updates only when the user explicitly asks or when CI artifacts prove the expected visual state.
 
 Agents must not autonomously redesign UI, bless visual diffs, commit refreshed screenshots, access secrets, or run production-affecting/network mutations without human approval. Escalate to a human when the intended UX is ambiguous, when a visual diff hides possible product regression, or when credentials/external services are required.

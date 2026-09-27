@@ -1,61 +1,47 @@
 import { describe, expect, test } from "@rstest/core";
+import playwrightConfig from "../e2e/playwright.config";
 import rstestBrowserConfig from "../rstest.browser.config";
-import browserDarkConfig from "../vitest.browser.dark.config";
-import browserLightConfig from "../vitest.browser.light.config";
-import { resolveBrowserScreenshotDirectory } from "../vitest.browser.shared";
+import rstestBrowserDarkConfig from "../rstest.browser.dark.config";
 
-function getAllowWrite(api: unknown) {
-  if (
-    typeof api === "object" &&
-    api !== null &&
-    "allowWrite" in api &&
-    typeof api.allowWrite === "boolean"
-  ) {
-    return api.allowWrite;
-  }
-
-  throw new Error("Expected Vitest API config to expose allowWrite.");
-}
+const VISUAL_PROJECT_NAMES = ["visual-light", "visual-dark"];
 
 describe("test harness config", () => {
-  test("keeps browser checks fast, deterministic, and Chromium only", () => {
-    expect(browserLightConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
-    expect(browserDarkConfig.test?.testTimeout).toBeLessThanOrEqual(10_000);
-    expect(browserLightConfig.test?.browser?.viewport).toEqual({
-      height: 1000,
-      width: 1280,
-    });
-    expect(rstestBrowserConfig.browser?.viewport).toEqual({
-      height: 1000,
-      width: 1280,
-    });
-    expect(getAllowWrite(browserLightConfig.test?.api)).toBe(true);
-    expect(browserLightConfig.test?.api).toMatchObject({
-      host: "127.0.0.1",
-    });
-    expect(browserLightConfig.test?.browser).not.toHaveProperty("api");
-    const comparatorOptions =
-      browserLightConfig.test?.browser?.expect?.toMatchScreenshot
-        ?.comparatorOptions;
-    if (!comparatorOptions) {
-      throw new Error("Expected browser screenshot comparator options.");
+  test("keeps rstest browser checks fast, deterministic, and Chromium only", () => {
+    for (const config of [rstestBrowserConfig, rstestBrowserDarkConfig]) {
+      expect(config.testTimeout).toBeLessThanOrEqual(10_000);
+      expect(config.browser).toMatchObject({
+        browser: "chromium",
+        headless: true,
+        provider: "playwright",
+        viewport: { height: 1000, width: 1280 },
+      });
     }
-    expect(comparatorOptions.allowedMismatchedPixelRatio).toBeLessThanOrEqual(
-      0.05
+    expect(rstestBrowserConfig.env).toEqual({
+      PUBLIC_TEST_BROWSER_THEME: "light",
+    });
+    expect(rstestBrowserDarkConfig.env).toEqual({
+      PUBLIC_TEST_BROWSER_THEME: "dark",
+    });
+  });
+
+  test("keeps Playwright visual baselines explicit and tightly compared", () => {
+    expect(playwrightConfig.updateSnapshots).toBe("none");
+
+    const visualProjects = (playwrightConfig.projects ?? []).filter(
+      (project) => VISUAL_PROJECT_NAMES.includes(project.name ?? "")
     );
-    expect(
-      browserLightConfig.test?.browser?.expect?.toMatchScreenshot
-        ?.screenshotOptions?.scale
-    ).toBe("css");
-    expect(
-      resolveBrowserScreenshotDirectory({
-        project: {
-          config: { browser: { screenshotDirectory: "__screenshots__/dark" } },
-        },
-        root: "/repo/frontend",
-        screenshotDirectory: "__screenshots__",
-        testFileDirectory: "src/components",
-      })
-    ).toBe("/repo/frontend/src/components/__screenshots__/dark");
+    expect(visualProjects.map((project) => project.name)).toEqual(
+      VISUAL_PROJECT_NAMES
+    );
+    for (const project of visualProjects) {
+      const screenshot = project.expect?.toHaveScreenshot;
+      expect(screenshot?.maxDiffPixelRatio).toBeLessThanOrEqual(0.05);
+      expect(screenshot).toMatchObject({
+        animations: "disabled",
+        caret: "hide",
+        scale: "css",
+      });
+      expect(project.use?.viewport).toEqual({ height: 1000, width: 1280 });
+    }
   });
 });

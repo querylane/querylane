@@ -16,6 +16,9 @@ const booleanFlag = z.preprocess(
 );
 
 export const e2eEnv = createEnv({
+  // Playwright config always runs in Node, even when a DOM-environment unit
+  // test imports it to check config invariants.
+  isServer: true,
   runtimeEnv: processEnv,
   server: {
     BASE_URL: z.string().url().optional(),

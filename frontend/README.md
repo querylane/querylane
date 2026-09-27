@@ -6,7 +6,7 @@ React + TypeScript app bundled with Rsbuild.
 
 - Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
-- Rstest runs unit, integration, and functional browser tests. Playwright owns E2E and visual regression (`e2e/visual`). Vitest browser mode remains only for visual suites not yet moved to Playwright.
+- Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
 - `react-doctor` runs lint/dead-code checks.
 
 ## Scripts
@@ -16,7 +16,7 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run build` - build production assets
 - `bun run preview` - preview the production build
 - `bun run quality:gate` - run the standard full local gate with React Doctor, typecheck, build, unit tests, and integration tests
-- `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, and changed Rstest and Vitest suites against `QUALITY_BASE_REF` (defaults to `origin/main`)
+- `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, and changed Rstest suites against `QUALITY_BASE_REF` (defaults to `origin/main`)
 - `bun run type:check` - run the TypeScript project build check used by local hooks and CI
 - `bun run doctor` - run React Doctor against the whole frontend
 - `bun run doctor:full` - run React Doctor against the whole frontend
@@ -25,7 +25,7 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run test:integration` - run integration tests with Rstest and happy-dom
 - `bun run test:unit:watch` - run unit tests in Rstest watch mode
 - `bun run test:integration:watch` - run integration tests in Rstest watch mode
-- `bun run test:browser` - run Vitest visual tests and Rstest functional browser tests through Playwright
+- `bun run test:browser` - run Rstest browser behavior tests in Chromium (light and dark)
 - `bun run test:e2e` - run Playwright end-to-end tests
 - `bun run test:visual` - run Playwright visual regression tests in light and dark
 - `bun run test:visual:update` - regenerate Linux visual baselines in the Playwright container
@@ -38,7 +38,6 @@ React + TypeScript app bundled with Rsbuild.
 ## Agent-friendly test output
 
 - Rstest automatically selects its compact Markdown reporter for coding agents.
-- Vitest browser tests use native reporters and preserve visual failure artifacts.
 - Rstest browser mode does not support screenshot assertions, so visual regression moves to Playwright `toHaveScreenshot` (see `e2e/README.md`).
 - Playwright local runs use a compact reporter; CI uses the built-in list reporter plus failure artifacts.
 
@@ -71,7 +70,7 @@ This README is agent-facing documentation under `frontend/**/*{.md,_agent.{js,ts
 - React 19
 - TanStack Router file-based routing
 - Tailwind CSS 4
-- Rstest (unit/integration/functional browser) + Vitest browser mode (visual regression) + Playwright (e2e)
+- Rstest (unit/integration/browser behavior) + Playwright (e2e and visual regression)
 
 ## Diagnostics
 
