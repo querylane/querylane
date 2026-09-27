@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { expect, test } from "./base";
+import { expect, linuxScreenshotStep, test } from "./base";
 import {
   mockApiManagedReadyConsole,
   mockDatabases,
@@ -70,7 +70,9 @@ test("instance overview defers form validation until configuration opens", {
   await page.getByRole("link", { name: "Configuration", exact: true }).click();
   try {
     await expect(page.getByText("Loading configuration…")).toBeVisible();
-    await expect(page).toHaveScreenshot("configuration-loading.png");
+    await linuxScreenshotStep("Linux loading screenshot", async () => {
+      await expect(page).toHaveScreenshot("configuration-loading.png");
+    });
   } finally {
     validationDownload.resolve();
   }
@@ -86,6 +88,8 @@ test("instance overview defers form validation until configuration opens", {
   await page.getByLabel("Host", { exact: true }).fill("");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Host is required.")).toBeVisible();
-  await expect(page).toHaveScreenshot("configuration-validation.png");
+  await linuxScreenshotStep("Linux validation screenshot", async () => {
+    await expect(page).toHaveScreenshot("configuration-validation.png");
+  });
   expect(errors).toEqual([]);
 });

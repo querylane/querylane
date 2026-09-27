@@ -1,5 +1,5 @@
 import type { Page } from "playwright/test";
-import { expect, test } from "./base";
+import { expect, linuxScreenshotStep, test } from "./base";
 import { mockReadyEmptyApp } from "./helpers";
 
 const SCRIPT_CSP = "script-src 'self'; object-src 'none'; base-uri 'self'";
@@ -95,14 +95,16 @@ for (const viewport of [
           "font-family",
           '"Geist Variable", sans-serif'
         );
-        await expect(page).toHaveScreenshot(`${theme}-${viewport.name}.png`, {
-          clip: {
-            x: (viewport.width - 160) / 2,
-            y: (viewport.height - 160) / 2,
-            width: 160,
-            height: 160,
-          },
-          maxDiffPixels: 0,
+        await linuxScreenshotStep("Linux startup screenshot", async () => {
+          await expect(page).toHaveScreenshot(`${theme}-${viewport.name}.png`, {
+            clip: {
+              x: (viewport.width - 160) / 2,
+              y: (viewport.height - 160) / 2,
+              width: 160,
+              height: 160,
+            },
+            maxDiffPixels: 0,
+          });
         });
         expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
       } finally {
@@ -248,9 +250,11 @@ test.describe("without JavaScript", () => {
     );
     await expect(page.locator("noscript")).toBeVisible();
     await expect(page.getByRole("status")).toBeHidden();
-    await expect(page).toHaveScreenshot("no-javascript-desktop.png", {
-      clip: { x: 440, y: 390, width: 400, height: 120 },
-      maxDiffPixels: 0,
+    await linuxScreenshotStep("Linux no-JavaScript screenshot", async () => {
+      await expect(page).toHaveScreenshot("no-javascript-desktop.png", {
+        clip: { x: 440, y: 390, width: 400, height: 120 },
+        maxDiffPixels: 0,
+      });
     });
   });
 });

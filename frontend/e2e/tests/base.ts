@@ -7,6 +7,7 @@
  * falls through is treated as an unmocked backend dependency and fails the test.
  */
 
+import process from "node:process";
 import AxeBuilder from "@axe-core/playwright";
 import {
   test as base,
@@ -86,6 +87,8 @@ const test = base.extend<Fixtures>({
     { auto: true },
   ],
 });
+const linuxScreenshotStep =
+  process.platform === "linux" ? test.step : test.step.skip;
 
 async function softScreenshot(page: Page, name: string) {
   const panel = page.locator("[data-onboarding-panel]").first();
@@ -95,4 +98,4 @@ async function softScreenshot(page: Page, name: string) {
   await test.info().attach(name, { body: buffer, contentType: "image/png" });
 }
 
-export { expect, softScreenshot, test };
+export { expect, linuxScreenshotStep, softScreenshot, test };

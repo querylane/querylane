@@ -1,4 +1,4 @@
-import { expect, test } from "./base";
+import { expect, linuxScreenshotStep, test } from "./base";
 import { mockDataExplorerApp } from "./data-explorer-fixtures";
 import { mockRpc } from "./helpers";
 
@@ -110,16 +110,20 @@ for (const motion of [
           page.getByRole("button", { name: "Search or jump to", exact: true })
         ).toBeVisible();
       }
-      await expect(page).toHaveScreenshot(
-        `${screenshotPrefix}database-page.png`
-      );
-      await test.info().attach(`${screenshotPrefix}database-page`, {
-        body: await page.screenshot({
-          animations: "disabled",
-          caret: "hide",
-          path: test.info().outputPath(`${screenshotPrefix}database-page.png`),
-        }),
-        contentType: "image/png",
+      await linuxScreenshotStep("Linux database screenshot", async () => {
+        await expect(page).toHaveScreenshot(
+          `${screenshotPrefix}database-page.png`
+        );
+        await test.info().attach(`${screenshotPrefix}database-page`, {
+          body: await page.screenshot({
+            animations: "disabled",
+            caret: "hide",
+            path: test
+              .info()
+              .outputPath(`${screenshotPrefix}database-page.png`),
+          }),
+          contentType: "image/png",
+        });
       });
     }
 
@@ -131,16 +135,20 @@ for (const motion of [
       page.getByRole("heading", { name: "public", exact: true })
     ).toBeVisible();
     if (animated) {
-      await expect(page).toHaveScreenshot(
-        `${screenshotPrefix}explorer-page.png`
-      );
-      await test.info().attach(`${screenshotPrefix}explorer-page`, {
-        body: await page.screenshot({
-          animations: "disabled",
-          caret: "hide",
-          path: test.info().outputPath(`${screenshotPrefix}explorer-page.png`),
-        }),
-        contentType: "image/png",
+      await linuxScreenshotStep("Linux explorer screenshot", async () => {
+        await expect(page).toHaveScreenshot(
+          `${screenshotPrefix}explorer-page.png`
+        );
+        await test.info().attach(`${screenshotPrefix}explorer-page`, {
+          body: await page.screenshot({
+            animations: "disabled",
+            caret: "hide",
+            path: test
+              .info()
+              .outputPath(`${screenshotPrefix}explorer-page.png`),
+          }),
+          contentType: "image/png",
+        });
       });
       await expect
         .poll(() =>

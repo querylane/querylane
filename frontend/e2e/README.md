@@ -53,6 +53,15 @@ bun run test:e2e:debug
 - Keep scenario responses explicit so tests document frontend expectations.
 - Add unhappy paths by fulfilling RPC errors, not by starting a broken backend.
 
+## Screenshot baselines
+
+E2E screenshots must be Linux baselines, like Vitest browser screenshots.
+Screenshot steps use Playwright's conditional step skip on other platforms, so
+the surrounding behavior checks still run. Update baselines with
+`bun run test:e2e --update-snapshots` in Linux CI or a Linux container only.
+Review every updated image before committing it. Existing E2E screenshots still
+need a Linux refresh before they can be relied on as canonical baselines.
+
 ## Playwright 1.63 diagnostics
 
 - Failed tests retain DOM, accessibility, and screen snapshots in their trace.

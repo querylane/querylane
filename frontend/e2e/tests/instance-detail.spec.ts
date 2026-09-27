@@ -1,5 +1,5 @@
 import type { Page, Route } from "playwright/test";
-import { expect, test } from "./base";
+import { expect, linuxScreenshotStep, test } from "./base";
 import { mockExplorerShell, mockTableCatalog } from "./data-explorer-fixtures";
 import {
   fulfillJson,
@@ -44,10 +44,12 @@ function metricPartialError(metric: string, message: string) {
 }
 
 async function expectMainScreenshot(page: Page, name: string) {
-  await expect(page.getByRole("main").nth(1)).toHaveScreenshot(name, {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixelRatio: 0.03,
+  await linuxScreenshotStep("Linux instance screenshot", async () => {
+    await expect(page.getByRole("main").nth(1)).toHaveScreenshot(name, {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.03,
+    });
   });
 }
 
