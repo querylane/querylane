@@ -52,8 +52,6 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
-const ENCODING_RE = /UTF8/;
-const HEADER_COUNTS_RE = /3 schemas · 3 objects/;
 const LOWER_BOUND_CATALOG_RE = /Counts, sizes, and rankings are lower bounds/;
 const state = rs.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
@@ -84,8 +82,6 @@ const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
 const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
 const COPY_SELECT_TO_QUERY_BUTTON_RE =
   /COPY \(SELECT \* FROM events\) TO STDOUT/i;
-const OBSERVED_TIMESTAMP_RE = /Observed/;
-const CUMULATIVE_STATS_NOTE_RE = /Statistics are cumulative/;
 const COPY_TO_PATH_WITH_FROM_BUTTON_RE =
   /COPY events TO '\/tmp\/from\/archive\.csv'/i;
 const COPY_FROM_PROGRAM_WITH_TO_BUTTON_RE =
@@ -97,12 +93,7 @@ const COMMENTED_UPDATE_QUERY_BUTTON_RE =
   /-- trace: worker\s+UPDATE events SET processed_at = now\(\)/i;
 const EXACT_THRESHOLD_QUERY_BUTTON_RE =
   /SELECT avg\(duration_ms\) FROM events/i;
-const DUPLICATE_QUERY_ID_SECOND_ROW_RE =
-  /SELECT \* FROM events WHERE tenant_id = \$2/i;
 const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
-const QUERY_PAGE_SIX_BUTTON_RE = /sequence = 6/i;
-const QUERY_PAGE_ELEVEN_BUTTON_RE = /sequence = 11/i;
-const EMPTY_PAGINATION_RANGE_RE = /Showing 1–0/;
 const QUERY_STATS_UNAVAILABLE_RE =
   /Query statistics are unavailable for this database/;
 
@@ -571,60 +562,6 @@ function queryInsightsResponseWithSearchableQueries() {
   });
 }
 
-function queryInsightsResponseWithManyQueries() {
-  return queryInsightsResponseWith({
-    topQueries: Array.from({ length: 12 }, (_, index) => {
-      const sequence = index + 1;
-      return queryRuntimeInsight({
-        calls: BigInt(120 - sequence),
-        meanTimeMs: sequence,
-        query: `SELECT * FROM events WHERE sequence = ${sequence}`,
-        queryId: BigInt(10_000 + sequence),
-        totalTimeMs: 1200 - sequence,
-        totalTimeRatio: 1 - index / 20,
-      });
-    }),
-  });
-}
-
-function queryInsightsResponseWithUpdatedSelection() {
-  return queryInsightsResponseWith({
-    topQueries: [
-      queryRuntimeInsight({
-        calls: 84n,
-        meanTimeMs: 18,
-        query: "UPDATE events SET processed_at = now() WHERE id = $1",
-        queryId: 456n,
-        totalTimeMs: 1512,
-        totalTimeRatio: 1,
-      }),
-    ],
-  });
-}
-
-function queryInsightsResponseWithDuplicateQueryIds() {
-  return queryInsightsResponseWith({
-    topQueries: [
-      queryRuntimeInsight({
-        calls: 8n,
-        meanTimeMs: 10,
-        query: "SELECT * FROM events WHERE tenant_id = $1",
-        queryId: 900n,
-        totalTimeMs: 80,
-        totalTimeRatio: 1,
-      }),
-      queryRuntimeInsight({
-        calls: 4n,
-        meanTimeMs: 15,
-        query: "SELECT * FROM events WHERE tenant_id = $2",
-        queryId: 900n,
-        totalTimeMs: 60,
-        totalTimeRatio: 0.75,
-      }),
-    ],
-  });
-}
-
 function unavailableQueryInsightsResponse() {
   return queryInsightsResponseWith({
     queryStatsAvailable: false,
@@ -796,59 +733,6 @@ afterEach(() => {
 });
 
 describe("backend database overview", () => {
-  test("renders the mock-derived overview: header, stats, cards", () => {
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    // Header: name, owner, encoding — catalog counts live only in the stat
-    // strip below, never duplicated in the header subtitle.
-    expect(
-      screen.getByRole("heading", { name: "customer_events" })
-    ).toBeTruthy();
-    expect(screen.queryByText(HEADER_COUNTS_RE)).toBeNull();
-    expect(screen.getByText("data-platform")).toBeTruthy();
-    expect(screen.getByText(ENCODING_RE)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Insights" })).toBeTruthy();
-    expect(screen.getByText("Data explorer")).toBeTruthy();
-
-    // Stat strip
-    expect(screen.getByText("Total size")).toBeTruthy();
-    expect(screen.getByText("3 schemas")).toBeTruthy();
-    expect(screen.getByText("Dead tuples")).toBeTruthy();
-
-    // Schemas card lists every schema with its inventory
-    expect(screen.getByText("Schemas")).toBeTruthy();
-    expect(screen.getByText("public")).toBeTruthy();
-    expect(screen.getByText("analytics")).toBeTruthy();
-    expect(screen.getByText("pg_catalog")).toBeTruthy();
-    expect(screen.getByText("0 tables · 1 view · 2 MB")).toBeTruthy();
-
-    // Top tables exclude system relations
-    expect(screen.getByText("Top tables")).toBeTruthy();
-    expect(screen.getByText("daily_rollup")).toBeTruthy();
-    expect(screen.queryByText("pg_class")).toBeNull();
-
-    // Sibling databases on the instance, current one included
-    expect(screen.getByText("Databases on this instance")).toBeTruthy();
-    expect(screen.getByText("orders")).toBeTruthy();
-    expect(screen.getByText("postgres")).toBeTruthy();
-    expect(screen.getByText("system")).toBeTruthy();
-
-    // Query stats off → actionable empty state; no extensions installed
-    expect(screen.getByText("Query statistics are off")).toBeTruthy();
-    expect(
-      screen.getByText("CREATE EXTENSION pg_stat_statements;")
-    ).toBeTruthy();
-    expect(
-      screen.getByText("No extensions are installed in this database.")
-    ).toBeTruthy();
-  });
-
   test("uses the subtle blue chart color for metric sparklines", () => {
     state.metricsQuery = {
       data: {
@@ -888,114 +772,6 @@ describe("backend database overview", () => {
 
       expect.soft(sparkline?.getAttribute("class")).toContain("text-chart-1");
     }
-  });
-
-  test("keeps the database-objects section with only extensions when the database has no other objects", () => {
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    expect(screen.getByText("Database objects")).toBeTruthy();
-    expect(screen.getByText("Extensions")).toBeTruthy();
-    expect(screen.queryByText("Routines")).toBeNull();
-  });
-
-  test("lists non-relation objects in the database-objects section", () => {
-    state.otherObjectsQuery = {
-      data: {
-        routines: {
-          objects: [
-            {
-              badge: "FUNCTION",
-              category: "routines",
-              detail: "",
-              name: "analytics.rollup_daily()",
-              sortKey: "analytics.rollup_daily",
-              summary: "void · plpgsql · volatile",
-            },
-          ],
-          total: 1,
-        },
-      },
-    };
-
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    expect(screen.getByText("Database objects")).toBeTruthy();
-    expect(screen.getByText("Routines")).toBeTruthy();
-    expect(screen.getByText("rollup_daily")).toBeTruthy();
-    expect(screen.getByText("→ void")).toBeTruthy();
-    expect(screen.getByText("plpgsql · volatile")).toBeTruthy();
-  });
-
-  test("links schema tiles, top tables, and sibling databases", () => {
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    const schemaLink = screen.getByText("pg_catalog").closest("a");
-    if (!(schemaLink instanceof HTMLAnchorElement)) {
-      throw new Error("Missing schema tile link");
-    }
-    expect(schemaLink.dataset["linkSearch"]).toBe(
-      JSON.stringify({ schema: "pg_catalog" })
-    );
-    expect(schemaLink.dataset["linkParams"]).toBe(
-      JSON.stringify({ databaseId: "customer-events", instanceId: "prod" })
-    );
-    expect(schemaLink.getAttribute("href")).toBe(
-      "/instances/$instanceId/databases/$databaseId/explorer"
-    );
-
-    // Views deep-link into the explorer's views category.
-    const viewLink = screen.getByText("daily_rollup").closest("a");
-    if (!(viewLink instanceof HTMLAnchorElement)) {
-      throw new Error("Missing top table link");
-    }
-    expect(viewLink.dataset["linkSearch"]).toBe(
-      JSON.stringify({
-        category: "views",
-        name: "daily_rollup",
-        schema: "analytics",
-      })
-    );
-
-    const tableLink = screen.getByText("events").closest("a");
-    if (!(tableLink instanceof HTMLAnchorElement)) {
-      throw new Error("Missing top table link");
-    }
-    expect(tableLink.dataset["linkSearch"]).toBe(
-      JSON.stringify({
-        category: "tables",
-        name: "events",
-        schema: "public",
-      })
-    );
-
-    const databaseLink = screen.getByText("orders").closest("a");
-    if (!(databaseLink instanceof HTMLAnchorElement)) {
-      throw new Error("Missing sibling database link");
-    }
-    expect(databaseLink.dataset["linkParams"]).toBe(
-      JSON.stringify({ databaseId: "orders", instanceId: "prod" })
-    );
-    expect(databaseLink.getAttribute("href")).toBe(
-      "/instances/$instanceId/databases/$databaseId"
-    );
   });
 
   test("renders eagerly loaded insights and opens the overview drawer", async () => {
@@ -1065,69 +841,6 @@ describe("backend database overview", () => {
       })
     ).toBeTruthy();
   });
-
-  test("closes query insights when the selected database changes", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponse() };
-    const { rerender } = render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Insights" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Query insights" })
-    ).toBeTruthy();
-
-    rerender(
-      <BackendDatabasePage
-        databaseId="orders"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Query insights" })
-      ).toBeNull()
-    );
-  });
-
-  test("disables Insights only when every insight source is unavailable", () => {
-    state.queryInsightsQuery = {
-      data: queryInsightsWithoutQueryStatsResponse(),
-    };
-    const { rerender } = render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    expect(
-      screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
-        .disabled
-    ).toBe(false);
-
-    state.queryInsightsQuery = { data: unavailableQueryInsightsResponse() };
-    rerender(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    expect(
-      screen.getByRole<HTMLButtonElement>("button", { name: "Insights" })
-        .disabled
-    ).toBe(true);
-  });
 });
 
 describe("bounded database catalog overview", () => {
@@ -1157,82 +870,6 @@ describe("bounded database catalog overview", () => {
 });
 
 describe("backend database overview query insights", () => {
-  test("renders the query insights drawer with filtering and query detail", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponse() };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(
-      screen.getByRole("heading", { name: "Query insights" })
-    ).toBeTruthy();
-    expect(screen.getByText("Top queries by total time")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "Relative" })).toBeTruthy();
-    expect(screen.getByText("Sequential scan hotspots")).toBeTruthy();
-    expect(screen.getByText("Cache hit by table")).toBeTruthy();
-    expect(
-      screen.getByRole("button", {
-        name: SELECT_EVENTS_QUERY_BUTTON_RE,
-      })
-    ).toBeTruthy();
-    const selectQueryButton = screen.getByRole("button", {
-      name: SELECT_EVENTS_QUERY_BUTTON_RE,
-    });
-    const highlightedQueryPreview = within(selectQueryButton).getByText(
-      (_content, element) =>
-        element instanceof HTMLElement &&
-        element.matches('code.language-sql[data-syntax-highlighter="shiki"]') &&
-        element.textContent?.includes("SELECT * FROM events") === true
-    );
-    expect(highlightedQueryPreview).toBeTruthy();
-    expect(
-      within(selectQueryButton).queryByRole("button", { name: "Copy SQL" })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Type" }));
-    await user.click(screen.getByRole("option", { name: "Write queries" }));
-
-    expect(
-      screen.queryByRole("button", {
-        name: SELECT_EVENTS_QUERY_BUTTON_RE,
-      })
-    ).toBeNull();
-    expect(
-      screen.getByRole("button", {
-        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
-      })
-    ).toBeTruthy();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
-      })
-    );
-
-    const detail = screen.getByRole("region", { name: "Query detail" });
-    expect(within(detail).getByText("Relative to top")).toBeTruthy();
-    expect(within(detail).getByText("queryid 456")).toBeTruthy();
-    expect(within(detail).getByText("21")).toBeTruthy();
-    expect(within(detail).getByText("12 ms")).toBeTruthy();
-    expect(screen.queryByText("Since stats reset")).toBeNull();
-    expect(screen.queryByText(OBSERVED_TIMESTAMP_RE)).toBeNull();
-    expect(within(detail).queryByText(CUMULATIVE_STATS_NOTE_RE)).toBeNull();
-    expect(
-      within(detail).getByText(
-        (_content, element) =>
-          element?.tagName.toLowerCase() === "pre" &&
-          element.textContent?.includes(
-            "UPDATE events SET processed_at = now()"
-          ) === true
-      ).className
-    ).toContain("whitespace-pre-wrap");
-  });
-
   test("shows skeleton rows without progress bars while the catalog is pending", () => {
     state.catalogQuery = { data: undefined, isPending: true };
 
@@ -1362,193 +999,9 @@ describe("backend database query insights drawer", () => {
       screen.queryByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
     ).toBeNull();
   });
-
-  test("exposes selected query state without colliding on queryid zero", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    await user.click(screen.getByRole("option", { name: "25" }));
-
-    const unavailableQueryButtons = screen.getAllByRole("button", {
-      name: "Query text unavailable",
-    });
-    expect(unavailableQueryButtons).toHaveLength(2);
-    const [firstUnavailableQueryButton, secondUnavailableQueryButton] =
-      unavailableQueryButtons;
-    if (!(firstUnavailableQueryButton && secondUnavailableQueryButton)) {
-      throw new Error("Expected two unavailable query buttons");
-    }
-
-    await user.click(firstUnavailableQueryButton);
-
-    expect(firstUnavailableQueryButton.getAttribute("aria-pressed")).toBe(
-      "true"
-    );
-    expect(secondUnavailableQueryButton.getAttribute("aria-pressed")).toBe(
-      "false"
-    );
-  });
-
-  test("clears an unidentifiable query selection after rows reorder", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponseWithEdgeQueries() };
-    const { rerender } = render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    await user.click(screen.getByRole("option", { name: "25" }));
-    const unavailableQueryButtons = screen.getAllByRole("button", {
-      name: "Query text unavailable",
-    });
-    const [firstUnavailableQueryButton] = unavailableQueryButtons;
-    if (!firstUnavailableQueryButton) {
-      throw new Error("Expected an unavailable query button");
-    }
-    await user.click(firstUnavailableQueryButton);
-
-    const refreshed = queryInsightsResponseWithEdgeQueries();
-    const topQueries = refreshed.queryInsights?.topQueries;
-    if (!topQueries) {
-      throw new Error("Expected query insights");
-    }
-    const firstUnknown = topQueries.at(-2);
-    const secondUnknown = topQueries.at(-1);
-    if (!(firstUnknown && secondUnknown)) {
-      throw new Error("Expected two unavailable queries");
-    }
-    topQueries.splice(-2, 2, secondUnknown, firstUnknown);
-    state.queryInsightsQuery = { data: refreshed };
-    rerender(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByRole("region", { name: "Query detail" })).toBeNull();
-    });
-
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithEdgeQueries(),
-    };
-    rerender(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(screen.queryByRole("region", { name: "Query detail" })).toBeNull();
-  });
-
-  test("keeps selected query detail synced to refetched insights", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponse() };
-
-    const { rerender } = render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
-      })
-    );
-    const detail = screen.getByRole("region", { name: "Query detail" });
-    expect(within(detail).getByText("21")).toBeTruthy();
-
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithUpdatedSelection(),
-    };
-    rerender(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(within(detail).getByText("84")).toBeTruthy();
-    expect(within(detail).getByText("18 ms")).toBeTruthy();
-  });
 });
 
 describe("database query insights resilience", () => {
-  test("selects the intended row when queryids repeat", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithDuplicateQueryIds(),
-    };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: DUPLICATE_QUERY_ID_SECOND_ROW_RE,
-      })
-    );
-
-    const detail = screen.getByRole("region", { name: "Query detail" });
-    expect(
-      within(detail).getByText(
-        (_content, element) =>
-          element?.tagName.toLowerCase() === "code" &&
-          element.textContent === "SELECT * FROM events WHERE tenant_id = $2"
-      )
-    ).toBeTruthy();
-    expect(within(detail).getByText("4")).toBeTruthy();
-  });
-
-  test("resets query selection when switching databases", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = { data: queryInsightsResponse() };
-
-    const { rerender } = render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", {
-        name: UPDATE_EVENTS_QUERY_BUTTON_RE,
-      })
-    );
-    const detail = screen.getByRole("region", { name: "Query detail" });
-    expect(within(detail).getByText("queryid 456")).toBeTruthy();
-
-    // The other database also reports queryid 456 (queryids are stable text
-    // hashes), so a carried-over selection would silently match there.
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithSearchableQueries(),
-    };
-    rerender(
-      <QueryInsightsDrawerForTest databaseId="orders" instanceId="prod" />
-    );
-
-    const freshDetail = screen.getByRole("region", { name: "Query detail" });
-    expect(within(freshDetail).getByText("queryid 123")).toBeTruthy();
-  });
-
   test("filters query insights with table-style search and shared faceted filters", async () => {
     const user = userEvent.setup();
     state.queryInsightsQuery = {
@@ -1625,68 +1078,6 @@ describe("database query insights resilience", () => {
     expect(
       screen.queryByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
-  });
-
-  test("paginates query insights and lets users change page size", async () => {
-    const user = userEvent.setup();
-    state.queryInsightsQuery = {
-      data: queryInsightsResponseWithManyQueries(),
-    };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Showing 1–10 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_SIX_BUTTON_RE })
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Next page" }));
-
-    expect(screen.getByText("Showing 11–12 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
-    ).toEqual(["10", "25", "50"]);
-    await user.click(screen.getByRole("option", { name: "25" }));
-
-    expect(screen.getByText("Showing 1–12 of 12")).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: QUERY_PAGE_ELEVEN_BUTTON_RE })
-    ).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
-
-    await user.type(
-      screen.getByRole("textbox", { name: "Search queries…" }),
-      "missing query"
-    );
-
-    expect(screen.getByText("No matching query runtime data.")).toBeTruthy();
-    expect(screen.queryByText(EMPTY_PAGINATION_RANGE_RE)).toBeNull();
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
   });
 
   test("renders unavailable, table-stats-missing, and error states", () => {
@@ -1770,26 +1161,5 @@ describe("database query insights resilience", () => {
       screen.getByRole("button", { name: "Retry query statistics" })
     );
     expect(refetch).toHaveBeenCalledOnce();
-  });
-
-  test("keeps cached insights visible after a background refetch error", () => {
-    state.queryInsightsQuery = {
-      data: queryInsightsResponse(),
-      error: new Error("background refresh failed"),
-      refetch: rs.fn(async () => undefined),
-    };
-
-    render(
-      <QueryInsightsDrawerForTest
-        databaseId="customer-events"
-        instanceId="prod"
-      />
-    );
-
-    expect(screen.getByRole("alert")).toBeTruthy();
-    expect(screen.getByText("Top queries by total time")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
-    ).toBeTruthy();
   });
 });

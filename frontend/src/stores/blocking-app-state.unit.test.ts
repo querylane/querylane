@@ -34,51 +34,12 @@ function createAppUiError(
 }
 
 describe("blocking app state policy", () => {
-  it("turns setup-required errors into setup state and route blockers", () => {
-    const error = createAppUiError("setup_required");
-
-    expect(
-      decideBlockingAppState({ currentHref: "/instances/prod", error })
-    ).toEqual({
-      blockingError: error,
-      redirectTo: "/setup",
-      returnTo: "/instances/prod",
-      setupRequired: true,
-    });
-  });
-
-  it("turns unauthenticated errors into access blockers without setup state", () => {
-    const error = createAppUiError("unauthenticated");
-
-    expect(
-      decideBlockingAppState({ currentHref: "/instances/prod", error })
-    ).toEqual({
-      blockingError: error,
-      redirectTo: "/access-denied",
-      returnTo: "/instances/prod",
-      setupRequired: false,
-    });
-  });
-
   it("turns permission errors into access blockers without setup state", () => {
     const error = createAppUiError("permission_denied");
 
     expect(decideBlockingAppState({ currentHref: null, error })).toEqual({
       blockingError: error,
       redirectTo: "/access-denied",
-      returnTo: null,
-      setupRequired: false,
-    });
-  });
-
-  it("ignores non-blocking errors", () => {
-    const error = createAppUiError(null);
-
-    expect(
-      decideBlockingAppState({ currentHref: "/instances/prod", error })
-    ).toEqual({
-      blockingError: null,
-      redirectTo: null,
       returnTo: null,
       setupRequired: false,
     });

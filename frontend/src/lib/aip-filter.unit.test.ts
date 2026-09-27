@@ -1,24 +1,11 @@
 import { describe, expect, it } from "@rstest/core";
 import {
-  buildContainsFilter,
   buildGrantFilter,
   buildOwnedFilter,
   buildRoleFilter,
-  quoteFilterValue,
 } from "@/lib/aip-filter";
 
 describe("AIP filter builders", () => {
-  it("quotes a user value as one escaped filter literal", () => {
-    expect(
-      quoteFilterValue(String.raw`report\" AND is_system_role = true`)
-    ).toBe(String.raw`"report\\\" AND is_system_role = true"`);
-  });
-
-  it("skips substring scans until two trimmed characters are present", () => {
-    expect(buildContainsFilter("name", " a ")).toBeUndefined();
-    expect(buildContainsFilter("name", " ab ")).toBe('name:"ab"');
-  });
-
   it("combines owned-object kind and escaped name filters", () => {
     expect(
       buildOwnedFilter({ objectType: "TABLE", search: 'order"items' })

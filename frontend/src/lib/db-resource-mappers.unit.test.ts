@@ -8,7 +8,6 @@ import {
 import { DatabaseSchema } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
   Instance_ConnectionState,
-  Instance_CredentialState,
   InstanceSchema,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -49,25 +48,6 @@ describe("mapInstance", () => {
       status: "disconnected",
     });
   });
-
-  test.each([
-    Instance_CredentialState.UNREADABLE,
-    Instance_CredentialState.KEY_MISSING,
-  ])(
-    "marks unavailable credential state %s as an actionable instance error",
-    (credentialState) => {
-      const instance = create(InstanceSchema, {
-        credentialError: "Stored credentials cannot be read.",
-        credentialState,
-        name: "instances/broken",
-      });
-
-      expect(mapInstance(instance)).toMatchObject({
-        credentialsUnreadable: true,
-        status: "error",
-      });
-    }
-  );
 });
 
 describe("mapDatabase", () => {

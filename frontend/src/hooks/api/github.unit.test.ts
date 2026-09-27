@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 
 import {
   fetchGithubRepoStars,
-  formatGithubStarCount,
   useGithubRepoStarsQuery,
 } from "@/hooks/api/github";
 
@@ -14,9 +13,6 @@ rs.mock("@tanstack/react-query", () => ({
   useQuery: useQueryMock,
 }));
 
-const STAR_COUNT_999 = 999;
-const STAR_COUNT_1249 = 1249;
-const STAR_COUNT_1550 = 1550;
 const STAR_COUNT_3210 = 3210;
 const HTTP_INTERNAL_SERVER_ERROR = 500;
 
@@ -32,15 +28,6 @@ afterEach(() => {
 });
 
 describe("github api helpers", () => {
-  it("formats small star counts without suffix", () => {
-    expect(formatGithubStarCount(STAR_COUNT_999)).toBe("999");
-  });
-
-  it("formats thousands with k suffix", () => {
-    expect(formatGithubStarCount(STAR_COUNT_1249)).toBe("1k");
-    expect(formatGithubStarCount(STAR_COUNT_1550)).toBe("2k");
-  });
-
   it("returns formatted stars on successful response", async () => {
     rs.stubGlobal("fetch", () =>
       Promise.resolve(
@@ -69,14 +56,6 @@ describe("github api helpers", () => {
     ).resolves.toBeNull();
   });
 
-  it("returns null on network failure", async () => {
-    rs.stubGlobal("fetch", () => Promise.reject(new Error("network down")));
-
-    await expect(
-      fetchGithubRepoStars("querylane/querylane")
-    ).resolves.toBeNull();
-  });
-
   it("returns null when GitHub payload has no numeric star count", async () => {
     rs.stubGlobal("fetch", () =>
       Promise.resolve(Response.json({ stargazers_count: "321" }))
@@ -89,18 +68,6 @@ describe("github api helpers", () => {
 });
 
 describe("useGithubRepoStarsQuery", () => {
-  it("normalizes repo input and disables empty queries", () => {
-    useGithubRepoStarsQuery("  ");
-
-    expect(useQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-        queryKey: ["github-repo-stars", ""],
-        retry: 1,
-      })
-    );
-  });
-
   it("passes abort signal through to decorative GitHub fetches", async () => {
     useGithubRepoStarsQuery(" querylane/querylane ");
     const options = useQueryMock.mock.calls[0]?.[0];

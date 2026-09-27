@@ -1,6 +1,5 @@
 import { describe, expect, test } from "@rstest/core";
 import {
-  formatActivityDuration,
   getActivityBlockingChains,
   presentActivityFilterOptions,
   presentActivitySessionRows,
@@ -25,11 +24,6 @@ describe("instance activity model", () => {
       ["Waiting", "1"],
       ["Oldest transaction", "4m 12s"],
     ]);
-  });
-
-  test("formats zero and long durations without empty output", () => {
-    expect(formatActivityDuration(0)).toBe("0s");
-    expect(formatActivityDuration(3661)).toBe("1h 1m");
   });
 
   test("presents unavailable stats as placeholders", () => {

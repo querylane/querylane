@@ -48,7 +48,8 @@ describe("refresh settings", () => {
   });
 
   it("rounds absolute date inputs to human interval precision", async () => {
-    const now = new Date("2026-06-15T17:06:38.978Z");
+    // Local noon keeps tomorrow at 9am within the 24-hour limit in any zone.
+    const now = new Date(2026, 5, 15, 12, 6, 38, 978);
 
     const result = await parseRefreshIntervalInput("tomorrow at 9am", now);
 

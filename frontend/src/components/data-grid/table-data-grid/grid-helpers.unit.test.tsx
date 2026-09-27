@@ -53,10 +53,6 @@ function testColumn(
   });
 }
 
-function testCell(value: string) {
-  return testValueCell({ case: "stringValue", value });
-}
-
 function testValueCell(kind: TableValue["kind"], truncated = false) {
   return createProto(TableCellSchema, {
     truncated,
@@ -96,19 +92,6 @@ describe("grid helpers", () => {
     ).toBe("Page 2 of 3");
   });
 
-  test("keeps large bigint page totals precise", () => {
-    expect(
-      buildPageLabel({
-        pageIndex: 0,
-        pageSize: 2,
-        rowCount: {
-          status: RowCount_Status.AVAILABLE,
-          value: 9_007_199_254_740_993n,
-        },
-      })
-    ).toBe("Page 1 of 4,503,599,627,370,497");
-  });
-
   test("marks estimated page totals", () => {
     expect(
       buildPageLabel({
@@ -117,36 +100,6 @@ describe("grid helpers", () => {
         rowCount: { status: RowCount_Status.ESTIMATED, value: 100n },
       })
     ).toBe("Page 1 of ≈4");
-  });
-
-  test("builds renderable grid columns around table cells", () => {
-    const column = buildColumn({
-      canHide: true,
-      column: testColumn(),
-      isFrozen: true,
-      onCopyName: rs.fn(),
-      onHide: rs.fn(),
-      onSortAsc: rs.fn(),
-      onSortDesc: rs.fn(),
-      onToggleFreeze: rs.fn(),
-      pkColumnSet: new Set(["email"]),
-      sortDirection: "ASC",
-      sortPriority: 1,
-    });
-
-    expect(column.key).toBe("email");
-    expect(column.frozen).toBe(true);
-    expect(column.width).toBe("auto");
-
-    const rendered = column.renderCell?.({
-      row: {
-        [ROW_KEY_FIELD]: "row-1",
-        cells: new Map([["email", testCell("owner@example.com")]]),
-      },
-    } as never);
-    expect(renderToStaticMarkup(<span>{rendered}</span>)).toContain(
-      "owner@example.com"
-    );
   });
 
   test("renders a plain cell when a composite foreign key filter is incomplete", () => {

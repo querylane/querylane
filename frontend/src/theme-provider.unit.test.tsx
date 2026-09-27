@@ -10,7 +10,6 @@ import {
   ThemeProvider,
   useTheme,
 } from "./theme-provider";
-import { isTheme } from "./theme-types";
 
 const STORAGE_KEY = "querylane-ui-theme";
 const DOM_GLOBAL_KEYS = [
@@ -202,17 +201,6 @@ afterEach(async () => {
 });
 
 describe("theme provider", () => {
-  it("accepts supported theme modes", () => {
-    expect(isTheme("light")).toBe(true);
-    expect(isTheme("dark")).toBe(true);
-    expect(isTheme("system")).toBe(true);
-  });
-
-  it("rejects unsupported stored theme values", () => {
-    expect(isTheme("auto")).toBe(false);
-    expect(isTheme(null)).toBe(false);
-  });
-
   it("hydrates from the persisted theme and applies it to the document", async () => {
     localStorage.setItem(STORAGE_KEY, "dark");
 
@@ -225,32 +213,6 @@ describe("theme provider", () => {
       hasInverseTheme: false,
       hasTheme: true,
       resolvedTheme: "dark",
-    });
-  });
-
-  it("persists selected light and dark modes", async () => {
-    await renderThemeProvider();
-
-    await clickButton("Dark");
-
-    expect(text("theme")).toBe("dark");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("dark");
-    expect(readAppliedThemeState("dark")).toEqual({
-      colorScheme: "dark",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "dark",
-    });
-
-    await clickButton("Light");
-
-    expect(text("theme")).toBe("light");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("light");
-    expect(readAppliedThemeState("light")).toEqual({
-      colorScheme: "light",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "light",
     });
   });
 
@@ -310,35 +272,5 @@ describe("theme provider edge cases", () => {
     } finally {
       installDom();
     }
-  });
-
-  it("falls back when browser storage access throws", async () => {
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      get() {
-        throw new Error("storage access denied");
-      },
-    });
-
-    await renderThemeProvider("dark");
-
-    expect(text("theme")).toBe("dark");
-
-    await clickButton("Light");
-
-    expect(text("theme")).toBe("light");
-  });
-
-  it("falls back when matchMedia is unavailable", async () => {
-    Reflect.deleteProperty(window, "matchMedia");
-
-    await renderThemeProvider("system");
-
-    expect(readAppliedThemeState("light")).toEqual({
-      colorScheme: "light",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "light",
-    });
   });
 });

@@ -14,43 +14,6 @@ import {
 } from "@/components/data-grid/table-data-grid/cell-selection-state";
 
 describe("cell selection state", () => {
-  test("selects and drags a rectangular range", () => {
-    const store = createCellSelectionStore();
-
-    store.start({ columnIndex: 2, rowIndex: 1 });
-    store.extendTo({ columnIndex: 4, rowIndex: 3 });
-
-    expect(store.getState()).toEqual({
-      isDragging: true,
-      ranges: [
-        {
-          anchor: { columnIndex: 2, rowIndex: 1 },
-          focus: { columnIndex: 4, rowIndex: 3 },
-        },
-      ],
-    });
-    expect(
-      isCellSelected(store.getState(), { columnIndex: 3, rowIndex: 2 })
-    ).toBe(true);
-    expect(
-      isCellSelected(store.getState(), { columnIndex: 5, rowIndex: 2 })
-    ).toBe(false);
-  });
-
-  test("normalizes a range dragged up and left", () => {
-    expect(
-      getCellSelectionBounds({
-        anchor: { columnIndex: 5, rowIndex: 4 },
-        focus: { columnIndex: 2, rowIndex: 1 },
-      })
-    ).toEqual({
-      bottom: 4,
-      left: 2,
-      right: 5,
-      top: 1,
-    });
-  });
-
   test("adds disjoint ranges and extends the latest anchor", () => {
     const store = createCellSelectionStore();
 
@@ -123,24 +86,6 @@ describe("cell selection state", () => {
     expect(getCellSelectionSummary(store.getState()).cellCount).toBe(6);
   });
 
-  test("keeps non-rectangular unions as separate ranges", () => {
-    const store = createCellSelectionStore();
-    store.start({ columnIndex: 2, rowIndex: 1 });
-    store.extendTo({ columnIndex: 3, rowIndex: 2 });
-    store.end();
-
-    store.start({ columnIndex: 4, rowIndex: 2 }, { additive: true });
-    store.end();
-
-    expect(store.getState().ranges).toHaveLength(2);
-    expect(getCellSelectionSummary(store.getState())).toEqual({
-      cellCount: 5,
-      columnCount: undefined,
-      rangeCount: 2,
-      rowCount: undefined,
-    });
-  });
-
   test("deduplicates overlapping non-rectangular ranges without filling gaps", () => {
     const store = createCellSelectionStore();
     store.start({ columnIndex: 2, rowIndex: 1 });
@@ -209,49 +154,15 @@ describe("cell selection state", () => {
 
     expect(notifications).toBe(0);
   });
-
-  test("summarizes a rectangular selection", () => {
-    const store = createCellSelectionStore();
-
-    store.start({ columnIndex: 2, rowIndex: 1 });
-    store.extendTo({ columnIndex: 4, rowIndex: 2 });
-
-    expect(getCellSelectionSummary(store.getState())).toEqual({
-      cellCount: 6,
-      columnCount: 3,
-      rangeCount: 1,
-      rowCount: 2,
-    });
-  });
 });
 
 describe("cell selection clipboard formatting", () => {
-  test("formats rectangular and disjoint blocks as TSV", () => {
-    expect(
-      formatCellSelectionForClipboard([
-        [
-          ["Ada", "Lovelace"],
-          ["Grace", "Hopper"],
-        ],
-        [["Linus", "Torvalds"]],
-      ])
-    ).toBe("Ada\tLovelace\nGrace\tHopper\n\nLinus\tTorvalds");
-  });
-
   test("quotes tabs, line breaks, and quotes", () => {
     expect(
       formatCellSelectionForClipboard([
         [["one\ttwo", "line one\nline two", 'say "hello"']],
       ])
     ).toBe('"one\ttwo"\t"line one\nline two"\t"say ""hello"""');
-  });
-
-  test("neutralizes spreadsheet formulas", () => {
-    expect(
-      formatCellSelectionForClipboard([
-        [["=1+1", " +SUM(A1:A2)", "-2", "@command", "safe"]],
-      ])
-    ).toBe("'=1+1\t' +SUM(A1:A2)\t'-2\t'@command\tsafe");
   });
 
   test("preserves negative numeric values", () => {

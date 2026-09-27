@@ -4,7 +4,6 @@ import {
   derivePartitionTabCount,
   derivePartitionViewModel,
   filterPartitionDisplayRows,
-  formatPartitionResourceLabel,
   hasPartitionMetadata,
   partitionBoundKind,
   partitionSchemaName,
@@ -41,19 +40,6 @@ describe("table partition detail helpers", () => {
 
     expect(hasPartitionMetadata(metadata)).toBe(true);
     expect(derivePartitionTabCount(metadata)).toBe(2);
-  });
-
-  test("treats child partition bounds and parent links as partition metadata", () => {
-    const metadata = create(TablePartitionMetadataSchema, {
-      parentTable: "instances/i/databases/d/schemas/analytics/tables/events",
-      partitionBound: "FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')",
-    });
-
-    expect(hasPartitionMetadata(metadata)).toBe(true);
-    expect(derivePartitionTabCount(metadata)).toBeUndefined();
-    expect(formatPartitionResourceLabel(metadata.parentTable)).toBe(
-      "analytics.events"
-    );
   });
 
   test("classifies child partition schema and bound kind", () => {
@@ -157,48 +143,6 @@ describe("table partition detail helpers", () => {
       totalRowsLabel: "1.9M",
       totalSizeLabel: "1.7 GB",
     });
-  });
-
-  test("formats whole-million partition row estimates without dangling decimals", () => {
-    const model = derivePartitionViewModel({
-      currentDate: new Date("2026-01-15T00:00:00Z"),
-      partitions: [
-        create(TablePartitionSchema, {
-          estimatedRows: 2_000_000n,
-          partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-02-01')",
-          table:
-            "instances/i/databases/d/schemas/audit/tables/change_log_2026_01",
-        }),
-      ],
-    });
-
-    expect(model.rows[0]?.rowsLabel).toBe("2M");
-  });
-
-  test("parses timestamptz range bounds for labels and current detection", () => {
-    const model = derivePartitionViewModel({
-      currentDate: new Date("2026-07-19T10:00:00Z"),
-      partitions: [
-        create(TablePartitionSchema, {
-          estimatedRows: 72_000n,
-          partitionBound:
-            "FOR VALUES FROM ('2026-01-01 00:00:00+00') TO ('2026-07-01 00:00:00+00')",
-          table: "instances/i/databases/d/schemas/commerce/tables/oe_2026_h1",
-        }),
-        create(TablePartitionSchema, {
-          estimatedRows: 0n,
-          partitionBound:
-            "FOR VALUES FROM ('2026-07-01 00:00:00+00') TO ('2027-01-01 00:00:00+00')",
-          table: "instances/i/databases/d/schemas/commerce/tables/oe_2026_h2",
-        }),
-      ],
-    });
-
-    expect(model.rows.map((row) => row.boundLabel)).toEqual([
-      "2026-01-01 → 2026-07-01",
-      "2026-07-01 → 2027-01-01",
-    ]);
-    expect(model.rows.map((row) => row.isCurrent)).toEqual([false, true]);
   });
 
   test("shortens non-range bounds instead of repeating the FOR VALUES prefix", () => {

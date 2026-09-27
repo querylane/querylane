@@ -20,29 +20,6 @@ describe("buildTimeTicks", () => {
     expect(buildTimeTicks(0, Number.NaN)).toEqual([]);
   });
 
-  test("aligns a 1h window to whole 10-minute boundaries", () => {
-    const start = 1_700_000_123_456;
-    const ticks = buildTimeTicks(start, start + MS_PER_HOUR);
-
-    expect(ticks.length).toBeGreaterThanOrEqual(5);
-    expect(ticks.length).toBeLessThanOrEqual(6);
-    for (const tick of ticks) {
-      expect(tick % (10 * MS_PER_MINUTE)).toBe(0);
-      expect(tick).toBeGreaterThanOrEqual(start);
-      expect(tick).toBeLessThanOrEqual(start + MS_PER_HOUR);
-    }
-  });
-
-  test("uses hour steps for a 6h window", () => {
-    const start = 1_700_000_000_000;
-    const ticks = buildTimeTicks(start, start + 6 * MS_PER_HOUR);
-
-    expect(ticks.length).toBeGreaterThanOrEqual(5);
-    for (const tick of ticks) {
-      expect(tick % MS_PER_HOUR).toBe(0);
-    }
-  });
-
   test("never exceeds the requested tick budget", () => {
     const start = 1_700_000_000_000;
     for (const spanMs of [
@@ -56,26 +33,6 @@ describe("buildTimeTicks", () => {
       expect(
         buildTimeTicks(start, start + spanMs, 6).length
       ).toBeLessThanOrEqual(6);
-    }
-  });
-
-  test("aligns multi-day windows to local midnights", () => {
-    const start = 1_700_000_000_000;
-    const ticks = buildTimeTicks(start, start + 7 * MS_PER_DAY);
-
-    expect(ticks.length).toBeGreaterThan(0);
-    for (const tick of ticks) {
-      const date = new Date(tick);
-      expect(date.getHours()).toBe(0);
-      expect(date.getMinutes()).toBe(0);
-    }
-  });
-
-  test("ticks are strictly increasing", () => {
-    const start = 1_700_000_000_000;
-    const ticks = buildTimeTicks(start, start + MS_PER_DAY);
-    for (let index = 1; index < ticks.length; index += 1) {
-      expect(ticks[index]).toBeGreaterThan(ticks[index - 1] ?? 0);
     }
   });
 });

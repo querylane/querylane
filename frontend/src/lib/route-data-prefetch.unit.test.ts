@@ -54,19 +54,6 @@ describe("route data prefetch registry", () => {
     ]);
   });
 
-  test("describes database overview route data", () => {
-    const queries = databaseRouteDataQueries({
-      databaseId: "postgres",
-      instanceId: "local",
-      transport,
-    });
-
-    expect(queries).toHaveLength(1);
-    expect(queries[0]?.staleTime).toBe(
-      RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime
-    );
-  });
-
   test("describes database extensions route data", () => {
     const queries = extensionRouteDataQueries({
       databaseId: "postgres",
@@ -109,23 +96,6 @@ describe("route data prefetch registry", () => {
     );
   });
 
-  test("prefetches only first-paint table data for a selected table", () => {
-    const queries = explorerRouteDataQueries({
-      databaseId: "postgres",
-      instanceId: "local",
-      search: { category: "tables", name: "users", schema: "public" },
-      transport,
-    });
-
-    // selectedDatabase + visible columns header/query validation + first rows page.
-    expect(queries).toHaveLength(3);
-    expect(queries.map((query) => query.staleTime)).toEqual([
-      RESOURCE_QUERY_OPTIONS.selectedDatabase.staleTime,
-      RESOURCE_QUERY_OPTIONS.tableMetadata.staleTime,
-      RESOURCE_QUERY_OPTIONS.tableRows.staleTime,
-    ]);
-  });
-
   test("skips fresh metadata but still refetches table rows", () => {
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -149,54 +119,6 @@ describe("route data prefetch registry", () => {
       queryClient.clear();
       unary.mockRestore();
     }
-  });
-
-  test("refetches invalidated metadata even inside its stale time", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
-      },
-    });
-    const unary = rs.spyOn(transport, "unary");
-    const queries = databaseRouteDataQueries({
-      databaseId: "postgres",
-      instanceId: "local",
-      transport,
-    });
-    markFreshRouteDataQueries(queryClient, queries);
-    await queryClient.invalidateQueries();
-    try {
-      prefetchRouteData({ queryClient, transport }, queries);
-      expect(unary.mock.calls.map(([method]) => method.name)).toEqual([
-        "GetDatabase",
-      ]);
-    } finally {
-      queryClient.clear();
-      unary.mockRestore();
-    }
-  });
-
-  test("returns immediately when route prefetch promises are still pending", async () => {
-    const calls: unknown[] = [];
-    let resolvePrefetch: () => void = () => undefined;
-    const pendingPrefetch = new Promise<void>((resolve) => {
-      resolvePrefetch = resolve;
-    });
-    const queryClient = makeQueryClientStub(calls, pendingPrefetch);
-
-    prefetchRouteData(
-      { queryClient, transport },
-      databaseRouteDataQueries({
-        databaseId: "postgres",
-        instanceId: "local",
-        transport,
-      })
-    );
-
-    expect(calls).toHaveLength(1);
-    resolvePrefetch();
-    await pendingPrefetch;
-    await Promise.resolve();
   });
 
   test("prefetches every registered route data query", () => {

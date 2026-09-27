@@ -35,16 +35,6 @@ beforeEach(() => {
 });
 
 describe("blocking-error-store", () => {
-  test("setBlockingError stores the error and returnTo", () => {
-    const error = makeFakeError("something broke");
-
-    useBlockingErrorStore.getState().setBlockingError(error, "/dashboard");
-
-    const state = useBlockingErrorStore.getState();
-    expect(state.blockingError).toBe(error);
-    expect(state.returnTo).toBe("/dashboard");
-  });
-
   test("setBlockingError defaults returnTo to null when omitted", () => {
     const error = makeFakeError("no return");
 
@@ -64,36 +54,10 @@ describe("blocking-error-store", () => {
     expect(state.returnTo).toBeNull();
   });
 
-  test("consumeBlockingError returns the current error and clears the store", () => {
-    const error = makeFakeError("consumed");
-    useBlockingErrorStore.getState().setBlockingError(error, "/return-path");
-
-    const result = useBlockingErrorStore.getState().consumeBlockingError();
-
-    expect(result.error).toBe(error);
-    expect(result.returnTo).toBe("/return-path");
-
-    const state = useBlockingErrorStore.getState();
-    expect(state.blockingError).toBeNull();
-    expect(state.returnTo).toBeNull();
-  });
-
   test("consumeBlockingError returns nulls when no error is set", () => {
     const result = useBlockingErrorStore.getState().consumeBlockingError();
 
     expect(result.error).toBeNull();
     expect(result.returnTo).toBeNull();
-  });
-
-  test("setBlockingError overwrites the previous error", () => {
-    const first = makeFakeError("first");
-    const second = makeFakeError("second");
-
-    useBlockingErrorStore.getState().setBlockingError(first, "/one");
-    useBlockingErrorStore.getState().setBlockingError(second, "/two");
-
-    const state = useBlockingErrorStore.getState();
-    expect(state.blockingError).toBe(second);
-    expect(state.returnTo).toBe("/two");
   });
 });

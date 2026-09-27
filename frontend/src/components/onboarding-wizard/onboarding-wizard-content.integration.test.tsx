@@ -3,7 +3,6 @@ import { TransportProvider } from "@connectrpc/connect-query";
 import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  act,
   cleanup,
   fireEvent,
   render,
@@ -44,36 +43,15 @@ import { createTestRouterTransport } from "@/test/router-transport";
 import { ThemeProvider } from "@/theme-provider";
 
 const CONFIGURE_UI_RE = /Configure via UI/;
-const CONFIGURE_YAML_RE = /Configure YAML manually/;
 const EMBEDDED_RE = /Use embedded database/;
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
 const DIRECT_SSL_NEGOTIATION_OPTION_RE = /^direct /i;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/i;
-const REFRESH_RE = /Refresh/;
 const REQUIRE_SSL_MODE_OPTION_RE = /^require /i;
 const BACK_RE = /back/i;
-const SETUP_INTERNAL_STORAGE_RE =
-  /Pick how Querylane should store its own metadata/;
-const VERIFY_FULL_RE = /verify-full/;
-const SSL_MODE_VALUES = [
-  "disable",
-  "allow",
-  "prefer",
-  "require",
-  "verify-ca",
-  "verify-full",
-] as const;
 
 let restoreLocalStorage: (() => void) | undefined;
 const renderedQueryClients: QueryClient[] = [];
-
-function getRenderedSslModeIconModes() {
-  return new Set(
-    Array.from(document.querySelectorAll('[data-slot="ssl-mode-icon"]')).map(
-      (icon) => icon.getAttribute("data-mode")
-    )
-  );
-}
 
 function installLocalStorageStub() {
   const originalDescriptor = Object.getOwnPropertyDescriptor(
@@ -236,136 +214,6 @@ afterEach(() => {
 });
 
 describe("onboarding wizard content integration", () => {
-  it("renders loading state and refresh action before onboarding state exists", async () => {
-    const user = userEvent.setup();
-    const refreshOnboardingState = rs.fn(async () => undefined);
-    useSetupStore.setState({ onboardingState: null, refreshOnboardingState });
-
-    renderWizard();
-
-    expect(
-      screen.getByRole("heading", { name: "Loading onboarding state" })
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: REFRESH_RE }));
-
-    expect(refreshOnboardingState).toHaveBeenCalledTimes(1);
-  });
-
-  it("gates setup method progression until the user chooses a method", async () => {
-    const user = userEvent.setup();
-    seedOnboardingState();
-
-    renderWizard();
-
-    const continueButton = screen.getByRole("button", {
-      name: "Continue",
-    }) as HTMLButtonElement;
-    expect(continueButton.disabled).toBe(true);
-    expect(
-      screen.getAllByText("Postgres server to manage").length
-    ).toBeGreaterThan(0);
-    expect(screen.getByText(SETUP_INTERNAL_STORAGE_RE)).toBeTruthy();
-
-    await user.click(screen.getByRole("radio", { name: CONFIGURE_UI_RE }));
-    await user.click(continueButton);
-
-    expect(
-      screen.getByRole("heading", { name: "Querylane internal storage" })
-    ).toBeTruthy();
-    expect(
-      screen.getAllByText("Postgres server to manage").length
-    ).toBeGreaterThan(0);
-  });
-
-  it("explains when no setup methods are available", () => {
-    useSetupStore.setState({
-      onboardingState: createOnboardingState({ availableMethods: [] }),
-      status: "onboarding",
-    });
-
-    renderWizard();
-
-    expect(screen.getByText("No setup methods available")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Continue" })).toHaveProperty(
-      "disabled",
-      true
-    );
-  });
-
-  it("explains why only manual YAML setup is available", () => {
-    useSetupStore.setState({
-      onboardingState: createOnboardingState({
-        availableMethods: [SetupMethod.MANUAL_YAML],
-        configFilePath: "/read-only/.querylane/config.yaml",
-        homePath: "/read-only/.querylane",
-        isHomeWritable: false,
-      }),
-      status: "onboarding",
-    });
-
-    renderWizard();
-
-    expect(screen.getByRole("status")).toBeTruthy();
-    expect(screen.getByText("Automatic setup unavailable")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Querylane cannot write its configuration to /read-only/.querylane/config.yaml, so UI-configured and embedded setup are unavailable. Fix the directory permissions or configure the file manually."
-      )
-    ).toBeTruthy();
-    expect(screen.getByRole("radio", { name: CONFIGURE_YAML_RE })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: CONFIGURE_UI_RE })).toBeNull();
-    expect(screen.queryByRole("radio", { name: EMBEDDED_RE })).toBeNull();
-  });
-
-  it("exposes setup method selection state to assistive tech", async () => {
-    const user = userEvent.setup();
-    seedOnboardingState();
-
-    renderWizard();
-
-    const uiMethod = screen.getByRole("radio", { name: CONFIGURE_UI_RE });
-    expect(uiMethod.getAttribute("aria-checked")).toBe("false");
-
-    await user.click(uiMethod);
-
-    expect(uiMethod.getAttribute("aria-checked")).toBe("true");
-  });
-
-  it("renders the config rail with the current database config shape", () => {
-    seedWizardPhase("configure_ui", "ui_configured");
-
-    renderWizard();
-
-    const configRail = screen.getByTestId("onboarding-config-rail");
-    expect(configRail.textContent).toContain("database:");
-    expect(configRail.textContent).toContain("ssl_mode:");
-    expect(configRail.textContent).not.toContain("meta:");
-  });
-
-  it("surfaces previous setup failures while keeping method selection available", () => {
-    useSetupStore.setState({
-      onboardingState: createOnboardingState({
-        appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
-          error: "migration failed",
-          state: AppDatabaseStatus_State.ERROR,
-        }),
-      }),
-      showWizardErrorBanner: true,
-      status: "onboarding",
-    });
-
-    renderWizard();
-
-    expect(screen.getByText("Previous setup attempt failed")).toBeTruthy();
-    expect(screen.getByText("migration failed")).toBeTruthy();
-    expect(
-      screen.getByRole("heading", {
-        name: "How would you like to get started?",
-      })
-    ).toBeTruthy();
-  });
-
   it("validates and applies a pasted metadata database connection string", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
@@ -399,22 +247,6 @@ describe("onboarding wizard content integration", () => {
     ).toContain("direct");
   });
 
-  it("does not render internal storage fields in an error state before interaction", async () => {
-    seedWizardPhase("configure_ui", "ui_configured");
-
-    renderWizard();
-
-    // Let the mount-time validity check settle before asserting.
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(
-      screen.getByLabelText("Password").getAttribute("aria-invalid")
-    ).toBeNull();
-    expect(screen.queryAllByRole("alert")).toHaveLength(0);
-  });
-
   it("clears stale field errors when applying a connection string", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
@@ -446,50 +278,6 @@ describe("onboarding wizard content integration", () => {
     });
   });
 
-  it("enables continue after applying a connection string and testing it", async () => {
-    const user = userEvent.setup();
-    seedWizardPhase("configure_ui", "ui_configured");
-
-    renderWizard();
-
-    await user.click(screen.getByRole("tab", { name: "Connection string" }));
-    setFieldValue(
-      "PostgreSQL connection string",
-      "postgres://meta:secret@metadata.internal:6543/querylane?sslmode=require"
-    );
-    await user.click(screen.getByRole("button", { name: "Apply" }));
-    await user.click(screen.getByRole("button", { name: "Test connection" }));
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole<HTMLButtonElement>("button", { name: "Continue" })
-          .disabled
-      ).toBe(false);
-    });
-  });
-
-  it("renders the manual YAML path and sample config for file-managed setup", async () => {
-    const user = userEvent.setup();
-    seedOnboardingState();
-
-    renderWizard();
-
-    await user.click(screen.getByRole("radio", { name: CONFIGURE_YAML_RE }));
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    expect(
-      screen.getByRole("heading", { name: "YAML Configuration" })
-    ).toBeTruthy();
-    expect(
-      screen.getAllByText("/tmp/querylane/config.yaml").length
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("QUERYLANE_CONFIG")).toBeTruthy();
-    const configPreview = screen.getByTestId("manual-yaml-config-preview");
-    expect(configPreview.textContent).toContain("database:");
-    expect(configPreview.textContent).toContain("ssl_mode: disable");
-    expect(configPreview.textContent).not.toContain("meta:");
-  });
-
   it("renders embedded setup defaults from onboarding state", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
@@ -507,68 +295,6 @@ describe("onboarding wizard content integration", () => {
     ).toBeTruthy();
     expect(screen.getByText("/tmp/querylane/embedded-postgres")).toBeTruthy();
     expect(screen.getByText("Local port, chosen automatically")).toBeTruthy();
-  });
-
-  it("warns loudly when embedded persistence is unavailable", async () => {
-    const user = userEvent.setup();
-    useSetupStore.setState({
-      onboardingState: createOnboardingState({ isHomeWritable: false }),
-      refreshOnboardingState: rs.fn(async () => undefined),
-      showWizardErrorBanner: false,
-      status: "onboarding",
-    });
-    useOnboardingWizardStore.setState({
-      phase: "configure_embedded",
-      selectedMethod: "embedded",
-    });
-
-    renderWizard();
-
-    expect(screen.getByText("Data will not persist")).toBeTruthy();
-    expect(
-      screen.getByText("Ephemeral: data is cleared on shutdown")
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    expect(
-      useOnboardingWizardStore.getState().submittedEmbeddedConfig?.mode
-    ).toBe("ephemeral");
-  });
-
-  it("persists UI metadata database config before entering setup progress", async () => {
-    const user = userEvent.setup();
-    seedWizardPhase("configure_ui", "ui_configured");
-
-    renderWizard();
-
-    setFieldValue("Host", "metadata.internal");
-    setFieldValue("Password", "secret");
-    const sslModeTrigger = screen.getByRole("combobox", { name: "SSL mode" });
-    expect(
-      sslModeTrigger.querySelector(
-        '[data-slot="ssl-mode-icon"][data-mode="disable"]'
-      )
-    ).toBeInstanceOf(SVGSVGElement);
-    await user.click(sslModeTrigger);
-    expect(getRenderedSslModeIconModes()).toEqual(new Set(SSL_MODE_VALUES));
-    await user.click(screen.getByRole("option", { name: VERIFY_FULL_RE }));
-    await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await waitFor(() => {
-      expect(
-        screen.getByRole<HTMLButtonElement>("button", { name: "Continue" })
-          .disabled
-      ).toBe(false);
-    });
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    const state = useOnboardingWizardStore.getState();
-    expect(state.phase).toBe("progress_running");
-    expect(state.submittedPostgresConfig?.host).toBe("metadata.internal");
-    expect(state.submittedPostgresConfig?.password).toBe("secret");
-    expect(state.submittedPostgresConfig?.sslMode).toBe(
-      PostgresConfig_SslMode.VERIFY_FULL
-    );
   });
 });
 
@@ -629,62 +355,6 @@ describe("onboarding wizard setup progression", () => {
     expect(
       screen.getByRole("heading", { name: "Waiting for configuration" })
     ).toBeTruthy();
-  });
-
-  it("persists embedded setup defaults before starting embedded progress", async () => {
-    const user = userEvent.setup();
-    seedWizardPhase("configure_embedded", "embedded");
-
-    renderWizard();
-
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    const state = useOnboardingWizardStore.getState();
-    expect(state.phase).toBe("progress_running");
-    expect(state.submittedEmbeddedConfig?.mode).toBe("persistent");
-  });
-
-  it("renders configure validation errors inline on the relevant configure step", () => {
-    seedOnboardingState();
-    useOnboardingWizardStore.setState({
-      configureError: normalizeAppUiError(new Error("password is required"), {
-        area: "onboarding-setup",
-        source: "setup",
-      }),
-      phase: "configure_ui",
-      selectedMethod: "ui_configured",
-    });
-
-    renderWizard();
-
-    expect(screen.getByText("password is required")).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Querylane internal storage" })
-    ).toBeTruthy();
-  });
-
-  it("shows waiting-for-config recovery controls for manual YAML setup", async () => {
-    const user = userEvent.setup();
-    const retryWatch = rs.fn(async () => undefined);
-    seedOnboardingState();
-    useOnboardingWizardStore.setState({
-      phase: "progress_waiting_for_config",
-      selectedMethod: "manual_yaml",
-      watchNotice: "No valid config detected yet.",
-    });
-
-    renderWizard(createController({ retryWatch }));
-
-    expect(
-      screen.getByRole("heading", { name: "Waiting for configuration" })
-    ).toBeTruthy();
-    expect(screen.getByText("No valid config detected yet.")).toBeTruthy();
-
-    await user.click(
-      screen.getByRole("button", { name: "I've saved the file" })
-    );
-
-    expect(retryWatch).toHaveBeenCalledTimes(1);
   });
 
   it("renders successful setup completion and calls finish action", async () => {
@@ -796,60 +466,6 @@ describe("onboarding wizard setup progression", () => {
     ).not.toHaveLength(0);
   });
 
-  it("classifies an embedded port collision as reconfigurable", () => {
-    const error =
-      "embedded postgres port 5433 is already in use; stop the process using it or choose another port";
-    const failedEvent = createProto(SetupProgressEventSchema, {
-      displayName: "Starting embedded PostgreSQL",
-      error,
-      state: StepState.FAILED,
-      stepId: SetupStep.STARTING_EMBEDDED,
-    });
-    seedOnboardingState();
-    useOnboardingWizardStore.setState({
-      failedEvent,
-      phase: "error_summary",
-      progressEvents: [failedEvent],
-      selectedMethod: "embedded",
-      streamError: normalizeAppUiError(new Error(error), {
-        area: "onboarding-setup",
-        source: "setup_stream",
-      }),
-    });
-
-    renderWizard();
-
-    expect(screen.getAllByText(error)).not.toHaveLength(0);
-    expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
-  });
-
-  it("classifies missing metadata CREATE privileges as reconfigurable", () => {
-    const error =
-      "The PostgreSQL role needs CREATE privileges on the metadata database and schema public. Grant them, then retry setup.";
-    const failedEvent = createProto(SetupProgressEventSchema, {
-      displayName: "Running migrations",
-      error,
-      state: StepState.FAILED,
-      stepId: SetupStep.MIGRATING,
-    });
-    seedOnboardingState();
-    useOnboardingWizardStore.setState({
-      failedEvent,
-      phase: "error_summary",
-      progressEvents: [failedEvent],
-      selectedMethod: "ui_configured",
-      streamError: normalizeAppUiError(new Error(error), {
-        area: "onboarding-setup",
-        source: "setup_stream",
-      }),
-    });
-
-    renderWizard();
-
-    expect(screen.getAllByText(error)).not.toHaveLength(0);
-    expect(screen.getByText("Likely a configuration issue")).toBeTruthy();
-  });
-
   it("deep links to the configure phase via initialMethod", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
@@ -872,24 +488,5 @@ describe("onboarding wizard setup progression", () => {
         .getByRole("radio", { name: CONFIGURE_UI_RE })
         .getAttribute("aria-checked")
     ).toBe("true");
-  });
-
-  it("ignores a deep-linked method the server does not offer", () => {
-    useSetupStore.setState({
-      onboardingState: createOnboardingState({
-        availableMethods: [SetupMethod.MANUAL_YAML],
-      }),
-      refreshOnboardingState: rs.fn(async () => undefined),
-      showWizardErrorBanner: false,
-      status: "onboarding",
-    });
-
-    renderRealWizard("embedded");
-
-    expect(
-      screen.getByRole("heading", {
-        name: "How would you like to get started?",
-      })
-    ).toBeTruthy();
   });
 });

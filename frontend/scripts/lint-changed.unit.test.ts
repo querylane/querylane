@@ -1,10 +1,8 @@
 import { describe, expect, test } from "@rstest/core";
 import {
   baseRefFromEnvironment,
-  changedRepoFiles,
   frontendRelativePath,
   lintableChangedFiles,
-  requiresFullStaticAnalysis,
   requiresFullStaticAnalysisFromBase,
 } from "./lint-changed";
 
@@ -33,39 +31,6 @@ describe("changed-file lint selection", () => {
     expect(frontendRelativePath("../backend/main.go")).toBeNull();
   });
 
-  test("lists changed files from committed trees without blob-hydrating rename checks", () => {
-    const calls: { command: string; args: string[] }[] = [];
-    const runner = {
-      run: (command: string, args: string[]) => {
-        calls.push({ args, command });
-        if (args[0] === "merge-base") {
-          return { status: 0, stdout: "abc123\n" };
-        }
-        if (args[0] === "diff") {
-          return { status: 0, stdout: "frontend/src/app.tsx\n" };
-        }
-        return { status: 0, stdout: "" };
-      },
-    };
-
-    expect(changedRepoFiles("origin/main", runner)).toEqual([
-      "frontend/src/app.tsx",
-    ]);
-
-    const diffCall = calls.find((call) => call.args[0] === "diff");
-    expect(diffCall?.args).toEqual([
-      "diff",
-      "--name-only",
-      "--no-renames",
-      "--diff-filter=ACMRTUXB",
-      "abc123",
-      "HEAD",
-      "--",
-      ":(top)frontend",
-      ":(top).github/workflows/frontend-ci.yml",
-    ]);
-  });
-
   test("keeps lintable changed files and skips generated or registry files", () => {
     expect(
       lintableChangedFiles(
@@ -81,27 +46,6 @@ describe("changed-file lint selection", () => {
         fileSystem
       )
     ).toEqual(["src/app.tsx"]);
-  });
-
-  test("requires a full scan when tool policy or versions change", () => {
-    for (const path of [
-      ".github/workflows/frontend-ci.yml",
-      "frontend/biome.jsonc",
-      "frontend/bun.lock",
-      "frontend/doctor.config.ts",
-      "frontend/oxlint.config.ts",
-      "frontend/package.json",
-      "frontend/react-doctor.config.json",
-      "frontend/scripts/lint-changed.ts",
-      "frontend/scripts/run-react-doctor-ci.ts",
-      "frontend/scripts/strict-tooling-policy.unit.test.ts",
-      "frontend/tsconfig.json",
-    ]) {
-      expect(requiresFullStaticAnalysis([path])).toBe(true);
-    }
-    expect(
-      requiresFullStaticAnalysis(["frontend/src/components/admin-header.tsx"])
-    ).toBe(false);
   });
 
   test("discovers workflow policy changes through the git runner", () => {

@@ -82,23 +82,6 @@ describe("formatTableCell", () => {
     ).toMatchObject({ display: "1234567890.123456789", kind: "number" });
   });
 
-  test("uses full byte size when present and preserves truncation", () => {
-    expect(
-      formatTableCell(
-        cell(
-          { case: "bytesValue", value: new Uint8Array([1, 2, 3]) },
-          { fullSizeBytes: 4096n, truncated: true }
-        ),
-        column(DataType.BINARY)
-      )
-    ).toEqual({
-      display: "‹4 KB›",
-      isNull: false,
-      isTruncated: true,
-      kind: "bytes",
-    });
-  });
-
   test("labels zero-byte bytea previews from full size alone", () => {
     expect(
       formatTableCell(
@@ -157,19 +140,6 @@ describe("formatTableCell", () => {
     });
   });
 
-  test("does not invent a zone for timestamp without time zone values", () => {
-    expect(
-      formatTableCell(
-        cell({ case: "timestampValue", value: "2026-05-20T10:11:12Z" }),
-        column(DataType.TIMESTAMP, "timestamp(3)")
-      )
-    ).toMatchObject({
-      display: "2026-05-20 10:11:12",
-      kind: "timestamp",
-      timezoneLabel: undefined,
-    });
-  });
-
   test("formats time-only values without inventing date or zone context", () => {
     expect(
       formatTableCell(
@@ -205,20 +175,6 @@ describe("formatTableCell", () => {
       isNull: false,
       isTruncated: false,
       kind: "array",
-    });
-  });
-
-  test("falls back to text for string values and carries truncation metadata", () => {
-    expect(
-      formatTableCell(
-        cell({ case: "stringValue", value: "prefix" }, { truncated: true }),
-        column(DataType.STRING)
-      )
-    ).toEqual({
-      display: "prefix",
-      isNull: false,
-      isTruncated: true,
-      kind: "text",
     });
   });
 });

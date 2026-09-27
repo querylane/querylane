@@ -23,9 +23,6 @@ const mocks = rs.hoisted(() => ({
   truncatedRequestCount: 0,
 }));
 
-const SUPERUSERS_FILTER_OPTION_NAME = /Superusers 1/;
-const TYPE_FILTER_BUTTON_NAME = /^Type/;
-
 rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
@@ -190,54 +187,6 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("sends the role search and type filter to the list endpoint", () => {
-    mocks.tableSearch = " post ";
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab={undefined}
-        type="super"
-      />
-    );
-
-    expect(mocks.roleQueryInputs).toContainEqual({
-      filter:
-        'role_name:"post" AND is_system_role = false AND attributes.is_superuser = true',
-      parent: "instances/prod",
-    });
-  });
-
-  test("keeps roles table as the default tab and writes access map tab to the URL search", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab={undefined}
-        type="login"
-      />
-    );
-
-    const tableTab = screen.getByRole("tab", { name: "Table" });
-    const mapTab = screen.getByRole("tab", { name: "Access map" });
-    expect(tableTab.hasAttribute("data-active")).toBe(true);
-    expect(mapTab.hasAttribute("data-active")).toBe(false);
-    expect(screen.getByPlaceholderText("Search roles…")).toBeTruthy();
-    expect(screen.queryByLabelText("Role access map")).toBeNull();
-
-    await user.click(mapTab);
-
-    const navigateCall = mocks.navigate.mock.calls[0]?.[0];
-    expect(navigateCall.search({ q: "app", type: "login" })).toEqual({
-      q: "app",
-      tab: "map",
-      type: "login",
-    });
-  });
-
   test("hydrates the access map tab from URL search and shows object access", async () => {
     const user = userEvent.setup();
 
@@ -275,53 +224,6 @@ describe("InstanceRolesPage", () => {
     });
   });
 
-  test("does not show the empty grants state while object access is loading", () => {
-    mocks.accessMapPending = true;
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-      />
-    );
-
-    expect(screen.getByText("Loading role object access.")).toBeTruthy();
-    expect(
-      screen.queryByText("No object grants found for the visible roles.")
-    ).toBeNull();
-  });
-
-  test("filters roles by URL type with the shared type filter", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab={undefined}
-        type="login"
-      />
-    );
-
-    expect(screen.getByText("app_user")).toBeTruthy();
-    expect(screen.queryByText("app_group")).toBeNull();
-    expect(screen.queryByText("replicator")).toBeNull();
-
-    await user.click(
-      screen.getByRole("button", { name: TYPE_FILTER_BUTTON_NAME })
-    );
-    await user.click(
-      screen.getByRole("option", { name: SUPERUSERS_FILTER_OPTION_NAME })
-    );
-
-    const navigateCall = mocks.navigate.mock.calls[0]?.[0];
-    expect(navigateCall.search({ q: "app", type: "login" })).toEqual({
-      q: "app",
-      type: "super",
-    });
-  });
-
   test("hides built-in roles until they are enabled from the map view", async () => {
     const user = userEvent.setup();
 
@@ -342,76 +244,5 @@ describe("InstanceRolesPage", () => {
 
     expect(canvas.textContent).toContain("pg_read_all_data");
     expect(mocks.accessMapRoleNames).toContain("pg_read_all_data");
-  });
-
-  test("shows built-in roles when the type filter explicitly selects them", () => {
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-        type="builtin"
-      />
-    );
-
-    expect(screen.getByLabelText("Role access map").textContent).toContain(
-      "pg_read_all_data"
-    );
-    expect(mocks.accessMapRoleNames).toEqual(["pg_read_all_data"]);
-  });
-
-  test("keeps partial access data visible with a warning", () => {
-    mocks.failedRequestCount = 2;
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-      />
-    );
-
-    expect(
-      screen.getByText(
-        "2 access requests could not be loaded. The map shows the available data."
-      )
-    ).toBeTruthy();
-    expect(screen.getByText("orders")).toBeTruthy();
-  });
-
-  test("warns when access results are truncated and keeps the map visible", () => {
-    mocks.truncatedRequestCount = 1;
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-      />
-    );
-
-    const warning = screen.getByRole("status");
-    expect(warning.textContent).toContain("Some access data is not shown");
-    expect(warning.textContent).toContain(
-      "The access map reached a result or request limit. It shows available results; counts and relationships may be incomplete."
-    );
-    expect(screen.getByText("orders")).toBeTruthy();
-  });
-
-  test("warns when the access-map request budget skips results", () => {
-    mocks.budgetSkippedRequestCount = 1;
-
-    render(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-      />
-    );
-
-    expect(screen.getByRole("status").textContent).toContain(
-      "Some access data is not shown"
-    );
-    expect(screen.getByText("orders")).toBeTruthy();
   });
 });

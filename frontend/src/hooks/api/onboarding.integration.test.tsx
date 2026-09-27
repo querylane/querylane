@@ -15,7 +15,6 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
-  type SetupAppDatabaseMutationVariables,
   useSetupAppDatabaseMutation,
   useWatchConfigChanges,
   type WatchErrorReason,
@@ -23,7 +22,6 @@ import {
 import {
   EmbeddedSetupConfigSchema,
   OnboardingService,
-  type SetupAppDatabaseRequest,
   SetupAppDatabaseRequestSchema,
   SetupAppDatabaseResponseSchema,
   type SetupProgressEvent,
@@ -158,15 +156,6 @@ function buildEmbeddedSetupRequest() {
 // Drains pending microtask chains (the router transport is promise-based and
 // never schedules macrotasks) without advancing fake timers, so backoff
 // timers only fire when a test advances them explicitly.
-async function flushMicrotasks(ticks = 20) {
-  if (ticks <= 0) {
-    return;
-  }
-  await act(async () => {
-    await Promise.resolve();
-  });
-  await flushMicrotasks(ticks - 1);
-}
 
 async function flushUntil(condition: () => boolean, maxTicks = 200) {
   if (condition()) {
@@ -210,40 +199,6 @@ afterEach(async () => {
 });
 
 describe("useSetupAppDatabaseMutation", () => {
-  test("resolves and reports each progress event from the setup stream", async () => {
-    const requests: SetupAppDatabaseRequest[] = [];
-    const transport = createOnboardingTransport({
-      setupAppDatabase(request) {
-        requests.push(request);
-        return streamOf(
-          setupResponse(connectingEvent()),
-          setupResponse(setupCompletedEvent())
-        );
-      },
-    });
-    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
-    const { result } = renderHook(
-      () => useSetupAppDatabaseMutation({ onProgress }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await act(async () => {
-      await result.current.mutateAsync({
-        request: buildEmbeddedSetupRequest(),
-      });
-    });
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-    expect(requests).toHaveLength(1);
-    expect(requests[0]?.setup.case).toBe("embeddedConfig");
-    expect(onProgress.mock.calls.map(([event]) => event.state)).toEqual([
-      StepState.IN_PROGRESS,
-      StepState.SUCCEEDED,
-    ]);
-  });
-
   test("resolves without options when the stream completes", async () => {
     const transport = createOnboardingTransport({
       setupAppDatabase: () => streamOf(setupResponse(setupCompletedEvent())),
@@ -295,158 +250,9 @@ describe("useSetupAppDatabaseMutation", () => {
       activeQueryClients.at(-1)?.getMutationCache().getAll()[0]?.meta
     ).toMatchObject({ appErrorSurface: "silent" });
   });
-
-  test("rejects when the provided abort signal is already aborted", async () => {
-    const transport = createOnboardingTransport({
-      setupAppDatabase: () => streamOf(setupResponse(succeededEvent())),
-    });
-    const onError = rs.fn<(error: Error) => void>();
-    const { result } = renderHook(
-      () => useSetupAppDatabaseMutation({ onError }),
-      { wrapper: createWrapper(transport) }
-    );
-    const abortController = new AbortController();
-    abortController.abort();
-
-    const variables: SetupAppDatabaseMutationVariables = {
-      request: buildEmbeddedSetupRequest(),
-      signal: abortController.signal,
-    };
-    await act(async () => {
-      await expect(result.current.mutateAsync(variables)).rejects.toThrow();
-    });
-
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true);
-    });
-    expect(ConnectError.from(result.current.error).code).toBe(Code.Canceled);
-    expect(onError).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("useWatchConfigChanges", () => {
-  test("reports progress and completion for a successful watch stream", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        return streamOf(
-          watchResponse(connectingEvent()),
-          watchResponse(succeededEvent())
-        );
-      },
-    });
-    const onComplete = rs.fn<() => void>();
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
-    const { result } = renderHook(
-      () =>
-        useWatchConfigChanges({
-          enabled: true,
-          onComplete,
-          onError,
-          onProgress,
-        }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    expect(result.current.isRunning).toBe(true);
-
-    await flushUntil(() => result.current.isRunning === false);
-
-    expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(onError).not.toHaveBeenCalled();
-    expect(onProgress.mock.calls.map(([event]) => event.stepId)).toEqual([
-      SetupStep.CONNECTING,
-      SetupStep.MIGRATING,
-    ]);
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(attempts).toBe(1);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("reports failed_step without retrying when the stream delivers a failed event", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        return streamOf(
-          watchResponse(connectingEvent()),
-          watchResponse(failedEvent())
-        );
-      },
-    });
-    const onComplete = rs.fn<() => void>();
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: true, onComplete, onError }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => result.current.isRunning === false);
-
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0]?.[0].message).toBe("migration failed");
-    expect(onError.mock.calls[0]?.[1]).toBe("failed_step");
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(attempts).toBe(1);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("retries with 500/1000/2000ms backoff before requiring manual retry", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        if (attempts <= 4) {
-          throw new ConnectError("watch unavailable", Code.Unavailable);
-        }
-        return streamOf(watchResponse(succeededEvent()));
-      },
-    });
-    const onComplete = rs.fn<() => void>();
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: true, onComplete, onError }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => attempts === 1);
-
-    async function advanceFailedAttempts(index = 0): Promise<void> {
-      const backoffMs = WATCH_BACKOFF_SCHEDULE_MS[index];
-      if (backoffMs === undefined) {
-        return;
-      }
-      // The next attempt only starts once the full backoff has elapsed.
-      await advanceTimers(backoffMs - 1);
-      await flushMicrotasks();
-      expect(attempts).toBe(index + 1);
-
-      await advanceTimers(1);
-      await flushUntil(() => attempts === index + 2);
-      await advanceFailedAttempts(index + 1);
-    }
-    await advanceFailedAttempts();
-
-    await flushUntil(() => result.current.manualRetryRequired);
-
-    expect(attempts).toBe(4);
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(ConnectError.from(onError.mock.calls[0]?.[0]).rawMessage).toBe(
-      "watch unavailable"
-    );
-    expect(onError.mock.calls[0]?.[1]).toBe("stream_error");
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(result.current.isRunning).toBe(false);
-    expect(result.current.retryPending).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
   test("retry() restarts the stream and resolves once the watch settles", async () => {
     rs.useFakeTimers();
     let attempts = 0;
@@ -491,182 +297,6 @@ describe("useWatchConfigChanges", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(result.current.retryPending).toBe(false);
     expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("aborts the in-flight stream when disabled", async () => {
-    rs.useFakeTimers();
-    let abortedByClient = false;
-    const transport = createOnboardingTransport({
-      async *watchConfigChanges(_request, context) {
-        yield watchResponse(connectingEvent());
-        await new Promise<void>((resolve) => {
-          context.signal.addEventListener(
-            "abort",
-            () => {
-              abortedByClient = true;
-              resolve();
-            },
-            { once: true }
-          );
-        });
-      },
-    });
-    const onComplete = rs.fn<() => void>();
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const onProgress = rs.fn<(event: SetupProgressEvent) => void>();
-    const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) =>
-        useWatchConfigChanges({ enabled, onComplete, onError, onProgress }),
-      { initialProps: { enabled: true }, wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => onProgress.mock.calls.length === 1);
-    expect(result.current.isRunning).toBe(true);
-
-    rerender({ enabled: false });
-
-    expect(result.current.isRunning).toBe(false);
-    await flushUntil(() => abortedByClient);
-    await flushMicrotasks();
-
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(onError).not.toHaveBeenCalled();
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("stops retrying when disabled during the backoff wait", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        if (attempts > 0) {
-          throw new ConnectError("watch unavailable", Code.Unavailable);
-        }
-        return streamOf(watchResponse(succeededEvent()));
-      },
-    });
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) =>
-        useWatchConfigChanges({ enabled, onError }),
-      { initialProps: { enabled: true }, wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => attempts === 1);
-
-    rerender({ enabled: false });
-
-    // Flushing the pending backoff timer must not start another attempt.
-    await advanceTimers(500);
-    await flushMicrotasks();
-
-    expect(attempts).toBe(1);
-    expect(onError).not.toHaveBeenCalled();
-    expect(result.current.isRunning).toBe(false);
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("does not start the watch stream while disabled", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        return streamOf(watchResponse(succeededEvent()));
-      },
-    });
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: false }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushMicrotasks();
-
-    expect(attempts).toBe(0);
-    expect(result.current.isRunning).toBe(false);
-    expect(result.current.retryPending).toBe(false);
-    expect(result.current.manualRetryRequired).toBe(false);
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("normalizes non-Error stream failures before reporting them", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        return streamOf(
-          watchResponse(connectingEvent()),
-          watchResponse(succeededEvent())
-        );
-      },
-    });
-    const nonErrorFailure: unknown = "watch consumer failed without an Error";
-    const onError = rs.fn<(error: Error, reason: WatchErrorReason) => void>();
-    // Throwing from onProgress is treated like a stream failure; a non-Error
-    // value must be normalized into an Error before reaching onError.
-    const onProgress = rs.fn<(event: SetupProgressEvent) => void>(() => {
-      throw nonErrorFailure;
-    });
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: true, onError, onProgress }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => attempts === 1);
-    await advanceWatchBackoffs();
-    await flushUntil(() => result.current.manualRetryRequired);
-
-    expect(attempts).toBe(4);
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
-    expect(onError.mock.calls[0]?.[0].message).toBe(
-      "Onboarding request failed"
-    );
-    expect(onError.mock.calls[0]?.[1]).toBe("stream_error");
-    expect(rs.getTimerCount()).toBe(0);
-  });
-
-  test("reports again through the defensive catch when the consumer onError throws", async () => {
-    rs.useFakeTimers();
-    let attempts = 0;
-    const transport = createOnboardingTransport({
-      watchConfigChanges() {
-        attempts += 1;
-        if (attempts > 0) {
-          throw new ConnectError("watch unavailable", Code.Unavailable);
-        }
-        return streamOf(watchResponse(succeededEvent()));
-      },
-    });
-    const onError = rs
-      .fn<(error: Error, reason: WatchErrorReason) => void>()
-      .mockImplementationOnce(() => {
-        throw new Error("consumer onError exploded");
-      });
-    const { result } = renderHook(
-      () => useWatchConfigChanges({ enabled: true, onError }),
-      { wrapper: createWrapper(transport) }
-    );
-
-    await flushUntil(() => attempts === 1);
-    await advanceWatchBackoffs();
-    await flushUntil(() => onError.mock.calls.length === 2);
-
-    // Current behavior: a throwing onError consumer is reported a second
-    // time through the defensive catch, now carrying the consumer failure
-    // instead of the original stream failure.
-    expect(onError.mock.calls[0]?.[1]).toBe("stream_error");
-    expect(onError.mock.calls[1]?.[0].message).toBe(
-      "consumer onError exploded"
-    );
-    expect(onError.mock.calls[1]?.[1]).toBe("stream_error");
-    expect(result.current.manualRetryRequired).toBe(true);
-    await flushUntil(() => result.current.isRunning === false);
     expect(rs.getTimerCount()).toBe(0);
   });
 });

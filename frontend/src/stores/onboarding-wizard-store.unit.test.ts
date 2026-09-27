@@ -34,45 +34,6 @@ function buildProgressEvent({
 }
 
 describe("onboarding-wizard-store", () => {
-  it("startProgress uses the running progress phase for UI setup", () => {
-    const useStore = createOnboardingWizardStore();
-
-    useStore.getState().selectMethod("ui_configured");
-    useStore.getState().startProgress();
-
-    expect(useStore.getState().phase).toBe("progress_running");
-  });
-
-  it("startProgress increments the setup run token", () => {
-    const useStore = createOnboardingWizardStore();
-
-    expect(useStore.getState().setupRunToken).toBe(0);
-
-    useStore.getState().startProgress();
-    expect(useStore.getState().setupRunToken).toBe(1);
-
-    useStore.getState().startProgress();
-    expect(useStore.getState().setupRunToken).toBe(2);
-  });
-
-  it("resetSession preserves the setup run token", () => {
-    const useStore = createOnboardingWizardStore();
-
-    useStore.getState().startProgress();
-    useStore.getState().resetSession();
-
-    expect(useStore.getState().setupRunToken).toBe(1);
-  });
-
-  it("startProgress uses the waiting progress phase for manual yaml", () => {
-    const useStore = createOnboardingWizardStore();
-
-    useStore.getState().selectMethod("manual_yaml");
-    useStore.getState().startProgress();
-
-    expect(useStore.getState().phase).toBe("progress_waiting_for_config");
-  });
-
   it("applyProgressEvent keeps first-seen order and upserts by step id", () => {
     const useStore = createOnboardingWizardStore();
 

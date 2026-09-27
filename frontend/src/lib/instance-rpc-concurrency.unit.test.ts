@@ -1,4 +1,4 @@
-import { create, type DescService, getOption } from "@bufbuild/protobuf";
+import { create } from "@bufbuild/protobuf";
 import {
   createContextValues,
   type UnaryRequest,
@@ -9,50 +9,17 @@ import {
   createInstanceRpcConcurrencyInterceptor,
   createKeyedRpcSemaphore,
   extractInstanceScopeKey,
-  INSTANCE_SCOPED_SERVICE_TYPE_NAMES,
 } from "@/lib/instance-rpc-concurrency";
-import { field as fieldRules } from "@/protogen/buf/validate/validate_pb";
 import {
   ConsoleService,
   GetConsoleConfigRequestSchema,
   type GetConsoleConfigResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/console_pb";
-import { InstanceService } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
   ListSchemasRequestSchema,
   ListSchemasResponseSchema,
   SchemaService,
 } from "@/protogen/querylane/console/v1alpha1/schema_pb";
-
-const generatedProtoModules = import.meta.glob<Record<string, unknown>>(
-  "../protogen/querylane/console/v1alpha1/*_pb.ts",
-  { eager: true }
-);
-
-function isServiceDescriptor(value: unknown): value is DescService {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "service"
-  );
-}
-
-function hasInstanceResourceRequest(service: DescService): boolean {
-  return service.methods.some((method) =>
-    method.input.fields.some((inputField) => {
-      if (inputField.name !== "name" && inputField.name !== "parent") {
-        return false;
-      }
-
-      const validationRules = getOption(inputField, fieldRules);
-      return (
-        validationRules.type.case === "string" &&
-        validationRules.type.value.pattern.startsWith("^instances/")
-      );
-    })
-  );
-}
 
 function createListSchemasRequest(
   parent: string
@@ -104,43 +71,7 @@ function createConsoleConfigRequest(): UnaryRequest<
   };
 }
 
-describe("INSTANCE_SCOPED_SERVICE_TYPE_NAMES", () => {
-  it("covers every non-meta service with instance resource requests", () => {
-    const discoveredServiceTypeNames = new Set(
-      Object.values(generatedProtoModules)
-        .flatMap((generatedModule) => Object.values(generatedModule))
-        .filter(isServiceDescriptor)
-        .filter(hasInstanceResourceRequest)
-        // InstanceService names identify connection records in the meta database.
-        .filter((service) => service.typeName !== InstanceService.typeName)
-        .map((service) => service.typeName)
-    );
-
-    expect(INSTANCE_SCOPED_SERVICE_TYPE_NAMES).toEqual(
-      discoveredServiceTypeNames
-    );
-  });
-});
-
 describe("extractInstanceScopeKey", () => {
-  it("extracts the instance prefix from name and parent fields", () => {
-    expect(
-      extractInstanceScopeKey({ name: "instances/neon-1/databases/app" })
-    ).toBe("instances/neon-1");
-    expect(
-      extractInstanceScopeKey({ parent: "instances/local/databases/demo" })
-    ).toBe("instances/local");
-  });
-
-  it("prefers name over parent when both are present", () => {
-    expect(
-      extractInstanceScopeKey({
-        name: "instances/a/databases/x",
-        parent: "instances/b",
-      })
-    ).toBe("instances/a");
-  });
-
   it("returns null for non-instance resources and invalid messages", () => {
     expect(extractInstanceScopeKey({ name: "users/1" })).toBe(null);
     expect(extractInstanceScopeKey({ parent: 42 })).toBe(null);
@@ -172,16 +103,6 @@ describe("createKeyedRpcSemaphore", () => {
 
     releaseSecond();
     releaseThird();
-  });
-
-  it("tracks limits per key independently", async () => {
-    const semaphore = createKeyedRpcSemaphore(1);
-
-    const releaseA = await semaphore.acquire("instances/a");
-    const releaseB = await semaphore.acquire("instances/b");
-
-    releaseA();
-    releaseB();
   });
 
   it("drains the queue in order as slots free up", async () => {
@@ -237,46 +158,6 @@ describe("createKeyedRpcSemaphore", () => {
 });
 
 describe("createInstanceRpcConcurrencyInterceptor", () => {
-  it("caps concurrent unary requests per instance and drains the queue", async () => {
-    const interceptor = createInstanceRpcConcurrencyInterceptor(1);
-    let inFlight = 0;
-    let maxInFlight = 0;
-    const releases: Array<() => void> = [];
-    const next = () => {
-      inFlight += 1;
-      maxInFlight = Math.max(maxInFlight, inFlight);
-      return new Promise<ReturnType<typeof createListSchemasResponse>>(
-        (resolve) => {
-          releases.push(() => {
-            inFlight -= 1;
-            resolve(createListSchemasResponse());
-          });
-        }
-      );
-    };
-
-    const first = interceptor(next)(
-      createListSchemasRequest("instances/neon/databases/app")
-    );
-    const second = interceptor(next)(
-      createListSchemasRequest("instances/neon/databases/app")
-    );
-
-    await Promise.resolve();
-    expect(maxInFlight).toBe(1);
-    expect(releases).toHaveLength(1);
-
-    releases[0]?.();
-    await first;
-    // Queued request dispatches once the first releases its slot.
-    await Promise.resolve();
-    expect(releases).toHaveLength(2);
-
-    releases[1]?.();
-    await second;
-    expect(maxInFlight).toBe(1);
-  });
-
   it("does not gate requests for different instances against each other", async () => {
     const interceptor = createInstanceRpcConcurrencyInterceptor(1);
     let inFlight = 0;

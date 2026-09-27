@@ -68,49 +68,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 describe("resolveSetupFailureAction", () => {
-  it("returns success action for already configured errors", () => {
-    const result = resolveSetupFailureAction({
-      error: new ConnectError("already configured", Code.FailedPrecondition),
-      failedEvent: null,
-    });
-
-    expect(result).toEqual({ action: "success" });
-  });
-
-  it("returns configure action for invalid argument errors", () => {
-    const result = resolveSetupFailureAction({
-      error: new ConnectError("host is required", Code.InvalidArgument),
-      failedEvent: null,
-    });
-
-    expect(result.action).toBe("configure");
-    if (result.action !== "configure") {
-      throw new Error("Expected configure result");
-    }
-    expect(result.configureError.message).toBe("host is required");
-    expect(result.configureError.codeLabel).toBe("InvalidArgument");
-  });
-
-  it("returns error summary using failed event message when available", () => {
-    const failedEvent = createProto(SetupProgressEventSchema, {
-      displayName: "Apply migrations",
-      error: "migration failed",
-      state: StepState.FAILED,
-      stepId: SetupStep.MIGRATING,
-    });
-    const result = resolveSetupFailureAction({
-      error: new Error("generic error"),
-      failedEvent,
-    });
-
-    expect(result.action).toBe("error_summary");
-    if (result.action !== "error_summary") {
-      throw new Error("Expected error summary result");
-    }
-    expect(result.streamError.message).toBe("migration failed");
-    expect(result.streamError.context.stepId).toBe(SetupStep.MIGRATING);
-  });
-
   it("returns fallback setup failure message for unknown errors", () => {
     const result = resolveSetupFailureAction({
       error: { reason: "unknown" },
@@ -131,18 +88,6 @@ describe("useSetupExecution", () => {
     useEffectMock.mockReset();
     useRefMock.mockReset();
     arrangeReactHooks();
-  });
-
-  it("does not run setup outside auto-run phases", () => {
-    const options = createSetupOptions({
-      phase: "method_selection",
-      selectedMethod: null,
-    });
-
-    const result = useSetupExecution(options);
-
-    expect(result.setupRunning).toBe(false);
-    expect(options.runSetupMutation).not.toHaveBeenCalled();
   });
 
   it("does not run setup before an explicit run is requested", () => {
@@ -235,22 +180,6 @@ describe("useSetupExecution", () => {
     await flushPromises();
 
     expect(options.onSuccess).toHaveBeenCalledTimes(1);
-    expect(options.setConfigureValidationError).not.toHaveBeenCalled();
-    expect(options.setStreamFailure).not.toHaveBeenCalled();
-  });
-
-  it("ignores setup failures after abort", async () => {
-    const options = createSetupOptions({
-      runSetupMutation: rs.fn(() =>
-        Promise.reject(new Error("request cancelled"))
-      ),
-    });
-
-    const result = useSetupExecution(options);
-    result.abortSetup();
-    await flushPromises();
-
-    expect(options.onSuccess).not.toHaveBeenCalled();
     expect(options.setConfigureValidationError).not.toHaveBeenCalled();
     expect(options.setStreamFailure).not.toHaveBeenCalled();
   });

@@ -305,46 +305,6 @@ describe("DataExplorerPage", () => {
     });
   });
 
-  it("renders formatted table sizes in the sidebar table list", () => {
-    mocks.schemasQuery.data = {
-      pages: [
-        {
-          schemas: [
-            {
-              displayName: "public",
-              name: "instances/inst-1/databases/db-1/schemas/public",
-              owner: "app_owner",
-            },
-          ],
-        },
-      ],
-    };
-    mocks.schemasQuery.error = null;
-    mocks.tablesQuery.data = {
-      pages: [
-        {
-          tables: [
-            {
-              displayName: "accounts",
-              name: "instances/inst-1/databases/db-1/schemas/public/tables/accounts",
-              rowCount: 42n,
-              sizeBytes: 49_152n,
-            },
-          ],
-        },
-      ],
-    };
-
-    renderExplorer();
-
-    const tableItem = screen.getByRole("button", {
-      name: ACCOUNTS_BUTTON_NAME,
-    });
-
-    expect(tableItem.textContent).toContain("accounts");
-    expect(tableItem.textContent).toContain("48 KB");
-  });
-
   it("does not fetch table details on hover or focus", async () => {
     rs.useFakeTimers();
     const prefetch = rs

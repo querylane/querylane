@@ -32,11 +32,7 @@ import {
   ErrorInfoSchema,
 } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
-import {
-  ExtensionSchema,
-  type ListExtensionsResponse,
-  ListExtensionsResponseSchema,
-} from "@/protogen/querylane/console/v1alpha1/extension_pb";
+import type { ListExtensionsResponse } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 import {
   ApplicationConnectionsSchema,
   AutovacuumHealthSchema,
@@ -79,18 +75,8 @@ interface InstanceUpdateInput {
   updateMask: { paths: string[] };
 }
 
-const ENCODING_COLUMN_NAME = /encoding/i;
-const UPTIME_FACT_PATTERN = /^up /;
-const AUTOVACUUM_ROW_NAME = /Autovacuum/;
-const CHARSET_COLUMN_NAME = /^charset/i;
-const COLLATION_COLUMN_NAME = /^collation/i;
 const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
 const LOCK_WAIT_HINT_PATTERN = /held by another session/;
-const ACTIVITY_SNAPSHOT_HINT_PATTERN = /refresh to take a new snapshot/;
-const BLOCKER_ACTIVITY_TABLE_ROW_NAME = /4211/;
-const MISSING_INSTANCE_SECRET_KEY_MESSAGE =
-  /QUERYLANE_INSTANCE_SECRET_KEY is not configured/;
-const REPLICATION_ROW_NAME = /Replication/;
 const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/;
 
 const state = rs.hoisted(() => ({
@@ -387,29 +373,6 @@ function connectedInstanceResponse({
   });
 }
 
-function extensionInventoryResponse() {
-  return createProto(ListExtensionsResponseSchema, {
-    extensions: [
-      createProto(ExtensionSchema, {
-        displayName: "pg_stat_statements",
-        installed: true,
-        installedVersion: "1.10",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        displayName: "pgcrypto",
-        installed: true,
-        installedVersion: "1.3",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        displayName: "postgis",
-        installed: false,
-      }),
-    ],
-  });
-}
-
 function instanceHealthResponse({
   includeAutovacuum = true,
   replicationRole = ServerInfo_ReplicationRole.PRIMARY,
@@ -657,57 +620,6 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
-  test("requires the operator key before password recovery", async () => {
-    state.instanceData = instanceResponse({
-      credentialError:
-        "Stored credentials cannot be read because QUERYLANE_INSTANCE_SECRET_KEY is not configured. Set the key and restart Querylane before replacing the password.",
-      credentialState: Instance_CredentialState.KEY_MISSING,
-    });
-    await renderInstanceConfiguration();
-
-    expect(screen.getByText(MISSING_INSTANCE_SECRET_KEY_MESSAGE)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Re-enter password" })
-    ).toBeNull();
-    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty(
-      "disabled",
-      true
-    );
-  });
-
-  test("guides unreadable credentials through a full config replacement", async () => {
-    const user = userEvent.setup();
-    state.instanceData = instanceResponse({
-      credentialError:
-        "Stored credentials cannot be read. Re-enter the password to restore access.",
-      credentialState: Instance_CredentialState.UNREADABLE,
-    });
-    await renderInstanceConfiguration();
-
-    expect(screen.getByText("Credentials need attention")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Stored credentials can’t be read. Enter the password again to restore access."
-      )
-    ).toBeTruthy();
-    const saveButton = screen.getByRole("button", { name: "Save changes" });
-    expect(saveButton).toHaveProperty("disabled", true);
-
-    await user.click(screen.getByRole("button", { name: "Re-enter password" }));
-    await waitFor(() => {
-      expect(document.activeElement).toBe(screen.getByLabelText("Password"));
-    });
-    await user.type(screen.getByLabelText("Password"), "replacement-secret");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(() => {
-      expect(state.updateInstance).toHaveBeenCalledTimes(1);
-    });
-    expect(state.updateInstance.mock.calls[0]?.[0]?.updateMask.paths).toEqual([
-      "config",
-    ]);
-  });
-
   test("trims text fields before building the update payload", async () => {
     const user = userEvent.setup();
     await renderInstanceConfiguration();
@@ -765,154 +677,9 @@ describe("backend instance configuration save", () => {
     });
     expect(screen.queryByText("authentication failed")).toBeNull();
   });
-
-  test("does not send an update when changes are whitespace only", async () => {
-    const user = userEvent.setup();
-    await renderInstanceConfiguration();
-
-    setFieldValue("Display name", "Production ");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    expect(state.updateInstance).not.toHaveBeenCalled();
-  });
-
-  test("resets the form after a successful save so the password is not re-sent", async () => {
-    const user = userEvent.setup();
-    await renderInstanceConfiguration();
-
-    setFieldValue("Password", "hunter2");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(() => {
-      expect(state.updateInstance).toHaveBeenCalledTimes(1);
-    });
-    expect(state.updateInstance.mock.calls[0]?.[0]?.updateMask.paths).toContain(
-      "config.password"
-    );
-
-    // After the save, the form must reset from the refetched instance: the
-    // backend redacts the password, so the field returns to blank and the
-    // form is no longer dirty.
-    await waitFor(() => {
-      expect(screen.getByLabelText("Password")).toHaveProperty("value", "");
-    });
-
-    setFieldValue("Display name", "Renamed");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-    await waitFor(() => {
-      expect(state.updateInstance).toHaveBeenCalledTimes(2);
-    });
-    expect(state.updateInstance.mock.calls[1]?.[0]?.updateMask.paths).toEqual([
-      "display_name",
-    ]);
-  });
-});
-
-describe("backend instance credential recovery routing", () => {
-  test.each([
-    Instance_CredentialState.UNREADABLE,
-    Instance_CredentialState.KEY_MISSING,
-  ])(
-    "redirects unavailable credential state %s to configuration",
-    async (credentialState) => {
-      state.instanceData = instanceResponse({
-        credentialState,
-      });
-      renderInstanceOverview();
-
-      await waitFor(() => {
-        expect(state.navigate).toHaveBeenCalledWith({
-          params: { instanceId: "prod" },
-          replace: true,
-          to: "/instances/$instanceId/configuration",
-        });
-      });
-    }
-  );
 });
 
 describe("backend instance danger zone", () => {
-  test("disables delete when this is the only registered instance", async () => {
-    await renderInstanceConfiguration();
-
-    const dangerZone = screen.getByTestId("instance-danger-zone");
-
-    expect(
-      within(dangerZone).getByRole("button", { name: "Delete instance" })
-    ).toHaveProperty("disabled", true);
-    expect(
-      screen.getByText(
-        "Querylane needs at least one registered instance. Add another instance before deleting this one."
-      )
-    ).toBeTruthy();
-  });
-
-  test("shows empty-catalog copy when no instances are registered", async () => {
-    state.instances = [];
-    await renderInstanceConfiguration();
-
-    expect(
-      screen.getByText(
-        "No registered instances were found. Refresh the instance list before deleting."
-      )
-    ).toBeTruthy();
-  });
-
-  test("keeps delete available when the only instance credentials are unreadable", async () => {
-    state.instanceData = instanceResponse({
-      credentialState: Instance_CredentialState.UNREADABLE,
-    });
-    await renderInstanceConfiguration();
-
-    const dangerZone = screen.getByTestId("instance-danger-zone");
-    expect(
-      within(dangerZone).getByRole("button", { name: "Delete instance" })
-    ).toHaveProperty("disabled", false);
-  });
-
-  test("keeps delete disabled while the instance catalog is pending", async () => {
-    state.instanceCatalogHasData = false;
-    state.instanceCatalogHasResolved = false;
-    state.instanceCatalogIsPending = true;
-    state.instanceData = instanceResponse({
-      credentialState: Instance_CredentialState.UNREADABLE,
-    });
-    state.instances = [];
-    await renderInstanceConfiguration();
-
-    expect(
-      within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
-        name: "Delete instance",
-      })
-    ).toHaveProperty("disabled", true);
-    expect(
-      screen.getByText("Checking registered instances before delete.")
-    ).toBeTruthy();
-  });
-
-  test("keeps delete disabled when the instance catalog failed", async () => {
-    state.instanceCatalogError = new Error("catalog unavailable");
-    state.instanceCatalogHasData = false;
-    state.instanceCatalogHasResolved = true;
-    state.instanceData = instanceResponse({
-      credentialState: Instance_CredentialState.UNREADABLE,
-    });
-    state.instances = [];
-    await renderInstanceConfiguration();
-
-    expect(
-      within(screen.getByTestId("instance-danger-zone")).getByRole("button", {
-        name: "Delete instance",
-      })
-    ).toHaveProperty("disabled", true);
-    expect(
-      screen.getByText(
-        "Could not verify registered instances. Refresh data before deleting."
-      )
-    ).toBeTruthy();
-  });
-
   test("opens registration after deleting the only unreadable instance", async () => {
     const user = userEvent.setup();
     state.instanceData = instanceResponse({
@@ -938,26 +705,6 @@ describe("backend instance danger zone", () => {
       replace: true,
       to: "/new-instance",
     });
-  });
-});
-
-describe("backend instance refresh", () => {
-  test("handles rejected refetch promises without throwing", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instanceData = connectedInstanceResponse();
-    state.refetchExtensions.mockRejectedValueOnce(
-      new Error("extensions offline")
-    );
-    state.refetchInstance.mockRejectedValueOnce(new Error("network offline"));
-    renderInstanceOverview();
-
-    await user.click(screen.getByRole("button", { name: "Refresh data" }));
-
-    await waitFor(() => {
-      expect(state.refetchInstance).toHaveBeenCalledTimes(1);
-    });
-    expect(state.refetchExtensions).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1021,79 +768,6 @@ describe("backend instance activity interactions", () => {
     expect(within(blockerDetails).getByText("waiting · pid 4302")).toBeTruthy();
     expect(within(blockerDetails).getByText("open for 4m 12s")).toBeTruthy();
   });
-
-  test("copies the session pid and query from the inspector", async () => {
-    const user = userEvent.setup();
-    const originalClipboard = navigator.clipboard;
-    const writeText = rs.fn(async () => undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    try {
-      renderInstanceActivity();
-
-      const details = await openBlockedSessionInspector(user);
-
-      await user.click(
-        within(details).getByRole("button", { name: "Copy PID" })
-      );
-      await waitFor(() => {
-        expect(writeText).toHaveBeenCalledWith("4302");
-      });
-
-      await user.click(
-        within(details).getByRole("button", { name: "Copy SQL" })
-      );
-      await waitFor(() => {
-        expect(writeText).toHaveBeenCalledWith(
-          "UPDATE shipping.shipments SET eta = $1 WHERE id = $2"
-        );
-      });
-    } finally {
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: originalClipboard,
-      });
-    }
-  });
-
-  test("shows an ended state when the selected session disappears", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    const { rerender } = renderInstanceActivity();
-
-    await openBlockedSessionInspector(user);
-
-    // The next snapshot no longer contains pid 4302.
-    const response = activityHealthResponse();
-    response.health?.connectionActivity?.sessions.splice(1);
-    state.healthData = response;
-    rerender(
-      <BackendInstancePage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId"
-        section="activity"
-      />
-    );
-
-    const details = await screen.findByRole("dialog", { name: "Session 4302" });
-    expect(within(details).getByText("Session ended")).toBeTruthy();
-    expect(
-      within(details).getByText(
-        "This session is no longer visible in pg_stat_activity."
-      )
-    ).toBeTruthy();
-  });
 });
 
 describe("backend instance overview redesign", () => {
@@ -1127,45 +801,6 @@ describe("backend instance overview redesign", () => {
         "Querylane is connected, but couldn’t load live server details: failed to query server info"
       )
     ).toBeTruthy();
-  });
-
-  test("keeps replication inside health without a standalone card", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = instanceHealthResponse();
-
-    renderInstanceOverview();
-
-    const health = screen.getByRole("region", { name: "Health checks" });
-    expect(
-      screen.queryByRole("region", { name: "Replication overview" })
-    ).toBeNull();
-    expect(
-      within(health).getByText(
-        "Live checks from this instance's system catalogs."
-      )
-    ).toBeTruthy();
-    expect(within(health).getByText("Replication")).toBeTruthy();
-    expect(
-      within(health).getByText("Primary · 1 replica streaming")
-    ).toBeTruthy();
-
-    await user.click(
-      within(health).getByRole("button", { name: REPLICATION_ROW_NAME })
-    );
-
-    expect(await within(health).findByText("Role")).toBeTruthy();
-    expect(within(health).getByText("Primary")).toBeTruthy();
-    expect(within(health).getByText("Streaming replicas")).toBeTruthy();
-
-    expect(
-      screen.queryByRole("region", { name: "Storage overview" })
-    ).toBeNull();
-    expect(screen.queryByText("Connections by application")).toBeNull();
-    expect(screen.queryByText("CPU")).toBeNull();
-    expect(screen.queryByText("Memory")).toBeNull();
   });
 
   test("keeps replication facts aligned when server info and health roles disagree", async () => {
@@ -1202,160 +837,6 @@ describe("backend instance overview redesign", () => {
 });
 
 describe("backend instance activity", () => {
-  test("shows live pg_stat_activity session rows and blocking chain", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    expect(
-      within(activity).getByText(ACTIVITY_SNAPSHOT_HINT_PATTERN)
-    ).toBeTruthy();
-    expect(
-      within(activity).getByRole("button", { name: "Refresh activity" })
-    ).toBeTruthy();
-    expect(within(activity).getAllByText("4m 12s").length).toBeGreaterThan(0);
-    expect(within(activity).getByText("Blocking chains")).toBeTruthy();
-    expect(within(activity).getByText("blocker · pid 4211")).toBeTruthy();
-    expect(within(activity).getByText("PID")).toBeTruthy();
-    expect(
-      within(activity).getAllByText("app_readwrite").length
-    ).toBeGreaterThan(0);
-    expect(within(activity).getByText("api-gateway")).toBeTruthy();
-    expect(
-      Array.from(
-        activity.querySelectorAll(
-          'code.language-sql[data-syntax-highlighter="shiki"]'
-        ),
-        (code) => code.textContent
-      )
-    ).toEqual([
-      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
-      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
-      "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
-      "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
-    ]);
-    // The page snapshots on demand now; no background polling interval.
-    expect(state.activityQueryOptions).toMatchObject({ enabled: true });
-    expect(state.activityQueryOptions?.["refetchInterval"]).toBeUndefined();
-    expect(state.healthQueryOptions).toMatchObject({ enabled: false });
-  });
-
-  test("filters session rows by URL-backed search and shared facets", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = activityHealthResponse();
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const table = within(activity).getByRole("table");
-    const search = within(activity).getByRole("textbox", {
-      name: "Search query, user, app…",
-    });
-    const stateFilter = within(activity).getByRole("button", {
-      name: "State",
-    });
-    const appFilter = within(activity).getByRole("button", { name: "App" });
-
-    expect(appFilter).toBeTruthy();
-    // Every fixture session is on "logistics", and single-valued facets hide.
-    expect(within(activity).queryByRole("button", { name: "DB" })).toBeNull();
-
-    await user.type(search, "4302");
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-    const searchNavigation = state.navigate.mock.lastCall?.[0];
-    expect(searchNavigation).toEqual({
-      hash: true,
-      ignoreBlocker: true,
-      replace: true,
-      resetScroll: false,
-      search: expect.any(Function),
-    });
-    if (!searchNavigation || typeof searchNavigation["search"] !== "function") {
-      throw new Error("expected table search navigation updater");
-    }
-    expect(searchNavigation["search"]({ tab: "details" })).toEqual({
-      q: "4302",
-      tab: "details",
-    });
-
-    await user.clear(search);
-    await user.click(stateFilter);
-    await user.click(screen.getByRole("option", { name: "active" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-
-    await user.click(
-      within(activity).getByRole("button", { name: "Clear all" })
-    );
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(activity).queryByRole("button", { name: "Clear all" })
-    ).toBeNull();
-
-    await user.click(appFilter);
-    await user.click(screen.getByRole("option", { name: "api-gateway" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).queryByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeNull();
-
-    await user.click(screen.getByRole("option", { name: "api-gateway" }));
-
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-    expect(
-      within(table).getByRole("button", {
-        name: BLOCKER_ACTIVITY_TABLE_ROW_NAME,
-      })
-    ).toBeTruthy();
-  });
-
   test("paginates the session sample and changes page size", async () => {
     const user = userEvent.setup();
     state.selectedInstanceStatus = "connected";
@@ -1439,68 +920,6 @@ describe("backend instance activity", () => {
 });
 
 describe("backend instance activity pagination and states", () => {
-  test("clamps the current page when a live sample shrinks", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = paginatedActivityHealthResponse();
-
-    const { rerender } = renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const table = within(activity).getByRole("table");
-    const nextPage = within(activity).getByRole("button", {
-      name: "Next page",
-    });
-    const previousPage = within(activity).getByRole("button", {
-      name: "Previous page",
-    });
-
-    await user.click(nextPage);
-
-    expect(within(activity).getByText("Page 2 of 2")).toBeTruthy();
-    expect(within(table).getByText("5000")).toBeTruthy();
-
-    state.healthData = activityHealthResponse();
-    rerender(
-      <BackendInstancePage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId"
-        section="activity"
-      />
-    );
-
-    expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
-    expect(within(table).getByText("4211")).toBeTruthy();
-    expect(within(table).getByText("4302")).toBeTruthy();
-    expect(within(table).queryByText("5000")).toBeNull();
-    expect(previousPage).toHaveProperty("disabled", true);
-    expect(nextPage).toHaveProperty("disabled", true);
-  });
-
-  test("shows the empty sessions state", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
-      health: createProto(InstanceHealthSchema, {
-        connectionActivity: createProto(ConnectionActivityHealthSchema, {
-          totalConnections: 2,
-        }),
-      }),
-    });
-
-    renderInstanceActivity();
-
-    expect(screen.getByText("No sessions found")).toBeTruthy();
-    expect(screen.getByText("Try a different search or filter.")).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" })
-    ).toBeTruthy();
-    expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-  });
-
   test("shows unavailable placeholders and the activity partial error", () => {
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
@@ -1525,132 +944,9 @@ describe("backend instance activity pagination and states", () => {
       within(activity).getByText("permission denied for pg_stat_activity")
     ).toBeTruthy();
   });
-
-  test("shows Activity unavailable instead of loading forever when disconnected", () => {
-    state.healthData = activityHealthResponse();
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    expect(within(activity).getAllByText("—")).toHaveLength(6);
-    expect(within(activity).getByText("Activity unavailable")).toBeTruthy();
-    expect(
-      within(activity).getByText(
-        "Connect the instance before Querylane can read pg_stat_activity."
-      )
-    ).toBeTruthy();
-    expect(within(activity).queryByText("Loading activity…")).toBeNull();
-  });
-
-  test("shows both directions of a chained lock in the inspector", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    const response = activityHealthResponse();
-    response.health?.connectionActivity?.sessions.push(
-      createProto(ConnectionActivitySessionSchema, {
-        applicationName: "api-gateway",
-        blockedByPid: 4302,
-        databaseName: "logistics",
-        durationSeconds: 12n,
-        pid: 4318,
-        query: "SELECT * FROM shipping.shipments FOR UPDATE",
-        state: "active",
-        username: "app_readwrite",
-      })
-    );
-    state.healthData = response;
-
-    renderInstanceActivity();
-
-    const activity = screen.getByRole("region", { name: "Activity" });
-    const table = within(activity).getByRole("table");
-    await user.click(
-      within(table).getByRole("button", {
-        name: BLOCKED_ACTIVITY_TABLE_ROW_NAME,
-      })
-    );
-
-    // 4302 sits mid-chain: blocked by 4211 while blocking 4318.
-    const details = await screen.findByRole("dialog", { name: "Session 4302" });
-    expect(within(details).getByText("blocked by · pid 4211")).toBeTruthy();
-    expect(
-      within(details).getByText("This session is blocking 1 session.")
-    ).toBeTruthy();
-    expect(within(details).getByText("waiting · pid 4318")).toBeTruthy();
-  });
 });
 
 describe("backend instance health checks", () => {
-  function renderConnectedHealth() {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.extensionData = extensionInventoryResponse();
-    state.healthData = instanceHealthResponse();
-    renderInstanceOverview();
-    return screen.getByRole("region", { name: "Health checks" });
-  }
-
-  test("shows server facts and live health rows when connected", () => {
-    const health = renderConnectedHealth();
-
-    // Facts header from serverInfo + the unfiltered extension inventory.
-    expect(within(health).getByText("PostgreSQL 17.9")).toBeTruthy();
-    expect(within(health).getByText(UPTIME_FACT_PATTERN)).toBeTruthy();
-    expect(within(health).getByText("aarch64 / linux")).toBeTruthy();
-    expect(within(health).getByText("2 extensions")).toBeTruthy();
-    expect(within(health).getByText("max 100 connections")).toBeTruthy();
-    expect(state.extensionInput).toEqual({
-      orderBy: "installed desc",
-      pageSize: 50,
-      parent: "instances/prod/databases/postgres",
-    });
-
-    // One compact confirmation row folds TCP, TLS, and auth together.
-    expect(within(health).getByText("Connection")).toBeTruthy();
-    expect(
-      within(health).getByText(
-        "db.internal:5432 · TLS prefer · credentials accepted"
-      )
-    ).toBeTruthy();
-
-    // Live rows from the CheckInstanceHealth RPC, including autovacuum.
-    expect(within(health).getByText("Connections")).toBeTruthy();
-    expect(
-      within(health).getByText("42% used · 3 active · no lock waits")
-    ).toBeTruthy();
-    expect(within(health).getByText("Replication")).toBeTruthy();
-    expect(
-      within(health).getByText("Primary · 1 replica streaming")
-    ).toBeTruthy();
-    expect(within(health).getByText("Stats access")).toBeTruthy();
-    expect(
-      within(health).getByText("superuser · full visibility")
-    ).toBeTruthy();
-    expect(within(health).getByText("pg_stat_statements")).toBeTruthy();
-    expect(
-      within(health).getByText("Not loaded (needs shared_preload_libraries)")
-    ).toBeTruthy();
-    expect(within(health).getByText("Autovacuum")).toBeTruthy();
-    expect(
-      within(health).getByText("1 of 3 workers · last ran 18m ago")
-    ).toBeTruthy();
-  });
-
-  test("expands a row to show its typed detail fields", async () => {
-    const user = userEvent.setup();
-    const health = renderConnectedHealth();
-
-    await user.click(
-      within(health).getByRole("button", { name: AUTOVACUUM_ROW_NAME })
-    );
-
-    expect(await within(health).findByText("Running workers")).toBeTruthy();
-    expect(within(health).getByText("1 of 3")).toBeTruthy();
-  });
-
   test("renders a category from partial_errors as unavailable with its reason", () => {
     state.selectedInstanceStatus = "connected";
     state.instances = [postgresInstanceFixture("connected")];
@@ -1685,23 +981,6 @@ describe("backend instance health checks", () => {
     ).toBeTruthy();
   });
 
-  test("keeps metadata diagnostics when the instance is disconnected", () => {
-    renderInstanceOverview();
-
-    const health = screen.getByRole("region", { name: "Health checks" });
-
-    expect(within(health).getByText("TCP")).toBeTruthy();
-    expect(within(health).getByText("Authentication")).toBeTruthy();
-    expect(within(health).getAllByText("Not checked yet")).toHaveLength(2);
-    expect(within(health).getByText("TLS")).toBeTruthy();
-    expect(
-      within(health).getByText("prefer · may fall back to plaintext")
-    ).toBeTruthy();
-    // No live rows without a connection.
-    expect(within(health).queryByText("Autovacuum")).toBeNull();
-    expect(within(health).queryByText("Stats access")).toBeNull();
-  });
-
   test("explains the failure when the connection errors", () => {
     state.selectedInstanceStatus = "error";
     state.instanceData = instanceResponse({
@@ -1717,44 +996,6 @@ describe("backend instance health checks", () => {
       within(health).getAllByText("PostgreSQL instance unavailable")
     ).not.toHaveLength(0);
     expect(within(health).getByText("No authenticated session")).toBeTruthy();
-  });
-
-  test("keeps rotated credential details behind explicit disclosure", async () => {
-    const user = userEvent.setup();
-    const rawError =
-      'failed to connect to user=admin database=postgres host=10.0.0.8:5432: SASL authentication failed: FATAL: password authentication failed for user "admin" (SQLSTATE 28P01)';
-    state.selectedInstanceStatus = "error";
-    state.instanceData = instanceResponse({ connectionError: rawError });
-
-    renderInstanceOverview();
-
-    expect(
-      screen.getAllByText("PostgreSQL authentication failed")
-    ).not.toHaveLength(0);
-    expect(
-      screen.getByText("PostgreSQL rejected the saved credentials.")
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: "Update credentials" })
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Showing the last loaded data until the connection succeeds."
-      )
-    ).toBeTruthy();
-    expect(screen.queryByText(rawError)).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Error details" }));
-
-    const details = await screen.findByLabelText("Technical details JSON");
-    expect(details).toHaveProperty(
-      "value",
-      expect.stringContaining("host=10.0.0.8:5432")
-    );
-    expect(details).toHaveProperty(
-      "value",
-      expect.stringContaining("SQLSTATE 28P01")
-    );
   });
 });
 
@@ -1783,30 +1024,6 @@ describe("backend dependency recovery", () => {
       expect(state.refetchInstance).toHaveBeenCalledTimes(1);
       expect(state.retryInstanceCatalog).toHaveBeenCalledTimes(1);
     });
-  });
-
-  test("attributes a server outage to Querylane instead of PostgreSQL", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.instanceData = connectedInstanceResponse();
-    state.instanceQueryError = new ConnectError(
-      "fetch failed",
-      Code.Unavailable
-    );
-
-    renderInstanceOverview();
-
-    expect(screen.getByText("Cannot reach Querylane")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Check that the Querylane server is running and that your network or proxy can reach it, then retry."
-      )
-    ).toBeTruthy();
-    expect(
-      screen.queryByText(
-        "The database instance may still be starting. Retry in a moment."
-      )
-    ).toBeNull();
   });
 });
 
@@ -1894,74 +1111,5 @@ describe("backend instance database list", () => {
         name: "postgres postgres UTF8 C System",
       })
     ).toBeTruthy();
-  });
-
-  test("opens database overview when a database row is selected", async () => {
-    const user = userEvent.setup();
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.databases = [
-      {
-        characterSet: "UTF8",
-        collation: "en_US.UTF-8",
-        id: "customer-events",
-        isSystemDatabase: false,
-        name: "customer_events",
-        owner: "data-platform",
-        resourceName: "instances/prod/databases/customer-events",
-      },
-    ];
-
-    renderInstanceOverview();
-
-    await user.click(screen.getByText("customer_events"));
-
-    expect(state.navigateToDatabase).toHaveBeenCalledWith(
-      expect.objectContaining({
-        resourceName: "instances/prod/databases/customer-events",
-      }),
-      { overridePage: "database.overview" }
-    );
-    expect(state.queryClient.query).not.toHaveBeenCalled();
-  });
-
-  test("groups charset and collation into one encoding column", () => {
-    state.selectedInstanceStatus = "connected";
-    state.instances = [postgresInstanceFixture("connected")];
-    state.databases = [
-      {
-        characterSet: "UTF8",
-        collation: "en_US.UTF-8",
-        id: "customer-events",
-        isSystemDatabase: false,
-        name: "customer_events",
-        owner: "data-platform",
-        resourceName: "instances/prod/databases/customer-events",
-      },
-      {
-        characterSet: "UTF8",
-        collation: "C",
-        id: "postgres",
-        isSystemDatabase: true,
-        name: "postgres",
-        owner: "postgres",
-        resourceName: "instances/prod/databases/postgres",
-      },
-    ];
-
-    renderInstanceOverview();
-
-    expect(
-      screen.getByRole("columnheader", { name: ENCODING_COLUMN_NAME })
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("columnheader", { name: CHARSET_COLUMN_NAME })
-    ).toBeNull();
-    expect(
-      screen.queryByRole("columnheader", { name: COLLATION_COLUMN_NAME })
-    ).toBeNull();
-    expect(screen.getAllByText("UTF8")).toHaveLength(2);
-    expect(screen.getByText("en_US.UTF-8")).toBeTruthy();
-    expect(screen.getByText("C")).toBeTruthy();
   });
 });

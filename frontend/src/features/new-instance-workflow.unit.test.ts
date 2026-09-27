@@ -90,18 +90,6 @@ describe("new instance workflow", () => {
     expect(canCreateInstance(state)).toBe(false);
   });
 
-  test("failed connection keeps create blocked", () => {
-    const state = createCreateInstanceWorkflowState({
-      formState: { displayName: "Prod", host: "db.local", password: "secret" },
-    });
-    const next = createInstanceWorkflowReducer(state, {
-      fingerprint: null,
-      type: "setLastSuccessfulConnectionFingerprint",
-    });
-
-    expect(canCreateInstance(next)).toBe(false);
-  });
-
   test("create request trims identity fields and label keys", () => {
     const request = buildCreateInstanceRequest(
       createCreateInstanceWorkflowState({

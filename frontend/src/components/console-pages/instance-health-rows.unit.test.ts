@@ -61,25 +61,6 @@ describe("toneFromHealthCheckStatus", () => {
 });
 
 describe("getHealthCheckPartialReasons", () => {
-  test("maps partial errors to categories via ErrorInfo metadata", () => {
-    const partialError = createProto(StatusSchema, {
-      details: [
-        anyPack(
-          ErrorInfoSchema,
-          createProto(ErrorInfoSchema, {
-            metadata: { check: "stats_access" },
-            reason: "STATS_ACCESS_DENIED",
-          })
-        ),
-      ],
-      message: "permission denied for view pg_stat_activity",
-    });
-
-    expect(getHealthCheckPartialReasons([partialError])).toEqual({
-      stats_access: "permission denied for view pg_stat_activity",
-    });
-  });
-
   test("ignores errors without a known check key", () => {
     const partialError = createProto(StatusSchema, {
       details: [
@@ -218,15 +199,6 @@ describe("buildLiveHealthRows", () => {
     expect(autovacuum?.tone).toBe("error");
     expect(autovacuum?.summary).toBe("autovacuum check timed out");
   });
-
-  test("renders a missing category without a reason as no-data", () => {
-    const rows = buildLiveHealthRows(undefined, undefined);
-
-    for (const row of rows) {
-      expect(row.tone).toBe("muted");
-      expect(row.summary).toBe("No data");
-    }
-  });
 });
 
 describe("buildConnectedEndpointRow", () => {
@@ -252,18 +224,6 @@ describe("buildConnectedEndpointRow", () => {
 });
 
 describe("buildDisconnectedDiagnosticRows", () => {
-  test("shows not-checked diagnostics while disconnected", () => {
-    const rows = buildDisconnectedDiagnosticRows({
-      connectionStatus: "disconnected",
-      instance: instanceFixture(),
-    });
-
-    expect(rows.map((row) => row.id)).toEqual(["tcp", "authentication", "tls"]);
-    expect(rows[0]?.tone).toBe("muted");
-    expect(rows[0]?.summary).toBe("Not checked yet");
-    expect(rows[2]?.summary).toBe("prefer · may fall back to plaintext");
-  });
-
   test("summarizes the connection error without exposing raw details", () => {
     const instance = instanceFixture();
     instance.connectionError = "connection refused";

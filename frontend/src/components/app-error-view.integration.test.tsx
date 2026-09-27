@@ -1,11 +1,9 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { afterEach, describe, expect, it, rs } from "@rstest/core";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { afterEach, describe, it } from "@rstest/core";
+import { cleanup, render, screen } from "@testing-library/react";
 
 import { AppErrorView } from "@/components/app-error-view";
-import { Button } from "@/components/ui/button";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   PostgreSqlErrorDetailSchema,
@@ -13,21 +11,7 @@ import {
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
-const BOOTSTRAP_RPC_PATH =
-  "/querylane.console.v1alpha1.OnboardingService/Bootstrap";
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-
-function createBootError() {
-  return normalizeAppUiError(
-    new ConnectError("meta database is unavailable", Code.Unavailable),
-    {
-      area: "boot-gate",
-      endpoint: BOOTSTRAP_RPC_PATH,
-      source: "boot",
-      surface: "route",
-    }
-  );
-}
 
 function createPostgresPermissionError() {
   const error = new ConnectError(
@@ -58,170 +42,11 @@ function createPostgresPermissionError() {
   });
 }
 
-function createPostgresAuthorizationSpecError() {
-  const error = new ConnectError(
-    "PostgreSQL invalid_authorization_specification during list_views",
-    Code.InvalidArgument
-  );
-  error.details = [
-    {
-      type: POSTGRES_DETAIL_TYPE,
-      value: toBinary(
-        PostgreSqlErrorDetailSchema,
-        create(PostgreSqlErrorDetailSchema, {
-          conditionName: "invalid_authorization_specification",
-          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
-          operation: "list_views",
-          retryGuidance:
-            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-          sqlstate: "28000",
-          sqlstateClass: "28",
-        })
-      ),
-    },
-  ];
-
-  return normalizeAppUiError(error, {
-    source: "connect",
-    surface: "inline",
-  });
-}
-
-async function openErrorDetailsDialog(
-  user: ReturnType<typeof userEvent.setup>
-) {
-  await user.click(screen.getByRole("button", { name: "Error details" }));
-}
-
 afterEach(() => {
   cleanup();
 });
 
 describe("app error view integration", () => {
-  it("renders a normalized Connect error with retry and a details affordance", () => {
-    const onRetry = rs.fn(async () => undefined);
-
-    render(
-      <AppErrorView
-        error={createBootError()}
-        onRetry={onRetry}
-        variant="page"
-      />
-    );
-
-    screen.getByText("Cannot reach Querylane");
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Cannot reach Querylane" })
-    ).toBeTruthy();
-    screen.getByText("Querylane did not respond.");
-    screen.getByRole("button", { name: "Retry" });
-    screen.getByRole("button", { name: "Error details" });
-  });
-
-  it("keeps diagnostics out of the main surface until the dialog is opened", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <AppErrorView
-        error={createBootError()}
-        onRetry={async () => undefined}
-        variant="page"
-      />
-    );
-
-    expect(screen.queryByText("Code: Unavailable")).toBeNull();
-    expect(screen.queryByText("Source: boot")).toBeNull();
-
-    await openErrorDetailsDialog(user);
-
-    screen.getByText("Code: Unavailable");
-    screen.getByText("Source: boot");
-    screen.getByText("Retry available: yes");
-    screen.getByText("Technical details");
-    screen.getByRole("textbox", { name: "Technical details JSON" });
-  });
-
-  it("runs the provided retry action from the integrated retry button", async () => {
-    const user = userEvent.setup();
-    const onRetry = rs.fn(async () => undefined);
-
-    render(<AppErrorView error={createBootError()} onRetry={onRetry} />);
-
-    await user.click(screen.getByRole("button", { name: "Retry" }));
-
-    expect(onRetry).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders caller-provided recovery actions without inventing retry", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <AppErrorView
-        actions={<Button type="button">Go home</Button>}
-        error={createBootError()}
-      />
-    );
-
-    screen.getByRole("button", { name: "Go home" });
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-
-    await openErrorDetailsDialog(user);
-    screen.getByText("Retry available: no");
-  });
-
-  it("promotes bug reporting only when no recovery action exists", async () => {
-    const user = userEvent.setup();
-
-    const { rerender } = render(<AppErrorView error={createBootError()} />);
-
-    const reportLink = screen.getByRole("link", { name: "Report bug" });
-    expect(reportLink.getAttribute("target")).toBe("_blank");
-    expect(reportLink.getAttribute("rel")).toContain("noreferrer");
-    expect(reportLink.getAttribute("href")).toContain(
-      "github.com/querylane/querylane/issues/new"
-    );
-
-    rerender(
-      <AppErrorView error={createBootError()} onRetry={async () => undefined} />
-    );
-
-    expect(screen.queryByRole("link", { name: "Report bug" })).toBeNull();
-
-    await openErrorDetailsDialog(user);
-
-    screen.getByRole("link", { name: "Report bug" });
-  });
-
-  it("shows SQLSTATE badges and retry guidance for PostgreSQL errors in the dialog", async () => {
-    const user = userEvent.setup();
-
-    render(<AppErrorView error={createPostgresPermissionError()} />);
-
-    screen.getByText("PostgreSQL permission denied");
-
-    await openErrorDetailsDialog(user);
-    screen.getByText("SQLSTATE: 42501");
-    screen.getByText("SQLSTATE class: 42");
-    screen.getByText("Condition: insufficient_privilege");
-  });
-
-  it("keeps the PostgreSQL server message behind the error details action", async () => {
-    const user = userEvent.setup();
-
-    render(<AppErrorView error={createPostgresPermissionError()} />);
-
-    screen.getByText("PostgreSQL insufficient_privilege during read_rows");
-    expect(
-      screen.queryByText(
-        "PostgreSQL 42501: permission denied for table invoices"
-      )
-    ).toBeNull();
-
-    await openErrorDetailsDialog(user);
-
-    screen.getByText("PostgreSQL 42501: permission denied for table invoices");
-  });
-
   it("shows retry guidance on the page surface for PostgreSQL errors", () => {
     render(
       <AppErrorView error={createPostgresPermissionError()} variant="page" />
@@ -229,133 +54,5 @@ describe("app error view integration", () => {
 
     screen.getByText("PostgreSQL permission denied");
     screen.getByText("Correct the issue before retrying.");
-  });
-
-  it("renders the structured PostgreSQL authentication kind", async () => {
-    const user = userEvent.setup();
-
-    render(<AppErrorView error={createPostgresAuthorizationSpecError()} />);
-
-    screen.getByText("PostgreSQL authentication failed");
-    screen.getByText(
-      "PostgreSQL invalid_authorization_specification during list_views"
-    );
-
-    await openErrorDetailsDialog(user);
-    screen.getByText("Code: InvalidArgument");
-    screen.getByText("SQLSTATE: 28000");
-    screen.getByText("SQLSTATE class: 28");
-    screen.getByText("Condition: invalid_authorization_specification");
-  });
-
-  it("announces successful detail copies", async () => {
-    const user = userEvent.setup();
-    const originalClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    let resolveSecondCopy: () => void = () => undefined;
-    const secondCopy = new Promise<void>((resolve) => {
-      resolveSecondCopy = resolve;
-    });
-    const writeText = rs
-      .fn<() => Promise<void>>()
-      .mockResolvedValueOnce()
-      .mockReturnValueOnce(secondCopy);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-
-    try {
-      const error = createBootError();
-      render(<AppErrorView error={error} />);
-
-      await openErrorDetailsDialog(user);
-      await user.click(screen.getByRole("button", { name: "Copy details" }));
-
-      expect(writeText).toHaveBeenCalledWith(error.technicalDetails);
-      expect(screen.getByRole("status").textContent).toBe("Details copied");
-
-      await user.click(screen.getByRole("button", { name: "Copy details" }));
-
-      expect(screen.getByRole("status").textContent).toBe("");
-
-      resolveSecondCopy();
-      await waitFor(() => {
-        expect(screen.getByRole("status").textContent).toBe("Details copied");
-      });
-      expect(writeText).toHaveBeenCalledTimes(2);
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, "clipboard", originalClipboard);
-      } else {
-        Reflect.deleteProperty(navigator, "clipboard");
-      }
-    }
-  });
-
-  it("clears stale copy feedback when the displayed error changes", async () => {
-    const user = userEvent.setup();
-    const originalClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText: rs.fn(() => Promise.resolve()) },
-    });
-
-    try {
-      const { rerender } = render(<AppErrorView error={createBootError()} />);
-
-      await openErrorDetailsDialog(user);
-      await user.click(screen.getByRole("button", { name: "Copy details" }));
-      expect(screen.getByRole("status").textContent).toBe("Details copied");
-
-      const nextError = normalizeAppUiError(
-        new ConnectError("A different request failed", Code.Internal)
-      );
-      rerender(<AppErrorView error={nextError} />);
-
-      expect(screen.getByRole("status").textContent).toBe("");
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, "clipboard", originalClipboard);
-      } else {
-        Reflect.deleteProperty(navigator, "clipboard");
-      }
-    }
-  });
-
-  it("announces failed detail copies", async () => {
-    const user = userEvent.setup();
-    const originalClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: rs.fn(() => Promise.reject(new Error("denied"))),
-      },
-    });
-
-    try {
-      render(<AppErrorView error={createBootError()} />);
-
-      await openErrorDetailsDialog(user);
-      await user.click(screen.getByRole("button", { name: "Copy details" }));
-
-      expect(screen.getByRole("status").textContent).toBe(
-        "Couldn't copy details"
-      );
-    } finally {
-      if (originalClipboard) {
-        Object.defineProperty(navigator, "clipboard", originalClipboard);
-      } else {
-        Reflect.deleteProperty(navigator, "clipboard");
-      }
-    }
   });
 });

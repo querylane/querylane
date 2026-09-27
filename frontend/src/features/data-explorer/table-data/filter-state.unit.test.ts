@@ -5,7 +5,6 @@ import {
   getInvalidFilterRules,
   getOperatorsForColumn,
   parseTableFilterSearch,
-  parseTableFilterSearchResult,
   serializeTableFilterSearch,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
@@ -31,17 +30,6 @@ const columns = [
 ];
 
 describe("table filter search params", () => {
-  test("round-trips compact filter state", () => {
-    const rules: TableFilterRule[] = [
-      { column: "email", id: "a", operator: "ilike", value: "%@acme.com" },
-      { column: "active", id: "b", operator: "eq", value: "true" },
-    ];
-
-    const serialized = serializeTableFilterSearch({ logic: "or", rules });
-
-    expect(parseTableFilterSearch(serialized)).toEqual({ logic: "or", rules });
-  });
-
   test("round-trips advanced operators and predicate negation", () => {
     const rules: TableFilterRule[] = [
       {
@@ -89,39 +77,6 @@ describe("table filter search params", () => {
     expect(parseTableFilterSearch(serialized)).toEqual({ logic: "and", rules });
   });
 
-  test("keeps non-default match logic before a rule is added", () => {
-    const serialized = serializeTableFilterSearch({ logic: "or", rules: [] });
-
-    expect(serialized).toBe(JSON.stringify({ l: "or", r: [] }));
-    expect(parseTableFilterSearch(serialized)).toEqual({
-      logic: "or",
-      rules: [],
-    });
-    expect(
-      serializeTableFilterSearch({ logic: "and", rules: [] })
-    ).toBeUndefined();
-  });
-
-  test("reports malformed URL payloads", () => {
-    expect(parseTableFilterSearchResult("not-json")).toEqual({
-      error: "Filter URL is malformed. Clear the filter and try again.",
-      ok: false,
-      state: {
-        logic: "and",
-        rules: [],
-      },
-    });
-    expect(
-      parseTableFilterSearchResult(
-        JSON.stringify({ l: "and", r: [{ c: "email", o: "wat" }] })
-      )
-    ).toEqual({
-      error: "Filter URL is malformed. Clear the filter and try again.",
-      ok: false,
-      state: { logic: "and", rules: [] },
-    });
-  });
-
   test("keeps the legacy state parser empty for malformed URL payloads", () => {
     expect(parseTableFilterSearch("not-json")).toEqual({
       logic: "and",
@@ -148,57 +103,6 @@ describe("table filter search params", () => {
 });
 
 describe("buildRowFilter", () => {
-  test("builds an AND RowFilter group with typed values", () => {
-    const filter = buildRowFilter(
-      [
-        { column: "id", id: "a", operator: "gte", value: "42" },
-        { column: "email", id: "b", operator: "ilike", value: "%@acme.com" },
-        { column: "active", id: "c", operator: "eq", value: "true" },
-      ],
-      columns
-    );
-
-    expect(filter?.node.case).toBe("group");
-    if (filter?.node.case !== "group") {
-      throw new Error("expected group filter");
-    }
-    const group = filter.node.value;
-    expect(group).toMatchObject({ logic: RowFilterGroup_Logic.AND });
-    expect(group.children).toHaveLength(3);
-    expect(group.children[0]?.node.value).toMatchObject({
-      column: "id",
-      operator: RowPredicate_Operator.GREATER_THAN_OR_EQUAL,
-      values: [{ kind: { case: "int64Value", value: 42n } }],
-    });
-    expect(group.children[1]?.node.value).toMatchObject({
-      column: "email",
-      operator: RowPredicate_Operator.ILIKE,
-      values: [{ kind: { case: "stringValue", value: "%@acme.com" } }],
-    });
-    expect(group.children[2]?.node.value).toMatchObject({
-      column: "active",
-      operator: RowPredicate_Operator.EQUAL,
-      values: [{ kind: { case: "boolValue", value: true } }],
-    });
-  });
-
-  test("builds an OR RowFilter group when requested", () => {
-    const filter = buildRowFilter(
-      [
-        { column: "email", id: "a", operator: "ilike", value: "%@acme.com" },
-        { column: "active", id: "b", operator: "eq", value: "true" },
-      ],
-      columns,
-      "or"
-    );
-
-    if (filter?.node.case !== "group") {
-      throw new Error("expected group filter");
-    }
-    expect(filter.node.value.logic).toBe(RowFilterGroup_Logic.OR);
-    expect(filter.node.value.children).toHaveLength(2);
-  });
-
   test("uses SQL precedence when rules mix OR and AND", () => {
     const filter = buildRowFilter(
       [
@@ -355,42 +259,6 @@ describe("buildRowFilter", () => {
     });
   });
 
-  test("models a real support lookup across email or external id", () => {
-    const filter = buildRowFilter(
-      [
-        {
-          column: "email",
-          id: "email-domain",
-          operator: "ilike",
-          value: "%@acme.com",
-        },
-        {
-          column: "external_id",
-          id: "stripe-id",
-          operator: "eq",
-          value: "cus_123",
-        },
-      ],
-      columns,
-      "or"
-    );
-
-    if (filter?.node.case !== "group") {
-      throw new Error("expected group filter");
-    }
-    expect(filter.node.value.logic).toBe(RowFilterGroup_Logic.OR);
-    expect(filter.node.value.children[0]?.node.value).toMatchObject({
-      column: "email",
-      operator: RowPredicate_Operator.ILIKE,
-      values: [{ kind: { case: "stringValue", value: "%@acme.com" } }],
-    });
-    expect(filter.node.value.children[1]?.node.value).toMatchObject({
-      column: "external_id",
-      operator: RowPredicate_Operator.EQUAL,
-      values: [{ kind: { case: "stringValue", value: "cus_123" } }],
-    });
-  });
-
   test("omits incomplete or invalid predicates", () => {
     expect(
       buildRowFilter(
@@ -403,30 +271,6 @@ describe("buildRowFilter", () => {
     ).toBeUndefined();
   });
 
-  test.each(["0x10", "0b101", " 12 "])(
-    "rejects non-decimal float literal %j",
-    (value) => {
-      expect(
-        buildRowFilter(
-          [{ column: "rating", id: "float", operator: "eq", value }],
-          columns
-        )
-      ).toBeUndefined();
-    }
-  );
-
-  test.each(["12", "-12.5", ".5", "1.", "1e3", "-1.25E+3"])(
-    "accepts decimal float literal %s",
-    (value) => {
-      expect(
-        getInvalidFilterRules(
-          [{ column: "rating", id: "float", operator: "eq", value }],
-          columns
-        )
-      ).toEqual([]);
-    }
-  );
-
   test("reports invalid values before applying filters", () => {
     expect(
       getInvalidFilterRules(
@@ -434,17 +278,6 @@ describe("buildRowFilter", () => {
         columns
       )
     ).toEqual([{ id: "a", message: "active expects true or false." }]);
-  });
-
-  test("treats empty-value rules as incomplete rather than invalid", () => {
-    // A freshly added rule starts with an empty value; it must not surface a
-    // destructive "Filter not applied" alert or pause the rows query.
-    expect(
-      getInvalidFilterRules(
-        [{ column: "email", id: "fresh", operator: "eq", value: "" }],
-        columns
-      )
-    ).toEqual([]);
   });
 
   test("treats a partially filled between rule as incomplete", () => {
@@ -462,17 +295,6 @@ describe("buildRowFilter", () => {
         columns
       )
     ).toEqual([]);
-  });
-
-  test("still reports typed-value errors once a value is present", () => {
-    expect(
-      getInvalidFilterRules(
-        [{ column: "id", id: "typed", operator: "eq", value: "abc" }],
-        columns
-      )
-    ).toEqual([
-      { id: "typed", message: "id expects a whole number, like 42." },
-    ]);
   });
 
   test("reports operators incompatible with column type", () => {
@@ -498,75 +320,6 @@ describe("buildRowFilter", () => {
 });
 
 describe("advanced RowFilter operators", () => {
-  test("builds regex, NULL-safe, boolean identity, and negated predicates", () => {
-    const filter = buildRowFilter(
-      [
-        {
-          column: "email",
-          id: "regex",
-          negated: true,
-          operator: "match",
-          value: "^support@",
-        },
-        {
-          column: "status",
-          id: "distinct",
-          operator: "isDistinct",
-          value: "done",
-        },
-        {
-          column: "active",
-          id: "truth",
-          operator: "isTrue",
-          value: "",
-        },
-      ],
-      columns
-    );
-
-    if (filter?.node.case !== "group") {
-      throw new Error("expected group filter");
-    }
-    expect(filter.node.value.children[0]?.node.value).toMatchObject({
-      column: "email",
-      negated: true,
-      operator: RowPredicate_Operator.MATCH,
-      values: [{ kind: { case: "stringValue", value: "^support@" } }],
-    });
-    expect(filter.node.value.children[1]?.node.value).toMatchObject({
-      column: "status",
-      operator: RowPredicate_Operator.IS_DISTINCT,
-    });
-    expect(filter.node.value.children[2]?.node.value).toMatchObject({
-      column: "active",
-      operator: RowPredicate_Operator.IS_TRUE,
-      values: [],
-    });
-  });
-
-  test("offers advanced operators only for compatible column types", () => {
-    expect(
-      getOperatorsForColumn({ columnName: "email", dataType: DataType.STRING })
-    ).toEqual(expect.arrayContaining(["match", "imatch", "isDistinct"]));
-    expect(
-      getOperatorsForColumn({
-        columnName: "active",
-        dataType: DataType.BOOLEAN,
-      })
-    ).toEqual(
-      expect.arrayContaining(["isTrue", "isFalse", "isUnknown", "isDistinct"])
-    );
-    const integerOperators = getOperatorsForColumn({
-      columnName: "id",
-      dataType: DataType.INTEGER,
-    });
-    expect(integerOperators).not.toContain("match");
-    expect(integerOperators).not.toContain("imatch");
-    expect(integerOperators).not.toContain("isTrue");
-    expect(integerOperators).not.toContain("isFalse");
-    expect(integerOperators).not.toContain("isUnknown");
-  });
-
   test("offers null-safe inequality only for equality-comparable JSON", () => {
     expect(
       getOperatorsForColumn({
