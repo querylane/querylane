@@ -21,6 +21,10 @@ import {
   RecordDetailDrawerScenario,
 } from "@/visual-harness/data-grid-scenarios";
 import {
+  DatabaseObjectsGridScenario,
+  DatabaseObjectsLoadingScenario,
+} from "@/visual-harness/database-objects-scenarios";
+import {
   FeedbackFormRecoveryScenario,
   FeedbackSectionStatesScenario,
   PostgresErrorDetailsScenario,
@@ -54,6 +58,8 @@ const VISUAL_SCENARIOS = {
   "data-table-default": DataTableDefaultScenario,
   "data-table-sorted-filtered": DataTableSortedFilteredScenario,
   "data-value-dialog-guard": DataValueDialogGuardScenario,
+  "database-objects-grid": DatabaseObjectsGridScenario,
+  "database-objects-loading": DatabaseObjectsLoadingScenario,
   "database-structure-map": DatabaseStructureMapScenario,
   "feedback-form-recovery": FeedbackFormRecoveryScenario,
   "feedback-postgres-error-details": PostgresErrorDetailsScenario,
