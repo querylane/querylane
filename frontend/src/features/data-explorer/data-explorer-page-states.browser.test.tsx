@@ -1,10 +1,8 @@
+import { create } from "@bufbuild/protobuf";
+import type { ServiceImpl } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
-import { beforeEach, expect, rs, test } from "@rstest/core";
-import * as actualReactQuery from "@tanstack/react-query" with {
-  rstest: "importActual",
-};
-import { QueryClientProvider } from "@tanstack/react-query";
+import { expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
 };
@@ -13,79 +11,29 @@ import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ExplorerRailFrame } from "@/__tests__/explorer-rail-test-utils";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
-import { createTestQueryClient } from "@/test/query-client";
+import {
+  GetSchemaResponseSchema,
+  ListSchemasResponseSchema,
+  SchemaService,
+} from "@/protogen/querylane/console/v1alpha1/schema_pb";
+import {
+  GetTableResponseSchema,
+  ListTableColumnsResponseSchema,
+  ListTableConstraintsResponseSchema,
+  ListTablesResponseSchema,
+  TableSchema,
+  TableService,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  ListViewsResponseSchema,
+  ViewService,
+} from "@/protogen/querylane/console/v1alpha1/view_pb";
+import { schemaLoadErrorServices } from "@/test/fixtures/explorer-states-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 
-interface SchemaFixture {
-  displayName: string;
-  name: string;
-  owner: string;
-}
-
-interface TableFixture {
-  displayName: string;
-  name: string;
-  rowCount: bigint;
-  sizeBytes: bigint;
-}
-
-interface TablesData {
-  pages: Array<{ tables: TableFixture[] }>;
-}
-
-interface SelectedTableData {
-  table: TableFixture;
-}
-
-const mocks = rs.hoisted(() => ({
-  columnsQuery: {
-    data: { columns: [] as unknown[] },
-    error: null as Error | null,
-    isLoading: false,
-  },
-  constraintsQuery: {
-    data: { constraints: [] as unknown[] },
-    error: null as Error | null,
-    isLoading: false,
-  },
-  indexesQuery: {
-    data: { indexes: [] as unknown[] },
-    error: null as Error | null,
-    isLoading: false,
-  },
-  navigate: rs.fn(),
-  policiesQuery: {
-    data: { policies: [] as unknown[] },
-    error: null as Error | null,
-    isLoading: false,
-  },
-  schemaMapTables: [] as TableFixture[],
-  schemasQuery: {
-    data: { pages: [{ schemas: [] as SchemaFixture[] }] },
-    error: new Error("schema rpc failed") as Error | null,
-    isFetching: false,
-    isPending: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  },
-  selectedTableQuery: {
-    data: undefined as SelectedTableData | undefined,
-    error: null as Error | null,
-  },
-  tablesQuery: {
-    data: undefined as TablesData | undefined,
-    error: null as Error | null,
-    fetchNextPage: rs.fn(() => Promise.resolve()),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isLoading: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  },
-  triggersQuery: {
-    data: { triggers: [] as unknown[] },
-    error: null as Error | null,
-    isLoading: false,
-  },
-}));
-
+// The grid has its own browser coverage; a fixed stand-in keeps these layout
+// measurements independent of row data.
 rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () => {
   const tableDataGridExportName = "TableDataGrid";
   return {
@@ -118,7 +66,7 @@ rs.mock("@tanstack/react-router", () => {
     [linkExportName]: ({ children }: { children: React.ReactNode }) => (
       <a href="/explorer">{children}</a>
     ),
-    useNavigate: () => mocks.navigate,
+    useNavigate: () => rs.fn(),
   };
 });
 
@@ -126,104 +74,70 @@ rs.mock("@/components/querylane-ui/sidebar", () => ({
   useSidebar: () => ({ isMobile: false, setOpenMobile: rs.fn() }),
 }));
 
-rs.mock("@connectrpc/connect-query", () => ({
-  useMutation: rs.fn(),
-  useQuery: () => ({ data: undefined }),
-  useTransport: () => ({}),
-}));
-
-rs.mock("@tanstack/react-query", () => ({
-  ...actualReactQuery,
-  useQueries: ({ queries }: { queries: unknown[] }) =>
-    queries.map(() => ({
-      data: {
-        columns: [],
-        constraints: [],
-        tables: mocks.schemaMapTables,
-        views: [],
-      },
-      error: null,
-      isLoading: false,
-    })),
-}));
-
-rs.mock("@/hooks/api/schema", () => ({
-  schemasForDatabaseQueryInput: rs.fn((input) => input),
-  useGetSchemaQuery: () => ({ data: undefined }),
-  useListSchemasInfiniteQuery: () => mocks.schemasQuery,
-}));
-
-rs.mock("@/hooks/api/table", () => ({
-  assertNoUnhandledTableDetailQueries: rs.fn(),
-  tableDetailQueryOptions: rs.fn(({ tableId }) =>
-    [
-      "columns",
-      "indexes",
-      "constraints",
-      "policies",
-      "triggers",
-      "partition",
-    ].map((facet) => ({
-      queryFn: async () => ({}),
-      queryKey: ["browser", "table-detail", tableId, facet],
-    }))
-  ),
-  tablesForSchemaQueryInput: rs.fn((input) => input),
-  useGetTablePartitionMetadataQuery: () => ({
-    data: {
-      partitionMetadata: {
-        childPartitions: [],
-        parentTable: "",
-        partitionBound: "",
-        partitionCount: 0,
-        partitionKey: "",
-      },
-    },
-    dataUpdatedAt: 0,
-    error: null,
-    isFetching: false,
-    isLoading: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  }),
-  useGetTableQuery: () => mocks.selectedTableQuery,
-  useListTableColumnsQuery: () => mocks.columnsQuery,
-  useListTableConstraintsQuery: () => mocks.constraintsQuery,
-  useListTableIndexesQuery: () => mocks.indexesQuery,
-  useListTablePoliciesQuery: () => mocks.policiesQuery,
-  useListTablesInfiniteQuery: () => mocks.tablesQuery,
-  useListTableTriggersQuery: () => mocks.triggersQuery,
-}));
-
 rs.mock("@/lib/db-context", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 
-function renderDataExplorerPage() {
-  const queryClient = createTestQueryClient();
-
-  return render(
-    <ScreenshotFrame>
-      <div className="h-[720px] w-[1180px] overflow-hidden rounded-2xl border border-border bg-background text-foreground">
-        <QueryClientProvider client={queryClient}>
-          <ExplorerRailFrame>
-            <DataExplorerPage databaseId="app" instanceId="prod" search={{}} />
-          </ExplorerRailFrame>
-        </QueryClientProvider>
-      </div>
-    </ScreenshotFrame>
-  );
+interface ExplorerServices {
+  schema: Partial<ServiceImpl<typeof SchemaService>>;
+  table: Partial<ServiceImpl<typeof TableService>>;
+  view?: Partial<ServiceImpl<typeof ViewService>>;
 }
 
-function renderWideExplorerPage(search: DataExplorerSearch) {
-  const queryClient = createTestQueryClient();
+const ANALYTICS_SCHEMA = {
+  displayName: "analytics",
+  name: "instances/prod/databases/app/schemas/analytics",
+  owner: "postgres",
+};
+const PAGE_VIEWS_TABLE = create(TableSchema, {
+  displayName: "page_views",
+  name: "instances/prod/databases/app/schemas/analytics/tables/page_views",
+  rowCount: 42n,
+  sizeBytes: 65_536n,
+});
+
+function analyticsCatalogServices(): Required<ExplorerServices> {
+  return {
+    schema: {
+      getSchema: () =>
+        create(GetSchemaResponseSchema, { schema: ANALYTICS_SCHEMA }),
+      listSchemas: () =>
+        create(ListSchemasResponseSchema, { schemas: [ANALYTICS_SCHEMA] }),
+    },
+    table: {
+      getTable: () =>
+        create(GetTableResponseSchema, { table: PAGE_VIEWS_TABLE }),
+      listTableColumns: () => create(ListTableColumnsResponseSchema),
+      listTableConstraints: () => create(ListTableConstraintsResponseSchema),
+      listTables: () =>
+        create(ListTablesResponseSchema, { tables: [PAGE_VIEWS_TABLE] }),
+    },
+    view: { listViews: () => create(ListViewsResponseSchema) },
+  };
+}
+
+function renderExplorerPage({
+  search = {},
+  services,
+  width,
+}: {
+  search?: DataExplorerSearch;
+  services: ExplorerServices;
+  width: "w-[1180px]" | "w-[1800px]";
+}) {
+  const transport = createTestRouterTransport((router) => {
+    router.service(SchemaService, services.schema);
+    router.service(TableService, services.table);
+    router.service(ViewService, services.view ?? {});
+  });
 
   return render(
-    <ScreenshotFrame>
-      <div
-        className="h-[720px] w-[1800px] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
-        data-testid="wide-explorer-shell"
-      >
-        <QueryClientProvider client={queryClient}>
+    <HarnessProviders transport={transport}>
+      <ScreenshotFrame>
+        <div
+          className={`h-[720px] ${width} overflow-hidden rounded-2xl border border-border bg-background text-foreground`}
+          data-testid="explorer-shell"
+        >
           <ExplorerRailFrame>
             <DataExplorerPage
               databaseId="app"
@@ -231,63 +145,17 @@ function renderWideExplorerPage(search: DataExplorerSearch) {
               search={search}
             />
           </ExplorerRailFrame>
-        </QueryClientProvider>
-      </div>
-    </ScreenshotFrame>
+        </div>
+      </ScreenshotFrame>
+    </HarnessProviders>
   );
 }
 
-function seedAnalyticsSchema() {
-  mocks.schemasQuery.data = {
-    pages: [
-      {
-        schemas: [
-          {
-            displayName: "analytics",
-            name: "instances/prod/databases/app/schemas/analytics",
-            owner: "postgres",
-          },
-        ],
-      },
-    ],
-  };
-  mocks.schemasQuery.error = null;
-  mocks.tablesQuery.data = { pages: [{ tables: [] }] };
-}
-
-beforeEach(() => {
-  mocks.columnsQuery.data = { columns: [] };
-  mocks.columnsQuery.error = null;
-  mocks.columnsQuery.isLoading = false;
-  mocks.constraintsQuery.data = { constraints: [] };
-  mocks.constraintsQuery.error = null;
-  mocks.constraintsQuery.isLoading = false;
-  mocks.indexesQuery.data = { indexes: [] };
-  mocks.indexesQuery.error = null;
-  mocks.indexesQuery.isLoading = false;
-  mocks.policiesQuery.data = { policies: [] };
-  mocks.policiesQuery.error = null;
-  mocks.policiesQuery.isLoading = false;
-  mocks.schemasQuery.data = { pages: [{ schemas: [] }] };
-  mocks.schemasQuery.error = new Error("schema rpc failed");
-  mocks.schemasQuery.isFetching = false;
-  mocks.schemasQuery.isPending = false;
-  mocks.schemaMapTables = [];
-  mocks.selectedTableQuery.data = undefined;
-  mocks.selectedTableQuery.error = null;
-  mocks.tablesQuery.data = undefined;
-  mocks.tablesQuery.error = null;
-  mocks.tablesQuery.hasNextPage = false;
-  mocks.tablesQuery.isFetchingNextPage = false;
-  mocks.tablesQuery.isLoading = false;
-  mocks.triggersQuery.data = { triggers: [] };
-  mocks.triggersQuery.error = null;
-  mocks.triggersQuery.isLoading = false;
-  rs.clearAllMocks();
-});
-
 test("data explorer schema load failures stay visibly retryable", async () => {
-  await renderDataExplorerPage();
+  await renderExplorerPage({
+    services: schemaLoadErrorServices(),
+    width: "w-[1180px]",
+  });
 
   await expect
     .element(page.getByRole("button", { name: "Retry" }))
@@ -299,52 +167,15 @@ test("data explorer schema load failures stay visibly retryable", async () => {
 });
 
 test("data explorer table grid uses width immediately beside object browser", async () => {
-  mocks.schemasQuery.data = {
-    pages: [
-      {
-        schemas: [
-          {
-            displayName: "analytics",
-            name: "instances/prod/databases/app/schemas/analytics",
-            owner: "postgres",
-          },
-        ],
-      },
-    ],
-  };
-  mocks.schemasQuery.error = null;
-  mocks.tablesQuery.data = {
-    pages: [
-      {
-        tables: [
-          {
-            displayName: "page_views",
-            name: "instances/prod/databases/app/schemas/analytics/tables/page_views",
-            rowCount: 42n,
-            sizeBytes: 65_536n,
-          },
-        ],
-      },
-    ],
-  };
-  mocks.selectedTableQuery.data = {
-    table: {
-      displayName: "page_views",
-      name: "instances/prod/databases/app/schemas/analytics/tables/page_views",
-      rowCount: 42n,
-      sizeBytes: 65_536n,
-    },
-  };
-
-  await renderWideExplorerPage({
-    category: "tables",
-    name: "page_views",
-    schema: "analytics",
+  await renderExplorerPage({
+    search: { category: "tables", name: "page_views", schema: "analytics" },
+    services: analyticsCatalogServices(),
+    width: "w-[1800px]",
   });
 
   await expect.element(page.getByTestId("mock-table-data-grid")).toBeVisible();
 
-  const shell = document.querySelector("[data-testid='wide-explorer-shell']");
+  const shell = document.querySelector("[data-testid='explorer-shell']");
   const rail = document.querySelector("[data-testid='explorer-rail-slot']");
   const sidebar = document.querySelector(
     "aside[aria-label='Database objects']"
@@ -412,22 +243,17 @@ test("data explorer table grid uses width immediately beside object browser", as
 });
 
 test("data explorer schema map fills the available detail area", async () => {
-  seedAnalyticsSchema();
-  mocks.schemaMapTables = [
-    {
-      displayName: "page_views",
-      name: "instances/prod/databases/app/schemas/analytics/tables/page_views",
-      rowCount: 42n,
-      sizeBytes: 65_536n,
-    },
-  ];
-  await renderWideExplorerPage({ schema: "analytics", tab: "map" });
+  await renderExplorerPage({
+    search: { schema: "analytics", tab: "map" },
+    services: analyticsCatalogServices(),
+    width: "w-[1800px]",
+  });
 
   await expect
     .element(page.getByRole("region", { name: "Schema map for analytics" }))
     .toBeVisible();
 
-  const shell = screen.getByTestId("wide-explorer-shell");
+  const shell = screen.getByTestId("explorer-shell");
   const rail = screen.getByTestId("explorer-rail-slot");
   const map = screen.getByRole("region", { name: "Schema map for analytics" });
   const canvas = screen.getByRole("region", {
@@ -449,8 +275,11 @@ test("data explorer schema map fills the available detail area", async () => {
 });
 
 test("data explorer schema objects fill the pane at wide widths", async () => {
-  seedAnalyticsSchema();
-  await renderWideExplorerPage({ schema: "analytics" });
+  await renderExplorerPage({
+    search: { schema: "analytics" },
+    services: analyticsCatalogServices(),
+    width: "w-[1800px]",
+  });
 
   await expect
     .element(page.getByRole("heading", { name: "analytics" }))
