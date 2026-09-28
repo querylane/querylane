@@ -9,416 +9,29 @@ import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
 import { RoleDetailPage } from "@/components/console-pages/role-detail-page";
+import { DatabaseService } from "@/protogen/querylane/console/v1alpha1/database_pb";
 import {
-  DefaultPrivilegeObjectType,
   GrantObjectType,
+  RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
+import {
+  accessMapFixture,
+  ROLE_FIXTURE_INSTANCE_ID,
+  ROLES_TABLE_ROLES,
+  type RoleFixture,
+  role,
+  roleDetailFixture,
+  roleFixtureServices,
+} from "@/test/fixtures/role-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
 import {
   ConsoleEmptyStatesScenario,
   ConsolePageErrorScenario,
   ConsoleResourceOverviewScenario,
   ConsoleSqlstateScenario,
 } from "@/visual-harness/console-scenarios";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 import { SQLSTATE_SCENARIOS } from "@/visual-harness/sqlstate-scenarios";
-
-const roleApiState = rs.hoisted(() => ({
-  accessMapPending: false,
-  accessMapResources: null as null | {
-    budgetSkippedRequestCount: number;
-    failedRequestCount: number;
-    publicAccess: unknown[];
-    roleAccess: unknown[];
-    truncatedRequestCount: number;
-  },
-  defaultPrivileges: [] as unknown[],
-  defaultPrivilegesNextPageToken: "",
-  grants: [] as unknown[],
-  grantsNextPageToken: "",
-  ownedObjects: [] as unknown[],
-  ownedObjectsNextPageToken: "",
-  publicGrants: [] as unknown[],
-  publicGrantsNextPageToken: "",
-  roles: [] as unknown[],
-}));
-
-function roleFixture(overrides: Record<string, unknown> = {}) {
-  return {
-    attributes: {
-      bypassesRls: false,
-      canCreateDatabase: false,
-      canCreateRole: false,
-      canLogin: true,
-      canReplicate: false,
-      connectionLimit: -1,
-      inheritsByDefault: true,
-      isSuperuser: false,
-    },
-    comment: "Primary application login role.",
-    isSystemRole: false,
-    memberOf: [
-      {
-        adminOption: false,
-        grantor: "postgres",
-        grantorRole: "instances/prod/roles/postgres",
-        inheritOption: true,
-        role: "instances/prod/roles/app_writer",
-        roleName: "app_writer",
-        setOption: true,
-      },
-    ],
-    name: "instances/prod/roles/app_user",
-    roleName: "app_user",
-    ...overrides,
-  };
-}
-
-function setRoleDetailFixture() {
-  roleApiState.defaultPrivilegesNextPageToken = "";
-  roleApiState.grantsNextPageToken = "";
-  roleApiState.ownedObjectsNextPageToken = "";
-  roleApiState.publicGrantsNextPageToken = "";
-  roleApiState.roles = [
-    roleFixture(),
-    roleFixture({
-      attributes: {
-        bypassesRls: false,
-        canCreateDatabase: false,
-        canCreateRole: false,
-        canLogin: false,
-        canReplicate: false,
-        connectionLimit: -1,
-        inheritsByDefault: true,
-        isSuperuser: false,
-      },
-      comment: "Application write group.",
-      memberOf: [],
-      name: "instances/prod/roles/app_writer",
-      roleName: "app_writer",
-    }),
-    roleFixture({
-      memberOf: [
-        {
-          adminOption: false,
-          grantor: "postgres",
-          grantorRole: "instances/prod/roles/postgres",
-          inheritOption: true,
-          role: "instances/prod/roles/app_user",
-          roleName: "app_user",
-          setOption: true,
-        },
-      ],
-      name: "instances/prod/roles/reporting_reader",
-      roleName: "reporting_reader",
-    }),
-  ];
-  roleApiState.grants = [
-    {
-      grantor: "postgres",
-      objectName: "orders",
-      objectType: GrantObjectType.TABLE,
-      privilege: "SELECT",
-      schemaName: "public",
-      withGrantOption: false,
-    },
-    {
-      grantor: "postgres",
-      objectName: "orders",
-      objectType: GrantObjectType.TABLE,
-      privilege: "UPDATE",
-      schemaName: "public",
-      withGrantOption: false,
-    },
-    {
-      grantor: "postgres",
-      objectName: "daily_revenue",
-      objectType: GrantObjectType.VIEW,
-      privilege: "SELECT",
-      schemaName: "analytics",
-      withGrantOption: true,
-    },
-  ];
-  roleApiState.ownedObjects = [
-    {
-      objectName: "job_runs",
-      objectType: GrantObjectType.TABLE,
-      schemaName: "internal",
-    },
-  ];
-  roleApiState.publicGrants = [
-    {
-      grantor: "postgres",
-      objectName: "",
-      objectType: GrantObjectType.SCHEMA,
-      privilege: "USAGE",
-      schemaName: "public",
-      withGrantOption: false,
-    },
-  ];
-  roleApiState.defaultPrivileges = [
-    {
-      creatorRole: "instances/prod/roles/app_owner",
-      creatorRoleName: "app_owner",
-      objectType: DefaultPrivilegeObjectType.TABLES,
-      privilege: "SELECT",
-      schemaName: "analytics",
-      withGrantOption: false,
-    },
-  ];
-}
-
-function roleAttributes(overrides: Record<string, unknown> = {}) {
-  return {
-    bypassesRls: false,
-    canCreateDatabase: false,
-    canCreateRole: false,
-    canLogin: true,
-    canReplicate: false,
-    connectionLimit: -1,
-    inheritsByDefault: true,
-    isSuperuser: false,
-    ...overrides,
-  };
-}
-
-function roleMembership(roleName: string) {
-  return {
-    adminOption: false,
-    grantor: "postgres",
-    grantorRole: "instances/prod/roles/postgres",
-    inheritOption: true,
-    role: `instances/prod/roles/${roleName}`,
-    roleName,
-    setOption: true,
-  };
-}
-
-function setRolesAccessMapDesignFixture(extraDirectGrantCount = 0) {
-  // Mirrors the unzipped design source: ROLES screen `AMAP_ROLES`,
-  // `AMAP_OBJS`, and `AMAP_EDGES`.
-  roleApiState.roles = [
-    roleFixture({
-      attributes: roleAttributes({ isSuperuser: true }),
-      memberOf: [],
-      name: "instances/prod/roles/cloud_admin",
-      roleName: "cloud_admin",
-    }),
-    roleFixture({
-      attributes: roleAttributes(),
-      memberOf: [],
-      name: "instances/prod/roles/app_owner",
-      roleName: "app_owner",
-    }),
-    roleFixture({
-      attributes: roleAttributes(),
-      memberOf: [roleMembership("app_owner")],
-      name: "instances/prod/roles/app_readwrite",
-      roleName: "app_readwrite",
-    }),
-    roleFixture({
-      attributes: roleAttributes(),
-      memberOf: [],
-      name: "instances/prod/roles/app_readonly",
-      roleName: "app_readonly",
-    }),
-    roleFixture({
-      attributes: roleAttributes(),
-      memberOf: [roleMembership("app_readonly")],
-      name: "instances/prod/roles/analytics_reader",
-      roleName: "analytics_reader",
-    }),
-    roleFixture({
-      attributes: roleAttributes(),
-      memberOf: [roleMembership("app_owner")],
-      name: "instances/prod/roles/deploy_bot",
-      roleName: "deploy_bot",
-    }),
-    roleFixture({
-      attributes: roleAttributes({ canLogin: false }),
-      memberOf: [roleMembership("pg_monitor")],
-      name: "instances/prod/roles/dba_admins",
-      roleName: "dba_admins",
-    }),
-    roleFixture({
-      attributes: roleAttributes({ canLogin: false }),
-      isSystemRole: true,
-      memberOf: [],
-      name: "instances/prod/roles/pg_monitor",
-      roleName: "pg_monitor",
-    }),
-  ];
-  roleApiState.accessMapResources = {
-    budgetSkippedRequestCount: 0,
-    failedRequestCount: 0,
-    publicAccess: [
-      {
-        databaseId: "functions",
-        databaseName: "functions",
-        grants: [
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "USAGE · EXECUTE on functions",
-            schemaName: "public",
-            withGrantOption: false,
-          },
-        ],
-      },
-    ],
-    roleAccess: [
-      {
-        databaseId: "logistics",
-        databaseName: "logistics",
-        defaultPrivileges: [],
-        grants: [],
-        ownedObjects: [
-          {
-            objectName: "logistics",
-            objectType: GrantObjectType.DATABASE,
-            schemaName: "",
-          },
-        ],
-        roleId: "app_owner",
-        roleName: "app_owner",
-      },
-      {
-        databaseId: "logistics",
-        databaseName: "logistics",
-        defaultPrivileges: [
-          {
-            creatorRole: "instances/prod/roles/app_owner",
-            creatorRoleName: "app_owner",
-            objectType: DefaultPrivilegeObjectType.TABLES,
-            privilege: "SELECT",
-            schemaName: "shipping",
-            withGrantOption: false,
-          },
-        ],
-        grants: [
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "SELECT on all tables",
-            schemaName: "shipping",
-            withGrantOption: false,
-          },
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "SELECT on all tables",
-            schemaName: "catalog",
-            withGrantOption: false,
-          },
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "SELECT on all tables",
-            schemaName: "audit",
-            withGrantOption: false,
-          },
-          ...Array.from({ length: extraDirectGrantCount }, (_, index) => ({
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "USAGE",
-            schemaName: `extra_${index}`,
-            withGrantOption: false,
-          })),
-        ],
-        ownedObjects: [],
-        roleId: "app_readonly",
-        roleName: "app_readonly",
-      },
-      {
-        databaseId: "logistics",
-        databaseName: "logistics",
-        defaultPrivileges: [],
-        grants: [
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "SELECT · INSERT · UPDATE · DELETE",
-            schemaName: "shipping",
-            withGrantOption: false,
-          },
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "SELECT · INSERT · UPDATE · DELETE",
-            schemaName: "catalog",
-            withGrantOption: false,
-          },
-        ],
-        ownedObjects: [],
-        roleId: "app_readwrite",
-        roleName: "app_readwrite",
-      },
-      {
-        databaseId: "billing",
-        databaseName: "billing",
-        defaultPrivileges: [],
-        grants: [
-          {
-            objectName: "billing",
-            objectType: GrantObjectType.DATABASE,
-            privilege: "SELECT on invoices, payments",
-            schemaName: "",
-            withGrantOption: false,
-          },
-        ],
-        ownedObjects: [],
-        roleId: "analytics_reader",
-        roleName: "analytics_reader",
-      },
-      {
-        databaseId: "billing",
-        databaseName: "billing",
-        defaultPrivileges: [],
-        grants: [],
-        ownedObjects: [
-          {
-            objectName: "billing",
-            objectType: GrantObjectType.DATABASE,
-            schemaName: "",
-          },
-        ],
-        roleId: "app_owner",
-        roleName: "app_owner",
-      },
-      {
-        databaseId: "auth",
-        databaseName: "auth",
-        defaultPrivileges: [],
-        grants: [],
-        ownedObjects: [
-          {
-            objectName: "auth",
-            objectType: GrantObjectType.DATABASE,
-            schemaName: "",
-          },
-        ],
-        roleId: "app_owner",
-        roleName: "app_owner",
-      },
-      {
-        databaseId: "functions",
-        databaseName: "functions",
-        defaultPrivileges: [],
-        grants: [
-          {
-            objectName: "",
-            objectType: GrantObjectType.SCHEMA,
-            privilege: "ALL — superuser",
-            schemaName: "public",
-            withGrantOption: false,
-          },
-        ],
-        ownedObjects: [],
-        roleId: "cloud_admin",
-        roleName: "cloud_admin",
-      },
-    ],
-    truncatedRequestCount: 0,
-  };
-}
 
 rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -448,7 +61,7 @@ rs.mock("@tanstack/react-router", () => {
     } = {}) => {
       const location = {
         hash: "",
-        pathname: "/instances/prod/roles",
+        pathname: `/instances/${ROLE_FIXTURE_INSTANCE_ID}/roles`,
         searchStr: "",
       };
       return select ? select(location) : location;
@@ -461,89 +74,6 @@ rs.mock("@tanstack/react-router", () => {
     } = {}) => (select ? select({}) : {}),
   };
 });
-
-rs.mock("@/hooks/api/role", () => ({
-  publicGrantsForDatabaseQueryInput: () => ({}),
-  roleDefaultPrivilegesForDatabaseQueryInput: () => ({}),
-  roleGrantsForDatabaseQueryInput: () => ({}),
-  roleOwnedObjectsForDatabaseQueryInput: () => ({}),
-  rolesForInstanceQueryInput: (instanceId: string) => ({
-    orderBy: "name asc",
-    pageSize: 1000,
-    parent: `instances/${instanceId}`,
-  }),
-  useListAllRolesQuery: () => ({
-    data: {
-      roles:
-        roleApiState.roles.length > 0
-          ? roleApiState.roles
-          : [
-              roleFixture({
-                attributes: {
-                  bypassesRls: false,
-                  canCreateDatabase: true,
-                  canCreateRole: false,
-                  canLogin: true,
-                  canReplicate: false,
-                  connectionLimit: -1,
-                  inheritsByDefault: true,
-                  isSuperuser: true,
-                },
-                memberOf: [{ roleName: "pg_read_all_data" }],
-                name: "instances/prod/roles/cG9zdGdyZXM",
-                roleName: "postgres",
-              }),
-              roleFixture(),
-            ],
-    },
-    error: null,
-    isPending: false,
-    refetch: rs.fn(async () => undefined),
-  }),
-  useListPublicGrantsQuery: () => ({
-    data: {
-      grants: roleApiState.publicGrants,
-      nextPageToken: roleApiState.publicGrantsNextPageToken,
-    },
-    error: null,
-    isPending: false,
-  }),
-  useListRoleDefaultPrivilegesQuery: () => ({
-    data: {
-      defaultPrivileges: roleApiState.defaultPrivileges,
-      nextPageToken: roleApiState.defaultPrivilegesNextPageToken,
-    },
-    error: null,
-    isPending: false,
-  }),
-  useListRoleGrantsQuery: () => ({
-    data: {
-      grants: roleApiState.grants,
-      nextPageToken: roleApiState.grantsNextPageToken,
-    },
-    error: null,
-    isPending: false,
-  }),
-  useListRoleOwnedObjectsQuery: () => ({
-    data: {
-      nextPageToken: roleApiState.ownedObjectsNextPageToken,
-      ownedObjects: roleApiState.ownedObjects,
-    },
-    error: null,
-    isPending: false,
-  }),
-  useRolesAccessMapResourcesQuery: () => ({
-    data: roleApiState.accessMapResources ?? {
-      budgetSkippedRequestCount: 0,
-      failedRequestCount: 0,
-      publicAccess: [],
-      roleAccess: [],
-      truncatedRequestCount: 0,
-    },
-    error: null,
-    isPending: roleApiState.accessMapPending,
-  }),
-}));
 
 rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
@@ -559,13 +89,54 @@ async function renderScenario(scenario: ReactNode) {
   await render(<ScreenshotFrame>{scenario}</ScreenshotFrame>);
 }
 
-async function renderConsoleSurface(children: ReactNode) {
+async function renderConsoleSurface(
+  children: ReactNode,
+  fixture: RoleFixture = accessMapFixture({ roles: ROLES_TABLE_ROLES })
+) {
+  const services = roleFixtureServices(fixture);
+  const transport = createTestRouterTransport((router) => {
+    router.service(DatabaseService, services.database);
+    router.service(RoleService, services.role);
+  });
   await render(
-    <ScreenshotFrame>
-      <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
-        {children}
-      </div>
-    </ScreenshotFrame>
+    <HarnessProviders transport={transport}>
+      <ScreenshotFrame>
+        <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
+          {children}
+        </div>
+      </ScreenshotFrame>
+    </HarnessProviders>
+  );
+}
+
+function RolesPage({ tab }: { tab?: "map" }) {
+  return (
+    <InstanceRolesPage
+      instanceId={ROLE_FIXTURE_INSTANCE_ID}
+      searchRoute="/instances/$instanceId/roles/"
+      tab={tab}
+    />
+  );
+}
+
+function RoleDetail({
+  grantsSchema,
+  grantsType,
+  tab,
+}: {
+  grantsSchema?: string;
+  grantsType?: "tables";
+  tab: "access-map" | "definition" | "grants" | "members" | "overview";
+}) {
+  return (
+    <RoleDetailPage
+      grantsReach={undefined}
+      grantsSchema={grantsSchema}
+      grantsType={grantsType}
+      instanceId={ROLE_FIXTURE_INSTANCE_ID}
+      roleId="app_user"
+      tab={tab}
+    />
   );
 }
 
@@ -581,12 +152,7 @@ test("console resource overview keeps dense metadata readable", async () => {
 });
 
 test("console roles list shows an inline type filter, sortable columns, and role rows", async () => {
-  await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-    />
-  );
+  await renderConsoleSurface(<RolesPage />);
 
   await expect
     .element(page.getByRole("heading", { level: 1, name: "Roles" }))
@@ -632,14 +198,7 @@ test("console roles list shows an inline type filter, sortable columns, and role
 });
 
 test("console roles access map matches the design source", async () => {
-  setRolesAccessMapDesignFixture();
-  await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-      tab="map"
-    />
-  );
+  await renderConsoleSurface(<RolesPage tab="map" />, accessMapFixture());
 
   await expect
     .element(page.getByText("cloud_admin", { exact: true }))
@@ -672,13 +231,9 @@ test("console roles access map matches the design source", async () => {
 });
 
 test("console roles dense access map starts with reduced edge filters", async () => {
-  setRolesAccessMapDesignFixture(5);
   await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-      tab="map"
-    />
+    <RolesPage tab="map" />,
+    accessMapFixture({ extraDirectGrantCount: 5 })
   );
 
   const viewButton = page.getByRole("button", {
@@ -703,18 +258,9 @@ test("console roles dense access map starts with reduced edge filters", async ()
 });
 
 test("console roles access map keeps partial results visibly qualified", async () => {
-  setRolesAccessMapDesignFixture();
-  if (!roleApiState.accessMapResources) {
-    throw new Error("Expected the access map fixture.");
-  }
-  roleApiState.accessMapResources.truncatedRequestCount = 2;
-
   await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-      tab="map"
-    />
+    <RolesPage tab="map" />,
+    accessMapFixture({ truncated: ["listRoleGrants"] })
   );
 
   await expect
@@ -734,18 +280,9 @@ test("console roles access map keeps partial results visibly qualified", async (
 });
 
 test("console roles access map keeps failed requests visible when expanded", async () => {
-  setRolesAccessMapDesignFixture();
-  if (!roleApiState.accessMapResources) {
-    throw new Error("Expected the access map fixture.");
-  }
-  roleApiState.accessMapResources.failedRequestCount = 1;
-
   await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-      tab="map"
-    />
+    <RolesPage tab="map" />,
+    accessMapFixture({ failing: ["listRoleGrants:app_readonly@logistics"] })
   );
 
   await page.getByRole("button", { name: "Maximize role access map" }).click();
@@ -762,59 +299,25 @@ test("console roles access map keeps failed requests visible when expanded", asy
 });
 
 test("console roles access map does not show an empty state while loading", async () => {
-  const previousResources = roleApiState.accessMapResources;
-  roleApiState.accessMapPending = true;
-  roleApiState.accessMapResources = {
-    budgetSkippedRequestCount: 0,
-    failedRequestCount: 0,
-    publicAccess: [],
-    roleAccess: [],
-    truncatedRequestCount: 0,
-  };
-  try {
-    await renderConsoleSurface(
-      <InstanceRolesPage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId/roles/"
-        tab="map"
-      />
-    );
+  await renderConsoleSurface(
+    <RolesPage tab="map" />,
+    accessMapFixture({ pending: ["listRoleGrants"] })
+  );
 
-    await expect
-      .element(page.getByText("Loading role object access."))
-      .toBeVisible();
-    await expect
-      .element(page.getByText("No object grants found for the visible roles."))
-      .not.toBeAttached();
-  } finally {
-    roleApiState.accessMapPending = false;
-    roleApiState.accessMapResources = previousResources;
-  }
+  await expect
+    .element(page.getByText("Loading role object access."))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("No object grants found for the visible roles."))
+    .not.toBeAttached();
 });
 
 test("console roles login no state keeps the same indicator slot", async () => {
-  roleApiState.roles = [
-    roleFixture({
-      attributes: {
-        bypassesRls: false,
-        canCreateDatabase: false,
-        canCreateRole: false,
-        canLogin: false,
-        canReplicate: false,
-        connectionLimit: -1,
-        inheritsByDefault: true,
-        isSuperuser: false,
-      },
-      name: "instances/prod/roles/app_group",
-      roleName: "app_group",
-    }),
-  ];
-
   await renderConsoleSurface(
-    <InstanceRolesPage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId/roles/"
-    />
+    <RolesPage />,
+    accessMapFixture({
+      roles: [role({ attributes: { canLogin: false }, roleName: "app_group" })],
+    })
   );
 
   await expect.element(page.getByText("No", { exact: true })).toBeVisible();
@@ -882,17 +385,9 @@ test("console page error keeps recovery actions and diagnostics scannable", asyn
 });
 
 test("console role detail overview shows access sources and attributes", async () => {
-  setRoleDetailFixture();
-
   await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema={undefined}
-      grantsType={undefined}
-      instanceId="prod"
-      roleId="app_user"
-      tab="overview"
-    />
+    <RoleDetail tab="overview" />,
+    roleDetailFixture()
   );
 
   await expect
@@ -903,18 +398,7 @@ test("console role detail overview shows access sources and attributes", async (
 });
 
 test("console role detail grants overview keeps access sources scannable", async () => {
-  setRoleDetailFixture();
-
-  await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema={undefined}
-      grantsType={undefined}
-      instanceId="prod"
-      roleId="app_user"
-      tab="grants"
-    />
-  );
+  await renderConsoleSurface(<RoleDetail tab="grants" />, roleDetailFixture());
 
   await expect
     .element(page.getByRole("heading", { level: 1, name: "app_user" }))
@@ -925,25 +409,20 @@ test("console role detail grants overview keeps access sources scannable", async
 });
 
 test("console role schema grants capture active shared filters", async () => {
-  setRoleDetailFixture();
-  roleApiState.grants.push({
-    grantor: "postgres",
-    objectName: "recent_orders",
-    objectType: GrantObjectType.VIEW,
-    privilege: "SELECT",
-    schemaName: "public",
-    withGrantOption: false,
-  });
-
   await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema="public"
-      grantsType="tables"
-      instanceId="prod"
-      roleId="app_user"
-      tab="grants"
-    />
+    <RoleDetail grantsSchema="public" grantsType="tables" tab="grants" />,
+    roleDetailFixture({
+      extraGrants: [
+        {
+          grantor: "postgres",
+          objectName: "recent_orders",
+          objectType: GrantObjectType.VIEW,
+          privilege: "SELECT",
+          schemaName: "public",
+          withGrantOption: false,
+        },
+      ],
+    })
   );
 
   await page.getByRole("textbox", { name: "Search objects…" }).fill("orders");
@@ -962,20 +441,11 @@ test("console role schema grants capture active shared filters", async () => {
 });
 
 test("console role detail access map keeps partial counts qualified", async () => {
-  setRoleDetailFixture();
-  roleApiState.grantsNextPageToken = "more-grants";
-  roleApiState.ownedObjectsNextPageToken = "more-owned-objects";
-  roleApiState.publicGrantsNextPageToken = "more-public-grants";
-
   await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema={undefined}
-      grantsType={undefined}
-      instanceId="prod"
-      roleId="app_user"
-      tab="access-map"
-    />
+    <RoleDetail tab="access-map" />,
+    roleDetailFixture({
+      truncated: ["listPublicGrants", "listRoleGrants", "listRoleOwnedObjects"],
+    })
   );
 
   await expect
@@ -991,18 +461,7 @@ test("console role detail access map keeps partial counts qualified", async () =
 });
 
 test("console role detail membership shows inherited and child roles", async () => {
-  setRoleDetailFixture();
-
-  await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema={undefined}
-      grantsType={undefined}
-      instanceId="prod"
-      roleId="app_user"
-      tab="members"
-    />
-  );
+  await renderConsoleSurface(<RoleDetail tab="members" />, roleDetailFixture());
 
   await expect
     .element(page.getByRole("heading", { level: 1, name: "app_user" }))
@@ -1015,17 +474,9 @@ test("console role detail membership shows inherited and child roles", async () 
 });
 
 test("console role detail definition shows reconstructed SQL", async () => {
-  setRoleDetailFixture();
-
   await renderConsoleSurface(
-    <RoleDetailPage
-      grantsReach={undefined}
-      grantsSchema={undefined}
-      grantsType={undefined}
-      instanceId="prod"
-      roleId="app_user"
-      tab="definition"
-    />
+    <RoleDetail tab="definition" />,
+    roleDetailFixture()
   );
 
   await expect

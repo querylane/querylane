@@ -1,9 +1,7 @@
 import "./header-edge-fixture.css";
-import { create as createProto } from "@bufbuild/protobuf";
-import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
 import { cleanup, render } from "@rstest/browser-react";
-import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { screen, within } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
@@ -17,17 +15,20 @@ import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data
 import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import {
-  ReadRowsResponseSchema,
   type TableCell,
+  TableDataService,
   type TableResultColumn,
-  TableResultRowSchema,
-  TableResultSetSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
-  ColumnSchema,
   DataType,
-  ListTableColumnsResponseSchema,
+  TableService,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  CUSTOMERS_TABLE_NAME,
+  dataGridFixtureServices,
+  ORDERS_TABLE_NAME,
+} from "@/test/fixtures/data-grid-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
 import {
   gridCell as cell,
   gridColumn as column,
@@ -44,59 +45,19 @@ import {
   DataValueDialogGuardScenario,
   RecordDetailDrawerScenario,
 } from "@/visual-harness/data-grid-scenarios";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 
 // Pixels for these states live in e2e/visual/data-grid.spec.ts. This file
 // keeps the behavior, geometry, and computed-style assertions.
 
-const tableApi = rs.hoisted(() => ({
-  useListTableColumnsQuery: rs.fn((_input: { parent: string }) => ({
-    data: undefined as unknown,
-    error: null,
-    isError: false,
-    refetch: rs.fn(),
-  })),
-}));
-
-const tableDataApi = rs.hoisted(() => ({
-  useReadCellValueMutation: rs.fn(),
-  useReadRowsQuery: rs.fn(),
-  useReadRowsQueryActions: rs.fn(),
-}));
-
-rs.mock("@/hooks/api/table", () => ({
-  useListTableColumnsQuery: tableApi.useListTableColumnsQuery,
-}));
-
-rs.mock("@/hooks/api/table-data", () => ({
-  useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
-  useReadRowsQuery: tableDataApi.useReadRowsQuery,
-  useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-}));
-
-beforeEach(() => {
-  tableDataApi.useReadCellValueMutation.mockImplementation(() => ({
-    isError: false,
-    isPending: false,
-    mutate: rs.fn(),
-  }));
-});
-
 afterEach(async () => {
-  // Unmount before resetting the hook mocks so late renders never see them.
   await cleanup();
   useTableColumnLayoutSettingsStore.setState({ layouts: {} });
   localStorage.removeItem("querylane-table-column-layouts");
-  tableApi.useListTableColumnsQuery.mockReset();
-  tableDataApi.useReadRowsQueryActions.mockReset();
-  tableDataApi.useReadRowsQuery.mockReset();
 });
 
-const shipmentsName =
-  "instances/prod/databases/app/schemas/shipping/tables/shipments";
-const carriersName =
-  "instances/prod/databases/app/schemas/public/tables/carriers";
 const PAGE_LABEL_RE = /Page \d+/;
 const EXPANDED_GRID_CLASS =
   "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground";
@@ -193,217 +154,6 @@ function centerOf(element: HTMLElement) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-interface ForeignKeyQueryActionsStub {
-  fetch: () => Promise<unknown>;
-  getState: () => { fetchStatus: string; status: string } | undefined;
-  prefetch: () => void;
-}
-
-function seedForeignKeyGridQueries(
-  targetTableName = carriersName,
-  queryActions: ForeignKeyQueryActionsStub = {
-    fetch: rs.fn(() => Promise.resolve()),
-    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: rs.fn(),
-  },
-  sourceRowCount = 1
-) {
-  tableDataApi.useReadRowsQueryActions.mockReturnValue(queryActions);
-  tableApi.useListTableColumnsQuery.mockImplementation((input) => {
-    if (input.parent === targetTableName) {
-      return {
-        data: createProto(ListTableColumnsResponseSchema, {
-          columns: [
-            createProto(ColumnSchema, {
-              columnName: "id",
-              dataType: DataType.INTEGER,
-            }),
-            createProto(ColumnSchema, {
-              columnName: "code",
-              dataType: DataType.STRING,
-            }),
-            createProto(ColumnSchema, {
-              columnName: "name",
-              dataType: DataType.STRING,
-            }),
-          ],
-        }),
-        error: null,
-        isError: false,
-        refetch: rs.fn(),
-      };
-    }
-
-    return {
-      data: createProto(ListTableColumnsResponseSchema, { columns: [] }),
-      error: null,
-      isError: false,
-      refetch: rs.fn(),
-    };
-  });
-
-  tableDataApi.useReadRowsQuery.mockImplementation((request) => {
-    if (request.name === targetTableName) {
-      return {
-        data: createProto(ReadRowsResponseSchema, {
-          resultSet: createProto(TableResultSetSchema, {
-            columns: [
-              column("id", "int4", DataType.INTEGER),
-              column("code", "text", DataType.STRING),
-              column("name", "text", DataType.STRING),
-            ],
-            rows: [
-              createProto(TableResultRowSchema, {
-                rowKey: "carrier-214",
-                values: [
-                  cell({ case: "int64Value", value: 214n }),
-                  cell({ case: "stringValue", value: "HCL" }),
-                  cell({
-                    case: "stringValue",
-                    value: "Hanse Container Line",
-                  }),
-                ],
-              }),
-            ],
-          }),
-        }),
-        dataUpdatedAt: 1_782_882_000_000,
-        error: null,
-        isFetching: false,
-        isLoading: false,
-        isPlaceholderData: false,
-        refetch: rs.fn(),
-      };
-    }
-
-    return {
-      data: createProto(ReadRowsResponseSchema, {
-        resultSet: createProto(TableResultSetSchema, {
-          columns: [
-            column("ref", "text", DataType.STRING),
-            column("carrier_id", "int4", DataType.INTEGER),
-            column("status", "shipment_status", DataType.STRING),
-            column("origin_port", "text", DataType.STRING),
-            column("dest_port", "text", DataType.STRING),
-          ],
-          rows: Array.from({ length: sourceRowCount }, (_, index) =>
-            createProto(TableResultRowSchema, {
-              rowKey: `shipment-${index + 1}`,
-              values: [
-                cell({
-                  case: "stringValue",
-                  value: `ML-2026-04829${index + 1}`,
-                }),
-                cell({ case: "int64Value", value: 214n }),
-                cell({ case: "stringValue", value: "in_transit" }),
-                cell({ case: "stringValue", value: "CNSHA" }),
-                cell({ case: "stringValue", value: "DEHAM" }),
-              ],
-            })
-          ),
-        }),
-      }),
-      dataUpdatedAt: 1_782_882_000_000,
-      error: null,
-      isFetching: false,
-      isLoading: false,
-      isPlaceholderData: false,
-      refetch: rs.fn(),
-    };
-  });
-}
-
-function instanceUnavailableRowsError() {
-  const error = new ConnectError(
-    "PostgreSQL instance is unavailable",
-    Code.Unavailable
-  );
-  error.details = [
-    {
-      debug: {
-        domain: "console.querylane.dev",
-        reason: "INSTANCE_UNAVAILABLE",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
-    },
-  ];
-  return error;
-}
-
-function staleCustomerRows() {
-  return createProto(ReadRowsResponseSchema, {
-    nextPageToken: "customers-page-3",
-    resultSet: createProto(TableResultSetSchema, {
-      columns: resultColumns,
-      rows: [
-        createProto(TableResultRowSchema, {
-          rowKey: "customer-1051",
-          values: [
-            cell({ case: "stringValue", value: "cst_0000001051" }),
-            cell({ case: "stringValue", value: "arun.patel@example.com" }),
-            cell({ case: "jsonValue", value: '{"tier":"enterprise"}' }),
-            cell({ case: "boolValue", value: true }),
-            cell({
-              case: "timestampValue",
-              value: "2026-08-12T09:14:00Z",
-            }),
-          ],
-        }),
-        createProto(TableResultRowSchema, {
-          rowKey: "customer-1052",
-          values: [
-            cell({ case: "stringValue", value: "cst_0000001052" }),
-            cell({ case: "stringValue", value: "maria.chen@example.com" }),
-            cell({ case: "jsonValue", value: '{"tier":"growth"}' }),
-            cell({ case: "boolValue", value: true }),
-            cell({
-              case: "timestampValue",
-              value: "2026-08-12T09:12:00Z",
-            }),
-          ],
-        }),
-      ],
-    }),
-  });
-}
-
-async function renderUnavailableRowsGrid() {
-  const lastSuccessfulData = staleCustomerRows();
-  tableApi.useListTableColumnsQuery.mockReturnValue({
-    data: createProto(ListTableColumnsResponseSchema, {
-      columns: resultColumns.map((resultColumn) =>
-        createProto(ColumnSchema, {
-          columnName: resultColumn.columnName,
-          dataType: resultColumn.dataType,
-          rawType: resultColumn.rawType,
-        })
-      ),
-    }),
-    error: null,
-    isError: false,
-    refetch: rs.fn(),
-  });
-  tableDataApi.useReadRowsQuery.mockReturnValue({
-    data: undefined,
-    dataUpdatedAt: Date.UTC(2026, 7, 12, 9, 15, 0),
-    error: instanceUnavailableRowsError(),
-    isFetching: false,
-    isLoading: false,
-    isPlaceholderData: false,
-    lastSuccessfulData,
-    refetch: rs.fn(async () => undefined),
-  });
-
-  await render(
-    <ScreenshotFrame>
-      <div className="h-[600px] w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
-        <TableDataGrid initialPageSize={50} name={shipmentsName} />
-      </div>
-    </ScreenshotFrame>
-  );
-}
-
 async function renderScenario(Scenario: () => ReactNode) {
   await render(
     <ScreenshotFrame>
@@ -432,29 +182,33 @@ async function renderLongRecordDrawer() {
   ]);
 
   await render(
-    <ScreenshotFrame>
-      <div className="w-[980px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <RecordDetailDrawer
-          columns={columns}
-          hasNext={true}
-          hasPrev={true}
-          name="instances/prod/databases/app/schemas/information_schema/tables/sql_implementation_info"
-          onNext={rs.fn()}
-          onOpenChange={rs.fn()}
-          onPrev={rs.fn()}
-          onRowIndexChange={rs.fn()}
-          open={true}
-          pkColumnSet={new Set()}
-          rowCells={rowCells}
-          rowCount={12}
-          rowIndex={8}
-          tableName={{
-            schema: "information_schema",
-            table: "sql_implementation_info_with_extra_long_suffix",
-          }}
-        />
-      </div>
-    </ScreenshotFrame>
+    // Record fields load full values through a mutation, which needs a query
+    // client even though it never fires here.
+    <HarnessProviders>
+      <ScreenshotFrame>
+        <div className="w-[980px] rounded-2xl border border-border bg-background p-6 text-foreground">
+          <RecordDetailDrawer
+            columns={columns}
+            hasNext={true}
+            hasPrev={true}
+            name="instances/prod/databases/app/schemas/information_schema/tables/sql_implementation_info"
+            onNext={rs.fn()}
+            onOpenChange={rs.fn()}
+            onPrev={rs.fn()}
+            onRowIndexChange={rs.fn()}
+            open={true}
+            pkColumnSet={new Set()}
+            rowCells={rowCells}
+            rowCount={12}
+            rowIndex={8}
+            tableName={{
+              schema: "information_schema",
+              table: "sql_implementation_info_with_extra_long_suffix",
+            }}
+          />
+        </div>
+      </ScreenshotFrame>
+    </HarnessProviders>
   );
 }
 
@@ -509,40 +263,40 @@ async function renderSelectedHeaderEdgeFixture() {
   );
 }
 
-async function renderForeignKeyReferenceGrid(
+async function renderOrdersGrid(
   className: string,
-  {
-    queryActions,
-    sourceRowCount = 1,
-    targetTableName = carriersName,
-  }: {
-    queryActions?: ForeignKeyQueryActionsStub;
-    sourceRowCount?: number;
-    targetTableName?: string;
-  } = {}
+  services = dataGridFixtureServices()
 ) {
-  seedForeignKeyGridQueries(targetTableName, queryActions, sourceRowCount);
+  const transport = createTestRouterTransport((router) => {
+    router.service(TableService, services.table);
+    router.service(TableDataService, services.tableData);
+  });
 
   await render(
-    <ScreenshotFrame>
-      <div className={className}>
-        <TableDataGrid
-          foreignKeyReferences={[
-            {
-              sourceColumns: ["carrier_id"],
-              targetColumns: ["id"],
-              targetTableName,
-            },
-          ]}
-          initialPageSize={10}
-          name={shipmentsName}
-          renderOpenReferencedTableLink={() => (
-            <a href="/explorer?schema=public&table=carriers">Open table</a>
-          )}
-        />
-      </div>
-    </ScreenshotFrame>
+    <HarnessProviders transport={transport}>
+      <ScreenshotFrame>
+        <div className={className}>
+          <TableDataGrid
+            foreignKeyReferences={[
+              {
+                sourceColumns: ["customer_id"],
+                targetColumns: ["id"],
+                targetTableName: CUSTOMERS_TABLE_NAME,
+              },
+            ]}
+            initialPageSize={10}
+            name={ORDERS_TABLE_NAME}
+            renderOpenReferencedTableLink={() => (
+              <a href="/explorer?schema=public&table=customers">Open table</a>
+            )}
+          />
+        </div>
+      </ScreenshotFrame>
+    </HarnessProviders>
   );
+  await expect
+    .element(page.getByText("arun.patel@example.com", { exact: true }))
+    .toBeVisible();
 }
 
 function getPopoverBox() {
@@ -599,7 +353,11 @@ test("data explorer controls and row detail drawer expose dense table context", 
 });
 
 test("failed page loads keep prior rows visibly stale without false pagination", async () => {
-  await renderUnavailableRowsGrid();
+  await renderOrdersGrid(
+    "h-[600px] w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground",
+    dataGridFixtureServices({ failNextPage: true })
+  );
+  await page.getByRole("button", { name: "Next page" }).click();
 
   await expect
     .element(page.getByText("PostgreSQL instance unavailable"))
@@ -617,7 +375,7 @@ test("failed page loads keep prior rows visibly stale without false pagination",
 });
 
 test("expanded data grid prioritizes space for rows", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   const { dialog, dialogElement } = await openExpandedGrid();
   const dialogTitleStyle = getComputedStyle(
@@ -641,7 +399,7 @@ test("expanded data grid prioritizes space for rows", async () => {
 });
 
 test("expanded data grid keeps close and refresh actions separate", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   const { dialog, dialogElement } = await openExpandedGrid();
   await expect
@@ -661,16 +419,19 @@ test("expanded data grid keeps close and refresh actions separate", async () => 
 });
 
 test("Escape clears cell selection without closing the expanded grid", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   const { dialog, dialogElement } = await openExpandedGrid();
-  await dialog.getByText("ML-2026-048291", { exact: true }).click();
-  const referenceCell = gridCellContaining("ML-2026-048291", dialogElement);
+  await dialog.getByText("arun.patel@example.com", { exact: true }).click();
+  const referenceCell = gridCellContaining(
+    "arun.patel@example.com",
+    dialogElement
+  );
   expect(selectedCellCount(dialogElement)).toBe(1);
   expect(document.activeElement).toBe(referenceCell);
 
   await dialog
-    .getByRole("gridcell", { name: "ML-2026-048291" })
+    .getByRole("gridcell", { name: "arun.patel@example.com" })
     .press("Escape");
 
   await rs.waitFor(() => {
@@ -682,7 +443,7 @@ test("Escape clears cell selection without closing the expanded grid", async () 
 });
 
 test("column headers reorder while layout controls stay compact", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   const statusHeaderLocator = page.getByRole("columnheader").filter({
     has: page.getByRole("button", {
@@ -695,10 +456,10 @@ test("column headers reorder while layout controls stay compact", async () => {
   const statusHeader = screen
     .getByRole("button", { name: "Open options for column status" })
     .closest('[role="columnheader"]');
-  const carrierHeader = screen
-    .getByRole("button", { name: "Open options for column carrier_id" })
+  const customerHeader = screen
+    .getByRole("button", { name: "Open options for column customer_id" })
     .closest('[role="columnheader"]');
-  if (!(statusHeader && carrierHeader)) {
+  if (!(statusHeader && customerHeader)) {
     throw new Error("Expected draggable column headers.");
   }
   const dataTransfer = new DataTransfer();
@@ -708,10 +469,10 @@ test("column headers reorder while layout controls stay compact", async () => {
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() => resolve());
   });
-  carrierHeader.dispatchEvent(
+  customerHeader.dispatchEvent(
     new DragEvent("dragover", { bubbles: true, dataTransfer })
   );
-  carrierHeader.dispatchEvent(
+  customerHeader.dispatchEvent(
     new DragEvent("drop", { bubbles: true, dataTransfer })
   );
   statusHeader.dispatchEvent(
@@ -725,13 +486,13 @@ test("column headers reorder while layout controls stay compact", async () => {
   const statusToggle = within(popoverElement).getByRole("checkbox", {
     name: "status",
   });
-  const carrierToggle = within(popoverElement).getByRole("checkbox", {
-    name: "carrier_id",
+  const customerToggle = within(popoverElement).getByRole("checkbox", {
+    name: "customer_id",
   });
   expect(statusToggle.getBoundingClientRect().top).toBeLessThan(
-    carrierToggle.getBoundingClientRect().top
+    customerToggle.getBoundingClientRect().top
   );
-  await popover.getByRole("checkbox", { name: "carrier_id" }).click();
+  await popover.getByRole("checkbox", { name: "customer_id" }).click();
 
   await expect
     .element(
@@ -741,14 +502,14 @@ test("column headers reorder while layout controls stay compact", async () => {
   await expect
     .element(
       page.getByRole("button", {
-        name: "Open options for column carrier_id",
+        name: "Open options for column customer_id",
       })
     )
     .toBeDetached();
 });
 
 test("select-all stays tooltip-free and preserves native selection behavior", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   const selectAllCheckbox = page.getByRole("checkbox", { name: "Select All" });
   await expect.element(selectAllCheckbox).toBeVisible();
@@ -793,10 +554,10 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
 });
 
 test("keyboard navigation extends and clears a multi-cell selection", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
-  await page.getByText("ML-2026-048291", { exact: true }).click();
-  const referenceCell = gridCellContaining("ML-2026-048291");
+  await page.getByText("arun.patel@example.com", { exact: true }).click();
+  const referenceCell = gridCellContaining("arun.patel@example.com");
 
   referenceCell.dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -841,7 +602,7 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
   );
 
   await rs.waitFor(() => {
-    expect(selectedCellCount()).toBe(5);
+    expect(selectedCellCount()).toBe(15);
   });
   expect(
     document.querySelector(`.rdg-select-cell${SELECTED_CELLS}`)
@@ -854,7 +615,7 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
     expect(selectedCellCount()).toBe(0);
   });
 
-  // Mouse drag from the reference cell to the status cell selects the range.
+  // Mouse drag from the email cell back to the status cell selects the range.
   const statusCell = gridCellContaining("in_transit");
   const start = centerOf(referenceCell);
   const end = centerOf(statusCell);
@@ -894,18 +655,18 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
   );
 
   await rs.waitFor(() => {
-    expect(selectedCellCount()).toBe(3);
+    expect(selectedCellCount()).toBe(2);
   });
 });
 
 test("grid exposes selected cell state without selection toolbar", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   await expect
     .element(page.getByRole("grid", { name: "Table data" }))
     .toBeVisible();
-  await page.getByText("ML-2026-048291", { exact: true }).click();
-  const referenceCell = gridCellContaining("ML-2026-048291");
+  await page.getByText("arun.patel@example.com", { exact: true }).click();
+  const referenceCell = gridCellContaining("arun.patel@example.com");
 
   expect(referenceCell.getAttribute("aria-selected")).toBe("true");
   await expect
@@ -921,14 +682,11 @@ test("grid exposes selected cell state without selection toolbar", async () => {
 });
 
 test("touch pointer drag selects a cell range", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS, {
-    sourceRowCount: 2,
-  });
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
-  await expect.element(page.getByText("ML-2026-048291")).toBeVisible();
-  await expect.element(page.getByText("ML-2026-048292")).toBeVisible();
-  const startCell = gridCellContaining("ML-2026-048291");
-  const endCell = gridCellContaining("ML-2026-048292");
+  await expect.element(page.getByText("maria.chen@example.com")).toBeVisible();
+  const startCell = gridCellContaining("arun.patel@example.com");
+  const endCell = gridCellContaining("maria.chen@example.com");
   const start = centerOf(startCell);
   const end = centerOf(endCell);
   expect(getComputedStyle(startCell).touchAction).toBe("auto");
@@ -988,14 +746,12 @@ test("touch pointer drag selects a cell range", async () => {
 });
 
 test("dragging near a grid edge auto-scrolls the cell selection", async () => {
-  await renderForeignKeyReferenceGrid(
+  await renderOrdersGrid(
     "h-[620px] w-[420px] rounded-2xl border border-border bg-background p-6 text-foreground"
   );
 
-  await expect
-    .element(page.getByText("ML-2026-048291", { exact: true }))
-    .toBeVisible();
-  const startCell = gridCellContaining("ML-2026-048291");
+  await expect.element(page.getByText("1001", { exact: true })).toBeVisible();
+  const startCell = gridCellContaining("1001");
   const grid = document.querySelector<HTMLElement>(".rdg");
   if (!grid) {
     throw new Error("Expected auto-scroll grid elements.");
@@ -1049,15 +805,15 @@ test("dragging near a grid edge auto-scrolls the cell selection", async () => {
 });
 
 test("dragging near the bottom edge auto-scrolls through rows", async () => {
-  await renderForeignKeyReferenceGrid(
+  await renderOrdersGrid(
     "h-[480px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground",
-    { sourceRowCount: 25 }
+    dataGridFixtureServices({ orderRowCount: 25 })
   );
 
   await expect
-    .element(page.getByText("ML-2026-048291", { exact: true }))
+    .element(page.getByText("arun.patel@example.com", { exact: true }))
     .toBeVisible();
-  const startCell = gridCellContaining("ML-2026-048291");
+  const startCell = gridCellContaining("arun.patel@example.com");
   const grid = document.querySelector<HTMLElement>(".rdg");
   if (!grid) {
     throw new Error("Expected vertical auto-scroll grid elements.");
@@ -1109,55 +865,58 @@ test("dragging near the bottom edge auto-scrolls through rows", async () => {
 });
 
 async function openForeignKeyReference() {
-  const carrierLink = page.getByRole("button", {
-    name: "Open carrier_id reference 214",
-  });
-  await carrierLink.click();
-  return carrierLink;
+  const customerLink = page
+    .getByRole("button", { name: "Open customer_id reference 214" })
+    .first();
+  await customerLink.click();
+  return customerLink;
 }
 
 test("interactive cell actions do not change the cell selection", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
   await openForeignKeyReference();
 
   await expect
-    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .element(page.getByRole("dialog", { name: "public.customers" }))
     .toBeVisible();
   expect(selectedCellCount()).toBe(0);
 });
 
 test("foreign key reference popover keeps the source table visible", async () => {
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS);
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
 
-  const carrierLink = await openForeignKeyReference();
-  const carrierLinkElement = screen.getByRole("button", {
-    name: "Open carrier_id reference 214",
+  const customerLink = await openForeignKeyReference();
+  const [customerLinkElement] = screen.getAllByRole("button", {
+    name: "Open customer_id reference 214",
   });
-  const carrierLinkStyle = getComputedStyle(carrierLinkElement);
+  if (!customerLinkElement) {
+    throw new Error("Expected a customer_id reference trigger.");
+  }
+  const customerLinkStyle = getComputedStyle(customerLinkElement);
   const frameStyle = getComputedStyle(screen.getByTestId("screenshot-frame"));
   expect(
-    colorContrastRatio(carrierLinkStyle.color, frameStyle.backgroundColor)
+    colorContrastRatio(customerLinkStyle.color, frameStyle.backgroundColor)
   ).toBeGreaterThanOrEqual(4.5);
-  await carrierLink.hover();
-  const carrierLinkHoverStyle = getComputedStyle(carrierLinkElement);
-  expect(carrierLinkHoverStyle.opacity).toBe("1");
-  expect(carrierLinkHoverStyle.color).not.toBe(frameStyle.color);
+  await customerLink.hover();
+  const customerLinkHoverStyle = getComputedStyle(customerLinkElement);
+  expect(customerLinkHoverStyle.opacity).toBe("1");
+  expect(customerLinkHoverStyle.color).not.toBe(frameStyle.color);
   expect(
-    colorContrastRatio(carrierLinkHoverStyle.color, frameStyle.backgroundColor)
+    colorContrastRatio(customerLinkHoverStyle.color, frameStyle.backgroundColor)
   ).toBeGreaterThanOrEqual(4.5);
 
   const preview = page.getByRole("dialog", {
-    name: "public.carriers",
+    name: "public.customers",
   });
   await expect.element(preview).toBeVisible();
   await preview.hover();
   const previewElement = screen.getByRole("dialog", {
-    name: "public.carriers",
+    name: "public.customers",
   });
   expect(previewElement.dataset["slot"]).toBe("popover-content");
   expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
-  await expect.element(carrierLink).toBeVisible();
+  await expect.element(customerLink).toBeVisible();
   await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
   expect(
     colorContrastRatio(
@@ -1171,50 +930,50 @@ test("foreign key reference popover keeps the source table visible", async () =>
 });
 
 test("foreign key reference waits for first-load data before opening", async () => {
-  let queryState = { fetchStatus: "fetching", status: "pending" };
-  let resolveFetch: (() => void) | undefined;
-  const fetchPromise = new Promise<void>((resolve) => {
-    resolveFetch = resolve;
+  const services = dataGridFixtureServices();
+  const { readRows } = services.tableData;
+  if (!readRows) {
+    throw new Error("Expected the fixture to serve ReadRows.");
+  }
+  let releaseCustomers: (() => void) | undefined;
+  let customersGate = new Promise<void>((resolve) => {
+    releaseCustomers = resolve;
   });
-  const queryActions = {
-    fetch: rs.fn(() => fetchPromise),
-    getState: rs.fn(() => queryState),
-    prefetch: rs.fn(),
+  services.tableData.readRows = async (request, context) => {
+    if (request.name === CUSTOMERS_TABLE_NAME) {
+      await customersGate;
+    }
+    return readRows(request, context);
   };
 
-  await renderForeignKeyReferenceGrid(EXPANDED_GRID_CLASS, { queryActions });
+  await renderOrdersGrid(EXPANDED_GRID_CLASS, services);
 
-  const trigger = page.getByRole("button", {
-    name: "Open carrier_id reference 214",
-  });
+  const trigger = page
+    .getByRole("button", { name: "Open customer_id reference 214" })
+    .first();
   await trigger.click();
 
   expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
   await expect.element(trigger).toHaveAttribute("aria-busy", "true");
 
-  queryState = { fetchStatus: "idle", status: "success" };
-  resolveFetch?.();
+  releaseCustomers?.();
 
   await expect
-    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .element(page.getByRole("dialog", { name: "public.customers" }))
     .toBeVisible();
   await expect.element(trigger).not.toHaveAttribute("aria-busy");
 
+  // Reopening shows the cached row even while a hover refetch never answers.
+  customersGate = new Promise<void>(() => undefined);
   await trigger.click();
   await expect
-    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .element(page.getByRole("dialog", { name: "public.customers" }))
     .toBeDetached();
   await trigger.click();
   await expect
-    .element(page.getByRole("dialog", { name: "public.carriers" }))
+    .element(page.getByRole("dialog", { name: "public.customers" }))
     .toBeVisible();
-  expect(queryActions.fetch).toHaveBeenCalledTimes(1);
-});
-
-test("foreign key query fixtures do not leak into later browser cases", () => {
-  expect(
-    tableDataApi.useReadRowsQuery({ name: "unrelated-table" })
-  ).toBeUndefined();
+  await expect.element(trigger).not.toHaveAttribute("aria-busy");
 });
 
 test("data value expansion keeps one visible dialog layer", async () => {

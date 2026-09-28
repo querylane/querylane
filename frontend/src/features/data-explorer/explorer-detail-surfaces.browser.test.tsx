@@ -1,48 +1,70 @@
-import { create as createProto } from "@bufbuild/protobuf";
-import * as actualConnectQuery from "@connectrpc/connect-query" with {
-  rstest: "importActual",
-};
+import { create } from "@bufbuild/protobuf";
+import type { Transport } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
-import { expect, rs, test } from "@rstest/core";
-import * as actualReactQuery from "@tanstack/react-query" with {
-  rstest: "importActual",
-};
+import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
 };
 import { screen } from "@testing-library/dom";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
+import { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
+import { buildSchemaName } from "@/lib/console-resources";
+import * as actualTransport from "@/lib/transport" with {
+  rstest: "importActual",
+};
 import { cn } from "@/lib/utils";
+import { CatalogSyncMetadataSchema } from "@/protogen/querylane/console/v1alpha1/catalog_sync_pb";
+import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
-  ColumnSchema,
-  ConstraintType,
   DataType,
-  IdentityGeneration,
-  ListTableColumnsResponseSchema,
-  ListTableConstraintsResponseSchema,
-  ListTableIndexesResponseSchema,
-  ListTablePoliciesResponseSchema,
-  ListTableTriggersResponseSchema,
-  PolicyCommand,
-  PolicyMode,
-  ReferentialAction,
-  Table_TableType,
-  TableConstraintSchema,
-  TableIndexSchema,
-  TablePolicySchema,
   TableSchema,
-  TableTriggerSchema,
+  TableService,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
-  View_ViewType,
   ViewSchema,
+  ViewService,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
+import {
+  CHANGE_LOG_DEFINITION_SCHEMA,
+  CHILD_PARTITION_SCHEMA,
+  CUSTOMERS_CONSTRAINT_STATES,
+  changeLogPartition,
+  changeLogPartitionsSchema,
+  column,
+  customersSchema,
+  EXPLORER_DATABASE_ID,
+  EXPLORER_INSTANCE_ID,
+  type ExplorerSurfaceCatalog,
+  explorerSurfaceServices,
+  INVOICES_SCHEMA,
+  MATERIALIZED_VIEW_SCHEMA,
+  ordered,
+  SALES_SCHEMA,
+  SCHEMA_MAP_SCHEMAS,
+  SCHEMA_SUMMARY,
+  type SchemaFixture,
+  SHIPMENT_EVENT_BULK_TRIGGERS,
+  SHIPMENT_EVENT_CONSTRAINTS,
+  SHIPMENT_EVENT_PAGINATED_CONSTRAINTS,
+  SHIPMENT_EVENT_TRIGGERS,
+  SHIPMENTS_COLUMNS_SCHEMA,
+  SHIPMENTS_PAGINATED_INDEXES,
+  SHIPMENTS_USAGE_INDEXES,
+  STALE_CATALOG_SCHEMA,
+  STANDARD_VIEW_SCHEMA,
+  shipmentEventSchema,
+  shipmentIndexesSchema,
+  tableResource,
+  VIEW_NOTICES,
+} from "@/test/fixtures/data-explorer-surface-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -73,8 +95,6 @@ const SCHEMA_MAP_FILTER_RE = /^Schema$/;
 const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
 const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/;
 
-// 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
-// TZ=GMT this runner uses, matching the mocked data grid label below.
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
 const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
 const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
@@ -89,6 +109,11 @@ const PARTITION_DEFAULT_ROW_RE = /change_log_archive DEFAULT.*1\.94M/;
 const PARTITION_PAGE_ONE_RE = /Showing 1–10 of 12/;
 const PARTITION_PAGE_TWO_RE = /Showing 11–12 of 12/;
 const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
+// Queries stamp their fetch time from Date.now(). 2024-01-01T23:00:00Z renders
+// as "Last fetched 11:00:00 PM" under the pinned TZ=GMT this runner uses,
+// matching the mocked data grid label below.
+const FETCHED_AT = Date.parse("2024-01-01T23:00:00Z");
+// Falls inside change_log_2026_q3, so that partition reads as current.
 const PARTITION_REDESIGN_FETCHED_AT = Date.parse("2026-07-07T22:51:48Z");
 const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
 const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
@@ -98,90 +123,73 @@ const TIMESTAMPTZ_TYPE_TITLE_RE =
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
 const CACHE_HIT_HEADER_LABEL =
   "Cache hit. PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
-const refreshableQueryFields = rs.hoisted(() => ({
-  dataUpdatedAt: 1_704_150_000_000,
-  isFetching: false,
-  refetch: () => Promise.resolve(),
+
+const explainTransport = rs.hoisted(() => ({
+  current: undefined as Transport | undefined,
 }));
-const tableQueries = rs.hoisted(() => ({
-  columns: {
-    data: undefined as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-  constraints: {
-    data: undefined as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-  indexes: {
-    data: undefined as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-  partitionMetadata: {
-    data: {
-      partitionMetadata: {
-        childPartitions: [],
-        parentTable: "",
-        partitionBound: "",
-        partitionCount: 0,
-        partitionKey: "",
+
+function requireExplainTransport() {
+  if (!explainTransport.current) {
+    throw new Error("Render through renderWithCatalog before explaining.");
+  }
+  return explainTransport.current;
+}
+
+// useExplainQuery pins longRunningTransport instead of reading the provider
+// transport, so route that one transport to the fixture services too.
+rs.mock("@/lib/transport", () => {
+  const longRunningTransport: Transport = {
+    stream: (...args) => requireExplainTransport().stream(...args),
+    unary: (...args) => requireExplainTransport().unary(...args),
+  };
+  return { ...actualTransport, longRunningTransport };
+});
+
+// The data grid has its own visual coverage; here it only supplies the
+// header's last-fetched label.
+rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
+  Object.fromEntries([
+    [
+      "TableDataGrid",
+      ({
+        children,
+      }: {
+        children?: (state: {
+          grid: ReactNode;
+          lastFetchedLabel: string;
+        }) => ReactNode;
+      }) => {
+        const grid = (
+          <div className="rounded-lg border border-border bg-muted/20 p-4 text-muted-foreground text-sm">
+            Data grid visual covered separately.
+          </div>
+        );
+
+        if (children) {
+          return (
+            <>
+              {children({
+                grid,
+                lastFetchedLabel: "Last fetched 11:00:00 PM",
+              })}
+            </>
+          );
+        }
+
+        return grid;
       },
-    } as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-  policies: {
-    data: undefined as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-  triggers: {
-    data: undefined as unknown,
-    error: null,
-    isLoading: false,
-    ...refreshableQueryFields,
-  },
-}));
-const sqlQueryState = rs.hoisted(() => ({
-  data: undefined as { notices: string[] } | undefined,
-  error: null as Error | null,
-  isFetching: false,
-  refetch: () => Promise.resolve(),
-}));
-const viewQueries = rs.hoisted(() => ({
-  dependencies: {
-    data: { pages: [{ viewDependencies: [] }] },
-    error: null,
-    fetchNextPage: () => Promise.resolve(),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isLoading: false,
-    refetch: () => Promise.resolve(),
-  },
-  refresh: {
-    error: null,
-    isPending: false,
-    mutateAsync: () => Promise.resolve({}),
-    reset: () => undefined,
-  },
-}));
-const schemaMapCatalog = rs.hoisted(() => ({
-  columnsByTable: {} as Record<string, unknown[]>,
-  constraintsByTable: {} as Record<string, unknown[]>,
-  errorMethods: [] as string[],
-  errorParents: [] as string[],
-  observedQueries: [] as { methodName: string; parent: string }[],
-  tablesBySchema: {} as Record<string, unknown[]>,
-  truncatedSchemas: [] as string[],
-  viewsBySchema: {} as Record<string, unknown[]>,
-}));
+    ],
+  ])
+);
+
+beforeEach(() => {
+  rs.useFakeTimers({ toFake: ["Date"] });
+  rs.setSystemTime(FETCHED_AT);
+});
+
+afterEach(() => {
+  rs.useRealTimers();
+});
 
 function requireFacetFilterBar(description: string) {
   const filterBar = document.querySelector<HTMLElement>(
@@ -220,182 +228,33 @@ function requireColumnTypeTitle(displayType: string) {
   return title;
 }
 
-rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
-  Object.fromEntries([
-    [
-      "TableDataGrid",
-      ({
-        children,
-      }: {
-        children?: (state: {
-          grid: React.ReactNode;
-          lastFetchedLabel: string;
-        }) => React.ReactNode;
-      }) => {
-        const grid = (
-          <div className="rounded-lg border border-border bg-muted/20 p-4 text-muted-foreground text-sm">
-            Data grid visual covered separately.
-          </div>
-        );
-
-        if (children) {
-          return (
-            <>
-              {children({
-                grid,
-                lastFetchedLabel: "Last fetched 11:00:00 PM",
-              })}
-            </>
-          );
-        }
-
-        return grid;
-      },
-    ],
-  ])
-);
-
-rs.mock("@connectrpc/connect-query", () => ({
-  ...actualConnectQuery,
-  useTransport: () => ({}),
-}));
-
-rs.mock("@tanstack/react-query", () => {
-  function schemaNameFromParent(parent: string | undefined) {
-    return parent?.split("/").at(-1) ?? "";
-  }
-
-  function result(data: unknown, error: Error | null = null) {
-    return {
-      data,
-      error,
-      isFetching: false,
-      isLoading: false,
-      refetch: () => Promise.resolve(),
-    };
-  }
-
-  function schemaMapQuery(query: unknown) {
-    const { queryKey } = query as { queryKey?: readonly unknown[] };
-    const descriptor = queryKey?.[1] as
-      | { input?: { parent?: string }; methodName?: string }
-      | undefined;
-    const parent = descriptor?.input?.parent;
-    const methodName = descriptor?.methodName ?? "";
-    schemaMapCatalog.observedQueries.push({
-      methodName,
-      parent: parent ?? "",
-    });
-    const error =
-      schemaMapCatalog.errorMethods.includes(methodName) ||
-      schemaMapCatalog.errorParents.includes(parent ?? "")
-        ? new Error(`${methodName} failed`)
-        : null;
-
-    if (methodName === "ListTables") {
-      const schemaName = schemaNameFromParent(parent);
-      return result(
-        {
-          nextPageToken: schemaMapCatalog.truncatedSchemas.includes(schemaName)
-            ? "next"
-            : "",
-          tables: schemaMapCatalog.tablesBySchema[schemaName] ?? [],
-        },
-        error
-      );
-    }
-    if (methodName === "ListViews") {
-      return result(
-        {
-          views:
-            schemaMapCatalog.viewsBySchema[schemaNameFromParent(parent)] ?? [],
-        },
-        error
-      );
-    }
-    if (methodName === "ListTableColumns") {
-      return result(
-        {
-          columns: schemaMapCatalog.columnsByTable[parent ?? ""] ?? [],
-        },
-        error
-      );
-    }
-    if (methodName === "ListTableConstraints") {
-      return result(
-        {
-          constraints: schemaMapCatalog.constraintsByTable[parent ?? ""] ?? [],
-        },
-        error
-      );
-    }
-
-    return result({});
-  }
-
-  return {
-    ...actualReactQuery,
-    useQueries: ({ queries }: { queries: unknown[] }) =>
-      queries.map(schemaMapQuery),
-  };
-});
-
-rs.mock("@/hooks/api/table", () => ({
-  tablesForSchemaQueryInput: ({
-    databaseId,
-    instanceId,
-    schemaId,
-  }: {
-    databaseId: string;
-    instanceId: string;
-    schemaId: string;
-  }) => ({
-    parent: schemaResource(schemaId)
-      .replace("instances/prod", `instances/${instanceId}`)
-      .replace("databases/logistics", `databases/${databaseId}`),
-  }),
-  useGetTablePartitionMetadataQuery: () => tableQueries.partitionMetadata,
-  useListTableColumnsQuery: () => tableQueries.columns,
-  useListTableConstraintsQuery: () => tableQueries.constraints,
-  useListTableIndexesQuery: () => tableQueries.indexes,
-  useListTablePoliciesQuery: () => tableQueries.policies,
-  useListTableTriggersQuery: () => tableQueries.triggers,
-}));
-
-rs.mock("@/hooks/api/view", () => ({
-  useListViewDependenciesQuery: () => viewQueries.dependencies,
-  useRefreshMaterializedViewMutation: () => viewQueries.refresh,
-  viewsForSchemaQueryInput: ({
-    databaseId,
-    filter,
-    instanceId,
-    schemaId,
-  }: {
-    databaseId: string;
-    filter?: string | undefined;
-    instanceId: string;
-    schemaId: string;
-  }) => ({
-    ...(filter ? { filter } : {}),
-    orderBy: "name asc",
-    pageSize: 100,
-    parent: `instances/${instanceId}/databases/${databaseId}/schemas/${schemaId}`,
-  }),
-}));
-
-rs.mock("@/hooks/api/sql", () => ({
-  useExplainQuery: () => sqlQueryState,
-}));
-
-async function renderExplorerSurface(
-  children: React.ReactNode,
-  surfaceWidthClassName = "w-[1100px]"
+/** Renders `ui` with the real connect-query hooks served from `catalog`. */
+async function renderWithCatalog(
+  ui: ReactNode,
+  catalog: ExplorerSurfaceCatalog
 ) {
-  await render(
+  const services = explorerSurfaceServices(catalog);
+  const transport = createTestRouterTransport((router) => {
+    router.service(SQLService, services.sql);
+    router.service(TableService, services.table);
+    router.service(ViewService, services.view);
+  });
+  explainTransport.current = transport;
+  await render(<HarnessProviders transport={transport}>{ui}</HarnessProviders>);
+}
+
+function Surface({
+  children,
+  width = "w-[1100px]",
+}: {
+  children: ReactNode;
+  width?: string | undefined;
+}) {
+  return (
     <ScreenshotFrame>
       <div
         className={cn(
-          surfaceWidthClassName,
+          width,
           "rounded-2xl border border-border bg-background p-8 text-foreground"
         )}
       >
@@ -405,14 +264,30 @@ async function renderExplorerSurface(
   );
 }
 
-async function renderScaledExplorerSurface(children: React.ReactNode) {
-  await render(
+/** A 1180px surface scaled down into a fixed 850px frame. */
+function ScaledSurface({
+  children,
+  frameClassName,
+  scaleClassName,
+  testId,
+}: {
+  children: ReactNode;
+  frameClassName: string;
+  scaleClassName: string;
+  testId: string;
+}) {
+  return (
     <ScreenshotFrame>
       <div
-        className="relative h-[930px] w-[850px] overflow-hidden"
-        data-testid="indexes-complex-frame"
+        className={cn("relative w-[850px] overflow-hidden", frameClassName)}
+        data-testid={testId}
       >
-        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.72]">
+        <div
+          className={cn(
+            "absolute top-0 left-0 w-[1180px] origin-top-left",
+            scaleClassName
+          )}
+        >
           <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
             {children}
           </div>
@@ -422,1045 +297,138 @@ async function renderScaledExplorerSurface(children: React.ReactNode) {
   );
 }
 
-async function renderPaginatedIndexesSurface(children: React.ReactNode) {
-  await render(
-    <ScreenshotFrame>
-      <div
-        className="relative h-[1000px] w-[850px] overflow-hidden"
-        data-testid="indexes-pagination-frame"
-      >
-        <div className="absolute top-0 left-0 w-[1180px] origin-top-left scale-[0.62]">
-          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
-            {children}
-          </div>
-        </div>
-      </div>
-    </ScreenshotFrame>
-  );
+function tableMessages(schema: SchemaFixture) {
+  return schema.tables.map(({ table }) => create(TableSchema, table));
 }
 
-function resetSqlQueryState() {
-  sqlQueryState.data = undefined;
-  sqlQueryState.error = null;
-  sqlQueryState.isFetching = false;
+function viewMessages(schema: SchemaFixture) {
+  return (schema.views ?? []).map(({ view }) => create(ViewSchema, view));
 }
 
-function resetPartitionMetadataQuery() {
-  tableQueries.partitionMetadata.data = {
-    partitionMetadata: {
-      childPartitions: [],
-      parentTable: "",
-      partitionBound: "",
-      partitionCount: 0,
-      partitionKey: "",
-    },
-  };
-}
-
-function schemaResource(schemaName: string) {
-  return `instances/prod/databases/logistics/schemas/${schemaName}`;
-}
-
-function tableResource(schemaName: string, tableName: string) {
-  return `${schemaResource(schemaName)}/tables/${tableName}`;
-}
-
-function seedSchemaMapVisualCatalog() {
-  schemaMapCatalog.errorMethods = [];
-  schemaMapCatalog.errorParents = [];
-  schemaMapCatalog.observedQueries = [];
-  schemaMapCatalog.truncatedSchemas = [];
-  const table = (schemaName: string, tableName: string, rowCount: bigint) =>
-    createProto(TableSchema, {
-      displayName: tableName,
-      name: tableResource(schemaName, tableName),
-      owner: "app_owner",
-      rowCount,
-      sizeBytes: 128n,
-    });
-  const column = (
-    columnName: string,
-    rawType: string,
-    options: { primary?: boolean } = {}
-  ) =>
-    createProto(ColumnSchema, {
-      columnName,
-      isPrimaryKey: options.primary ?? false,
-      rawType,
-    });
-  const foreignKey = ({
-    columnName,
-    constraintName,
-    referencedColumn = "id",
-    referencedSchema,
-    referencedTable,
-  }: {
-    columnName: string;
-    constraintName: string;
-    referencedColumn?: string;
-    referencedSchema: string;
-    referencedTable: string;
-  }) =>
-    createProto(TableConstraintSchema, {
-      columnNames: [columnName],
-      constraintName,
-      referencedColumnNames: [referencedColumn],
-      referencedTable: tableResource(referencedSchema, referencedTable),
-      type: ConstraintType.FOREIGN_KEY,
-    });
-
-  const carriers = table("shipping", "carriers", 312n);
-  const shipments = table("shipping", "shipments", 2_400_000n);
-  const shipmentEvent = table("shipping", "shipment_event", 18_200_000n);
-  const containers = table("shipping", "containers", 88_000n);
-  const ports = table("catalog", "ports", 642n);
-  const routes = table("catalog", "routes", 1_800n);
-  const changeLog = table("audit", "change_log", 4_200_000n);
-
-  schemaMapCatalog.tablesBySchema = {
-    audit: [changeLog],
-    catalog: [ports, routes],
-    shipping: [carriers, shipments, shipmentEvent, containers],
-  };
-  schemaMapCatalog.viewsBySchema = { audit: [], catalog: [], shipping: [] };
-  schemaMapCatalog.columnsByTable = {
-    [carriers.name]: [
-      column("id", "int4", { primary: true }),
-      column("code", "text"),
-      column("name", "text"),
-      column("scac", "text"),
-      column("active", "bool"),
-      column("rating", "numeric(3,2)"),
-      column("onboarded_at", "date"),
-    ],
-    [changeLog.name]: [
-      column("id", "int8", { primary: true }),
-      column("table_name", "text"),
-      column("op", "text"),
-      column("actor", "text"),
-      column("diff", "jsonb"),
-      column("recorded_at", "timestamptz"),
-    ],
-    [containers.name]: [
-      column("id", "int4", { primary: true }),
-      column("shipment_id", "uuid"),
-      column("iso_code", "text"),
-      column("ctype", "text"),
-      column("tare_kg", "numeric"),
-    ],
-    [ports.name]: [
-      column("id", "int4", { primary: true }),
-      column("code", "text"),
-      column("name", "text"),
-      column("country", "text"),
-      column("tz", "text"),
-    ],
-    [routes.name]: [
-      column("id", "int4", { primary: true }),
-      column("origin_port", "text"),
-      column("dest_port", "text"),
-      column("transit_days", "int4"),
-      column("distance_nm", "int4"),
-      column("active", "bool"),
-    ],
-    [shipmentEvent.name]: [
-      column("id", "int8", { primary: true }),
-      column("shipment_id", "uuid"),
-      column("event", "text"),
-      column("location", "text"),
-      column("recorded_at", "timestamptz"),
-    ],
-    [shipments.name]: [
-      column("id", "uuid", { primary: true }),
-      column("ref", "text"),
-      column("carrier_id", "int4"),
-      column("status", "shipment_status"),
-      column("origin_port", "text"),
-      column("dest_port", "text"),
-      column("weight_kg", "numeric(10,2)"),
-      column("eta", "date"),
-      column("created_at", "timestamptz"),
-    ],
-  };
-  schemaMapCatalog.constraintsByTable = {
-    [containers.name]: [
-      foreignKey({
-        columnName: "shipment_id",
-        constraintName: "containers_shipment_id_fkey",
-        referencedSchema: "shipping",
-        referencedTable: "shipments",
-      }),
-    ],
-    [routes.name]: [
-      foreignKey({
-        columnName: "origin_port",
-        constraintName: "routes_origin_port_fkey",
-        referencedColumn: "code",
-        referencedSchema: "catalog",
-        referencedTable: "ports",
-      }),
-      foreignKey({
-        columnName: "dest_port",
-        constraintName: "routes_dest_port_fkey",
-        referencedColumn: "code",
-        referencedSchema: "catalog",
-        referencedTable: "ports",
-      }),
-    ],
-    [shipmentEvent.name]: [
-      foreignKey({
-        columnName: "shipment_id",
-        constraintName: "shipment_event_shipment_id_fkey",
-        referencedSchema: "shipping",
-        referencedTable: "shipments",
-      }),
-    ],
-    [shipments.name]: [
-      foreignKey({
-        columnName: "carrier_id",
-        constraintName: "shipments_carrier_id_fkey",
-        referencedSchema: "shipping",
-        referencedTable: "carriers",
-      }),
-    ],
-  };
-
-  return {
-    schemas: [
-      { id: "shipping", name: "shipping", owner: "app_owner" },
-      { id: "catalog", name: "catalog", owner: "app_owner" },
-      { id: "audit", name: "audit", owner: "app_owner" },
-    ],
-    shippingTables: [carriers, shipments, shipmentEvent, containers],
-  };
-}
-
-function seedTableDetailQueries() {
-  resetPartitionMetadataQuery();
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "customer_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "status",
-        dataType: DataType.STRING,
-        defaultValue: "'active'::text",
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "account_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "metadata",
-        dataType: DataType.JSON,
-        defaultValue: "'{}'::jsonb",
-        isNullable: true,
-        ordinalPosition: 4,
-        rawType: "jsonb",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["customer_id"],
-          constraintName: "customers_pkey",
-          definition: "PRIMARY KEY (customer_id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["account_id"],
-          constraintName: "customers_account_id_fkey",
-          definition: "FOREIGN KEY (account_id) REFERENCES accounts(id)",
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/app/schemas/public/tables/accounts",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-      ],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        blocksHit: 989n,
-        blocksRead: 11n,
-        definition:
-          "CREATE INDEX customers_status_account_idx ON public.customers USING btree (status, account_id) INCLUDE (last_seen_at)",
-        hasUsageStats: true,
-        includedColumns: ["last_seen_at"],
-        indexName: "customers_status_account_idx",
-        isUnique: false,
-        isValid: true,
-        keyColumns: ["status", "account_id"],
-        keyParts: ["status", "account_id"],
-        method: "btree",
-        scanCount: 10n,
-        sizeBytes: 327_680n,
-        tuplesFetched: 8n,
-        tuplesRead: 12n,
-      }),
-      createProto(TableIndexSchema, {
-        blocksHit: 100n,
-        definition:
-          "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (customer_id)",
-        hasUsageStats: true,
-        indexName: "customers_pkey",
-        isUnique: true,
-        isValid: true,
-        keyColumns: ["customer_id"],
-        keyParts: ["customer_id"],
-        method: "btree",
-        scanCount: 20n,
-        sizeBytes: 98_304n,
-        tuplesFetched: 18n,
-        tuplesRead: 20n,
-      }),
-    ],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [
-      createProto(TablePolicySchema, {
-        checkExpression: "account_id = current_setting('app.account_id')::uuid",
-        command: PolicyCommand.SELECT,
-        mode: PolicyMode.PERMISSIVE,
-        policyName: "customers_account_read_policy",
-        roles: ["app_reader", "support_agent"],
-        usingExpression: "account_id = current_setting('app.account_id')::uuid",
-      }),
-    ],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [
-      createProto(TableTriggerSchema, {
-        definition: "EXECUTE FUNCTION audit_customer_changes()",
-        enabled: true,
-        events: ["INSERT", "UPDATE"],
-        functionName: "audit_customer_changes",
-        timing: "AFTER",
-        triggerName: "customers_audit_trigger",
-      }),
-    ],
-  });
-}
-
-function seedDefinitionDesignQueries() {
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        dataType: DataType.INTEGER,
-        identityGeneration: IdentityGeneration.BY_DEFAULT,
-        isIdentity: true,
-        isNullable: false,
-        ordinalPosition: 1,
-        rawType: "int8",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "table_name",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "op",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "actor",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "diff",
-        dataType: DataType.JSON,
-        isNullable: false,
-        ordinalPosition: 5,
-        rawType: "jsonb",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "recorded_at",
-        dataType: DataType.TIMESTAMP,
-        defaultValue: "now()",
-        isNullable: false,
-        ordinalPosition: 6,
-        rawType: "timestamptz",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "change_log_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-      ],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        indexName: "change_log_pkey",
-        isUnique: true,
-        keyColumns: ["id"],
-        method: "btree",
-        sizeBytes: 98_304n,
-      }),
-    ],
-  });
-  tableQueries.partitionMetadata.data = {
-    partitionMetadata: {
-      childPartitions: [],
-      parentTable: "",
-      partitionBound: "",
-      partitionCount: 0,
-      partitionKey: "",
-    },
-  };
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [
-      createProto(TablePolicySchema, {
-        command: PolicyCommand.SELECT,
-        mode: PolicyMode.PERMISSIVE,
-        policyName: "change_log_actor_read_policy",
-        roles: ["audit_reader"],
-        usingExpression: "actor = current_user",
-      }),
-    ],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [
-      createProto(TableTriggerSchema, {
-        // Full pg_get_triggerdef form, matching what the backend returns.
-        definition:
-          "CREATE TRIGGER change_log_record_trigger\n  AFTER INSERT OR UPDATE OR DELETE ON audit.change_log\n  FOR EACH ROW EXECUTE FUNCTION audit.record_change()",
-        enabled: true,
-        events: ["INSERT", "UPDATE", "DELETE"],
-        functionName: "audit.record_change",
-        timing: "AFTER",
-        triggerName: "change_log_record_trigger",
-      }),
-    ],
-  });
-}
-
-function seedInvoicePolicies() {
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [
-      createProto(TablePolicySchema, {
-        checkExpression: "customer = current_setting('app.tenant')",
-        command: PolicyCommand.ALL,
-        mode: PolicyMode.PERMISSIVE,
-        policyName: "invoices_tenant_all",
-        roles: ["app_readwrite"],
-        usingExpression: "customer = current_setting('app.tenant')",
-      }),
-      createProto(TablePolicySchema, {
-        command: PolicyCommand.SELECT,
-        mode: PolicyMode.PERMISSIVE,
-        policyName: "invoices_finance_select",
-        roles: ["app_readwrite"],
-        usingExpression: "pg_has_role(current_user, 'billing', 'member')",
-      }),
-      createProto(TablePolicySchema, {
-        command: PolicyCommand.SELECT,
-        mode: PolicyMode.PERMISSIVE,
-        policyName: "invoices_reader_recent",
-        roles: ["app_readonly"],
-        usingExpression: "issued_at >= now() - interval '90 days'",
-      }),
-    ],
-  });
-}
-
-function seedShippingColumnsDesignQueries() {
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        comment: "Surrogate key",
-        dataType: DataType.UUID,
-        defaultValue: "gen_random_uuid()",
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "ref",
-        comment: "Human-readable booking reference",
-        dataType: DataType.STRING,
-        isNullable: false,
-        isUnique: true,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "carrier_id",
-        dataType: DataType.INTEGER,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "int4",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "status",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "shipment_status",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "origin_port",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 5,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "dest_port",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 6,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "route_code",
-        dataType: DataType.STRING,
-        generationExpression: "origin_port || ':' || dest_port",
-        isGenerated: true,
-        isNullable: false,
-        ordinalPosition: 7,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "sequence_no",
-        dataType: DataType.INTEGER,
-        identityGeneration: IdentityGeneration.BY_DEFAULT,
-        isIdentity: true,
-        isNullable: false,
-        ordinalPosition: 8,
-        rawType: "int8",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "weight_kg",
-        dataType: DataType.FLOAT,
-        isNullable: false,
-        ordinalPosition: 9,
-        rawType: "numeric(10,2)",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "eta",
-        comment: "Set NULL once delivered",
-        dataType: DataType.DATE,
-        isNullable: true,
-        ordinalPosition: 10,
-        rawType: "date",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "created_at",
-        dataType: DataType.TIMESTAMP,
-        defaultValue: "now()",
-        isNullable: false,
-        ordinalPosition: 11,
-        rawType: "timestamptz",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "shipments_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["ref"],
-          constraintName: "shipments_ref_key",
-          definition: "UNIQUE (ref)",
-          type: ConstraintType.UNIQUE,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["carrier_id"],
-          constraintName: "shipments_carrier_id_fkey",
-          definition:
-            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id)",
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/logistics/schemas/shipping/tables/carriers",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-      ],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        indexName: "shipments_pkey",
-        isUnique: true,
-        keyColumns: ["id"],
-        method: "btree",
-        sizeBytes: 327_155_712n,
-      }),
-      createProto(TableIndexSchema, {
-        indexName: "shipments_ref_key",
-        isUnique: true,
-        keyColumns: ["ref"],
-        method: "btree",
-        sizeBytes: 104_857_600n,
-      }),
-      createProto(TableIndexSchema, {
-        indexName: "shipments_status_idx",
-        keyColumns: ["status"],
-        method: "btree",
-        sizeBytes: 18_874_368n,
-      }),
-      createProto(TableIndexSchema, {
-        indexName: "shipments_carrier_id_idx",
-        keyColumns: ["carrier_id"],
-        method: "btree",
-        sizeBytes: 54_525_952n,
-      }),
-    ],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
-  });
-}
-
-function seedShipmentIndexesRedesignQueries() {
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "ref",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "carrier_id",
-        dataType: DataType.INTEGER,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "integer",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "status",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "shipment_status",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "origin_port",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 5,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "dest_port",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 6,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "weight_kg",
-        dataType: DataType.FLOAT,
-        isNullable: false,
-        ordinalPosition: 7,
-        rawType: "numeric",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "eta",
-        dataType: DataType.DATE,
-        isNullable: true,
-        ordinalPosition: 8,
-        rawType: "date",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "created_at",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 9,
-        rawType: "timestamp with time zone",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "shipments_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["ref"],
-          constraintName: "shipments_ref_key",
-          definition: "UNIQUE (ref)",
-          type: ConstraintType.UNIQUE,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["carrier_id"],
-          constraintName: "shipments_carrier_id_fkey",
-          definition:
-            "FOREIGN KEY (carrier_id) REFERENCES shipping.carriers(id) ON DELETE RESTRICT",
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/logistics/schemas/shipping/tables/carriers",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["weight_kg"],
-          constraintName: "shipments_weight_positive",
-          definition: "CHECK (weight_kg > 0)",
-          type: ConstraintType.CHECK,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["eta", "created_at"],
-          constraintName: "shipments_eta_reasonable",
-          definition: "CHECK (eta IS NULL OR eta > created_at::date)",
-          type: ConstraintType.CHECK,
-        }),
-      ],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        blocksHit: 997n,
-        blocksRead: 3n,
-        definition:
-          "CREATE UNIQUE INDEX shipments_pkey ON shipping.shipments USING btree (id)",
-        hasUsageStats: true,
-        indexName: "shipments_pkey",
-        isUnique: true,
-        isValid: true,
-        keyColumns: ["id"],
-        keyParts: ["id"],
-        method: "btree",
-        scanCount: 48_100_000n,
-        sizeBytes: 312n * 1024n * 1024n,
-        tuplesFetched: 48_100_000n,
-        tuplesRead: 48_400_000n,
-      }),
-      createProto(TableIndexSchema, {
-        blocksHit: 989n,
-        blocksRead: 11n,
-        definition:
-          "CREATE INDEX shipments_status_idx ON shipping.shipments USING btree (status) WHERE status <> 'delivered'",
-        hasUsageStats: true,
-        indexName: "shipments_status_idx",
-        isValid: true,
-        keyColumns: ["status"],
-        keyParts: ["status"],
-        method: "btree",
-        predicate: "status <> 'delivered'",
-        scanCount: 9_400_000n,
-        sizeBytes: 18n * 1024n * 1024n,
-        tuplesFetched: 9_300_000n,
-        tuplesRead: 11_200_000n,
-      }),
-      createProto(TableIndexSchema, {
-        blocksHit: 991n,
-        blocksRead: 9n,
-        definition:
-          "CREATE INDEX shipments_carrier_id_idx ON shipping.shipments USING btree (carrier_id)",
-        hasUsageStats: true,
-        indexName: "shipments_carrier_id_idx",
-        isValid: true,
-        keyColumns: ["carrier_id"],
-        keyParts: ["carrier_id"],
-        method: "btree",
-        scanCount: 1_200_000n,
-        sizeBytes: 52n * 1024n * 1024n,
-        tuplesFetched: 1_200_000n,
-        tuplesRead: 2_800_000n,
-      }),
-      createProto(TableIndexSchema, {
-        definition:
-          "CREATE INDEX shipments_legacy_ref_idx ON shipping.shipments USING btree (lower(ref))",
-        hasExpression: true,
-        hasUsageStats: true,
-        indexName: "shipments_legacy_ref_idx",
-        isValid: true,
-        keyParts: ["lower(ref)"],
-        method: "btree",
-        sizeBytes: 96n * 1024n * 1024n,
-      }),
-    ],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [
-      createProto(TableTriggerSchema, {
-        definition: "EXECUTE FUNCTION shipping.touch_updated_at()",
-        enabled: true,
-        events: ["UPDATE"],
-        functionName: "shipping.touch_updated_at",
-        timing: "BEFORE",
-        triggerName: "trg_shipments_touch",
-      }),
-      createProto(TableTriggerSchema, {
-        definition: "EXECUTE FUNCTION audit.log_change()",
-        enabled: true,
-        events: ["INSERT", "UPDATE", "DELETE"],
-        functionName: "audit.log_change",
-        timing: "AFTER",
-        triggerName: "trg_shipments_audit",
-      }),
-      createProto(TableTriggerSchema, {
-        definition: "EXECUTE FUNCTION shipping.notify_status_change()",
-        enabled: false,
-        events: ["UPDATE"],
-        functionName: "shipping.notify_status_change",
-        timing: "AFTER",
-        triggerName: "trg_shipments_notify",
-      }),
-    ],
-  });
-}
-
-function seedTypeAnnotationQueries() {
-  resetPartitionMetadataQuery();
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "event_time",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 1,
-        rawType: "timestamp with time zone",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "amount",
-        dataType: DataType.FLOAT,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "numeric",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "retry_count",
-        dataType: DataType.INTEGER,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "bigint",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "metadata",
-        dataType: DataType.JSON,
-        isNullable: true,
-        ordinalPosition: 4,
-        rawType: "jsonb",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
-  });
-}
-
-function seedTriggerRedesignQueries() {
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "shipment_event_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "shipment_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "event_type",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "event_time",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "timestamptz",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "metadata",
-        dataType: DataType.JSON,
-        isNullable: true,
-        ordinalPosition: 5,
-        rawType: "jsonb",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_event_enrich BEFORE INSERT ON shipping.shipment_event\n  FOR EACH ROW EXECUTE FUNCTION shipping.enrich_event_location();",
-        enabled: true,
-        events: ["INSERT"],
-        functionName: "shipping.enrich_event_location",
-        timing: "BEFORE",
-        triggerName: "trg_event_enrich",
-      }),
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_shipments_notify AFTER UPDATE OF status ON shipping.shipment_event FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION shipping.notify_status_change()",
-        enabled: false,
-        events: ["UPDATE"],
-        functionName: "notify_status_change",
-        timing: "AFTER",
-        triggerName: "trg_shipments_notify",
-      }),
-      createProto(TableTriggerSchema, {
-        definition:
-          "CREATE TRIGGER trg_event_statement_log AFTER INSERT OR DELETE OR UPDATE ON shipping.shipment_event FOR EACH STATEMENT EXECUTE FUNCTION shipping.log_shipment_event_summary()",
-        enabled: true,
-        events: ["INSERT", "DELETE", "UPDATE"],
-        functionName: "log_shipment_event_summary",
-        timing: "AFTER",
-        triggerName: "trg_event_statement_log",
-      }),
-    ],
-  });
-}
-
-test("data explorer schema detail keeps dense table summaries scannable", async () => {
-  await renderExplorerSurface(
+function SchemaOverview({
+  schema,
+  ...props
+}: { schema: SchemaFixture } & Partial<ComponentProps<typeof SchemaDetail>>) {
+  return (
     <SchemaDetail
       onSelectTable={() => undefined}
       onSelectView={() => undefined}
-      owner="data_platform"
-      schemaName="customer_success_reporting"
-      tables={[
-        createProto(TableSchema, {
-          displayName: "fact_customer_activity_rollup_daily_archive_2026",
-          name: "fact_customer_activity_rollup_daily_archive_2026",
-          owner: "data_platform",
-          rowCount: 8_400_000n,
-          sizeBytes: 1_420_000_000n,
-        }),
-        createProto(TableSchema, {
-          displayName: "customer_accounts",
-          name: "customer_accounts",
-          owner: "data_platform",
-          rowCount: 986_420n,
-          sizeBytes: 428_000_000n,
-        }),
-        createProto(TableSchema, {
-          displayName: "subscription_events",
-          name: "subscription_events",
-          owner: "data_platform",
-          rowCount: 1_250_000n,
-          sizeBytes: 398_000_000n,
-        }),
-        createProto(TableSchema, {
-          displayName: "dim_region",
-          name: "dim_region",
-          owner: "data_platform",
-          rowCount: 184n,
-          sizeBytes: 28_672n,
-        }),
-      ]}
+      owner={schema.owner ?? "app_owner"}
+      schemaName={schema.name}
+      tables={tableMessages(schema)}
       tablesError={null}
       tablesLoading={false}
-      views={[
-        createProto(ViewSchema, {
-          displayName: "active_customer_accounts",
-          name: "active_customer_accounts",
-          owner: "data_platform",
-          rowCount: 986_420n,
-          sizeBytes: 0n,
-          viewType: View_ViewType.STANDARD,
-        }),
-        createProto(ViewSchema, {
-          displayName: "customer_success_daily_rollups",
-          name: "customer_success_daily_rollups",
-          owner: "data_platform",
-          rowCount: 8_400_000n,
-          sizeBytes: 512_000_000n,
-          viewType: View_ViewType.MATERIALIZED,
-        }),
-      ]}
+      views={viewMessages(schema)}
       viewsError={null}
       viewsLoading={false}
+      {...props}
     />
+  );
+}
+
+function TableSurface({
+  schema,
+  tab,
+  tableName,
+}: {
+  schema: SchemaFixture;
+  tab: string;
+  tableName: string;
+}) {
+  const fixture = schema.tables.find(
+    ({ table }) => table.displayName === tableName
+  );
+  return (
+    <TableDetail
+      databaseId={EXPLORER_DATABASE_ID}
+      initialTab={tab}
+      instanceId={EXPLORER_INSTANCE_ID}
+      schemaName={schema.name}
+      table={fixture && create(TableSchema, fixture.table)}
+      tableName={tableName}
+    />
+  );
+}
+
+/** `surface` is the initial tab, or the tab plus a surface width. */
+async function renderTable(
+  schema: SchemaFixture,
+  tableName: string,
+  surface: string | { tab: string; width: string }
+) {
+  const { tab, width } =
+    typeof surface === "string" ? { tab: surface, width: undefined } : surface;
+  await renderWithCatalog(
+    <Surface width={width}>
+      <TableSurface schema={schema} tab={tab} tableName={tableName} />
+    </Surface>,
+    { schemas: [schema] }
+  );
+}
+
+function ViewSurface({ schema }: { schema: SchemaFixture }) {
+  const [fixture] = schema.views ?? [];
+  if (!fixture) {
+    throw new Error(`Expected ${schema.name} to define a view.`);
+  }
+  return (
+    <ViewDetail
+      view={create(ViewSchema, fixture.view)}
+      viewName={fixture.view.displayName ?? ""}
+    />
+  );
+}
+
+const MAP_SCHEMAS = SCHEMA_MAP_SCHEMAS.map(({ name, owner }) => ({
+  id: name,
+  name,
+  owner: owner ?? "app_owner",
+}));
+
+function ShippingMap(props: Partial<ComponentProps<typeof ExplorerSchemaMap>>) {
+  return (
+    <ExplorerSchemaMap
+      activeSchemaName="shipping"
+      databaseId={EXPLORER_DATABASE_ID}
+      enabled={true}
+      instanceId={EXPLORER_INSTANCE_ID}
+      onSelectTable={() => undefined}
+      schemas={MAP_SCHEMAS}
+      {...props}
+    />
+  );
+}
+
+/** Serves the schema map catalog and returns the RPC log it fills. */
+async function renderMap(
+  ui: ReactNode,
+  overrides: Omit<ExplorerSurfaceCatalog, "schemas"> = {}
+) {
+  const requests: string[] = [];
+  await renderWithCatalog(ui, {
+    requests,
+    schemas: SCHEMA_MAP_SCHEMAS,
+    ...overrides,
+  });
+  return requests;
+}
+
+/** Resources a `renderMap` RPC log requested through `methods`. */
+function requestedResources(requests: string[], ...methods: string[]) {
+  return new Set(
+    requests.flatMap((request) => {
+      const [method = "", resource = ""] = request.split(":");
+      return methods.includes(method) ? [resource] : [];
+    })
+  );
+}
+
+test("data explorer schema detail keeps dense table summaries scannable", async () => {
+  await renderWithCatalog(
+    <Surface>
+      <SchemaOverview schema={SCHEMA_SUMMARY} />
+    </Surface>,
+    { schemas: [SCHEMA_SUMMARY] }
   );
 
   await expect
@@ -1508,37 +476,11 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
 });
 
 test("data explorer schema detail captures active object filters", async () => {
-  await renderExplorerSurface(
-    <SchemaDetail
-      onSelectTable={() => undefined}
-      onSelectView={() => undefined}
-      owner="data_platform"
-      schemaName="sales"
-      tables={[
-        createProto(TableSchema, {
-          displayName: "orders",
-          name: "orders",
-          owner: "data_platform",
-          rowCount: 120_000n,
-          sizeBytes: 80_000_000n,
-        }),
-      ]}
-      tablesError={null}
-      tablesLoading={false}
-      views={[
-        createProto(ViewSchema, {
-          displayName: "daily_rollups",
-          name: "daily_rollups",
-          owner: "analytics_owner",
-          rowCount: 4_200n,
-          sizeBytes: 4_096_000n,
-          viewType: View_ViewType.MATERIALIZED,
-        }),
-      ]}
-      viewsError={null}
-      viewsLoading={false}
-    />,
-    "w-[900px]"
+  await renderWithCatalog(
+    <Surface width="w-[900px]">
+      <SchemaOverview schema={SALES_SCHEMA} />
+    </Surface>,
+    { schemas: [SALES_SCHEMA] }
   );
 
   await page.getByRole("button", { name: KIND_FILTER_RE }).click();
@@ -1562,25 +504,19 @@ test("data explorer schema detail captures active object filters", async () => {
 });
 
 test("data explorer schema detail scopes the map to the selected schema", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <SchemaDetail
+  const [shipping] = SCHEMA_MAP_SCHEMAS;
+  if (!shipping) {
+    throw new Error("Expected the shipping schema fixture.");
+  }
+  const requests = await renderMap(
+    <SchemaOverview
       activeTab="map"
-      databaseId="logistics"
-      instanceId="prod"
-      onSelectTable={() => undefined}
+      databaseId={EXPLORER_DATABASE_ID}
+      instanceId={EXPLORER_INSTANCE_ID}
       onSelectTableInSchema={() => undefined}
-      onSelectView={() => undefined}
-      owner="app_owner"
-      schemaName="shipping"
-      schemas={catalog.schemas}
-      tables={catalog.shippingTables}
-      tablesError={null}
-      tablesLoading={false}
+      schema={shipping}
+      schemas={MAP_SCHEMAS}
       views={[]}
-      viewsError={null}
-      viewsLoading={false}
     />
   );
 
@@ -1588,32 +524,19 @@ test("data explorer schema detail scopes the map to the selected schema", async 
   await expect.element(page.getByText("ports")).not.toBeAttached();
   await expect.element(page.getByText("change_log")).not.toBeAttached();
 
-  const schemaListParents = schemaMapCatalog.observedQueries
-    .filter(
-      ({ methodName }) =>
-        methodName === "ListTables" || methodName === "ListViews"
-    )
-    .map(({ parent }) => parent);
-  expect(new Set(schemaListParents)).toEqual(
-    new Set([schemaResource("shipping")])
+  expect(requestedResources(requests, "ListTables", "ListViews")).toEqual(
+    new Set([
+      buildSchemaName(EXPLORER_INSTANCE_ID, EXPLORER_DATABASE_ID, "shipping"),
+    ])
   );
 });
 
 test("data explorer schema map shows relationships without a floating help overlay", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
   const onSelectTable = rs.fn();
-
-  await render(
+  const requests = await renderMap(
     <ScreenshotFrame>
       <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
-        <ExplorerSchemaMap
-          activeSchemaName="shipping"
-          databaseId="logistics"
-          enabled={true}
-          instanceId="prod"
-          onSelectTable={onSelectTable}
-          schemas={catalog.schemas}
-        />
+        <ShippingMap onSelectTable={onSelectTable} />
       </div>
     </ScreenshotFrame>
   );
@@ -1621,7 +544,7 @@ test("data explorer schema map shows relationships without a floating help overl
   await expect
     .element(page.getByRole("heading", { name: "Schema map" }))
     .toBeVisible();
-  await expect.element(page.getByText("logistics")).toBeVisible();
+  await expect.element(page.getByText(EXPLORER_DATABASE_ID)).toBeVisible();
   await expect
     .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
     .toBeVisible();
@@ -1636,22 +559,19 @@ test("data explorer schema map shows relationships without a floating help overl
     .element(page.getByText("Curved lines show foreign keys."))
     .not.toBeAttached();
 
-  const metadataParents = schemaMapCatalog.observedQueries
-    .filter(({ methodName }) => methodName === "ListTableColumns")
-    .map(({ parent }) => parent);
-  expect(new Set(metadataParents)).toEqual(
-    new Set([...Object.keys(schemaMapCatalog.columnsByTable)])
+  expect(requestedResources(requests, "ListTableColumns")).toEqual(
+    new Set(
+      SCHEMA_MAP_SCHEMAS.flatMap(({ tables }) =>
+        tables.map(({ table }) => table.name)
+      )
+    )
   );
 
   await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
   await page.getByText("catalog").last().click();
-  expect(
-    schemaMapCatalog.observedQueries.some(
-      ({ methodName, parent }) =>
-        methodName === "ListTableColumns" &&
-        parent.includes("/schemas/catalog/")
-    )
-  ).toBe(true);
+  expect(requestedResources(requests, "ListTableColumns")).toContain(
+    tableResource("catalog", "ports")
+  );
   await expect
     .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
     .toBeVisible();
@@ -1691,45 +611,19 @@ test("data explorer schema map shows relationships without a floating help overl
 }, 30_000);
 
 test("data explorer schema map loads table details without selection", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  const requests = await renderMap(<ShippingMap />);
 
   await expect.element(page.getByText("change_log")).toBeVisible();
   await expect
     .element(page.getByText("Select table to load details."))
     .not.toBeAttached();
-  expect(
-    schemaMapCatalog.observedQueries.some(
-      ({ methodName, parent }) =>
-        methodName === "ListTableColumns" &&
-        parent.includes("/schemas/audit/tables/change_log")
-    )
-  ).toBe(true);
+  expect(requestedResources(requests, "ListTableColumns")).toContain(
+    tableResource("audit", "change_log")
+  );
 });
 
 test("data explorer schema map selection does not move nodes", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   await expect
     .element(page.getByRole("button", { name: "catalog.routes" }))
@@ -1759,19 +653,10 @@ test("data explorer schema map selection does not move nodes", async () => {
 });
 
 test("data explorer schema map uses a compact schema filter at narrow widths", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
+  await renderMap(
     <ScreenshotFrame>
       <div className="flex h-[900px] w-[680px] bg-background text-foreground">
-        <ExplorerSchemaMap
-          activeSchemaName="shipping"
-          databaseId="logistics"
-          enabled={true}
-          instanceId="prod"
-          onSelectTable={() => undefined}
-          schemas={catalog.schemas}
-        />
+        <ShippingMap />
       </div>
     </ScreenshotFrame>
   );
@@ -1791,18 +676,7 @@ test("data explorer schema map uses a compact schema filter at narrow widths", a
 });
 
 test("data explorer schema map keeps schema labels clear of group borders", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   await expect.element(page.getByTestId("schema-map-canvas")).toBeVisible();
 
@@ -1825,18 +699,7 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
 });
 
 test("data explorer schema map spells out uppercase key labels", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   await expect.element(page.getByText("PRIMARY KEY").first()).toBeVisible();
   await expect.element(page.getByText("FOREIGN KEY").first()).toBeVisible();
@@ -1844,18 +707,7 @@ test("data explorer schema map spells out uppercase key labels", async () => {
 });
 
 test("data explorer schema map does not clip table card decoration", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   const tableCardLocator = page.getByRole("button", {
     name: "shipping.carriers",
@@ -1873,18 +725,7 @@ test("data explorer schema map does not clip table card decoration", async () =>
 });
 
 test("data explorer schema map emphasizes incoming and outgoing relationships", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   await expect.element(page.getByText("FOREIGN KEY").first()).toBeVisible();
   await page.getByRole("button", { name: "shipping.shipments" }).click();
@@ -1916,18 +757,7 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
 });
 
 test("data explorer schema map places controls directly after the schema filter", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />);
 
   const schemaFilterLocator = page.getByRole("button", {
     name: SCHEMA_MAP_FILTER_RE,
@@ -1944,20 +774,10 @@ test("data explorer schema map places controls directly after the schema filter"
 });
 
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-  schemaMapCatalog.errorMethods = ["ListViews"];
-  schemaMapCatalog.truncatedSchemas = ["shipping"];
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />, {
+    failing: ["ListViews"],
+    truncatedSchemas: ["shipping"],
+  });
 
   await expect
     .element(page.getByText("Some schema metadata could not load"))
@@ -1972,19 +792,9 @@ test("data explorer schema map surfaces partial catalog failures and truncation"
 });
 
 test("data explorer schema map omits tables whose details fail", async () => {
-  const catalog = seedSchemaMapVisualCatalog();
-  schemaMapCatalog.errorParents = [tableResource("catalog", "routes")];
-
-  await render(
-    <ExplorerSchemaMap
-      activeSchemaName="shipping"
-      databaseId="logistics"
-      enabled={true}
-      instanceId="prod"
-      onSelectTable={() => undefined}
-      schemas={catalog.schemas}
-    />
-  );
+  await renderMap(<ShippingMap />, {
+    failing: [tableResource("catalog", "routes")],
+  });
 
   await expect
     .element(page.getByText("Some schema metadata could not load"))
@@ -1998,62 +808,11 @@ test("data explorer schema map omits tables whose details fail", async () => {
 });
 
 test("data explorer materialized view detail stays readable", async () => {
-  resetSqlQueryState();
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "account_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 1,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "health_score",
-        dataType: DataType.FLOAT,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "numeric",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    { constraints: [] }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        definition:
-          "CREATE UNIQUE INDEX customer_success_daily_rollups_account_idx ON public.customer_success_daily_rollups USING btree (account_id)",
-        indexName: "customer_success_daily_rollups_account_idx",
-        isUnique: true,
-        isValid: true,
-        keyColumns: ["account_id"],
-        keyParts: ["account_id"],
-        method: "btree",
-        sizeBytes: 67_108_864n,
-      }),
-    ],
-  });
-  viewQueries.dependencies.data = { pages: [{ viewDependencies: [] }] };
-
-  await renderExplorerSurface(
-    <ViewDetail
-      view={createProto(ViewSchema, {
-        comment:
-          "Precomputed customer success metrics for account health dashboards.",
-        displayName: "customer_success_daily_rollups",
-        isPopulated: true,
-        lastDdlTime: { seconds: 1_779_292_800n },
-        name: "instances/prod/databases/app/schemas/public/views/customer_success_daily_rollups",
-        owner: "analytics_owner",
-        rowCount: 8_400_000n,
-        sizeBytes: 512_000_000n,
-        viewType: View_ViewType.MATERIALIZED,
-      })}
-      viewName="customer_success_daily_rollups"
-    />
+  await renderWithCatalog(
+    <Surface>
+      <ViewSurface schema={MATERIALIZED_VIEW_SCHEMA} />
+    </Surface>,
+    { schemas: [MATERIALIZED_VIEW_SCHEMA] }
   );
 
   await expect
@@ -2069,30 +828,11 @@ test("data explorer materialized view detail stays readable", async () => {
 });
 
 test("data explorer view notice check displays returned notices", async () => {
-  resetSqlQueryState();
-  sqlQueryState.data = {
-    notices: [
-      "NOTICE 00000: planner checked daily_paid_revenue",
-      "DETAIL: scan uses the sales.orders source relation",
-      "HINT: Refresh the view if estimates look stale",
-    ],
-  };
-
-  await renderExplorerSurface(
-    <ViewDetail
-      view={createProto(ViewSchema, {
-        comment: "Tracks paid revenue by day for finance reporting.",
-        definition:
-          "SELECT date_trunc('day', paid_at) AS paid_day, sum(amount_cents) AS revenue_cents FROM sales.orders WHERE status = 'paid' GROUP BY 1;",
-        displayName: "daily_paid_revenue",
-        lastDdlTime: { seconds: 1_779_292_800n },
-        name: "instances/prod/databases/app/schemas/public/views/daily_paid_revenue",
-        owner: "analytics_owner",
-        viewType: View_ViewType.STANDARD,
-      })}
-      viewName="daily_paid_revenue"
-    />,
-    "w-[980px]"
+  await renderWithCatalog(
+    <Surface width="w-[980px]">
+      <ViewSurface schema={STANDARD_VIEW_SCHEMA} />
+    </Surface>,
+    { explainNotices: VIEW_NOTICES, schemas: [STANDARD_VIEW_SCHEMA] }
   );
 
   await page.getByRole("button", { name: "Check database notices" }).click();
@@ -2105,31 +845,19 @@ test("data explorer view notice check displays returned notices", async () => {
 });
 
 test("data explorer schema detail highlights stale catalog warnings", async () => {
-  await renderExplorerSurface(
-    <SchemaDetail
-      onSelectTable={() => undefined}
-      onSelectView={() => undefined}
-      owner="data_platform"
-      schemaName="public"
-      tables={[
-        createProto(TableSchema, {
-          displayName: "customers",
-          name: "customers",
-          owner: "data_platform",
-          rowCount: 986_420n,
-          sizeBytes: 428_000_000n,
-        }),
-      ]}
-      tablesError={null}
-      tablesLoading={false}
-      tablesSyncNotice={{
-        message: "Showing cached catalog. Refresh failed.",
-        tone: "warning",
-      }}
-      views={[]}
-      viewsError={null}
-      viewsLoading={false}
-    />
+  await renderWithCatalog(
+    <Surface>
+      <SchemaOverview
+        schema={STALE_CATALOG_SCHEMA}
+        tablesSyncNotice={catalogSyncNotice(
+          create(
+            CatalogSyncMetadataSchema,
+            STALE_CATALOG_SCHEMA.tablesSyncMetadata
+          )
+        )}
+      />
+    </Surface>,
+    { schemas: [STALE_CATALOG_SCHEMA] }
   );
 
   await expect
@@ -2138,24 +866,7 @@ test("data explorer schema detail highlights stale catalog warnings", async () =
 });
 
 test("data explorer table columns match the redesign inventory", async () => {
-  seedShippingColumnsDesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="columns"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipments",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
-        owner: "app_owner",
-        rowCount: 2_400_000n,
-        sizeBytes: 12_800_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipments"
-    />
-  );
+  await renderTable(SHIPMENTS_COLUMNS_SCHEMA, "shipments", "columns");
 
   await expect
     .element(page.getByRole("columnheader", { exact: true, name: "Storage" }))
@@ -2270,24 +981,7 @@ test("data explorer table columns match the redesign inventory", async () => {
 });
 
 test("data explorer table keys preserve the existing relationship view", async () => {
-  seedTableDetailQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="keys"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
-  );
+  await renderTable(customersSchema(), "customers", "keys");
 
   await expect.element(page.getByText("Primary key").first()).toBeVisible();
   await expect.element(page.getByText("customers_pkey")).toBeVisible();
@@ -2302,58 +996,14 @@ test("data explorer table keys preserve the existing relationship view", async (
 });
 
 test("data explorer table columns show generated and identity metadata", async () => {
-  seedTableDetailQueries();
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        dataType: DataType.INTEGER,
-        identityGeneration: IdentityGeneration.BY_DEFAULT,
-        isIdentity: true,
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "bigint",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "email",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "email_lower",
-        dataType: DataType.STRING,
-        generationExpression: "lower(email)",
-        isGenerated: true,
-        isNullable: true,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-    ],
-  });
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="columns"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
-  );
+  await renderTable(SHIPMENTS_COLUMNS_SCHEMA, "shipments", "columns");
 
   await expect.element(page.getByText("IDENTITY")).toBeVisible();
   await expect.element(page.getByText("BY DEFAULT")).toBeVisible();
   await expect.element(page.getByText("GENERATED")).toBeVisible();
-  await expect.element(page.getByText("AS lower(email)")).toBeVisible();
+  await expect
+    .element(page.getByText("AS origin_port || ':' || dest_port"))
+    .toBeVisible();
 
   const badgeRow = screen.getByText("IDENTITY").parentElement;
   if (!badgeRow) {
@@ -2363,27 +1013,14 @@ test("data explorer table columns show generated and identity metadata", async (
 });
 
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
-  seedTableDetailQueries();
-  await render(
+  const customers = customersSchema();
+  await renderWithCatalog(
     <ScreenshotFrame>
       <div className="flex h-[320px] w-[1100px] flex-col overflow-hidden rounded-2xl border border-border bg-background p-8 text-foreground">
-        <TableDetail
-          databaseId="app"
-          initialTab="data"
-          instanceId="prod"
-          schemaName="public"
-          table={createProto(TableSchema, {
-            displayName: "customers",
-            name: "instances/prod/databases/app/schemas/public/tables/customers",
-            owner: "app_owner",
-            rowCount: 987_654n,
-            sizeBytes: 42_467_328n,
-            tableType: Table_TableType.BASE_TABLE,
-          })}
-          tableName="customers"
-        />
+        <TableSurface schema={customers} tab="data" tableName="customers" />
       </div>
-    </ScreenshotFrame>
+    </ScreenshotFrame>,
+    { schemas: [customers] }
   );
 
   await page.getByRole("tab", { exact: true, name: "Columns 4" }).click();
@@ -2400,24 +1037,7 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
 });
 
 test("data explorer table indexes have a redesigned table baseline", async () => {
-  seedTableDetailQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
-  );
+  await renderTable(customersSchema(), "customers", "indexes");
 
   await expect
     .element(page.getByText("customers_status_account_idx"))
@@ -2455,24 +1075,7 @@ test("data explorer table indexes have a redesigned table baseline", async () =>
 });
 
 test("data explorer table indexes constraints policies and triggers stay readable", async () => {
-  seedTableDetailQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
-  );
+  await renderTable(customersSchema(), "customers", "indexes");
 
   await expect
     .element(page.getByText("customers_status_account_idx"))
@@ -2545,81 +1148,10 @@ test("data explorer table indexes constraints policies and triggers stay readabl
 });
 
 test("data explorer constraints tab matches the redesigned table", async () => {
-  seedTableDetailQueries();
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        dataType: DataType.INTEGER,
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "int8",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "shipment_id",
-        dataType: DataType.UUID,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "uuid",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "event",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "recorded_at",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "timestamptz",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "shipment_event_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["shipment_id"],
-          constraintName: "shipment_event_shipment_id_fkey",
-          definition:
-            "FOREIGN KEY (shipment_id) REFERENCES shipping.shipments(id) ON DELETE CASCADE",
-          onDelete: ReferentialAction.CASCADE,
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-      ],
-    }
-  );
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="constraints"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        owner: "app_owner",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipment_event"
-    />
+  await renderTable(
+    shipmentEventSchema({ constraints: SHIPMENT_EVENT_CONSTRAINTS }),
+    "shipment_event",
+    "constraints"
   );
 
   await expect.element(page.getByText("shipment_event_pkey")).toBeVisible();
@@ -2668,37 +1200,10 @@ test("data explorer constraints tab matches the redesigned table", async () => {
 });
 
 test("data explorer constraints tab paginates the dense table", async () => {
-  seedTableDetailQueries();
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: Array.from({ length: 11 }, (_, index) =>
-        createProto(TableConstraintSchema, {
-          columnNames: [`status_${index + 1}`],
-          constraintName: `shipment_event_status_${index + 1}_check`,
-          definition: `CHECK (status_${index + 1} <> '')`,
-          type: ConstraintType.CHECK,
-        })
-      ),
-    }
-  );
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="constraints"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        owner: "app_owner",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipment_event"
-    />
+  await renderTable(
+    shipmentEventSchema({ constraints: SHIPMENT_EVENT_PAGINATED_CONSTRAINTS }),
+    "shipment_event",
+    "constraints"
   );
 
   await expect
@@ -2715,61 +1220,10 @@ test("data explorer constraints tab paginates the dense table", async () => {
 });
 
 test("data explorer constraints tab covers validation and action states", async () => {
-  seedTableDetailQueries();
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["account_id"],
-          constraintName: "customers_account_id_fkey",
-          definition:
-            "FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON UPDATE SET NULL ON DELETE RESTRICT",
-          onDelete: ReferentialAction.RESTRICT,
-          onUpdate: ReferentialAction.SET_NULL,
-          referencedColumnNames: ["id"],
-          referencedTable:
-            "instances/prod/databases/app/schemas/public/tables/accounts",
-          type: ConstraintType.FOREIGN_KEY,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["status"],
-          constraintName: "customers_status_check",
-          definition: "CHECK (status IN ('active', 'archived'))",
-          type: ConstraintType.CHECK,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["legacy_status"],
-          constraintName: "customers_legacy_status_check",
-          definition: "CHECK (legacy_status <> 'deleted') NOT VALID",
-          type: ConstraintType.CHECK,
-        }),
-        createProto(TableConstraintSchema, {
-          columnNames: ["active_period"],
-          constraintName: "customers_active_period_excl",
-          definition: "EXCLUDE USING gist (active_period WITH &&)",
-          type: ConstraintType.EXCLUSION,
-        }),
-      ],
-    }
-  );
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="constraints"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 12_400n,
-        sizeBytes: 8_900_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
+  await renderTable(
+    customersSchema({ constraints: CUSTOMERS_CONSTRAINT_STATES }),
+    "customers",
+    "constraints"
   );
 
   // Referential actions render as part of the definition cell text.
@@ -2794,25 +1248,7 @@ test("data explorer constraints tab covers validation and action states", async 
 });
 
 test("data explorer table policies explain RLS composition", async () => {
-  seedTableDetailQueries();
-  seedInvoicePolicies();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="billing"
-      initialTab="policies"
-      instanceId="prod"
-      schemaName="billing"
-      table={createProto(TableSchema, {
-        displayName: "invoices",
-        name: "instances/prod/databases/billing/schemas/billing/tables/invoices",
-        owner: "app_owner",
-        rowCount: 940_000n,
-        sizeBytes: 2_100_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="invoices"
-    />
-  );
+  await renderTable(INVOICES_SCHEMA, "invoices", "policies");
 
   await expect
     .element(
@@ -2854,23 +1290,16 @@ test("data explorer table policies explain RLS composition", async () => {
 });
 
 test("data explorer table indexes match the redesign complex usage scenario", async () => {
-  seedShipmentIndexesRedesignQueries();
-  await renderScaledExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipments",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
-        owner: "app_owner",
-        rowCount: 2_400_000n,
-        sizeBytes: 13_743_895_347n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipments"
-    />
+  const shipments = shipmentIndexesSchema(SHIPMENTS_USAGE_INDEXES);
+  await renderWithCatalog(
+    <ScaledSurface
+      frameClassName="h-[930px]"
+      scaleClassName="scale-[0.72]"
+      testId="indexes-complex-frame"
+    >
+      <TableSurface schema={shipments} tab="indexes" tableName="shipments" />
+    </ScaledSurface>,
+    { schemas: [shipments] }
   );
 
   await expect
@@ -2913,35 +1342,16 @@ test("data explorer table indexes match the redesign complex usage scenario", as
 });
 
 test("data explorer table indexes pagination has a visual baseline", async () => {
-  seedShipmentIndexesRedesignQueries();
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: Array.from({ length: 11 }, (_, index) =>
-      createProto(TableIndexSchema, {
-        indexName: `shipments_route_${index + 1}_idx`,
-        isValid: true,
-        keyColumns: ["route_id"],
-        keyParts: ["route_id"],
-        method: index === 10 ? "gin" : "btree",
-        sizeBytes: BigInt(index + 1) * 1024n * 1024n,
-      })
-    ),
-  });
-  await renderPaginatedIndexesSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipments",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipments",
-        owner: "app_owner",
-        rowCount: 2_400_000n,
-        sizeBytes: 13_743_895_347n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipments"
-    />
+  const shipments = shipmentIndexesSchema(SHIPMENTS_PAGINATED_INDEXES);
+  await renderWithCatalog(
+    <ScaledSurface
+      frameClassName="h-[1000px]"
+      scaleClassName="scale-[0.62]"
+      testId="indexes-pagination-frame"
+    >
+      <TableSurface schema={shipments} tab="indexes" tableName="shipments" />
+    </ScaledSurface>,
+    { schemas: [shipments] }
   );
 
   await page.getByRole("button", { name: "Next page" }).click();
@@ -2955,23 +1365,10 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
 });
 
 test("data explorer table triggers match redesign", async () => {
-  seedTriggerRedesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="triggers"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        owner: "shipping_owner",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipment_event"
-    />
+  await renderTable(
+    shipmentEventSchema({ triggers: SHIPMENT_EVENT_TRIGGERS }),
+    "shipment_event",
+    "triggers"
   );
 
   const triggerSearch = page.getByRole("textbox", {
@@ -3034,35 +1431,10 @@ test("data explorer table triggers match redesign", async () => {
 });
 
 test("data explorer trigger cards paginate dense resources", async () => {
-  seedTriggerRedesignQueries();
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: Array.from({ length: 12 }, (_, index) => {
-      const suffix = String(index).padStart(2, "0");
-      return createProto(TableTriggerSchema, {
-        definition: `CREATE TRIGGER trg_bulk_${suffix} AFTER UPDATE ON shipping.shipment_event FOR EACH ROW EXECUTE FUNCTION shipping.handle_bulk_${suffix}()`,
-        enabled: true,
-        events: ["UPDATE"],
-        functionName: `shipping.handle_bulk_${suffix}`,
-        timing: "AFTER",
-        triggerName: `trg_bulk_${suffix}`,
-      });
-    }),
-  });
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="triggers"
-      instanceId="prod"
-      schemaName="shipping"
-      table={createProto(TableSchema, {
-        displayName: "shipment_event",
-        name: "instances/prod/databases/logistics/schemas/shipping/tables/shipment_event",
-        rowCount: 18_200_000n,
-        sizeBytes: 21_400_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="shipment_event"
-    />
+  await renderTable(
+    shipmentEventSchema({ triggers: SHIPMENT_EVENT_BULK_TRIGGERS }),
+    "shipment_event",
+    "triggers"
   );
 
   await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
@@ -3100,24 +1472,7 @@ test("data explorer trigger cards paginate dense resources", async () => {
 });
 
 test("data explorer table data tab has a visual baseline", async () => {
-  seedTableDetailQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="data"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
-  );
+  await renderTable(customersSchema(), "customers", "data");
 
   await expect
     .element(page.getByText("Data grid visual covered separately."))
@@ -3128,24 +1483,7 @@ test("data explorer table data tab has a visual baseline", async () => {
 });
 
 test("data explorer table definition tab has a visual baseline", async () => {
-  seedDefinitionDesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="definition"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        displayName: "change_log",
-        name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
-        owner: "app_owner",
-        rowCount: 4_200_000n,
-        sizeBytes: 4_187_000_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />
-  );
+  await renderTable(CHANGE_LOG_DEFINITION_SCHEMA, "change_log", "definition");
 
   await expect
     .element(page.getByRole("heading", { name: "Create table" }))
@@ -3184,20 +1522,7 @@ test("data explorer table definition tab has a visual baseline", async () => {
 }, 10_000);
 
 test("data explorer table definition stays a full-width vertical flow", async () => {
-  seedDefinitionDesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="definition"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />,
-    "w-[1100px]"
-  );
+  await renderTable(CHANGE_LOG_DEFINITION_SCHEMA, "change_log", "definition");
 
   await expect
     .element(page.getByRole("heading", { name: "Referenced tables" }))
@@ -3239,20 +1564,10 @@ test("data explorer table definition stays a full-width vertical flow", async ()
 });
 
 test("data explorer definition toolbar keeps refresh reachable when narrow", async () => {
-  seedDefinitionDesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="definition"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />,
-    "w-[420px]"
-  );
+  await renderTable(CHANGE_LOG_DEFINITION_SCHEMA, "change_log", {
+    tab: "definition",
+    width: "w-[420px]",
+  });
 
   await expect
     .element(page.getByText("Schema document", { exact: true }))
@@ -3292,20 +1607,10 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
 });
 
 test("data explorer definition commands are keyboard reachable", async () => {
-  seedDefinitionDesignQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="logistics"
-      initialTab="definition"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />,
-    "w-[420px]"
-  );
+  await renderTable(CHANGE_LOG_DEFINITION_SCHEMA, "change_log", {
+    tab: "definition",
+    width: "w-[420px]",
+  });
 
   await expect
     .element(page.getByRole("heading", { name: "Reproduce locally" }))
@@ -3323,25 +1628,10 @@ test("data explorer definition commands are keyboard reachable", async () => {
 });
 
 test("data explorer index table stays inside narrow surfaces", async () => {
-  seedTableDetailQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />,
-    "w-[560px]"
-  );
+  await renderTable(customersSchema(), "customers", {
+    tab: "indexes",
+    width: "w-[560px]",
+  });
 
   await expect.element(page.getByText("btree").first()).toBeVisible();
   // Long definitions no longer render as SQL blocks; the Columns cell
@@ -3366,23 +1656,17 @@ test("data explorer index table stays inside narrow surfaces", async () => {
 });
 
 test("data explorer table columns explain PostgreSQL type semantics", async () => {
-  seedTypeAnnotationQueries();
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="columns"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "events",
-        name: "instances/prod/databases/app/schemas/public/tables/events",
-        owner: "app_owner",
-        rowCount: 10n,
-        sizeBytes: 4096n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="events"
-    />
+  await renderTable(
+    customersSchema({
+      columns: ordered(
+        column("event_time", [DataType.TIMESTAMP, "timestamp with time zone"]),
+        column("amount", [DataType.FLOAT, "numeric"]),
+        column("retry_count", [DataType.INTEGER, "bigint"]),
+        column("metadata", [DataType.JSON, "jsonb"], { isNullable: true })
+      ),
+    }),
+    "customers",
+    "columns"
   );
 
   await expect.element(page.getByText("event_time")).toBeVisible();
@@ -3395,39 +1679,15 @@ test("data explorer table columns explain PostgreSQL type semantics", async () =
 });
 
 test("data explorer table empty resource tabs use shared empty panels", async () => {
-  seedTableDetailQueries();
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
+  await renderTable(
+    customersSchema({
       constraints: [],
-    }
-  );
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
-  });
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="indexes"
-      instanceId="prod"
-      schemaName="public"
-      table={createProto(TableSchema, {
-        displayName: "customers",
-        name: "instances/prod/databases/app/schemas/public/tables/customers",
-        owner: "app_owner",
-        rowCount: 987_654n,
-        sizeBytes: 42_467_328n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="customers"
-    />
+      indexes: [],
+      policies: [],
+      triggers: [],
+    }),
+    "customers",
+    "indexes"
   );
 
   await expect
@@ -3499,145 +1759,8 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
 });
 
 test("data explorer table partitions matches the imported redesign fixture", async () => {
-  seedTableDetailQueries();
-  tableQueries.partitionMetadata.dataUpdatedAt = PARTITION_REDESIGN_FETCHED_AT;
-  tableQueries.columns.data = createProto(ListTableColumnsResponseSchema, {
-    columns: [
-      createProto(ColumnSchema, {
-        columnName: "id",
-        dataType: DataType.INTEGER,
-        isNullable: false,
-        isPrimaryKey: true,
-        ordinalPosition: 1,
-        rawType: "int8",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "table_name",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 2,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "op",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 3,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "actor",
-        dataType: DataType.STRING,
-        isNullable: false,
-        ordinalPosition: 4,
-        rawType: "text",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "diff",
-        dataType: DataType.JSON,
-        isNullable: false,
-        ordinalPosition: 5,
-        rawType: "jsonb",
-      }),
-      createProto(ColumnSchema, {
-        columnName: "recorded_at",
-        dataType: DataType.TIMESTAMP,
-        isNullable: false,
-        ordinalPosition: 6,
-        rawType: "timestamptz",
-      }),
-    ],
-  });
-  tableQueries.constraints.data = createProto(
-    ListTableConstraintsResponseSchema,
-    {
-      constraints: [
-        createProto(TableConstraintSchema, {
-          columnNames: ["id"],
-          constraintName: "change_log_pkey",
-          definition: "PRIMARY KEY (id)",
-          type: ConstraintType.PRIMARY_KEY,
-        }),
-      ],
-    }
-  );
-  tableQueries.indexes.data = createProto(ListTableIndexesResponseSchema, {
-    indexes: [
-      createProto(TableIndexSchema, {
-        indexName: "change_log_pkey",
-        isUnique: true,
-        keyColumns: ["id"],
-        method: "btree",
-        sizeBytes: 67_108_864n,
-      }),
-    ],
-  });
-  tableQueries.policies.data = createProto(ListTablePoliciesResponseSchema, {
-    policies: [],
-  });
-  tableQueries.triggers.data = createProto(ListTableTriggersResponseSchema, {
-    triggers: [],
-  });
-  tableQueries.partitionMetadata.data = {
-    partitionMetadata: {
-      childPartitions: [
-        {
-          displayName: "change_log_2026_q1",
-          estimatedRows: 1_020_000n,
-          partitionBound: "FOR VALUES FROM ('2026-01-01') TO ('2026-04-01')",
-          sizeBytes: 960n * 1024n * 1024n,
-          table:
-            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q1",
-        },
-        {
-          displayName: "change_log_2026_q2",
-          estimatedRows: 1_180_000n,
-          partitionBound: "FOR VALUES FROM ('2026-04-01') TO ('2026-07-01')",
-          sizeBytes: 1_181_116_006n,
-          table:
-            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q2",
-        },
-        {
-          displayName: "change_log_2026_q3",
-          estimatedRows: 48_000n,
-          partitionBound: "FOR VALUES FROM ('2026-07-01') TO ('2026-10-01')",
-          sizeBytes: 44n * 1024n * 1024n,
-          table:
-            "instances/prod/databases/app/schemas/audit/tables/change_log_2026_q3",
-        },
-        {
-          displayName: "change_log_archive",
-          estimatedRows: 1_940_000n,
-          partitionBound: "DEFAULT",
-          sizeBytes: 1_932_735_283n,
-          table:
-            "instances/prod/databases/app/schemas/audit/tables/change_log_archive",
-        },
-      ],
-      parentTable: "",
-      partitionBound: "",
-      partitionCount: 4,
-      partitionKey: "RANGE (recorded_at)",
-    },
-  };
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="partitions"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        displayName: "change_log",
-        name: "instances/prod/databases/app/schemas/audit/tables/change_log",
-        owner: "app_owner",
-        rowCount: 4_200_000n,
-        sizeBytes: 4_187_590_000n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />
-  );
+  rs.setSystemTime(PARTITION_REDESIGN_FETCHED_AT);
+  await renderTable(changeLogPartitionsSchema(), "change_log", "partitions");
 
   await expect
     .element(page.getByText("PostgreSQL statistics"))
@@ -3699,50 +1822,22 @@ test("data explorer table partitions matches the imported redesign fixture", asy
 });
 
 test("data explorer table partitions paginate large partition lists", async () => {
-  seedTableDetailQueries();
-  tableQueries.partitionMetadata.dataUpdatedAt = PARTITION_REDESIGN_FETCHED_AT;
-  tableQueries.partitionMetadata.data = {
-    partitionMetadata: {
-      childPartitions: Array.from({ length: 12 }, (_, index) => {
-        const month = index + 1;
-        const nextMonth = month === 12 ? 1 : month + 1;
-        const nextYear = month === 12 ? 2027 : 2026;
-        return {
-          displayName: `change_log_2026_m${String(month).padStart(2, "0")}`,
-          estimatedRows: BigInt(month * 1000),
-          partitionBound: `FOR VALUES FROM ('2026-${String(month).padStart(
-            2,
-            "0"
-          )}-01') TO ('${nextYear}-${String(nextMonth).padStart(2, "0")}-01')`,
-          sizeBytes: BigInt(month * 1024 * 1024),
-          table: `instances/prod/databases/app/schemas/audit/tables/change_log_2026_m${String(
-            month
-          ).padStart(2, "0")}`,
-        };
-      }),
-      parentTable: "",
-      partitionBound: "",
-      partitionCount: 12,
-      partitionKey: "RANGE (recorded_at)",
-    },
-  };
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="partitions"
-      instanceId="prod"
-      schemaName="audit"
-      table={createProto(TableSchema, {
-        displayName: "change_log",
-        name: "instances/prod/databases/app/schemas/audit/tables/change_log",
-        owner: "app_owner",
-        rowCount: 78_000n,
-        sizeBytes: 78n * 1024n * 1024n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="change_log"
-    />
+  rs.setSystemTime(PARTITION_REDESIGN_FETCHED_AT);
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? 2027 : 2026;
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return changeLogPartition(`2026_m${pad(month)}`, {
+      estimatedRows: BigInt(month * 1000),
+      partitionBound: `FOR VALUES FROM ('2026-${pad(month)}-01') TO ('${nextYear}-${pad(nextMonth)}-01')`,
+      sizeBytes: BigInt(month * 1024 * 1024),
+    });
+  });
+  await renderTable(
+    changeLogPartitionsSchema(months),
+    "change_log",
+    "partitions"
   );
 
   await expect
@@ -3769,35 +1864,7 @@ test("data explorer table partitions paginate large partition lists", async () =
 });
 
 test("data explorer table child partition shows parent metadata", async () => {
-  seedTableDetailQueries();
-  tableQueries.partitionMetadata.data = {
-    partitionMetadata: {
-      childPartitions: [],
-      parentTable:
-        "instances/prod/databases/app/schemas/analytics/tables/events",
-      partitionBound: "FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')",
-      partitionCount: 0,
-      partitionKey: "",
-    },
-  };
-
-  await renderExplorerSurface(
-    <TableDetail
-      databaseId="app"
-      initialTab="partitions"
-      instanceId="prod"
-      schemaName="analytics"
-      table={createProto(TableSchema, {
-        displayName: "events_2024",
-        name: "instances/prod/databases/app/schemas/analytics/tables/events_2024",
-        owner: "app_owner",
-        rowCount: 1_200_000n,
-        sizeBytes: 805_306_368n,
-        tableType: Table_TableType.BASE_TABLE,
-      })}
-      tableName="events_2024"
-    />
-  );
+  await renderTable(CHILD_PARTITION_SCHEMA, "events_2024", "partitions");
 
   await expect.element(page.getByText("Partition bound")).toBeVisible();
   await expect.element(page.getByText("Parent table")).toBeVisible();

@@ -1,13 +1,12 @@
 import type { Page } from "playwright/test";
-import { expect, test } from "../tests/base";
+import { GrantObjectType } from "../../src/protogen/querylane/console/v1alpha1/role_pb";
 import {
-  ACCESS_MAP_ROLES,
   accessMapFixture,
-  mockRolesScreen,
-  ROLE_DETAIL_ROLES,
   ROLES_TABLE_ROLES,
   roleDetailFixture,
-} from "./role-fixtures";
+} from "../../src/test/fixtures/role-fixtures";
+import { expect, test } from "../tests/base";
+import { mockRolesScreen } from "./role-fixtures";
 
 const ROLES_URL = "/instances/production/roles";
 const ACCESS_MAP_URL = `${ROLES_URL}?tab=map`;
@@ -23,10 +22,7 @@ test.describe("roles list", () => {
   test("table shows an inline type filter and sortable role rows", async ({
     page,
   }) => {
-    await mockRolesScreen(page, {
-      fixture: accessMapFixture(),
-      roles: ROLES_TABLE_ROLES,
-    });
+    await mockRolesScreen(page, accessMapFixture({ roles: ROLES_TABLE_ROLES }));
     await page.goto(ROLES_URL);
 
     await expect(
@@ -39,10 +35,7 @@ test.describe("roles list", () => {
 
 test.describe("roles access map", () => {
   test("matches the design source across view states", async ({ page }) => {
-    await mockRolesScreen(page, {
-      fixture: accessMapFixture(),
-      roles: ACCESS_MAP_ROLES,
-    });
+    await mockRolesScreen(page, accessMapFixture());
     await page.goto(ACCESS_MAP_URL);
     await expect(page.getByText("shipping", { exact: true })).toBeVisible();
 
@@ -71,10 +64,7 @@ test.describe("roles access map", () => {
   });
 
   test("dense map starts with reduced edge filters", async ({ page }) => {
-    await mockRolesScreen(page, {
-      fixture: accessMapFixture(5),
-      roles: ACCESS_MAP_ROLES,
-    });
+    await mockRolesScreen(page, accessMapFixture({ extraDirectGrantCount: 5 }));
     await page.goto(ACCESS_MAP_URL);
 
     const viewButton = page.getByRole("button", {
@@ -91,10 +81,10 @@ test.describe("roles access map", () => {
   });
 
   test("partial results stay visibly qualified", async ({ page }) => {
-    await mockRolesScreen(page, {
-      fixture: { ...accessMapFixture(), truncated: ["ListRoleGrants"] },
-      roles: ACCESS_MAP_ROLES,
-    });
+    await mockRolesScreen(
+      page,
+      accessMapFixture({ truncated: ["listRoleGrants"] })
+    );
     await page.goto(ACCESS_MAP_URL);
 
     await expect(page.getByText("Some access data is not shown")).toBeVisible();
@@ -107,10 +97,7 @@ test.describe("roles access map", () => {
     page,
   }) => {
     await page.setViewportSize({ height: 812, width: 355 });
-    await mockRolesScreen(page, {
-      fixture: accessMapFixture(),
-      roles: ACCESS_MAP_ROLES,
-    });
+    await mockRolesScreen(page, accessMapFixture());
     await page.goto(ACCESS_MAP_URL);
 
     await page.getByRole("button", { name: VIEW_BUTTON_NAME_RE }).click();
@@ -143,10 +130,7 @@ test.describe("role detail", () => {
     { heading: "SQL definition", name: "definition", tab: "definition" },
   ] as const) {
     test(`${name} tab`, async ({ page }) => {
-      await mockRolesScreen(page, {
-        fixture: roleDetailFixture(),
-        roles: ROLE_DETAIL_ROLES,
-      });
+      await mockRolesScreen(page, roleDetailFixture());
       await page.goto(`${ROLE_DETAIL_URL}?tab=${tab}`);
 
       await expect(
@@ -162,21 +146,21 @@ test.describe("role detail", () => {
   }
 
   test("grants tab captures active shared filters", async ({ page }) => {
-    await mockRolesScreen(page, {
-      fixture: roleDetailFixture({
+    await mockRolesScreen(
+      page,
+      roleDetailFixture({
         extraGrants: [
           {
             grantor: "postgres",
             objectName: "recent_orders",
-            objectType: "GRANT_OBJECT_TYPE_VIEW",
+            objectType: GrantObjectType.VIEW,
             privilege: "SELECT",
             schemaName: "public",
             withGrantOption: false,
           },
         ],
-      }),
-      roles: ROLE_DETAIL_ROLES,
-    });
+      })
+    );
     await page.goto(
       `${ROLE_DETAIL_URL}?tab=grants&grantsSchema=public&grantsType=tables`
     );
@@ -192,16 +176,16 @@ test.describe("role detail", () => {
   });
 
   test("access map keeps partial counts qualified", async ({ page }) => {
-    await mockRolesScreen(page, {
-      fixture: roleDetailFixture({
+    await mockRolesScreen(
+      page,
+      roleDetailFixture({
         truncated: [
-          "ListPublicGrants",
-          "ListRoleGrants",
-          "ListRoleOwnedObjects",
+          "listPublicGrants",
+          "listRoleGrants",
+          "listRoleOwnedObjects",
         ],
-      }),
-      roles: ROLE_DETAIL_ROLES,
-    });
+      })
+    );
     await page.goto(`${ROLE_DETAIL_URL}?tab=access-map`);
 
     await expect(page.getByText("Some access data is not shown")).toBeVisible();

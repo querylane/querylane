@@ -201,10 +201,16 @@ jobs:
           fi
 
   visual:
-    name: Frontend Visual
+    name: Frontend Visual (${{ matrix.shard }}/3)
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Each Playwright test loads a full route; one 4-vCPU runner is CPU-bound,
+    # so split the suite across runners instead of adding workers.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     # Same image as `bun run test:visual:update`, so baselines match pixel for pixel.
     container:
       image: *playwright_image
@@ -238,12 +244,12 @@ jobs:
             *) echo "::error::PLAYWRIGHT_IMAGE ($PLAYWRIGHT_IMAGE) does not match playwright ${installed}"; exit 1 ;;
           esac
       - name: Run visual regression tests
-        run: bun run test:visual
+        run: bun run test:visual --shard=${{ matrix.shard }}/3
       - name: Upload Playwright visual report
         if: failure()
         uses: *action_upload_artifact
         with:
-          name: playwright-visual-report
+          name: playwright-visual-report-${{ matrix.shard }}
           path: |
             frontend/e2e/playwright-report
             frontend/e2e/test-results

@@ -1,9 +1,9 @@
-import { expect, test } from "../tests/base";
 import {
   LONG_DATABASE_NAME,
   LONG_INSTANCE_NAME,
-  openAdminShell,
-} from "./admin-shell-fixtures";
+} from "../../src/test/fixtures/console-resource-fixtures";
+import { expect, test } from "../tests/base";
+import { openAdminShell } from "./console-resource-fixtures";
 import { expectActiveElement } from "./focus";
 
 // The real app shell (sidebar, header, overlays) around the database overview.

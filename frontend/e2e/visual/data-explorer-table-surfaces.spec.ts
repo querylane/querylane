@@ -1,13 +1,11 @@
 import type { Page } from "playwright/test";
-import { expect, test } from "../tests/base";
 import {
   CHANGE_LOG_DEFINITION_SCHEMA,
-  CHANGE_LOG_PARTITIONS_SCHEMA,
   CHILD_PARTITION_SCHEMA,
   CUSTOMERS_CONSTRAINT_STATES,
+  changeLogPartitionsSchema,
   customersSchema,
   INVOICES_SCHEMA,
-  mockExplorerSurfaces,
   type SchemaFixture,
   SHIPMENT_EVENT_BULK_TRIGGERS,
   SHIPMENT_EVENT_CONSTRAINTS,
@@ -18,6 +16,10 @@ import {
   SHIPMENTS_USAGE_INDEXES,
   shipmentEventSchema,
   shipmentIndexesSchema,
+} from "../../src/test/fixtures/data-explorer-surface-fixtures";
+import { expect, test } from "../tests/base";
+import {
+  mockExplorerSurfaces,
   tableUrl,
 } from "./data-explorer-surface-fixtures";
 
@@ -323,7 +325,7 @@ test.describe("definition", () => {
 test.describe("partitions", () => {
   test("match the redesign fixture", async ({ page }) => {
     await openTable(page, {
-      schema: CHANGE_LOG_PARTITIONS_SCHEMA,
+      schema: changeLogPartitionsSchema(),
       tab: "partitions",
       table: "change_log",
     });
