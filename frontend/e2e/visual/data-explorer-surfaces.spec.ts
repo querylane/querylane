@@ -1,15 +1,17 @@
 import type { Page } from "playwright/test";
-import { expect, test } from "../tests/base";
 import {
-  explorerUrl,
   MATERIALIZED_VIEW_SCHEMA,
-  mockExplorerSurfaces,
   SALES_SCHEMA,
   SCHEMA_MAP_SCHEMAS,
   SCHEMA_SUMMARY,
   STALE_CATALOG_SCHEMA,
   STANDARD_VIEW_SCHEMA,
   VIEW_NOTICES,
+} from "../../src/test/fixtures/data-explorer-surface-fixtures";
+import { expect, test } from "../tests/base";
+import {
+  explorerUrl,
+  mockExplorerSurfaces,
 } from "./data-explorer-surface-fixtures";
 
 // Schema overview, schema map, and view detail surfaces of the data explorer.
