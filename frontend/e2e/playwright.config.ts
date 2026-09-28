@@ -25,6 +25,8 @@ const isCanonicalScreenshotPlatform =
   platform === CANONICAL_SCREENSHOT_PLATFORM;
 const UPDATE_SNAPSHOTS_ARGUMENT_PATTERN = /^(-u|--update-snapshots)(=|$)/;
 const LOCAL_WORKERS = 2;
+// GitHub-hosted ubuntu-latest runners have 4 vCPUs; Playwright defaults to half.
+const CI_WORKERS = 4;
 const PORT = e2eEnv.PORT ?? e2eEnv.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
 const BASE_URL =
   e2eEnv.BASE_URL ?? e2eEnv.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -137,5 +139,5 @@ export default defineConfig({
       url: BASE_URL,
     },
   }),
-  ...(e2eEnv.CI ? {} : { workers: LOCAL_WORKERS }),
+  workers: e2eEnv.CI ? CI_WORKERS : LOCAL_WORKERS,
 });
