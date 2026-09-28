@@ -1,67 +1,31 @@
-import { create as createProto } from "@bufbuild/protobuf";
-import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
-import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
-import * as actualReactQuery from "@tanstack/react-query" with {
-  rstest: "importActual",
-};
+import { beforeEach, expect, rs, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
-import * as actualMetrics from "@/hooks/api/metrics" with {
-  rstest: "importActual",
-};
-import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
-import { StatusSchema } from "@/protogen/google/rpc/status_pb";
+import { cn } from "@/lib/utils";
 import {
-  DatabaseQueryInsightsSchema,
-  DatabaseSchema,
-  type GetDatabaseQueryInsightsResponse,
-  GetDatabaseQueryInsightsResponseSchema,
-  type GetDatabaseResponse,
-  GetDatabaseResponseSchema,
-  QueryRuntimeInsightSchema,
-  SequentialScanHotspotSchema,
-  TableCacheHitInsightSchema,
-} from "@/protogen/querylane/console/v1alpha1/database_pb";
-import {
-  ExtensionSchema,
-  type ListExtensionsResponse,
-  ListExtensionsResponseSchema,
-} from "@/protogen/querylane/console/v1alpha1/extension_pb";
-import {
-  CacheMetricsSchema,
-  ConnectionMetricsSchema,
-  type GetInstanceOverviewResponse,
-  GetInstanceOverviewResponseSchema,
-  type GetInstanceResponse,
-  GetInstanceResponseSchema,
-  InstanceOverviewSchema,
-  InstanceSchema,
-  PostgresConfigSchema,
-  ServerInfo_ReplicationRole,
-  ServerInfoSchema,
-  StorageMetricsSchema,
-} from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import type { QueryMetricsResponse } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
+  busyActivity,
+  CONSOLE_DATABASE_ID,
+  CONSOLE_INSTANCE_ID,
+  type ConsoleResourceFixture,
+  catalogSchema,
+  catalogTable,
+  consoleCatalog,
+  consoleResourceFixture,
+  designExtensions,
+  queryInsights,
+  routeConsoleResources,
+} from "@/test/fixtures/console-resource-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;
-
-interface QueryState<T> {
-  data?: T;
-  dataUpdatedAt?: number;
-  error?: unknown;
-  isFetching?: boolean;
-  isPending?: boolean;
-  refetch?: () => Promise<unknown>;
-}
-
 const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
 const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
@@ -69,66 +33,11 @@ const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const DENSE_SCHEMA_COUNT = 12;
 
 // Pixels for these pages, and every phone-width layout check, live in
-// e2e/visual/console-resources.spec.ts on the real console routes.
+// e2e/visual/console-resources.spec.ts on the real console routes, served
+// from the same fixture.
 
 const state = rs.hoisted(() => ({
-  catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
-  databaseMetricsQuery: {} as QueryState<QueryMetricsResponse>,
-  databaseQuery: {} as QueryState<GetDatabaseResponse>,
-  databasesQuery: {} as { data?: unknown; isPending?: boolean },
-  deleteInstance: rs.fn(async () => undefined),
-  extensionQuery: {} as QueryState<ListExtensionsResponse>,
-  healthQuery: {} as QueryState<{
-    health?: {
-      connectionActivity?: {
-        activeConnections: number;
-        byApplication: {
-          activeConnections: number;
-          applicationName: string;
-          idleConnections: number;
-          idleInTransactionConnections: number;
-          totalConnections: number;
-        }[];
-        idleConnections: number;
-        idleInTransactionConnections: number;
-        longestTransactionSeconds: bigint;
-        longRunningTransactionConnections: number;
-        sessions: {
-          applicationName: string;
-          blockedByPid?: number;
-          databaseName: string;
-          durationSeconds: bigint;
-          pid: number;
-          query: string;
-          state: string;
-          username: string;
-          waitEvent?: string;
-          waitEventType?: string;
-        }[];
-        totalConnections: number;
-        waitingForLockConnections: number;
-      };
-      replication?: {
-        attachedReplicas: number;
-        maxReplicationLagBytes: bigint;
-        role: ServerInfo_ReplicationRole;
-        status: number;
-        streamingReplicas: number;
-        summary: string;
-        synchronousReplicas: number;
-      };
-    };
-    partialErrors?: unknown[];
-  }>,
-  instanceQuery: {} as QueryState<GetInstanceResponse>,
-  instanceMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   navigate: rs.fn(async () => undefined),
-  overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
-  queryClient: {
-    getQueryState: rs.fn(() => undefined),
-    query: rs.fn(async () => undefined),
-  },
-  queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
   selectedInstanceStatus: "connected" as "connected" | "disconnected",
 }));
 
@@ -155,7 +64,11 @@ rs.mock("@tanstack/react-router", () => ({
       searchStr: string;
     }) => unknown;
   } = {}) => {
-    const location = { hash: "", pathname: "/instances/prod", searchStr: "" };
+    const location = {
+      hash: "",
+      pathname: `/instances/${CONSOLE_INSTANCE_ID}`,
+      searchStr: "",
+    };
     return select ? select(location) : location;
   },
   useNavigate: () => state.navigate,
@@ -166,43 +79,63 @@ rs.mock("@tanstack/react-router", () => ({
   } = {}) => (select ? select({}) : {}),
 }));
 
-rs.mock("@connectrpc/connect-query", () => ({
-  useMutation: rs.fn(),
-  useQuery: rs.fn(() => ({ data: undefined, isFetching: false })),
-  useTransport: () => ({}),
-}));
+const queryState = {
+  error: null,
+  hasData: true,
+  hasResolved: true,
+  isFetching: false,
+  isPending: false,
+  isSuppressed: false,
+  status: "success",
+  suppressedReason: null,
+} as const;
 
-function defaultHealthResponse() {
+rs.mock("@/lib/db-context", () => {
+  const instance = (id: string, name: string) => ({
+    connectionError: "",
+    host: "analytics-writer.internal.querylane.test",
+    id,
+    name,
+    port: 5432,
+    resourceName: `instances/${id}`,
+    status: "connected",
+  });
   return {
-    health: {
-      connectionActivity: {
-        activeConnections: 18,
-        byApplication: [],
-        idleConnections: 54,
-        idleInTransactionConnections: 2,
-        longestTransactionSeconds: 0n,
-        longRunningTransactionConnections: 0,
-        maxConnections: 100,
-        sessions: [],
-        status: 1,
-        summary: "74 connections",
-        totalConnections: 74,
-        utilizationRatio: 0.74,
-        waitingForLockConnections: 0,
+    useDb: () => ({
+      databases: [
+        {
+          characterSet: "UTF8",
+          collation: "en_US.UTF-8",
+          id: CONSOLE_DATABASE_ID,
+          isSystemDatabase: false,
+          name: "customer_events",
+          owner: "data-platform",
+          resourceName: `instances/${CONSOLE_INSTANCE_ID}/databases/${CONSOLE_DATABASE_ID}`,
+        },
+        {
+          characterSet: "UTF8",
+          collation: "C",
+          id: "postgres",
+          isSystemDatabase: true,
+          name: "postgres",
+          owner: "postgres",
+          resourceName: `instances/${CONSOLE_INSTANCE_ID}/databases/postgres`,
+        },
+      ],
+      instances: [
+        instance(CONSOLE_INSTANCE_ID, "Production Analytics Writer"),
+        instance("archive", "Archive Instance"),
+      ],
+      navigateToDatabase: rs.fn(),
+      queryStates: { databases: queryState, instances: queryState },
+      retryInstanceCatalog: rs.fn(async () => undefined),
+      selectedInstance: {
+        ...instance(CONSOLE_INSTANCE_ID, "Production Analytics Writer"),
+        status: state.selectedInstanceStatus,
       },
-      replication: {
-        attachedReplicas: 2,
-        maxReplicationLagBytes: 86_000_000n,
-        role: ServerInfo_ReplicationRole.PRIMARY,
-        status: 1,
-        streamingReplicas: 2,
-        summary: "primary with 2 attached replicas",
-        synchronousReplicas: 0,
-      },
-    },
-    partialErrors: [],
+    }),
   };
-}
+});
 
 beforeEach(() => {
   window.localStorage.removeItem("querylane-browser-test-theme");
@@ -213,336 +146,87 @@ beforeEach(() => {
   document.documentElement.classList.remove("light", "dark");
   document.documentElement.classList.add(visualTheme);
   document.documentElement.style.colorScheme = visualTheme;
-  state.catalogQuery = {};
-  state.databaseMetricsQuery = {};
-  state.databaseQuery = {};
-  state.databasesQuery = { data: databasesListResponse() };
-  state.extensionQuery = {};
-  state.healthQuery = { data: defaultHealthResponse() };
-  state.queryInsightsQuery = {};
   state.selectedInstanceStatus = "connected";
-  state.instanceQuery = {};
-  state.instanceMetricsQuery = {};
-  state.overviewQuery = {};
-  state.queryClient.getQueryState.mockReset();
-  state.queryClient.getQueryState.mockReturnValue(undefined);
-  state.queryClient.query.mockReset();
-  state.queryClient.query.mockResolvedValue(undefined);
-  state.deleteInstance.mockReset();
-  state.deleteInstance.mockResolvedValue(undefined);
   state.navigate.mockClear();
 });
 
-afterEach(() => {
-  rs.clearAllMocks();
-});
-
-rs.mock("@tanstack/react-query", () => ({
-  ...actualReactQuery,
-  useQueryClient: () => state.queryClient,
-}));
-
-rs.mock("@/hooks/api/console", () => ({
-  useConfigManagedInstancesStatus: () => ({
-    isConfigManaged: false,
-    isLoaded: true,
-  }),
-  useIsConfigManagedInstances: () => false,
-}));
-
-rs.mock("@/hooks/api/database", () => ({
-  databasesForInstanceQueryInput: (instanceId: string) => ({
-    parent: instanceId,
-  }),
-  selectedDatabaseQueryOptions: () => ({
-    queryKey: ["browser", "selected-database"],
-  }),
-  useListAllDatabasesQuery: () => ({
-    data: state.databasesQuery.data,
-    error: null,
-    isPending: state.databasesQuery.isPending ?? false,
-  }),
-  useGetDatabaseQuery: () => ({
-    data: state.databaseQuery.data,
-    error: state.databaseQuery.error ?? null,
-    isFetching: state.databaseQuery.isFetching ?? false,
-    isPending: state.databaseQuery.isPending ?? false,
-    refetch: state.databaseQuery.refetch ?? rs.fn(async () => undefined),
-  }),
-  useGetDatabaseQueryInsightsQuery: () => ({
-    data: state.queryInsightsQuery.data,
-    error: state.queryInsightsQuery.error ?? null,
-    isFetching: state.queryInsightsQuery.isFetching ?? false,
-    isPending: state.queryInsightsQuery.isPending ?? false,
-    refetch: state.queryInsightsQuery.refetch ?? rs.fn(async () => undefined),
-  }),
-}));
-
-rs.mock("@/hooks/api/database-catalog", () => ({
-  useDatabaseCatalogQuery: () => ({
-    data: state.catalogQuery.data,
-    error: state.catalogQuery.error ?? null,
-    isPending: state.catalogQuery.isPending ?? false,
-    refetch: rs.fn(async () => undefined),
-  }),
-}));
-
-rs.mock("@/components/console-pages/other-database-objects-query", () => ({
-  useOtherDatabaseObjectsSummaryQuery: () => ({
-    data: {},
-    error: null,
-    isLoading: false,
-    refetch: rs.fn(async () => undefined),
-  }),
-  useOtherObjectsBrowseQuery: () => ({
-    data: { pages: [] },
-    error: null,
-    fetchNextPage: rs.fn(),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isLoading: false,
-    refetch: rs.fn(async () => undefined),
-  }),
-}));
-
-rs.mock("@/hooks/api/metrics", () => ({
-  ...actualMetrics,
-  quantizedMetricsAnchor: () => 0,
-  useDatabaseMetricsQuery: () => ({
-    data: state.databaseMetricsQuery.data ?? { series: [] },
-    error: state.databaseMetricsQuery.error ?? null,
-    isFetching: state.databaseMetricsQuery.isFetching ?? false,
-    isPending: state.databaseMetricsQuery.isPending ?? false,
-  }),
-  useInstanceMetricsQuery: () => ({
-    data: state.instanceMetricsQuery.data,
-    dataUpdatedAt: state.instanceMetricsQuery.dataUpdatedAt ?? 0,
-    error: state.instanceMetricsQuery.error ?? null,
-    isFetching: state.instanceMetricsQuery.isFetching ?? false,
-    isPending: state.instanceMetricsQuery.isPending ?? false,
-    refetch: state.instanceMetricsQuery.refetch ?? rs.fn(async () => ({})),
-  }),
-  useInstancePreviousMetricsQuery: () => ({
-    data: undefined,
-    error: null,
-    isFetching: false,
-    isPending: false,
-  }),
-}));
-
-rs.mock("@/hooks/api/extension", () => ({
-  extensionsForDatabaseQueryInput: (input: {
-    databaseId: string;
-    instanceId: string;
-  }) => ({
-    orderBy: "installed desc",
-    pageSize: 50,
-    parent: `instances/${input.instanceId}/databases/${input.databaseId}`,
-  }),
-  useListAllExtensionsQuery: () => ({
-    data: state.extensionQuery.data,
-    error: state.extensionQuery.error ?? null,
-    isPending: state.extensionQuery.isPending ?? false,
-    refetch: state.extensionQuery.refetch ?? rs.fn(async () => undefined),
-  }),
-}));
-
-rs.mock("@/hooks/api/instance", () => ({
-  useCheckInstanceActivityQuery: () => ({
-    data: state.healthQuery.data
-      ? {
-          activity: state.healthQuery.data.health?.connectionActivity,
-          partialErrors: state.healthQuery.data.partialErrors,
-        }
-      : undefined,
-    error: state.healthQuery.error ?? null,
-    isFetching: state.healthQuery.isFetching ?? false,
-    isPending: state.healthQuery.isPending ?? false,
-    refetch: state.healthQuery.refetch ?? rs.fn(async () => ({})),
-  }),
-  useCheckInstanceHealthQuery: () => ({
-    data: state.healthQuery.data,
-    error: state.healthQuery.error ?? null,
-    isFetching: state.healthQuery.isFetching ?? false,
-    isPending: state.healthQuery.isPending ?? false,
-    refetch: state.healthQuery.refetch ?? rs.fn(async () => ({})),
-  }),
-  useDeleteInstanceMutation: () => ({
-    isPending: false,
-    mutateAsync: state.deleteInstance,
-  }),
-  useGetInstanceOverviewQuery: () => ({
-    data: state.overviewQuery.data,
-    error: state.overviewQuery.error ?? null,
-    isFetching: state.overviewQuery.isFetching ?? false,
-    isPending: state.overviewQuery.isPending ?? false,
-    refetch: state.overviewQuery.refetch ?? rs.fn(async () => undefined),
-  }),
-  useGetInstanceQuery: () => ({
-    data: state.instanceQuery.data,
-    dataUpdatedAt: state.instanceQuery.dataUpdatedAt ?? 0,
-    error: state.instanceQuery.error ?? null,
-    isFetching: state.instanceQuery.isFetching ?? false,
-    isPending: state.instanceQuery.isPending ?? false,
-    refetch: state.instanceQuery.refetch ?? rs.fn(async () => undefined),
-  }),
-  useUpdateInstanceMutation: () => ({
-    isPending: false,
-    mutateAsync: rs.fn(async () => undefined),
-  }),
-}));
-
-rs.mock("@/lib/db-context", () => ({
-  useDb: () => ({
-    databases: [
-      {
-        characterSet: "UTF8",
-        collation: "en_US.UTF-8",
-        id: "customer-events",
-        isSystemDatabase: false,
-        name: "customer_events",
-        owner: "data-platform",
-        resourceName: "instances/prod/databases/customer-events",
-      },
-      {
-        characterSet: "UTF8",
-        collation: "C",
-        id: "postgres",
-        isSystemDatabase: true,
-        name: "postgres",
-        owner: "postgres",
-        resourceName: "instances/prod/databases/postgres",
-      },
-    ],
-    instances: [
-      {
-        connectionError: "",
-        host: "analytics-writer.internal.querylane.test",
-        id: "prod",
-        name: "Production Analytics Writer",
-        port: 5432,
-        resourceName: "instances/prod",
-        status: "connected",
-      },
-      {
-        connectionError: "",
-        host: "analytics-reader.internal.querylane.test",
-        id: "reader",
-        name: "Production Analytics Reader",
-        port: 5432,
-        resourceName: "instances/reader",
-        status: "connected",
-      },
-    ],
-    navigateToDatabase: rs.fn(),
-    queryStates: {
-      databases: {
-        error: null,
-        hasData: true,
-        hasResolved: true,
-        isFetching: false,
-        isPending: false,
-        isSuppressed: false,
-        status: "success",
-        suppressedReason: null,
-      },
-      instances: {
-        error: null,
-        hasData: true,
-        hasResolved: true,
-        isFetching: false,
-        isPending: false,
-        isSuppressed: false,
-        status: "success",
-        suppressedReason: null,
-      },
-    },
-    retryInstanceCatalog: rs.fn(async () => undefined),
-    selectedInstance: {
-      connectionError: "",
-      host: "analytics-writer.internal.querylane.test",
-      id: "prod",
-      name: "Production Analytics Writer",
-      port: 5432,
-      resourceName: "instances/prod",
-      status: state.selectedInstanceStatus,
-    },
-  }),
-}));
-
-function instanceResponse({
-  includeServerInfo = true,
-}: {
-  includeServerInfo?: boolean;
-} = {}) {
-  return createProto(GetInstanceResponseSchema, {
-    instance: createProto(InstanceSchema, {
-      config: createProto(PostgresConfigSchema, {
-        database: "postgres",
-        host: "analytics-writer.internal.querylane.test",
-        port: 5432,
-        username: "postgres",
-      }),
-      displayName: "Production Analytics Writer",
-      labels: { environment: "production", team: "data-platform" },
-      name: "instances/prod",
-    }),
-    ...(includeServerInfo
-      ? {
-          serverInfo: createProto(ServerInfoSchema, {
-            maxConnections: 250,
-            replicationRole: ServerInfo_ReplicationRole.PRIMARY,
-            versionNum: 1_704_000,
-            versionShort: "17.4",
-          }),
-        }
-      : {}),
-  });
+async function renderConsolePage(
+  ui: ReactNode,
+  overrides: Partial<ConsoleResourceFixture> = {},
+  width = "w-[1120px] p-6"
+) {
+  const fixture = consoleResourceFixture(overrides);
+  const transport = createTestRouterTransport((router) =>
+    routeConsoleResources(router, fixture)
+  );
+  await render(
+    <HarnessProviders transport={transport}>
+      <ScreenshotFrame>
+        <div
+          className={cn(
+            width,
+            "rounded-2xl border border-border bg-background text-foreground"
+          )}
+          data-testid="console-page"
+        >
+          {ui}
+        </div>
+      </ScreenshotFrame>
+    </HarnessProviders>
+  );
+  return fixture;
 }
 
-function metaDatabaseUnavailableError() {
-  const error = new ConnectError(
-    "meta database is unavailable",
-    Code.Unavailable
+function InstancePage({
+  section,
+}: {
+  section: "activity" | "configuration" | "overview";
+}) {
+  return (
+    <BackendInstancePage
+      instanceId={CONSOLE_INSTANCE_ID}
+      searchRoute="/instances/$instanceId"
+      section={section}
+    />
   );
-  error.details = [
-    {
-      debug: {
-        domain: "console.querylane.dev",
-        reason: "ERROR_REASON_APP_DATABASE_UNAVAILABLE",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
-    },
-  ];
-  return error;
+}
+
+const databasePage = (
+  <BackendDatabasePage
+    databaseId={CONSOLE_DATABASE_ID}
+    instanceId={CONSOLE_INSTANCE_ID}
+    section="overview"
+  />
+);
+
+const extensionsPage = (
+  <BackendDatabaseExtensionsPage
+    databaseId={CONSOLE_DATABASE_ID}
+    instanceId={CONSOLE_INSTANCE_ID}
+    searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
+  />
+);
+
+function cardRect(label: string) {
+  const card = screen.getByText(label).closest('[data-slot="card"]');
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Expected ${label} card`);
+  }
+  return card.getBoundingClientRect();
+}
+
+async function openQueryInsightsDrawer(
+  insights: ConsoleResourceFixture["queryInsights"]
+) {
+  await renderConsolePage(databasePage, { queryInsights: insights });
+  await page.getByRole("button", { name: "Insights", exact: true }).click();
+  return page.getByRole("dialog", { name: "Query insights" });
 }
 
 test("backend instance page explains unavailable server info", async () => {
-  const response = instanceResponse({ includeServerInfo: false });
-  response.partialErrors = [
-    createProto(StatusSchema, {
-      details: [
-        anyPack(
-          ErrorInfoSchema,
-          createProto(ErrorInfoSchema, {
-            metadata: { metric: "server_info" },
-            reason: "METRIC_UNAVAILABLE",
-          })
-        ),
-      ],
-      message: "failed to query server info",
-    }),
-  ];
-  state.instanceQuery = { data: response };
-
-  await render(
-    <BackendInstancePage
-      instanceId="prod"
-      searchRoute="/instances/$instanceId"
-      section="overview"
-    />
-  );
+  await renderConsolePage(<InstancePage section="overview" />, {
+    serverInfoError: "failed to query server info",
+  });
 
   await expect.element(page.getByText("Server info unavailable")).toBeVisible();
   await expect
@@ -554,464 +238,8 @@ test("backend instance page explains unavailable server info", async () => {
     .toBeVisible();
 });
 
-function extensionInventoryResponse() {
-  return createProto(ListExtensionsResponseSchema, {
-    extensions: [
-      createProto(ExtensionSchema, {
-        displayName: "pg_stat_statements",
-        installed: true,
-        installedVersion: "1.10",
-        schema: "public",
-      }),
-    ],
-  });
-}
-
-function extensionDesignInventoryResponse() {
-  return createProto(ListExtensionsResponseSchema, {
-    extensions: [
-      createProto(ExtensionSchema, {
-        comment:
-          "Track planning and execution statistics of all SQL statements",
-        defaultVersion: "1.10",
-        displayName: "pg_stat_statements",
-        installed: true,
-        installedVersion: "1.10",
-        name: "instances/prod/databases/customer-events/extensions/pg_stat_statements",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment:
-          "Cryptographic functions — hashing, HMAC, symmetric and public-key encryption",
-        defaultVersion: "1.3",
-        displayName: "pgcrypto",
-        installed: true,
-        installedVersion: "1.3",
-        name: "instances/prod/databases/customer-events/extensions/pgcrypto",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment: "Generate universally unique identifiers (v1, v3, v4, v5)",
-        defaultVersion: "1.1",
-        displayName: "uuid-ossp",
-        installed: true,
-        installedVersion: "1.1",
-        name: "instances/prod/databases/customer-events/extensions/uuid-ossp",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment:
-          "Trigram matching — fuzzy text search and fast LIKE/ILIKE indexing",
-        defaultVersion: "1.6",
-        displayName: "pg_trgm",
-        installed: true,
-        installedVersion: "1.6",
-        name: "instances/prod/databases/customer-events/extensions/pg_trgm",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment:
-          "Vector similarity search — embeddings storage with HNSW and IVFFlat indexes",
-        defaultVersion: "0.8.0",
-        displayName: "pgvector",
-        installed: true,
-        installedVersion: "v0.8.0",
-        name: "instances/prod/databases/customer-events/extensions/pgvector",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment:
-          "Geospatial types, indexes, and functions — points, polygons, distances, projections",
-        defaultVersion: "3.4.2",
-        displayName: "postgis",
-        installed: true,
-        installedVersion: "v3.4.2",
-        name: "instances/prod/databases/customer-events/extensions/postgis",
-        schema: "public",
-      }),
-      createProto(ExtensionSchema, {
-        comment:
-          "Hypertables — automatic time partitioning, compression, and continuous aggregates",
-        defaultVersion: "2.17",
-        displayName: "timescaledb",
-        installed: false,
-        name: "instances/prod/databases/customer-events/extensions/timescaledb",
-      }),
-    ],
-  });
-}
-
-function overviewResponse() {
-  return createProto(GetInstanceOverviewResponseSchema, {
-    instanceOverview: createProto(InstanceOverviewSchema, {
-      cache: createProto(CacheMetricsSchema, {
-        blocksHit: 987_654n,
-        blocksRead: 12_345n,
-        hitRatio: 0.988,
-      }),
-      connections: createProto(ConnectionMetricsSchema, {
-        activeConnections: 18,
-        idleConnections: 56,
-        maxConnections: 250,
-        totalConnections: 74,
-      }),
-      storage: createProto(StorageMetricsSchema, {
-        totalSizeBytes: 1_250_000_000_000n,
-      }),
-    }),
-  });
-}
-
-function activityHealthResponse() {
-  return {
-    health: {
-      connectionActivity: {
-        activeConnections: 41,
-        byApplication: [
-          {
-            activeConnections: 20,
-            applicationName: "api-gateway",
-            idleConnections: 14,
-            idleInTransactionConnections: 0,
-            totalConnections: 34,
-          },
-          {
-            activeConnections: 8,
-            applicationName: "worker-pool",
-            idleConnections: 20,
-            idleInTransactionConnections: 5,
-            totalConnections: 33,
-          },
-          {
-            activeConnections: 3,
-            applicationName: "metabase",
-            idleConnections: 11,
-            idleInTransactionConnections: 0,
-            totalConnections: 14,
-          },
-        ],
-        idleConnections: 118,
-        idleInTransactionConnections: 9,
-        longestTransactionSeconds: 252n,
-        longRunningTransactionConnections: 1,
-        maxConnections: 250,
-        sessions: [
-          {
-            applicationName: "worker-pool",
-            backendAgeSeconds: 7200n,
-            clientAddress: "10.2.0.7",
-            clientPort: 51_234,
-            databaseName: "logistics",
-            durationSeconds: 252n,
-            pid: 4211,
-            query:
-              "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
-            queryAgeSeconds: 180n,
-            state: "idle in transaction",
-            transactionAgeSeconds: 252n,
-            username: "app_readwrite",
-          },
-          {
-            applicationName: "api-gateway",
-            backendAgeSeconds: 3600n,
-            blockedByPid: 4211,
-            clientAddress: "10.2.0.8",
-            clientPort: 55_432,
-            databaseName: "logistics",
-            durationSeconds: 38n,
-            pid: 4302,
-            query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
-            queryAgeSeconds: 38n,
-            state: "active",
-            transactionAgeSeconds: 38n,
-            username: "app_readwrite",
-            waitEvent: "transactionid",
-            waitEventType: "Lock",
-          },
-          {
-            applicationName: "api-gateway",
-            backendAgeSeconds: 1800n,
-            blockedByPid: 4211,
-            clientAddress: "10.2.0.9",
-            clientPort: 50_711,
-            databaseName: "logistics",
-            durationSeconds: 21n,
-            pid: 4318,
-            query: "SELECT * FROM shipping.shipments WHERE id = $1 FOR UPDATE",
-            queryAgeSeconds: 21n,
-            state: "active",
-            transactionAgeSeconds: 21n,
-            username: "app_readwrite",
-            waitEvent: "tuple",
-            waitEventType: "Lock",
-          },
-          {
-            applicationName: "api-gateway",
-            backendAgeSeconds: 60n,
-            clientAddress: "10.2.0.10",
-            clientPort: 49_882,
-            databaseName: "logistics",
-            durationSeconds: 0n,
-            pid: 3987,
-            query:
-              "SELECT s.*, c.name FROM shipping.shipments s JOIN shipping.carriers c ON c.id = s.carrier_id WHERE s.status = ANY($1)",
-            queryAgeSeconds: 0n,
-            state: "active",
-            username: "app_readwrite",
-          },
-          {
-            applicationName: "metabase",
-            backendAgeSeconds: 5400n,
-            clientAddress: "10.3.1.4",
-            clientPort: 60_125,
-            databaseName: "billing",
-            durationSeconds: 2n,
-            pid: 4402,
-            query:
-              "SELECT date_trunc('week', issued_at) AS wk, sum(amount) FROM billing.invoices GROUP BY 1 ORDER BY 1",
-            queryAgeSeconds: 2n,
-            state: "active",
-            transactionAgeSeconds: 2n,
-            username: "analytics_reader",
-          },
-        ],
-        status: 2,
-        summary: "171 connections",
-        totalConnections: 171,
-        utilizationRatio: 0.684,
-        waitingForLockConnections: 3,
-      },
-    },
-    partialErrors: [],
-  };
-}
-
-function databaseResponse() {
-  return createProto(GetDatabaseResponseSchema, {
-    database: createProto(DatabaseSchema, {
-      characterSet: "UTF8",
-      collation: "en_US.UTF-8",
-      displayName: "customer_events",
-      isSystemDatabase: false,
-      name: "instances/prod/databases/customer-events",
-      owner: "data-platform",
-    }),
-  });
-}
-
-function databasesListResponse() {
-  return {
-    databases: [
-      createProto(DatabaseSchema, {
-        displayName: "customer_events",
-        name: "instances/prod/databases/customer-events",
-        owner: "data-platform",
-      }),
-      createProto(DatabaseSchema, {
-        displayName: "orders",
-        name: "instances/prod/databases/orders",
-        owner: "data-platform",
-      }),
-      createProto(DatabaseSchema, {
-        displayName: "postgres",
-        isSystemDatabase: true,
-        name: "instances/prod/databases/postgres",
-        owner: "postgres",
-      }),
-    ],
-  };
-}
-
-function queryInsightsResponse() {
-  return createProto(GetDatabaseQueryInsightsResponseSchema, {
-    queryInsights: createProto(DatabaseQueryInsightsSchema, {
-      observedAt: timestampFromDate(new Date("2026-05-20T12:00:00Z")),
-      queryStatsAvailable: true,
-      sequentialScanHotspots: [
-        createProto(SequentialScanHotspotSchema, {
-          estimatedLiveRows: 50_000n,
-          indexScans: 3n,
-          schemaName: "public",
-          sequentialScanRatio: 0.8,
-          sequentialScans: 12n,
-          sequentialTuplesRead: 120_000n,
-          tableName: "events",
-          totalSizeBytes: 268_435_456n,
-        }),
-      ],
-      tableCacheHits: [
-        createProto(TableCacheHitInsightSchema, {
-          heapBlocksHit: 900n,
-          heapBlocksRead: 100n,
-          hitRatio: 0.9,
-          schemaName: "public",
-          tableName: "events",
-          totalSizeBytes: 268_435_456n,
-        }),
-        createProto(TableCacheHitInsightSchema, {
-          heapBlocksHit: 500n,
-          heapBlocksRead: 250n,
-          hitRatio: 0.67,
-          schemaName: "analytics",
-          tableName: "daily_rollup_cache",
-          totalSizeBytes: 134_217_728n,
-        }),
-      ],
-      tableStatsAvailable: true,
-      topQueries: [
-        createProto(QueryRuntimeInsightSchema, {
-          calls: 42n,
-          meanTimeMs: 20,
-          query: "SELECT * FROM events WHERE account_id = $1",
-          queryId: 123n,
-          totalTimeMs: 840,
-          totalTimeRatio: 1,
-        }),
-        createProto(QueryRuntimeInsightSchema, {
-          calls: 8n,
-          meanTimeMs: 26.25,
-          query: "UPDATE events SET processed_at = $1 WHERE id = $2",
-          queryId: 456n,
-          totalTimeMs: 210,
-          totalTimeRatio: 0.25,
-        }),
-      ],
-    }),
-  });
-}
-
-function queryInsightsWithoutQueryStatsResponse() {
-  const response = queryInsightsResponse();
-  const insights = response.queryInsights;
-  if (!insights) {
-    throw new Error("Expected query insights fixture");
-  }
-
-  insights.queryStatsAvailable = false;
-  insights.topQueries = [];
-  return response;
-}
-
-function catalogResult() {
-  return {
-    coverage: {
-      isPartial: false,
-      objectLimit: 1000,
-      objectsPartial: false,
-      schemaLimit: 100,
-      schemasPartial: false,
-    },
-    objects: [
-      {
-        comment: "",
-        isMaterialized: false,
-        isPopulated: true,
-        isSystem: false,
-        kind: "table" as const,
-        lastDdlTime: undefined,
-        name: "instances/prod/databases/customer-events/schemas/public/tables/events",
-        objectId: "events",
-        owner: "data-platform",
-        rowCount: 1_280_000n,
-        schemaId: "public",
-        sizeBytes: 5_368_709_120n,
-      },
-      {
-        comment: "",
-        isMaterialized: true,
-        isPopulated: true,
-        isSystem: false,
-        kind: "view" as const,
-        lastDdlTime: undefined,
-        name: "instances/prod/databases/customer-events/schemas/analytics/views/daily_rollup",
-        objectId: "daily_rollup",
-        owner: "data-platform",
-        rowCount: 4200n,
-        schemaId: "analytics",
-        sizeBytes: 268_435_456n,
-      },
-    ],
-    schemas: [
-      {
-        estimatedRows: 1_280_000,
-        isSystemSchema: false,
-        lastDdlTime: undefined,
-        name: "instances/prod/databases/customer-events/schemas/public",
-        owner: "data-platform",
-        schemaId: "public",
-        tableCount: 1,
-        totalSizeBytes: 5_368_709_120n,
-        viewCount: 0,
-      },
-      {
-        estimatedRows: 0,
-        isSystemSchema: false,
-        lastDdlTime: undefined,
-        name: "instances/prod/databases/customer-events/schemas/analytics",
-        owner: "data-platform",
-        schemaId: "analytics",
-        tableCount: 0,
-        totalSizeBytes: 268_435_456n,
-        viewCount: 1,
-      },
-    ],
-    syncMetadata: undefined,
-    totals: {
-      estimatedRows: 1_280_000,
-      schemaCount: 2,
-      tableCount: 1,
-      totalSizeBytes: 5_637_144_576n,
-      viewCount: 1,
-    },
-  };
-}
-
-function cardRect(label: string) {
-  const card = screen.getByText(label).closest('[data-slot="card"]');
-  if (!(card instanceof HTMLElement)) {
-    throw new Error(`Expected ${label} card`);
-  }
-  return card.getBoundingClientRect();
-}
-
-async function openQueryInsightsDrawer(
-  queryInsights: GetDatabaseQueryInsightsResponse
-) {
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalogResult() };
-  state.queryInsightsQuery = { data: queryInsights };
-
-  await render(
-    <BackendDatabasePage
-      databaseId="customer-events"
-      instanceId="prod"
-      section="overview"
-    />
-  );
-
-  await page.getByRole("button", { name: "Insights", exact: true }).click();
-  return page.getByRole("dialog", { name: "Query insights" });
-}
-
 test("backend instance overview shows live metrics and database catalog together", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.overviewQuery = { data: overviewResponse() };
-  state.extensionQuery = { data: extensionInventoryResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(<InstancePage section="overview" />);
 
   await expect
     .element(page.getByText("Production Analytics Writer"))
@@ -1050,28 +278,13 @@ test("backend instance overview shows live metrics and database catalog together
 });
 
 test("instance overview keeps cached catalog visible during a meta database outage", async () => {
-  const dependencyError = metaDatabaseUnavailableError();
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-    error: dependencyError,
-  };
-  state.overviewQuery = {
-    data: overviewResponse(),
-    error: dependencyError,
-  };
+  const fixture = await renderConsolePage(<InstancePage section="overview" />);
+  await expect
+    .element(page.getByRole("img", { name: "74 of 100 connections in use" }))
+    .toBeVisible();
 
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  fixture.metaDatabaseUnavailable = true;
+  await page.getByRole("button", { name: "Refresh data" }).click();
 
   await expect
     .element(page.getByText("Meta database unavailable"))
@@ -1089,23 +302,10 @@ test("instance overview keeps cached catalog visible during a meta database outa
 });
 
 test("backend instance activity matches the live sessions redesign", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.healthQuery = { data: activityHealthResponse() };
-  state.overviewQuery = { data: overviewResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="activity"
-        />
-      </div>
-    </ScreenshotFrame>
+  await renderConsolePage(
+    <InstancePage section="activity" />,
+    { activity: busyActivity },
+    "w-[1160px] p-6"
   );
 
   await expect
@@ -1242,41 +442,18 @@ test("backend instance activity matches the live sessions redesign", async () =>
 });
 
 test("background activity refresh keeps the table fixed in place", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.healthQuery = {
-    data: activityHealthResponse(),
-    isFetching: false,
-  };
-  state.overviewQuery = { data: overviewResponse() };
-
-  function activityPage() {
-    return (
-      <ScreenshotFrame>
-        <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-          <BackendInstancePage
-            instanceId="prod"
-            searchRoute="/instances/$instanceId"
-            section="activity"
-          />
-        </div>
-      </ScreenshotFrame>
-    );
-  }
-
-  const view = await render(activityPage());
-  const table = page.getByRole("table");
-
-  await expect.element(table).toBeVisible();
+  const fixture = await renderConsolePage(
+    <InstancePage section="activity" />,
+    { activity: busyActivity },
+    "w-[1160px] p-6"
+  );
+  await expect.element(page.getByText("Showing 1–5 of 5")).toBeVisible();
   const settledTableBox = screen.getByRole("table").getBoundingClientRect();
 
-  state.healthQuery = {
-    data: activityHealthResponse(),
-    isFetching: true,
-  };
-  await view.rerender(activityPage());
+  fixture.pending = ["checkInstanceActivity"];
+  const refresh = page.getByRole("button", { name: "Refresh activity" });
+  await refresh.click();
+  await expect.element(refresh).toBeDisabled();
 
   const refreshingTableBox = screen.getByRole("table").getBoundingClientRect();
   expect(refreshingTableBox.top).toBe(settledTableBox.top);
@@ -1284,23 +461,10 @@ test("background activity refresh keeps the table fixed in place", async () => {
 });
 
 test("backend instance activity empty state matches", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.healthQuery = { data: defaultHealthResponse() };
-  state.overviewQuery = { data: overviewResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="activity"
-        />
-      </div>
-    </ScreenshotFrame>
+  await renderConsolePage(
+    <InstancePage section="activity" />,
+    {},
+    "w-[1160px] p-6"
   );
 
   await expect.element(page.getByText("No sessions found")).toBeVisible();
@@ -1317,28 +481,10 @@ test("backend instance activity empty state matches", async () => {
 });
 
 test("backend instance activity unavailable state matches", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.healthQuery = {
-    data: {
-      health: {},
-      partialErrors: [{ message: "permission denied for pg_stat_activity" }],
-    },
-  };
-  state.overviewQuery = { data: overviewResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="activity"
-        />
-      </div>
-    </ScreenshotFrame>
+  await renderConsolePage(
+    <InstancePage section="activity" />,
+    { activity: null },
+    "w-[1160px] p-6"
   );
 
   await expect
@@ -1348,23 +494,10 @@ test("backend instance activity unavailable state matches", async () => {
 
 test("backend instance activity disconnected state matches", async () => {
   state.selectedInstanceStatus = "disconnected";
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.healthQuery = { data: activityHealthResponse(), isPending: false };
-  state.overviewQuery = { data: overviewResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="activity"
-        />
-      </div>
-    </ScreenshotFrame>
+  await renderConsolePage(
+    <InstancePage section="activity" />,
+    { activity: busyActivity },
+    "w-[1160px] p-6"
   );
 
   await expect.element(page.getByText("Activity unavailable")).toBeVisible();
@@ -1372,20 +505,7 @@ test("backend instance activity disconnected state matches", async () => {
 });
 
 test("backend database overview shows mission control stats and catalog tables", async () => {
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalogResult() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabasePage
-          databaseId="customer-events"
-          instanceId="prod"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(databasePage);
 
   await expect
     .element(page.getByRole("heading", { name: "customer_events" }))
@@ -1414,24 +534,7 @@ test("backend database overview shows mission control stats and catalog tables",
 });
 
 test("backend database overview qualifies a bounded catalog sample", async () => {
-  const catalog = catalogResult();
-  catalog.coverage.isPartial = true;
-  catalog.coverage.objectsPartial = true;
-  catalog.coverage.schemasPartial = true;
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalog };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] border border-border bg-background p-6 text-foreground">
-        <BackendDatabasePage
-          databaseId="customer-events"
-          instanceId="prod"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(databasePage, { schemasTruncated: true });
 
   await expect
     .element(
@@ -1443,34 +546,28 @@ test("backend database overview qualifies a bounded catalog sample", async () =>
 });
 
 test("dense schema inventories use the wide row without layout holes", async () => {
-  const catalog = catalogResult();
-  const [schema] = catalog.schemas;
-  if (!schema) {
-    throw new Error("Expected schema fixture");
-  }
-  catalog.schemas = Array.from({ length: DENSE_SCHEMA_COUNT }, (_, index) => ({
-    ...schema,
-    name: `${schema.name}-${index}`,
-    schemaId: `schema_${index}`,
-  }));
-  catalog.totals.schemaCount = catalog.schemas.length;
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalog };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabasePage
-          databaseId="customer-events"
-          instanceId="prod"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
+  const schemaIds = Array.from(
+    { length: DENSE_SCHEMA_COUNT },
+    (_, index) => `schema_${index}`
   );
+  await renderConsolePage(databasePage, {
+    catalog: {
+      ...consoleCatalog,
+      schemas: schemaIds.map(catalogSchema),
+      tables: Object.fromEntries(
+        schemaIds.map((id) => [
+          id,
+          [catalogTable(id, "events", { rowCount: 1n, sizeBytes: 1n })],
+        ])
+      ),
+    },
+  });
 
   await expect
     .element(page.getByText("Schemas", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("schema_11", { exact: true }))
     .toBeVisible();
 
   const schemas = cardRect("Schemas");
@@ -1481,25 +578,7 @@ test("dense schema inventories use the wide row without layout holes", async () 
 });
 
 test("disabled Insights explains why statistics are unavailable", async () => {
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalogResult() };
-  const response = queryInsightsWithoutQueryStatsResponse();
-  const insights = response.queryInsights;
-  if (!insights) {
-    throw new Error("Expected query insights fixture");
-  }
-  insights.sequentialScanHotspots = [];
-  insights.tableCacheHits = [];
-  insights.tableStatsAvailable = false;
-  state.queryInsightsQuery = { data: response };
-
-  await render(
-    <BackendDatabasePage
-      databaseId="customer-events"
-      instanceId="prod"
-      section="overview"
-    />
-  );
+  await renderConsolePage(databasePage);
 
   const button = page.getByRole("button", { name: "Insights", exact: true });
   await expect.element(button).toBeDisabled();
@@ -1517,21 +596,7 @@ test("disabled Insights explains why statistics are unavailable", async () => {
 });
 
 test("backend database overview opens the query insights drawer", async () => {
-  state.databaseQuery = { data: databaseResponse() };
-  state.catalogQuery = { data: catalogResult() };
-  state.queryInsightsQuery = { data: queryInsightsResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabasePage
-          databaseId="customer-events"
-          instanceId="prod"
-          section="overview"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(databasePage, { queryInsights: queryInsights() });
 
   await expect
     .element(page.getByText("Top queries by total time"))
@@ -1550,7 +615,7 @@ test("backend database overview opens the query insights drawer", async () => {
 });
 
 test("query insights active filters match the shared toolbar", async () => {
-  const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
+  const drawer = await openQueryInsightsDrawer(queryInsights());
   await expect.element(drawer).toBeVisible();
 
   await drawer.getByRole("textbox", { name: "Search queries…" }).fill("SELECT");
@@ -1567,14 +632,14 @@ test("query insights active filters match the shared toolbar", async () => {
 });
 
 test("query insights drawer caps its width at 64rem", async () => {
-  const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
+  const drawer = await openQueryInsightsDrawer(queryInsights());
   await expect.element(drawer).toBeVisible();
   await expect.element(drawer).toHaveCSS("max-width", "1024px");
 });
 
 test("partial query insights use the full drawer content width", async () => {
   const drawer = await openQueryInsightsDrawer(
-    queryInsightsWithoutQueryStatsResponse()
+    queryInsights({ queryStatsAvailable: false })
   );
   await expect.element(drawer).toBeVisible();
 
@@ -1594,7 +659,7 @@ test("partial query insights use the full drawer content width", async () => {
 
 test("query statistics retry uses the default button size", async () => {
   const drawer = await openQueryInsightsDrawer(
-    queryInsightsWithoutQueryStatsResponse()
+    queryInsights({ queryStatsAvailable: false })
   );
   await expect.element(drawer).toBeVisible();
 
@@ -1610,19 +675,7 @@ test("query statistics retry uses the default button size", async () => {
 });
 
 test("backend database extensions page matches design source", async () => {
-  state.extensionQuery = { data: extensionDesignInventoryResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabaseExtensionsPage
-          databaseId="customer-events"
-          instanceId="prod"
-          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(extensionsPage, { extensions: designExtensions });
 
   await expect
     .element(page.getByRole("heading", { name: "Extensions" }))
@@ -1632,28 +685,15 @@ test("backend database extensions page matches design source", async () => {
 });
 
 test("backend database extensions toolbar stays contained on narrow screens", async () => {
-  state.extensionQuery = { data: extensionDesignInventoryResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div
-        className="w-[320px] rounded-2xl border border-border bg-background p-4 text-foreground"
-        data-testid="narrow-extensions-page"
-      >
-        <BackendDatabaseExtensionsPage
-          databaseId="customer-events"
-          instanceId="prod"
-          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-        />
-      </div>
-    </ScreenshotFrame>
+  await renderConsolePage(
+    extensionsPage,
+    { extensions: designExtensions },
+    "w-[320px] p-4"
   );
 
   await expect.element(page.getByRole("tablist")).toBeVisible();
 
-  const surfaceBox = screen
-    .getByTestId("narrow-extensions-page")
-    .getBoundingClientRect();
+  const surfaceBox = screen.getByTestId("console-page").getBoundingClientRect();
   const searchBox = screen
     .getByRole("textbox", { name: "Search extensions…" })
     .getBoundingClientRect();
@@ -1665,19 +705,7 @@ test("backend database extensions toolbar stays contained on narrow screens", as
 });
 
 test("backend database extensions drawer matches design source", async () => {
-  state.extensionQuery = { data: extensionDesignInventoryResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabaseExtensionsPage
-          databaseId="customer-events"
-          instanceId="prod"
-          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(extensionsPage, { extensions: designExtensions });
 
   await page
     .getByRole("button", { name: PG_STAT_STATEMENTS_BUTTON_NAME })
@@ -1698,19 +726,7 @@ test("backend database extensions drawer matches design source", async () => {
 });
 
 test("backend database extensions available drawer matches design source", async () => {
-  state.extensionQuery = { data: extensionDesignInventoryResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendDatabaseExtensionsPage
-          databaseId="customer-events"
-          instanceId="prod"
-          searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  await renderConsolePage(extensionsPage, { extensions: designExtensions });
 
   await page
     .getByRole("textbox", { name: "Search extensions…" })
@@ -1728,31 +744,18 @@ test("backend database extensions available drawer matches design source", async
 });
 
 test("backend instance delete navigates without waiting for catalog refresh", async () => {
-  state.instanceQuery = {
-    data: instanceResponse(),
-    dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-  };
-  state.overviewQuery = { data: overviewResponse() };
-
-  await render(
-    <ScreenshotFrame>
-      <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
-        <BackendInstancePage
-          instanceId="prod"
-          searchRoute="/instances/$instanceId"
-          section="configuration"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+  // The catalog refresh after delete never answers.
+  await renderConsolePage(<InstancePage section="configuration" />, {
+    pending: ["listInstances"],
+  });
 
   await page
     .getByTestId("instance-danger-zone")
     .getByRole("button", { name: "Delete instance" })
     .click();
   await page
-    .getByLabel("Type instances/prod to confirm")
-    .fill("instances/prod");
+    .getByLabel(`Type instances/${CONSOLE_INSTANCE_ID} to confirm`)
+    .fill(`instances/${CONSOLE_INSTANCE_ID}`);
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Delete instance" })

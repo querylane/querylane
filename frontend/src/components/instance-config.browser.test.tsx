@@ -7,34 +7,16 @@ import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
-import {
-  InstanceSchema,
-  PostgresConfig_SslMode,
-  PostgresConfigSchema,
-} from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { InstanceSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { consoleInstance } from "@/test/fixtures/console-resource-fixtures";
 
 function createInstance() {
-  return createProto(InstanceSchema, {
-    config: createProto(PostgresConfigSchema, {
-      database: "querylane",
-      host: "analytics-writer.internal.querylane.test",
-      password: "redacted-secret",
-      port: 5432,
-      sslMode: PostgresConfig_SslMode.VERIFY_FULL,
-      username: "querylane_app",
-    }),
-    displayName: "Production Analytics Writer",
-    labels: {
-      environment: "production",
-      owner: "data-platform",
-      region: "eu-central-1",
-    },
-    name: "instances/prod-analytics-writer",
-  });
+  return createProto(InstanceSchema, consoleInstance);
 }
 
 // Pixels for these states, and the phone-width credential recovery layout,
-// live in e2e/visual/console-resources.spec.ts on the real configuration route.
+// live in e2e/visual/console-resources.spec.ts on the real configuration
+// route, served from the same instance fixture.
 function renderInstanceConfigSurface(children: ReactNode) {
   return render(
     <ScreenshotFrame>
@@ -180,7 +162,7 @@ test("instance delete dialog and danger zone make destructive actions explicit",
       />
       <InstanceDeleteDialog
         instanceDisplayName="Production Analytics Writer"
-        instanceResourceName="instances/prod-analytics-writer"
+        instanceResourceName={createInstance().name}
         onConfirm={rs.fn()}
         onOpenChange={rs.fn()}
         open={true}

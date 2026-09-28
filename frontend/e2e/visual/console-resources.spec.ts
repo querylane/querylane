@@ -1,18 +1,22 @@
 import type { Locator, Page } from "playwright/test";
+import {
+  Instance_ConnectionState,
+  Instance_CredentialState,
+} from "../../src/protogen/querylane/console/v1alpha1/instance_pb";
+import {
+  busyActivity,
+  consoleInstance,
+  designExtensions,
+  queryInsights,
+} from "../../src/test/fixtures/console-resource-fixtures";
 import { expect, test } from "../tests/base";
 import {
   ACTIVITY_URL,
-  busyActivityFixture,
   CONFIGURATION_URL,
   DATABASE_URL,
-  designExtensionsFixture,
   EXTENSIONS_URL,
-  failInstanceLoadsWithMetaDatabaseOutage,
   INSTANCE_URL,
-  instanceFixture,
   mockConsoleResources,
-  queryInsightsFixture,
-  rejectInstancePassword,
 } from "./console-resource-fixtures";
 import { expectActiveElement } from "./focus";
 
@@ -106,11 +110,11 @@ test.describe("instance overview", () => {
   test("cached catalog stays visible during a meta database outage", async ({
     page,
   }) => {
-    await mockConsoleResources(page);
+    const fixture = await mockConsoleResources(page);
     await page.goto(INSTANCE_URL);
     await expect(pageContent(page).getByText("customer_events")).toBeVisible();
 
-    await failInstanceLoadsWithMetaDatabaseOutage(page);
+    fixture.metaDatabaseUnavailable = true;
     await page.getByRole("button", { name: "Refresh data" }).click();
 
     await expect(page.getByText("Meta database unavailable")).toBeVisible();
@@ -147,7 +151,7 @@ test.describe("instance activity", () => {
   test("live sessions show blocking chains and the session inspector", async ({
     page,
   }) => {
-    await mockConsoleResources(page, { activity: busyActivityFixture });
+    await mockConsoleResources(page, { activity: busyActivity });
     await page.goto(ACTIVITY_URL);
 
     await expect(page.getByText("blocker · pid 4211")).toBeVisible();
@@ -234,10 +238,10 @@ test.describe("instance activity", () => {
 
   test("disconnected instance pauses live activity", async ({ page }) => {
     await mockConsoleResources(page, {
-      activity: busyActivityFixture,
+      activity: busyActivity,
       instance: {
-        ...instanceFixture,
-        connectionState: "CONNECTION_STATE_UNSPECIFIED",
+        ...consoleInstance,
+        connectionState: Instance_ConnectionState.UNSPECIFIED,
       },
     });
     await page.goto(ACTIVITY_URL);
@@ -288,7 +292,7 @@ test.describe("database overview", () => {
   });
 
   test("query insights drawer and its active filters", async ({ page }) => {
-    await mockConsoleResources(page, { queryInsights: queryInsightsFixture() });
+    await mockConsoleResources(page, { queryInsights: queryInsights() });
     await page.goto(DATABASE_URL);
     await page.getByRole("button", { exact: true, name: "Insights" }).click();
 
@@ -326,7 +330,7 @@ test.describe("database overview", () => {
   }) => {
     await page.setViewportSize(PHONE_VIEWPORT);
     await mockConsoleResources(page, {
-      queryInsights: queryInsightsFixture({ queryStatsAvailable: false }),
+      queryInsights: queryInsights({ queryStatsAvailable: false }),
     });
     await page.goto(DATABASE_URL);
     await page.getByRole("button", { exact: true, name: "Insights" }).click();
@@ -347,7 +351,7 @@ test.describe("database overview", () => {
 
 test.describe("database extensions", () => {
   test("installed inventory and details drawer", async ({ page }) => {
-    await mockConsoleResources(page, { extensions: designExtensionsFixture });
+    await mockConsoleResources(page, { extensions: designExtensions });
     await page.goto(EXTENSIONS_URL);
 
     await expect(page.getByText("Observability")).toBeVisible();
@@ -376,7 +380,7 @@ test.describe("database extensions", () => {
   });
 
   test("available extension search and details drawer", async ({ page }) => {
-    await mockConsoleResources(page, { extensions: designExtensionsFixture });
+    await mockConsoleResources(page, { extensions: designExtensions });
     await page.goto(EXTENSIONS_URL);
 
     await page
@@ -437,8 +441,9 @@ test.describe("instance configuration", () => {
   });
 
   test("server field errors anchor to the rejected field", async ({ page }) => {
-    await mockConsoleResources(page);
-    await rejectInstancePassword(page, SERVER_PASSWORD_ERROR);
+    await mockConsoleResources(page, {
+      passwordRejection: SERVER_PASSWORD_ERROR,
+    });
     await page.goto(CONFIGURATION_URL);
 
     const password = page.getByRole("textbox", { name: "Password" });
@@ -488,10 +493,10 @@ test.describe("instance configuration", () => {
     await page.setViewportSize({ height: 900, width: 320 });
     await mockConsoleResources(page, {
       instance: {
-        ...instanceFixture,
+        ...consoleInstance,
         credentialError:
           "Stored credentials cannot be read. Re-enter the password to restore access.",
-        credentialState: "CREDENTIAL_STATE_UNREADABLE",
+        credentialState: Instance_CredentialState.UNREADABLE,
       },
     });
     await page.goto(CONFIGURATION_URL);

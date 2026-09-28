@@ -14,15 +14,22 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSetupStore } from "@/stores/setup-store";
+import {
+  ADMIN_SHELL_FIXTURE,
+  CONSOLE_DATABASE_ID,
+  CONSOLE_INSTANCE_ID,
+  consoleResourceFixture,
+  LONG_DATABASE_NAME,
+  LONG_INSTANCE_NAME,
+  routeConsoleResources,
+} from "@/test/fixtures/console-resource-fixtures";
+import { createTestRouterTransport } from "@/test/router-transport";
 import { ThemeProvider } from "@/theme-provider";
+import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/;
 const navigateMock = rs.fn(async () => undefined);
 const adminHeaderMockState = rs.hoisted(() => ({
-  instanceMode: {
-    isConfigManaged: true,
-    isLoaded: true,
-  },
   instances: undefined as unknown,
   isInstanceRolesRoute: false,
   selectedInstance: undefined as unknown,
@@ -75,13 +82,13 @@ rs.mock("@tanstack/react-router", () => ({
   } = {}) => {
     const location = adminHeaderMockState.isInstanceRolesRoute
       ? {
-          href: "/instances/prod-analytics/roles",
-          pathname: "/instances/prod-analytics/roles",
+          href: `/instances/${CONSOLE_INSTANCE_ID}/roles`,
+          pathname: `/instances/${CONSOLE_INSTANCE_ID}/roles`,
           search: {},
         }
       : {
-          href: "/instances/prod-analytics/databases/customer-events?page=database.overview",
-          pathname: "/instances/prod-analytics/databases/customer-events",
+          href: `/instances/${CONSOLE_INSTANCE_ID}/databases/${CONSOLE_DATABASE_ID}?page=database.overview`,
+          pathname: `/instances/${CONSOLE_INSTANCE_ID}/databases/${CONSOLE_DATABASE_ID}`,
           search: { page: "database.overview" },
         };
     return select ? select(location) : location;
@@ -113,21 +120,21 @@ const selectedInstance = {
   connectionError: "",
   credentialsUnreadable: false,
   host: "analytics-writer.internal.querylane.test",
-  id: "prod-analytics",
-  name: "Production Analytics Writer With Long Display Name",
+  id: CONSOLE_INSTANCE_ID,
+  name: LONG_INSTANCE_NAME,
   port: 5432,
-  resourceName: "instances/prod-analytics",
+  resourceName: `instances/${CONSOLE_INSTANCE_ID}`,
   status: "connected",
 } as const;
 
 const selectedDatabase = {
   characterSet: "UTF8",
   collation: "en_US.UTF-8",
-  id: "customer-events",
+  id: CONSOLE_DATABASE_ID,
   isSystemDatabase: false,
-  name: "customer_events_with_long_identifier",
+  name: LONG_DATABASE_NAME,
   owner: "data-platform",
-  resourceName: "instances/prod-analytics/databases/customer-events",
+  resourceName: `instances/${CONSOLE_INSTANCE_ID}/databases/${CONSOLE_DATABASE_ID}`,
 } as const;
 
 rs.mock("@/lib/db-context", () => ({
@@ -138,7 +145,7 @@ rs.mock("@/lib/db-context", () => ({
         ...selectedDatabase,
         id: "warehouse",
         name: "warehouse",
-        resourceName: "instances/prod-analytics/databases/warehouse",
+        resourceName: `instances/${CONSOLE_INSTANCE_ID}/databases/warehouse`,
       },
     ],
     instances: adminHeaderMockState.instances ?? [
@@ -156,8 +163,8 @@ rs.mock("@/lib/db-context", () => ({
     navigateToDatabase: rs.fn(),
     navigateToInstance: rs.fn(),
     navigationIds: {
-      databaseId: "customer-events",
-      instanceId: "prod-analytics",
+      databaseId: CONSOLE_DATABASE_ID,
+      instanceId: CONSOLE_INSTANCE_ID,
     },
     queryStates: {
       databases: queryState,
@@ -174,103 +181,13 @@ rs.mock("@/lib/db-context", () => ({
   }),
 }));
 
-rs.mock("@/hooks/api/console", () => ({
-  CONSOLE_CONFIG_STATIC_QUERY_OPTIONS: {},
-  useConfigManagedInstancesStatus: () => adminHeaderMockState.instanceMode,
-  useGetConsoleConfigQuery: () => ({
-    data: {
-      buildInfo: {
-        buildTime: "2026-05-20T10:00:00Z",
-        gitBranch: "main",
-        gitCommit: "abcdef1234567890",
-        version: "0.0.0-test",
-      },
-    },
-    error: null,
-  }),
-  useIsConfigManagedInstances: () =>
-    adminHeaderMockState.instanceMode.isConfigManaged,
-}));
-
+// Stars come from the GitHub REST API, not a Connect RPC.
 rs.mock("@/hooks/api/github", () => ({
   useGithubRepoStarsQuery: () => ({ data: "1.2k" }),
 }));
 
-rs.mock("@/hooks/api/database-catalog", () => {
-  const catalogQuery = {
-    data: {
-      objects: [
-        {
-          kind: "table",
-          objectId: "shipments",
-          rowCount: 2_400_000n,
-          schemaId: "public",
-        },
-        {
-          kind: "table",
-          objectId: "shipment_event",
-          rowCount: 18_200_000n,
-          schemaId: "public",
-        },
-        {
-          kind: "table",
-          objectId: "carriers",
-          rowCount: 312n,
-          schemaId: "public",
-        },
-        {
-          kind: "table",
-          objectId: "containers",
-          rowCount: 88_000n,
-          schemaId: "public",
-        },
-        {
-          kind: "view",
-          objectId: "active_shipments",
-          rowCount: 0n,
-          schemaId: "public",
-        },
-      ],
-    },
-    error: null,
-    isPending: false,
-  };
-
-  return {
-    useDatabaseCatalogQuery: () => catalogQuery,
-    useDatabaseCatalogSearchQuery: () => catalogQuery,
-  };
-});
-
-rs.mock("@/hooks/api/role", () => ({
-  rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
-  useListRolesQuery: () => ({
-    data: { roles: [] },
-    error: null,
-    isPending: false,
-  }),
-  useListAllRolesQuery: () => ({
-    data: {
-      roles: [
-        {
-          attributes: { canLogin: true },
-          isSystemRole: false,
-          name: "instances/prod-analytics/roles/app-reader",
-          roleName: "app_reader",
-        },
-      ],
-    },
-    error: null,
-    isPending: false,
-  }),
-}));
-
 beforeEach(() => {
   navigateMock.mockClear();
-  adminHeaderMockState.instanceMode = {
-    isConfigManaged: true,
-    isLoaded: true,
-  };
   adminHeaderMockState.instances = undefined;
   adminHeaderMockState.isInstanceRolesRoute = false;
   adminHeaderMockState.selectedInstance = selectedInstance;
@@ -283,11 +200,25 @@ function leafElementWithText(root: ParentNode, text: string) {
   );
 }
 
-// Pixels for the shell, its overlays, and the phone and tablet layouts live in
-// e2e/visual/admin-shell.spec.ts, which drives the real app shell. Viewport
-// sizes are config-only here (1280x1000), so compact-layout behavior moved too.
-function renderAdminShell() {
+function renderWithConsole(ui: ReactNode, { configManaged = true } = {}) {
+  const fixture = consoleResourceFixture({
+    ...ADMIN_SHELL_FIXTURE,
+    configManaged,
+  });
+  const transport = createTestRouterTransport((router) =>
+    routeConsoleResources(router, fixture)
+  );
   return render(
+    <HarnessProviders transport={transport}>{ui}</HarnessProviders>
+  );
+}
+
+// Pixels for the shell, its overlays, and the phone and tablet layouts live in
+// e2e/visual/admin-shell.spec.ts, which drives the real app shell from the
+// same fixture. Viewport sizes are config-only here (1280x1000), so
+// compact-layout behavior moved too.
+function renderAdminShell(options?: { configManaged?: boolean }) {
+  return renderWithConsole(
     <ThemeProvider
       defaultTheme="dark"
       storageKey="querylane-admin-shell-browser-test-theme"
@@ -322,7 +253,8 @@ function renderAdminShell() {
           </div>
         </div>
       </TooltipProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
+    options
   );
 }
 
@@ -341,7 +273,7 @@ function renderDatabaseLayout({
       : "light";
   useSetupStore.setState({ onboardingState: null, showDegradedBanner });
 
-  return render(
+  return renderWithConsole(
     <ThemeProvider
       defaultTheme={visualTheme}
       storageKey="querylane-admin-shell-browser-test-theme-layout"
@@ -461,13 +393,9 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect
     .element(page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }))
     .toBeVisible();
+  await expect.element(page.getByText(LONG_INSTANCE_NAME)).toBeVisible();
   await expect
-    .element(
-      page.getByText("Production Analytics Writer With Long Display Name")
-    )
-    .toBeVisible();
-  await expect
-    .element(page.getByText("customer_events_with_long_identifier").first())
+    .element(page.getByText(LONG_DATABASE_NAME).first())
     .toBeVisible();
   await expect.element(page.getByText("Database overview")).toBeVisible();
   await expect
@@ -534,9 +462,7 @@ test("command palette opens over the full admin layout", async () => {
   await expect.element(page.getByText("Go to")).toBeVisible();
   await expect.element(page.getByText("Tables", { exact: true })).toBeVisible();
   await expect
-    .element(
-      page.getByText("customer_events_with_long_identifier.public.shipments")
-    )
+    .element(page.getByText(`${LONG_DATABASE_NAME}.public.shipments`))
     .toBeVisible();
 });
 
@@ -566,13 +492,9 @@ test("sidebar footer omits global settings", async () => {
 });
 
 test("admin header instance selector uses a rich empty state with a create action", async () => {
-  adminHeaderMockState.instanceMode = {
-    isConfigManaged: false,
-    isLoaded: true,
-  };
   adminHeaderMockState.instances = [];
   adminHeaderMockState.selectedInstance = null;
-  await renderAdminShell();
+  await renderAdminShell({ configManaged: false });
 
   await page.getByRole("button", { name: "Select instance" }).click();
 
@@ -606,7 +528,7 @@ test("admin header routes unreadable credentials to credential recovery", async 
   await page.getByText("Review credentials").click();
 
   expect(navigateMock).toHaveBeenCalledWith({
-    params: { instanceId: "prod-analytics" },
+    params: { instanceId: CONSOLE_INSTANCE_ID },
     to: "/instances/$instanceId/configuration",
   });
 });
