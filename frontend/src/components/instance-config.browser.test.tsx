@@ -1,14 +1,13 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, rs, test } from "@rstest/core";
 import { type ReactNode, useState } from "react";
-import { expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
 import {
-  Instance_CredentialState,
   InstanceSchema,
   PostgresConfig_SslMode,
   PostgresConfigSchema,
@@ -34,16 +33,10 @@ function createInstance() {
   });
 }
 
-function createUnreadableInstance() {
-  const instance = createInstance();
-  instance.credentialState = Instance_CredentialState.UNREADABLE;
-  instance.credentialError =
-    "Stored credentials cannot be read. Re-enter the password to restore access.";
-  return instance;
-}
-
+// Pixels for these states, and the phone-width credential recovery layout,
+// live in e2e/visual/console-resources.spec.ts on the real configuration route.
 function renderInstanceConfigSurface(children: ReactNode) {
-  render(
+  return render(
     <ScreenshotFrame>
       <div className="w-[1100px] space-y-6 rounded-2xl border border-border bg-background p-8 text-foreground">
         {children}
@@ -65,8 +58,8 @@ function InstanceConfigServerFieldErrorFixture() {
       formNotice={formNotice}
       instance={createInstance()}
       isConfigManaged={false}
-      onInvalidSave={vi.fn()}
-      onSave={vi.fn(() => {
+      onInvalidSave={rs.fn()}
+      onSave={rs.fn(() => {
         setFormNotice({
           message: "Fix the highlighted fields, then save again.",
           variant: "error",
@@ -84,7 +77,7 @@ function InstanceConfigServerFieldErrorFixture() {
 }
 
 test("editable instance configuration shows connection fields, labels, and save affordance", async () => {
-  renderInstanceConfigSurface(
+  await renderInstanceConfigSurface(
     <InstanceConfigurationSection
       formNotice={{
         message: "Last saved from browser visual fixture.",
@@ -92,25 +85,22 @@ test("editable instance configuration shows connection fields, labels, and save 
       }}
       instance={createInstance()}
       isConfigManaged={false}
-      onInvalidSave={vi.fn()}
-      onSave={vi.fn()}
+      onInvalidSave={rs.fn()}
+      onSave={rs.fn()}
       pending={false}
     />
   );
 
   await expect.element(page.getByText("Configuration")).toBeVisible();
   await expect
-    .element(page.getByLabelText("Host"))
+    .element(page.getByLabel("Host"))
     .toHaveValue("analytics-writer.internal.querylane.test");
   await expect.element(page.getByText("Labels")).toBeVisible();
   await expect.element(page.getByText("Save changes")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "instance-config-editable"
-  );
 });
 
 test("editable instance configuration surfaces validation errors near fields", async () => {
-  renderInstanceConfigSurface(
+  await renderInstanceConfigSurface(
     <InstanceConfigurationSection
       formNotice={{
         message: "Fix the highlighted fields, then save again.",
@@ -118,14 +108,14 @@ test("editable instance configuration surfaces validation errors near fields", a
       }}
       instance={createInstance()}
       isConfigManaged={false}
-      onInvalidSave={vi.fn()}
-      onSave={vi.fn()}
+      onInvalidSave={rs.fn()}
+      onSave={rs.fn()}
       pending={false}
     />
   );
 
-  await page.getByLabelText("Host").fill("");
-  await page.getByLabelText("Port").fill("65536");
+  await page.getByLabel("Host").fill("");
+  await page.getByLabel("Port").fill("65536");
   await page.getByText("Save changes").click();
 
   await expect.element(page.getByText("Could not save")).toBeVisible();
@@ -133,13 +123,10 @@ test("editable instance configuration surfaces validation errors near fields", a
   await expect
     .element(page.getByText("Port must be between 1 and 65535."))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "instance-config-validation-errors"
-  );
 });
 
 test("editable instance configuration anchors server field errors to fields", async () => {
-  renderInstanceConfigSurface(<InstanceConfigServerFieldErrorFixture />);
+  await renderInstanceConfigSurface(<InstanceConfigServerFieldErrorFixture />);
 
   const passwordInput = page.getByRole("textbox", { name: "Password" });
   await passwordInput.fill("wrong-password");
@@ -153,15 +140,12 @@ test("editable instance configuration anchors server field errors to fields", as
       )
     )
     .toBeVisible();
-  await expect.element(passwordInput).toHaveFocus();
+  await expect.element(passwordInput).toBeFocused();
   await expect.element(passwordInput).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "instance-config-server-field-errors"
-  );
 });
 
 test("config-managed instance configuration disables edits while preserving details", async () => {
-  renderInstanceConfigSurface(
+  await renderInstanceConfigSurface(
     <InstanceConfigurationSection
       formNotice={{
         message: "Managed from querylane.yaml. Restart the server after edits.",
@@ -169,8 +153,8 @@ test("config-managed instance configuration disables edits while preserving deta
       }}
       instance={createInstance()}
       isConfigManaged={true}
-      onInvalidSave={vi.fn()}
-      onSave={vi.fn()}
+      onInvalidSave={rs.fn()}
+      onSave={rs.fn()}
       pending={false}
     />
   );
@@ -182,26 +166,23 @@ test("config-managed instance configuration disables edits while preserving deta
       )
     )
     .toBeVisible();
-  await expect.element(page.getByLabelText("Username")).toBeDisabled();
+  await expect.element(page.getByLabel("Username")).toBeDisabled();
   await expect.element(page.getByText("Labels")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "instance-config-managed"
-  );
 });
 
 test("instance delete dialog and danger zone make destructive actions explicit", async () => {
-  renderInstanceConfigSurface(
+  await renderInstanceConfigSurface(
     <>
       <InstanceDangerZoneSection
         instanceDisplayName="Production Analytics Writer"
-        onDelete={vi.fn()}
+        onDelete={rs.fn()}
         pending={false}
       />
       <InstanceDeleteDialog
         instanceDisplayName="Production Analytics Writer"
         instanceResourceName="instances/prod-analytics-writer"
-        onConfirm={vi.fn()}
-        onOpenChange={vi.fn()}
+        onConfirm={rs.fn()}
+        onOpenChange={rs.fn()}
         open={true}
         pending={false}
       />
@@ -213,39 +194,4 @@ test("instance delete dialog and danger zone make destructive actions explicit",
     .element(page.getByRole("heading", { name: "Delete instance?" }))
     .toBeVisible();
   await expect.element(page.getByText("Delete instance").last()).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "instance-delete-confirmation"
-  );
-});
-
-test("credential recovery action does not overlap the alert copy on phones", async () => {
-  await page.viewport(320, 900);
-  render(
-    <ScreenshotFrame>
-      <div className="w-[240px] rounded-2xl border border-border bg-background p-2 text-foreground">
-        <InstanceConfigurationSection
-          formNotice={null}
-          instance={createUnreadableInstance()}
-          isConfigManaged={false}
-          onInvalidSave={vi.fn()}
-          onSave={vi.fn()}
-          pending={false}
-        />
-      </div>
-    </ScreenshotFrame>
-  );
-
-  const title = page.getByText("Credentials need attention");
-  const action = page.getByRole("button", { name: "Re-enter password" });
-  await expect.element(title).toBeVisible();
-  await expect.element(action).toBeVisible();
-
-  const titleRect = title.element().getBoundingClientRect();
-  const actionRect = action.element().getBoundingClientRect();
-  const overlaps =
-    titleRect.left < actionRect.right &&
-    titleRect.right > actionRect.left &&
-    titleRect.top < actionRect.bottom &&
-    titleRect.bottom > actionRect.top;
-  expect(overlaps).toBe(false);
 });

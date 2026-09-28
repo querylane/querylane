@@ -1,28 +1,38 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { beforeEach, expect, rs, test } from "@rstest/core";
+import * as actualReactQuery from "@tanstack/react-query" with {
+  rstest: "importActual",
+};
 import type { QueryClient } from "@tanstack/react-query";
-import { beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { CreateInstancePageState } from "@/routes/new-instance-page";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
 import { createTestQueryClient } from "@/test/query-client";
 
+// Pixels for the create instance form live in e2e/visual/onboarding.spec.ts,
+// driven through the real /new-instance route.
+
 const MANAGED_NOT_INTERNAL_STORAGE_RE = /not Querylane internal storage/;
 const NAVIGATION_FAILURE_RE = /could not open it automatically/;
 const INVALID_CONFIG_FIELD_RE = /invalid field "config"/;
+const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
+const SSL_MODE_DESCRIPTION =
+  "Require TLS and verify both the trusted CA and the server hostname.";
 
-const routeState = vi.hoisted(() => ({
-  createInstance: vi.fn(async () => ({ instance: { name: "instances/prod" } })),
-  listDatabases: vi.fn(async () => ({ databases: [] })),
-  navigate: vi.fn(async () => undefined),
+const routeState = rs.hoisted(() => ({
+  createInstance: rs.fn(async () => ({ instance: { name: "instances/prod" } })),
+  listDatabases: rs.fn(async () => ({ databases: [] })),
+  navigate: rs.fn(async () => undefined),
   queryClient: null as QueryClient | null,
-  testInstanceConnection: vi.fn(async () => ({})),
+  testInstanceConnection: rs.fn(async () => ({})),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   ...Object.fromEntries([
     ["Navigate", ({ to }: { to: string }) => <div>Redirecting to {to}</div>],
@@ -30,25 +40,20 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => routeState.navigate,
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
-  useQuery: vi.fn(),
+rs.mock("@connectrpc/connect-query", () => ({
+  useQuery: rs.fn(),
   useTransport: () => ({}),
 }));
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-  return {
-    ...actual,
-    useQueryClient: () => ({
-      ...routeState.queryClient,
-      query: routeState.listDatabases,
-    }),
-  };
-});
+rs.mock("@tanstack/react-query", () => ({
+  ...actualReactQuery,
+  useQueryClient: () => ({
+    ...routeState.queryClient,
+    query: routeState.listDatabases,
+  }),
+}));
 
-vi.mock("@/hooks/api/console", () => ({
+rs.mock("@/hooks/api/console", () => ({
   useConfigManagedInstancesStatus: () => ({
     isConfigManaged: false,
     isLoaded: true,
@@ -56,7 +61,7 @@ vi.mock("@/hooks/api/console", () => ({
   useIsConfigManagedInstances: () => false,
 }));
 
-vi.mock("@/hooks/api/instance", () => ({
+rs.mock("@/hooks/api/instance", () => ({
   useCreateInstanceMutation: () => ({
     isPending: false,
     mutateAsync: routeState.createInstance,
@@ -67,9 +72,11 @@ vi.mock("@/hooks/api/instance", () => ({
   }),
 }));
 
-function renderCreateInstance(initialState?: Partial<CreateInstancePageState>) {
+async function renderCreateInstance(
+  initialState?: Partial<CreateInstancePageState>
+) {
   routeState.queryClient = createTestQueryClient();
-  render(
+  await render(
     <ScreenshotFrame>
       <div
         className="w-[1120px] origin-top-left scale-90 rounded-2xl border border-border bg-background text-foreground"
@@ -83,10 +90,10 @@ function renderCreateInstance(initialState?: Partial<CreateInstancePageState>) {
 }
 
 async function fillRequiredConnectionFields() {
-  await page.getByLabelText("Display name").fill("Production");
-  await page.getByLabelText("Host").fill("localhost");
-  await page.getByLabelText("Default database").fill("postgres");
-  await page.getByLabelText("Username").fill("postgres");
+  await page.getByLabel("Display name").fill("Production");
+  await page.getByLabel("Host").fill("localhost");
+  await page.getByLabel("Default database").fill("postgres");
+  await page.getByLabel("Username").fill("postgres");
   await page.getByRole("textbox", { name: "Password" }).fill("secret");
 }
 
@@ -104,18 +111,15 @@ beforeEach(() => {
 });
 
 test("create instance form keeps initial setup path visually stable", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await expect
     .element(page.getByRole("heading", { name: "Postgres server to manage" }))
     .toBeVisible();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-initial");
 });
 
 test("create instance form keeps DSN-prefilled advanced fields readable", async () => {
-  renderCreateInstance({
+  await renderCreateInstance({
     formNotice: null,
     formState: {
       database: "warehouse",
@@ -144,64 +148,52 @@ test("create instance form keeps DSN-prefilled advanced fields readable", async 
     .toBeVisible();
 
   await expect
-    .element(page.getByLabelText("Host"))
+    .element(page.getByLabel("Host"))
     .toHaveValue("analytics-writer.internal.querylane.test");
   await expect.element(page.getByText("verify-full").first()).toBeVisible();
   await expect.element(page.getByText("Labels")).toBeVisible();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-dsn-advanced");
 });
 
 test("create instance form warns about DSN parameters it cannot apply", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await page
-    .getByLabelText("Connection string")
+    .getByLabel("Connection string")
     .fill(
       "postgresql://postgres:secret@[2001:db8::1]/postgres?sslmode=require&channel_binding=require"
     );
   await page.getByRole("button", { name: "Apply DSN" }).click();
 
-  await expect.element(page.getByLabelText("Host")).toHaveValue("2001:db8::1");
-  expect(
-    page
-      .getByLabelText("SSL mode")
-      .element()
-      .querySelector('[data-slot="ssl-mode-icon"][data-mode="require"]')
-  ).not.toBeNull();
+  await expect.element(page.getByLabel("Host")).toHaveValue("2001:db8::1");
+  await expect
+    .element(
+      page
+        .getByLabel("SSL mode")
+        .locator('[data-slot="ssl-mode-icon"][data-mode="require"]')
+    )
+    .toBeAttached();
   await expect
     .element(page.getByRole("status"))
-    .toHaveTextContent("DSN parameters not applied: channel_binding.");
+    .toContainText("DSN parameters not applied: channel_binding.");
 
   await page
-    .getByLabelText("Connection string")
+    .getByLabel("Connection string")
     .fill("postgres://postgres:secret@localhost/postgres");
   await expect
     .element(page.getByRole("status"))
-    .toHaveTextContent("DSN parameters not applied: channel_binding.");
+    .toContainText("DSN parameters not applied: channel_binding.");
 });
 
 test("create instance SSL mode menu keeps descriptions readable", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
-  await page.getByLabelText("SSL mode").click();
-  await expect
-    .element(
-      page.getByText(
-        "Require TLS and verify both the trusted CA and the server hostname."
-      )
-    )
-    .toBeVisible();
+  await page.getByLabel("SSL mode").click();
+  await expect.element(page.getByText(SSL_MODE_DESCRIPTION)).toBeVisible();
 
   const popup = document.querySelector(
     '[data-slot="select-content"][data-open]'
   );
-  const description = page
-    .getByText(
-      "Require TLS and verify both the trusted CA and the server hostname."
-    )
-    .element();
+  const description = screen.getByText(SSL_MODE_DESCRIPTION);
 
   expect(popup).toBeInstanceOf(HTMLElement);
   expect(description).toBeInstanceOf(HTMLElement);
@@ -223,18 +215,19 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
 });
 
 test("create instance SSL mode shows icons in the trigger and menu", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await expect
     .element(page.getByRole("heading", { name: "Postgres server to manage" }))
     .toBeVisible();
 
-  const trigger = page.getByLabelText("SSL mode").element();
+  const trigger = screen.getByLabelText("SSL mode");
   expect(
     trigger.querySelector('[data-slot="ssl-mode-icon"][data-mode="prefer"]')
   ).toBeInstanceOf(SVGSVGElement);
 
-  await page.getByLabelText("SSL mode").click();
+  await page.getByLabel("SSL mode").click();
+  await expect.element(page.getByText(SSL_MODE_DESCRIPTION)).toBeVisible();
 
   const renderedModes = Array.from(
     document.querySelectorAll('[data-slot="ssl-mode-icon"]')
@@ -253,20 +246,17 @@ test("create instance SSL mode shows icons in the trigger and menu", async () =>
 });
 
 test("connection test validation prevents invisible bad submits", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await page.getByRole("button", { name: "Test connection" }).click();
 
   await expect
     .element(page.getByText("Display name is required."))
     .toBeVisible();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-validation");
 });
 
 test("connection test validation shows per-field errors and focuses first invalid field", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await page.getByRole("button", { name: "Test connection" }).click();
 
@@ -275,21 +265,18 @@ test("connection test validation shows per-field errors and focuses first invali
     .toBeVisible();
   await expect.element(page.getByText("Host is required.")).toBeVisible();
   await expect.element(page.getByText("Password is required.")).toBeVisible();
-  await expect.element(page.getByLabelText("Display name")).toHaveFocus();
+  await expect.element(page.getByLabel("Display name")).toBeFocused();
 });
 
 test("new instance creation is gated on successful connection test", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   const createButton = page.getByRole("button", { name: "Create instance" });
   await expect.element(createButton).toBeDisabled();
-  const tooltipTrigger = createButton
-    .element()
-    .closest("[data-base-ui-tooltip-trigger]");
-  if (!(tooltipTrigger instanceof HTMLElement)) {
-    throw new Error("Expected Create instance tooltip trigger");
-  }
-  await page.elementLocator(tooltipTrigger).hover();
+  await page
+    .locator(TOOLTIP_TRIGGER_SELECTOR)
+    .filter({ has: createButton })
+    .hover();
   await expect
     .element(
       page
@@ -315,10 +302,7 @@ test("new instance creation is gated on successful connection test", async () =>
   expect(routeState.createInstance).not.toHaveBeenCalled();
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
-    .not.toBeDisabled();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-connection-success");
+    .toBeEnabled();
 
   await page.getByRole("button", { name: "Create instance" }).click();
 
@@ -335,7 +319,7 @@ test("new instance creation navigates without waiting for database discovery", a
         resolveDatabases = () => resolve({ databases: [] });
       })
   );
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -359,7 +343,7 @@ test("new instance creation stays disabled until success navigation completes", 
         finishNavigation = () => resolve(undefined);
       })
   );
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -374,12 +358,12 @@ test("new instance creation stays disabled until success navigation completes", 
 
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
-    .not.toBeDisabled();
+    .toBeEnabled();
 });
 
 test("new instance creation shows inline feedback when success navigation fails", async () => {
   routeState.navigate.mockRejectedValueOnce(new Error("router unavailable"));
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -391,7 +375,7 @@ test("new instance creation shows inline feedback when success navigation fails"
 
 test("new instance creation ignores cancelled success navigation", async () => {
   routeState.navigate.mockRejectedValueOnce(new Error("Navigation cancelled"));
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -399,39 +383,36 @@ test("new instance creation ignores cancelled success navigation", async () => {
 
   await expect
     .element(page.getByText(NAVIGATION_FAILURE_RE))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
-    .not.toBeDisabled();
+    .toBeEnabled();
 });
 
 test("new instance creation requires retest after connection fields change", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
 
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
-    .not.toBeDisabled();
+    .toBeEnabled();
 
-  await page.getByLabelText("Display name").fill("Production renamed");
+  await page.getByLabel("Display name").fill("Production renamed");
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
-    .not.toBeDisabled();
+    .toBeEnabled();
 
-  await page.getByLabelText("Host").fill("db.internal");
+  await page.getByLabel("Host").fill("db.internal");
 
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
     .toBeDisabled();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-retest-required");
 });
 
 test("connection test result clears after editing connection fields", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -439,18 +420,18 @@ test("connection test result clears after editing connection fields", async () =
   await expect.element(page.getByText("Connection successful.")).toBeVisible();
   await expect.element(page.getByRole("status")).toBeVisible();
 
-  await page.getByLabelText("Host").fill("db.internal");
+  await page.getByLabel("Host").fill("db.internal");
 
   await expect
     .element(page.getByText("Connection successful."))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 });
 
 test("connection test failure keeps create blocked with inline feedback", async () => {
   routeState.testInstanceConnection.mockRejectedValueOnce(
     new Error("connection refused")
   );
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -459,9 +440,6 @@ test("connection test failure keeps create blocked with inline feedback", async 
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
     .toBeDisabled();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-connection-failure");
 });
 
 test("connection test failure keeps server field errors anchored to connection fields", async () => {
@@ -491,7 +469,7 @@ test("connection test failure keeps server field errors anchored to connection f
       ]
     )
   );
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -505,17 +483,14 @@ test("connection test failure keeps server field errors anchored to connection f
         .first()
     )
     .toBeVisible();
-  await expect.element(page.getByLabelText("Host")).toHaveFocus();
+  await expect.element(page.getByLabel("Host")).toBeFocused();
   await expect
-    .element(page.getByLabelText("Host"))
+    .element(page.getByLabel("Host"))
     .toHaveAttribute("aria-invalid", "true");
   await expect
-    .element(page.getByLabelText("Port"))
+    .element(page.getByLabel("Port"))
     .toHaveAttribute("aria-invalid", "true");
-  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-server-field-errors");
+  await expect.element(page.getByRole("alert")).not.toBeAttached();
 });
 
 test("connection test failure shows actionable backend details", async () => {
@@ -524,7 +499,7 @@ test("connection test failure shows actionable backend details", async () => {
   routeState.testInstanceConnection.mockRejectedValueOnce(
     new Error(connectionFailureMessage)
   );
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await fillRequiredConnectionFields();
   await page.getByRole("button", { name: "Test connection" }).click();
@@ -532,17 +507,17 @@ test("connection test failure shows actionable backend details", async () => {
   await expect.element(page.getByText(connectionFailureMessage)).toBeVisible();
   await expect
     .element(page.getByText(INVALID_CONFIG_FIELD_RE))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("button", { name: "Create instance" }))
     .toBeDisabled();
 });
 
 test("connection test validation focuses empty advanced label keys", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
-  await page.getByLabelText("Display name").fill("Prod");
-  await page.getByLabelText("Host").fill("localhost");
+  await page.getByLabel("Display name").fill("Prod");
+  await page.getByLabel("Host").fill("localhost");
   await page.getByRole("textbox", { name: "Password" }).fill("secret");
   await page.getByRole("button", { name: "Show advanced options" }).click();
   await page.getByRole("button", { name: "Add label" }).click();
@@ -552,20 +527,17 @@ test("connection test validation focuses empty advanced label keys", async () =>
   await expect
     .element(page.getByText("Label keys cannot be empty."))
     .toBeVisible();
-  await expect.element(page.getByPlaceholder("Key")).toHaveFocus();
+  await expect.element(page.getByPlaceholder("Key")).toBeFocused();
   await expect
     .element(page.getByPlaceholder("Key"))
     .toHaveAttribute("aria-invalid", "true");
-  await expect(
-    page.getByTestId("create-instance-visual-surface")
-  ).toMatchScreenshot("create-instance-advanced-label-error");
 });
 
 test("connection test validation expands advanced options for hidden label errors", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
-  await page.getByLabelText("Display name").fill("Prod");
-  await page.getByLabelText("Host").fill("localhost");
+  await page.getByLabel("Display name").fill("Prod");
+  await page.getByLabel("Host").fill("localhost");
   await page.getByRole("textbox", { name: "Password" }).fill("secret");
   await page.getByRole("button", { name: "Show advanced options" }).click();
   await page.getByRole("button", { name: "Add label" }).click();
@@ -576,11 +548,11 @@ test("connection test validation expands advanced options for hidden label error
   await expect
     .element(page.getByText("Label keys cannot be empty."))
     .toBeVisible();
-  await expect.element(page.getByPlaceholder("Key")).toHaveFocus();
+  await expect.element(page.getByPlaceholder("Key")).toBeFocused();
 });
 
 test("label edits preserve unrelated validation errors", async () => {
-  renderCreateInstance();
+  await renderCreateInstance();
 
   await page.getByRole("button", { name: "Test connection" }).click();
   await page.getByRole("button", { name: "Show advanced options" }).click();

@@ -1,21 +1,21 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { anyPack, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
+import * as actualReactQuery from "@tanstack/react-query" with {
+  rstest: "importActual",
+};
+import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
-import {
-  afterEach,
-  beforeEach,
-  expect,
-  onTestFinished,
-  test,
-  vi,
-} from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
+import * as actualMetrics from "@/hooks/api/metrics" with {
+  rstest: "importActual",
+};
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import { StatusSchema } from "@/protogen/google/rpc/status_pb";
 import {
@@ -48,13 +48,7 @@ import {
   ServerInfoSchema,
   StorageMetricsSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
-import {
-  MetricId,
-  MetricKind,
-  MetricUnit,
-  type QueryMetricsResponse,
-  QueryMetricsResponseSchema,
-} from "@/protogen/querylane/console/v1alpha1/metrics_pb";
+import type { QueryMetricsResponse } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 const BLOCKED_ACTIVITY_ROW_NAME =
   /4302.*api-gateway.*UPDATE shipping\.shipments/;
@@ -73,46 +67,16 @@ const REPLICATION_ROW_NAME = /Replication/;
 const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
 const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
 const DENSE_SCHEMA_COUNT = 12;
-const SPARKLINE_RENDER_TIMEOUT_MS = 5000;
-/** The full-width sparkline band at the bottom of every stat tile (h-7). */
-const MOBILE_SPARKLINE_MIN_HEIGHT = 28;
 
-async function getMarkerCenterPixels(marker: HTMLElement) {
-  const screenshot = await page
-    .elementLocator(marker)
-    .screenshot({ base64: true, save: false });
-  const base64 =
-    typeof screenshot === "string" ? screenshot : screenshot.base64;
-  const image = new Image();
-  image.src = base64.startsWith("data:")
-    ? base64
-    : `data:image/png;base64,${base64}`;
-  await image.decode();
+// Pixels for these pages, and every phone-width layout check, live in
+// e2e/visual/console-resources.spec.ts on the real console routes.
 
-  const canvas = document.createElement("canvas");
-  canvas.width = image.width;
-  canvas.height = image.height;
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("Expected a 2D canvas context");
-  }
-  context.drawImage(image, 0, 0);
-
-  const centerX = Math.floor(image.width / 2);
-  const centerY = Math.floor(image.height / 2);
-  const offsetX = Math.min(image.width - 1, centerX + 2);
-  return {
-    center: Array.from(context.getImageData(centerX, centerY, 1, 1).data),
-    offset: Array.from(context.getImageData(offsetX, centerY, 1, 1).data),
-  };
-}
-
-const state = vi.hoisted(() => ({
+const state = rs.hoisted(() => ({
   catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
   databaseMetricsQuery: {} as QueryState<QueryMetricsResponse>,
   databaseQuery: {} as QueryState<GetDatabaseResponse>,
   databasesQuery: {} as { data?: unknown; isPending?: boolean },
-  deleteInstance: vi.fn(async () => undefined),
+  deleteInstance: rs.fn(async () => undefined),
   extensionQuery: {} as QueryState<ListExtensionsResponse>,
   healthQuery: {} as QueryState<{
     health?: {
@@ -158,17 +122,17 @@ const state = vi.hoisted(() => ({
   }>,
   instanceQuery: {} as QueryState<GetInstanceResponse>,
   instanceMetricsQuery: {} as QueryState<QueryMetricsResponse>,
-  navigate: vi.fn(async () => undefined),
+  navigate: rs.fn(async () => undefined),
   overviewQuery: {} as QueryState<GetInstanceOverviewResponse>,
   queryClient: {
-    getQueryState: vi.fn(() => undefined),
-    query: vi.fn(async () => undefined),
+    getQueryState: rs.fn(() => undefined),
+    query: rs.fn(async () => undefined),
   },
   queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
   selectedInstanceStatus: "connected" as "connected" | "disconnected",
 }));
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     className,
@@ -202,9 +166,9 @@ vi.mock("@tanstack/react-router", () => ({
   } = {}) => (select ? select({}) : {}),
 }));
 
-vi.mock("@connectrpc/connect-query", () => ({
-  useMutation: vi.fn(),
-  useQuery: vi.fn(() => ({ data: undefined, isFetching: false })),
+rs.mock("@connectrpc/connect-query", () => ({
+  useMutation: rs.fn(),
+  useQuery: rs.fn(() => ({ data: undefined, isFetching: false })),
   useTransport: () => ({}),
 }));
 
@@ -270,20 +234,15 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.clearAllMocks();
+  rs.clearAllMocks();
 });
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-  return {
-    ...actual,
-    useQueryClient: () => state.queryClient,
-  };
-});
+rs.mock("@tanstack/react-query", () => ({
+  ...actualReactQuery,
+  useQueryClient: () => state.queryClient,
+}));
 
-vi.mock("@/hooks/api/console", () => ({
+rs.mock("@/hooks/api/console", () => ({
   useConfigManagedInstancesStatus: () => ({
     isConfigManaged: false,
     isLoaded: true,
@@ -291,7 +250,7 @@ vi.mock("@/hooks/api/console", () => ({
   useIsConfigManagedInstances: () => false,
 }));
 
-vi.mock("@/hooks/api/database", () => ({
+rs.mock("@/hooks/api/database", () => ({
   databasesForInstanceQueryInput: (instanceId: string) => ({
     parent: instanceId,
   }),
@@ -308,75 +267,70 @@ vi.mock("@/hooks/api/database", () => ({
     error: state.databaseQuery.error ?? null,
     isFetching: state.databaseQuery.isFetching ?? false,
     isPending: state.databaseQuery.isPending ?? false,
-    refetch: state.databaseQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.databaseQuery.refetch ?? rs.fn(async () => undefined),
   }),
   useGetDatabaseQueryInsightsQuery: () => ({
     data: state.queryInsightsQuery.data,
     error: state.queryInsightsQuery.error ?? null,
     isFetching: state.queryInsightsQuery.isFetching ?? false,
     isPending: state.queryInsightsQuery.isPending ?? false,
-    refetch: state.queryInsightsQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.queryInsightsQuery.refetch ?? rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/hooks/api/database-catalog", () => ({
+rs.mock("@/hooks/api/database-catalog", () => ({
   useDatabaseCatalogQuery: () => ({
     data: state.catalogQuery.data,
     error: state.catalogQuery.error ?? null,
     isPending: state.catalogQuery.isPending ?? false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/components/console-pages/other-database-objects-query", () => ({
+rs.mock("@/components/console-pages/other-database-objects-query", () => ({
   useOtherDatabaseObjectsSummaryQuery: () => ({
     data: {},
     error: null,
     isLoading: false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
   useOtherObjectsBrowseQuery: () => ({
     data: { pages: [] },
     error: null,
-    fetchNextPage: vi.fn(),
+    fetchNextPage: rs.fn(),
     hasNextPage: false,
     isFetchingNextPage: false,
     isLoading: false,
-    refetch: vi.fn(async () => undefined),
+    refetch: rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/hooks/api/metrics", async () => {
-  const actual = await vi.importActual<typeof import("@/hooks/api/metrics")>(
-    "@/hooks/api/metrics"
-  );
-  return {
-    ...actual,
-    quantizedMetricsAnchor: () => 0,
-    useDatabaseMetricsQuery: () => ({
-      data: state.databaseMetricsQuery.data ?? { series: [] },
-      error: state.databaseMetricsQuery.error ?? null,
-      isFetching: state.databaseMetricsQuery.isFetching ?? false,
-      isPending: state.databaseMetricsQuery.isPending ?? false,
-    }),
-    useInstanceMetricsQuery: () => ({
-      data: state.instanceMetricsQuery.data,
-      dataUpdatedAt: state.instanceMetricsQuery.dataUpdatedAt ?? 0,
-      error: state.instanceMetricsQuery.error ?? null,
-      isFetching: state.instanceMetricsQuery.isFetching ?? false,
-      isPending: state.instanceMetricsQuery.isPending ?? false,
-      refetch: state.instanceMetricsQuery.refetch ?? vi.fn(async () => ({})),
-    }),
-    useInstancePreviousMetricsQuery: () => ({
-      data: undefined,
-      error: null,
-      isFetching: false,
-      isPending: false,
-    }),
-  };
-});
+rs.mock("@/hooks/api/metrics", () => ({
+  ...actualMetrics,
+  quantizedMetricsAnchor: () => 0,
+  useDatabaseMetricsQuery: () => ({
+    data: state.databaseMetricsQuery.data ?? { series: [] },
+    error: state.databaseMetricsQuery.error ?? null,
+    isFetching: state.databaseMetricsQuery.isFetching ?? false,
+    isPending: state.databaseMetricsQuery.isPending ?? false,
+  }),
+  useInstanceMetricsQuery: () => ({
+    data: state.instanceMetricsQuery.data,
+    dataUpdatedAt: state.instanceMetricsQuery.dataUpdatedAt ?? 0,
+    error: state.instanceMetricsQuery.error ?? null,
+    isFetching: state.instanceMetricsQuery.isFetching ?? false,
+    isPending: state.instanceMetricsQuery.isPending ?? false,
+    refetch: state.instanceMetricsQuery.refetch ?? rs.fn(async () => ({})),
+  }),
+  useInstancePreviousMetricsQuery: () => ({
+    data: undefined,
+    error: null,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
 
-vi.mock("@/hooks/api/extension", () => ({
+rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: (input: {
     databaseId: string;
     instanceId: string;
@@ -389,11 +343,11 @@ vi.mock("@/hooks/api/extension", () => ({
     data: state.extensionQuery.data,
     error: state.extensionQuery.error ?? null,
     isPending: state.extensionQuery.isPending ?? false,
-    refetch: state.extensionQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.extensionQuery.refetch ?? rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/hooks/api/instance", () => ({
+rs.mock("@/hooks/api/instance", () => ({
   useCheckInstanceActivityQuery: () => ({
     data: state.healthQuery.data
       ? {
@@ -404,14 +358,14 @@ vi.mock("@/hooks/api/instance", () => ({
     error: state.healthQuery.error ?? null,
     isFetching: state.healthQuery.isFetching ?? false,
     isPending: state.healthQuery.isPending ?? false,
-    refetch: state.healthQuery.refetch ?? vi.fn(async () => ({})),
+    refetch: state.healthQuery.refetch ?? rs.fn(async () => ({})),
   }),
   useCheckInstanceHealthQuery: () => ({
     data: state.healthQuery.data,
     error: state.healthQuery.error ?? null,
     isFetching: state.healthQuery.isFetching ?? false,
     isPending: state.healthQuery.isPending ?? false,
-    refetch: state.healthQuery.refetch ?? vi.fn(async () => ({})),
+    refetch: state.healthQuery.refetch ?? rs.fn(async () => ({})),
   }),
   useDeleteInstanceMutation: () => ({
     isPending: false,
@@ -422,7 +376,7 @@ vi.mock("@/hooks/api/instance", () => ({
     error: state.overviewQuery.error ?? null,
     isFetching: state.overviewQuery.isFetching ?? false,
     isPending: state.overviewQuery.isPending ?? false,
-    refetch: state.overviewQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.overviewQuery.refetch ?? rs.fn(async () => undefined),
   }),
   useGetInstanceQuery: () => ({
     data: state.instanceQuery.data,
@@ -430,15 +384,15 @@ vi.mock("@/hooks/api/instance", () => ({
     error: state.instanceQuery.error ?? null,
     isFetching: state.instanceQuery.isFetching ?? false,
     isPending: state.instanceQuery.isPending ?? false,
-    refetch: state.instanceQuery.refetch ?? vi.fn(async () => undefined),
+    refetch: state.instanceQuery.refetch ?? rs.fn(async () => undefined),
   }),
   useUpdateInstanceMutation: () => ({
     isPending: false,
-    mutateAsync: vi.fn(async () => undefined),
+    mutateAsync: rs.fn(async () => undefined),
   }),
 }));
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     databases: [
       {
@@ -480,7 +434,7 @@ vi.mock("@/lib/db-context", () => ({
         status: "connected",
       },
     ],
-    navigateToDatabase: vi.fn(),
+    navigateToDatabase: rs.fn(),
     queryStates: {
       databases: {
         error: null,
@@ -503,7 +457,7 @@ vi.mock("@/lib/db-context", () => ({
         suppressedReason: null,
       },
     },
-    retryInstanceCatalog: vi.fn(async () => undefined),
+    retryInstanceCatalog: rs.fn(async () => undefined),
     selectedInstance: {
       connectionError: "",
       host: "analytics-writer.internal.querylane.test",
@@ -582,7 +536,7 @@ test("backend instance page explains unavailable server info", async () => {
   ];
   state.instanceQuery = { data: response };
 
-  render(
+  await render(
     <BackendInstancePage
       instanceId="prod"
       searchRoute="/instances/$instanceId"
@@ -705,88 +659,6 @@ function overviewResponse() {
         totalSizeBytes: 1_250_000_000_000n,
       }),
     }),
-  });
-}
-
-function overviewMetricUnit(metric: MetricId): MetricUnit {
-  if (metric === MetricId.CACHE_HIT_RATIO) {
-    return MetricUnit.RATIO;
-  }
-  if (
-    metric === MetricId.STORAGE_TOTAL_BYTES ||
-    metric === MetricId.DATABASE_SIZE_BYTES
-  ) {
-    return MetricUnit.BYTES;
-  }
-  return MetricUnit.COUNT;
-}
-
-function overviewMetricsResponse(): QueryMetricsResponse {
-  const startSeconds = BigInt(Date.UTC(2026, 6, 30, 17, 0) / 1000);
-  const valuesByMetric = new Map<MetricId, number[]>([
-    [
-      MetricId.CONNECTIONS_TOTAL,
-      [68, 70, 69, 72, 71, 74, 73, 76, 74, 75, 77, 74, 74],
-    ],
-    [
-      MetricId.CACHE_HIT_RATIO,
-      [
-        0.982, 0.985, 0.981, 0.988, 0.986, 0.989, 0.987, 0.991, 0.99, 0.988,
-        0.992, 0.989, 0.991,
-      ],
-    ],
-    [
-      MetricId.STORAGE_TOTAL_BYTES,
-      [
-        1.17e12, 1.18e12, 1.19e12, 1.2e12, 1.21e12, 1.22e12, 1.23e12, 1.24e12,
-        1.25e12, 1.26e12, 1.27e12, 1.28e12, 1.29e12,
-      ],
-    ],
-    [
-      MetricId.DATABASE_SIZE_BYTES,
-      [
-        58_900_000, 59_000_000, 59_100_000, 59_300_000, 59_500_000, 59_700_000,
-        59_900_000, 60_000_000, 60_100_000, 60_200_000, 60_300_000, 60_400_000,
-        60_500_000,
-      ],
-    ],
-    [
-      MetricId.DATABASE_LIVE_TUPLES,
-      [
-        1_220_000, 1_225_000, 1_228_000, 1_232_000, 1_238_000, 1_241_000,
-        1_245_000, 1_249_000, 1_252_000, 1_257_000, 1_261_000, 1_265_000,
-        1_270_000,
-      ],
-    ],
-    [
-      MetricId.DATABASE_DEAD_TUPLES,
-      [
-        8100, 7900, 7600, 8300, 8800, 8600, 8200, 7800, 7500, 7300, 7100, 6900,
-        6700,
-      ],
-    ],
-  ]);
-
-  return createProto(QueryMetricsResponseSchema, {
-    interval: {
-      endTime: { nanos: 0, seconds: startSeconds + 3600n },
-      startTime: { nanos: 0, seconds: startSeconds },
-    },
-    series: Array.from(valuesByMetric, ([metric, values]) => ({
-      delta: {
-        currentValue: values.at(-1) ?? 0,
-        percentChange: 4.2,
-        previousAvailable: false,
-      },
-      kind: MetricKind.GAUGE,
-      metric,
-      points: {
-        startTime: { nanos: 0, seconds: startSeconds },
-        step: { nanos: 0, seconds: 300n },
-        values,
-      },
-      unit: overviewMetricUnit(metric),
-    })),
   });
 }
 
@@ -1095,52 +967,11 @@ function catalogResult() {
 }
 
 function cardRect(label: string) {
-  const card = page
-    .getByText(label, { exact: true })
-    .element()
-    .closest('[data-slot="card"]');
+  const card = screen.getByText(label).closest('[data-slot="card"]');
   if (!(card instanceof HTMLElement)) {
     throw new Error(`Expected ${label} card`);
   }
   return card.getBoundingClientRect();
-}
-
-/**
- * The stat tile owning `element`: its nearest ancestor that is a direct child
- * of the stat strip grid. Independent of the tile's internal layout.
- */
-function statTile(element: HTMLElement): HTMLElement | null {
-  let tile: HTMLElement | null = element;
-  while (tile && !tile.parentElement?.classList.contains("grid")) {
-    tile = tile.parentElement;
-  }
-  return tile;
-}
-
-async function statSparkline(label: string): Promise<SVGElement> {
-  let sparkline: SVGElement | null = null;
-  await vi.waitFor(
-    () => {
-      const statLabel = Array.from(document.querySelectorAll("span")).find(
-        (element) =>
-          element.textContent === label &&
-          statTile(element)?.querySelector('[aria-hidden="true"] svg')
-      );
-      sparkline = statLabel
-        ? (statTile(statLabel)?.querySelector<SVGElement>(
-            '[aria-hidden="true"] svg'
-          ) ?? null)
-        : null;
-      if (!sparkline) {
-        throw new Error(`Waiting for ${label} sparkline`);
-      }
-    },
-    { timeout: SPARKLINE_RENDER_TIMEOUT_MS }
-  );
-  if (!sparkline) {
-    throw new Error(`Expected ${label} sparkline`);
-  }
-  return sparkline;
 }
 
 async function openQueryInsightsDrawer(
@@ -1150,7 +981,7 @@ async function openQueryInsightsDrawer(
   state.catalogQuery = { data: catalogResult() };
   state.queryInsightsQuery = { data: queryInsights };
 
-  render(
+  await render(
     <BackendDatabasePage
       databaseId="customer-events"
       instanceId="prod"
@@ -1163,10 +994,6 @@ async function openQueryInsightsDrawer(
 }
 
 test("backend instance overview shows live metrics and database catalog together", async () => {
-  // Tall enough that expanding the replication row never scrolls: an element
-  // capture leaves whatever sits above the viewport blank.
-  await page.viewport(1280, 1800);
-  onTestFinished(() => page.viewport(1280, 1000));
   state.instanceQuery = {
     data: instanceResponse(),
     dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
@@ -1174,7 +1001,7 @@ test("backend instance overview shows live metrics and database catalog together
   state.overviewQuery = { data: overviewResponse() };
   state.extensionQuery = { data: extensionInventoryResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1198,7 +1025,7 @@ test("backend instance overview shows live metrics and database catalog together
     .toBeVisible();
   await expect
     .element(page.getByRole("region", { name: "Replication overview" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("img", { name: "74 of 100 connections in use" }))
     .toBeVisible();
@@ -1220,10 +1047,6 @@ test("backend instance overview shows live metrics and database catalog together
     .element(page.getByRole("button", { exact: true, name: "Owner" }))
     .toBeVisible();
   await expect.element(page.getByText("customer_events")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-overview"
-  );
-  await expect(health).toMatchScreenshot("backend-instance-overview-health");
 });
 
 test("instance overview keeps cached catalog visible during a meta database outage", async () => {
@@ -1238,7 +1061,7 @@ test("instance overview keeps cached catalog visible during a meta database outa
     error: dependencyError,
   };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1260,53 +1083,9 @@ test("instance overview keeps cached catalog visible during a meta database outa
       page.getByText("Showing the last loaded data until refresh succeeds.")
     )
     .toBeVisible();
-  expect(page.getByText("Connected", { exact: true }).elements()).toHaveLength(
-    0
-  );
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-overview-meta-database-unavailable"
-  );
-});
-
-test("instance overview keeps passive sparklines large on mobile", async () => {
-  await page.viewport(390, 844);
-  try {
-    state.instanceQuery = {
-      data: instanceResponse(),
-      dataUpdatedAt: Date.UTC(2026, 4, 20, 12, 0, 0),
-    };
-    state.instanceMetricsQuery = { data: overviewMetricsResponse() };
-    state.overviewQuery = { data: overviewResponse() };
-
-    render(
-      <BackendInstancePage
-        instanceId="prod"
-        searchRoute="/instances/$instanceId"
-        section="overview"
-      />
-    );
-
-    const sparkline = await statSparkline("Connections");
-    const geometry = sparkline.getBoundingClientRect();
-    expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
-    expect
-      .soft(geometry.height)
-      .toBeGreaterThanOrEqual(MOBILE_SPARKLINE_MIN_HEIGHT);
-    expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth
-    );
-    const statStrip = sparkline.closest(".grid");
-    if (!(statStrip instanceof HTMLElement)) {
-      throw new Error("Expected instance stat strip");
-    }
-    await expect(page.elementLocator(statStrip)).toMatchScreenshot(
-      "backend-instance-overview-stat-strip-mobile"
-    );
-  } finally {
-    await page.viewport(1280, 1000);
-  }
+  await expect
+    .element(page.getByText("Connected", { exact: true }))
+    .toHaveCount(0);
 });
 
 test("backend instance activity matches the live sessions redesign", async () => {
@@ -1317,7 +1096,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
   state.healthQuery = { data: activityHealthResponse() };
   state.overviewQuery = { data: overviewResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1334,7 +1113,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
     .toBeVisible();
   await expect.element(page.getByText("Blocking chains")).toBeVisible();
   await expect.element(page.getByText("blocker · pid 4211")).toBeVisible();
-  await expect.element(page.getByText("PID")).toBeVisible();
+  await expect.element(page.getByText("PID", { exact: true })).toBeVisible();
   await expect.element(page.getByText("User · app")).toBeVisible();
   const search = page.getByRole("textbox", {
     name: "Search query, user, app…",
@@ -1360,9 +1139,11 @@ test("backend instance activity matches the live sessions redesign", async () =>
     .toBeVisible();
   await expect.element(page.getByText("Showing 1–5 of 5")).toBeVisible();
 
-  const searchBox = search.element().getBoundingClientRect();
-  const filterBoxes = [stateFilter, appFilter, databaseFilter].map((filter) =>
-    filter.element().getBoundingClientRect()
+  const searchBox = screen
+    .getByRole("textbox", { name: "Search query, user, app…" })
+    .getBoundingClientRect();
+  const filterBoxes = ["State", "App", "DB"].map((name) =>
+    screen.getByRole("button", { name }).getBoundingClientRect()
   );
   expect(searchBox.right).toBeLessThan(filterBoxes[0]?.left ?? 0);
   expect(filterBoxes[0]?.right ?? 0).toBeLessThan(filterBoxes[1]?.left ?? 0);
@@ -1385,9 +1166,8 @@ test("backend instance activity matches the live sessions redesign", async () =>
         ).length
     )
     .toBe(8);
-  const waitingSql = page
+  const waitingSql = screen
     .getByText("waiting · pid 4302")
-    .element()
     .parentElement?.querySelector("code.language-sql");
   if (!waitingSql) {
     throw new Error("Missing highlighted waiting-session SQL");
@@ -1414,10 +1194,6 @@ test("backend instance activity matches the live sessions redesign", async () =>
   expect(tableSqlContainer.scrollWidth).toBeGreaterThan(
     tableSqlContainer.clientWidth
   );
-  await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-activity"
-  );
 
   await page.getByRole("button", { name: BLOCKED_ACTIVITY_ROW_NAME }).click();
   const inspector = page.getByRole("dialog", { name: "Session 4302" });
@@ -1430,7 +1206,9 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("1h 0m ago")).toBeVisible();
   await expect.element(page.getByText("Lock · transactionid")).toBeVisible();
   await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
-  const timeline = inspector.element().querySelector("ol");
+  const timeline = screen
+    .getByRole("dialog", { name: "Session 4302" })
+    .querySelector("ol");
   if (!timeline) {
     throw new Error("Missing session timeline");
   }
@@ -1438,13 +1216,11 @@ test("backend instance activity matches the live sessions redesign", async () =>
   const timelineStyle = getComputedStyle(timeline);
   const lineCenter =
     timelineRect.left + Number.parseFloat(timelineStyle.borderLeftWidth) / 2;
-  let firstMarker: HTMLElement | null = null;
   for (const item of timeline.children) {
     const marker = item.querySelector<HTMLElement>('[aria-hidden="true"]');
     if (!marker) {
       throw new Error("Missing session timeline marker");
     }
-    firstMarker ??= marker;
     const itemRect = item.getBoundingClientRect();
     const markerRect = marker.getBoundingClientRect();
     expect(
@@ -1458,23 +1234,10 @@ test("backend instance activity matches the live sessions redesign", async () =>
       )
     ).toBeLessThanOrEqual(0.1);
   }
-  if (!firstMarker) {
-    throw new Error("Missing session timeline markers");
-  }
-  const markerPixels = await getMarkerCenterPixels(firstMarker);
-  const maxMarkerPixelDifference = Math.max(
-    ...markerPixels.center.map((channel, index) =>
-      Math.abs(channel - (markerPixels.offset[index] ?? 0))
-    )
-  );
-  expect(maxMarkerPixelDifference).toBeLessThanOrEqual(1);
+  expect(timeline.children.length).toBeGreaterThan(0);
   await expect
     .element(page.getByRole("button", { name: "Terminate session…" }))
-    .not.toBeInTheDocument();
-  await document.fonts.ready;
-  await expect(inspector).toMatchScreenshot(
-    "backend-instance-activity-inspector"
-  );
+    .not.toBeAttached();
   await page.getByRole("button", { name: "Close" }).click();
 });
 
@@ -1507,7 +1270,7 @@ test("background activity refresh keeps the table fixed in place", async () => {
   const table = page.getByRole("table");
 
   await expect.element(table).toBeVisible();
-  const settledTableBox = table.element().getBoundingClientRect();
+  const settledTableBox = screen.getByRole("table").getBoundingClientRect();
 
   state.healthQuery = {
     data: activityHealthResponse(),
@@ -1515,7 +1278,7 @@ test("background activity refresh keeps the table fixed in place", async () => {
   };
   await view.rerender(activityPage());
 
-  const refreshingTableBox = table.element().getBoundingClientRect();
+  const refreshingTableBox = screen.getByRole("table").getBoundingClientRect();
   expect(refreshingTableBox.top).toBe(settledTableBox.top);
   expect(refreshingTableBox.height).toBe(settledTableBox.height);
 });
@@ -1528,7 +1291,7 @@ test("backend instance activity empty state matches", async () => {
   state.healthQuery = { data: defaultHealthResponse() };
   state.overviewQuery = { data: overviewResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1551,10 +1314,6 @@ test("backend instance activity empty state matches", async () => {
   await expect
     .element(page.getByRole("button", { name: "Next page" }))
     .toBeDisabled();
-  await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-activity-empty"
-  );
 });
 
 test("backend instance activity unavailable state matches", async () => {
@@ -1570,7 +1329,7 @@ test("backend instance activity unavailable state matches", async () => {
   };
   state.overviewQuery = { data: overviewResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1585,10 +1344,6 @@ test("backend instance activity unavailable state matches", async () => {
   await expect
     .element(page.getByText("Activity data unavailable"))
     .toBeVisible();
-  await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-activity-unavailable"
-  );
 });
 
 test("backend instance activity disconnected state matches", async () => {
@@ -1600,7 +1355,7 @@ test("backend instance activity disconnected state matches", async () => {
   state.healthQuery = { data: activityHealthResponse(), isPending: false };
   state.overviewQuery = { data: overviewResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1160px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -1613,20 +1368,14 @@ test("backend instance activity disconnected state matches", async () => {
   );
 
   await expect.element(page.getByText("Activity unavailable")).toBeVisible();
-  await expect
-    .element(page.getByText("Loading activity…"))
-    .not.toBeInTheDocument();
-  await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-instance-activity-disconnected"
-  );
+  await expect.element(page.getByText("Loading activity…")).not.toBeAttached();
 });
 
 test("backend database overview shows mission control stats and catalog tables", async () => {
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalogResult() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabasePage
@@ -1643,7 +1392,9 @@ test("backend database overview shows mission control stats and catalog tables",
     .toBeVisible();
   await expect.element(page.getByText("Top tables")).toBeVisible();
   await expect.element(page.getByText("daily_rollup")).toBeVisible();
-  await expect.element(page.getByText("Schemas")).toBeVisible();
+  await expect
+    .element(page.getByText("Schemas", { exact: true }))
+    .toBeVisible();
   await expect
     .element(page.getByText("Databases on this instance"))
     .toBeVisible();
@@ -1660,9 +1411,6 @@ test("backend database overview shows mission control stats and catalog tables",
   expect.soft(Math.abs(slowQueries.bottom - topTables.bottom)).toBeLessThan(1);
   expect.soft(Math.abs(schemas.top - otherDatabases.top)).toBeLessThan(1);
   expect.soft(Math.abs(schemas.bottom - otherDatabases.bottom)).toBeLessThan(1);
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-database-overview"
-  );
 });
 
 test("backend database overview qualifies a bounded catalog sample", async () => {
@@ -1673,7 +1421,7 @@ test("backend database overview qualifies a bounded catalog sample", async () =>
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalog };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] border border-border bg-background p-6 text-foreground">
         <BackendDatabasePage
@@ -1692,47 +1440,6 @@ test("backend database overview qualifies a bounded catalog sample", async () =>
     .toBeVisible();
   await expect.element(page.getByText("2+ schemas")).toBeVisible();
   await expect.element(page.getByText("partial sample")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-database-overview-partial-catalog"
-  );
-});
-
-test("database overview keeps passive sparklines large on mobile", async () => {
-  await page.viewport(390, 844);
-  try {
-    state.databaseQuery = { data: databaseResponse() };
-    state.catalogQuery = { data: catalogResult() };
-    state.databaseMetricsQuery = { data: overviewMetricsResponse() };
-
-    render(
-      <BackendDatabasePage
-        databaseId="customer-events"
-        instanceId="prod"
-        section="overview"
-      />
-    );
-
-    const sparkline = await statSparkline("Total size");
-    const geometry = sparkline.getBoundingClientRect();
-    expect.soft(geometry.width).toBeGreaterThanOrEqual(112);
-    expect
-      .soft(geometry.height)
-      .toBeGreaterThanOrEqual(MOBILE_SPARKLINE_MIN_HEIGHT);
-    expect.soft(sparkline.closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(document.querySelector('button[aria-label^="Expand"]')).toBeNull();
-    expect(document.documentElement.scrollWidth).toBe(
-      document.documentElement.clientWidth
-    );
-    const statStrip = sparkline.closest('[data-slot="card"]');
-    if (!(statStrip instanceof HTMLElement)) {
-      throw new Error("Expected database stat strip");
-    }
-    await expect(page.elementLocator(statStrip)).toMatchScreenshot(
-      "backend-database-overview-stat-strip-mobile"
-    );
-  } finally {
-    await page.viewport(1280, 1000);
-  }
 });
 
 test("dense schema inventories use the wide row without layout holes", async () => {
@@ -1750,7 +1457,7 @@ test("dense schema inventories use the wide row without layout holes", async () 
   state.databaseQuery = { data: databaseResponse() };
   state.catalogQuery = { data: catalog };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabasePage
@@ -1762,7 +1469,9 @@ test("dense schema inventories use the wide row without layout holes", async () 
     </ScreenshotFrame>
   );
 
-  await expect.element(page.getByText("Schemas")).toBeVisible();
+  await expect
+    .element(page.getByText("Schemas", { exact: true }))
+    .toBeVisible();
 
   const schemas = cardRect("Schemas");
   const otherDatabases = cardRect("Databases on this instance");
@@ -1784,7 +1493,7 @@ test("disabled Insights explains why statistics are unavailable", async () => {
   insights.tableStatsAvailable = false;
   state.queryInsightsQuery = { data: response };
 
-  render(
+  await render(
     <BackendDatabasePage
       databaseId="customer-events"
       instanceId="prod"
@@ -1794,14 +1503,10 @@ test("disabled Insights explains why statistics are unavailable", async () => {
 
   const button = page.getByRole("button", { name: "Insights", exact: true });
   await expect.element(button).toBeDisabled();
-  const tooltipTrigger = button
-    .element()
-    .closest("[data-base-ui-tooltip-trigger]");
-  if (!(tooltipTrigger instanceof HTMLElement)) {
-    throw new Error("Expected Insights tooltip trigger");
-  }
-
-  await page.elementLocator(tooltipTrigger).hover();
+  await page
+    .locator("[data-base-ui-tooltip-trigger]")
+    .filter({ has: button })
+    .hover();
   await expect
     .element(
       page.getByText(
@@ -1816,7 +1521,7 @@ test("backend database overview opens the query insights drawer", async () => {
   state.catalogQuery = { data: catalogResult() };
   state.queryInsightsQuery = { data: queryInsightsResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabasePage
@@ -1830,7 +1535,7 @@ test("backend database overview opens the query insights drawer", async () => {
 
   await expect
     .element(page.getByText("Top queries by total time"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await page.getByRole("button", { name: "Insights", exact: true }).click();
 
   const drawer = page.getByRole("dialog", { name: "Query insights" });
@@ -1842,10 +1547,6 @@ test("backend database overview opens the query insights drawer", async () => {
     .element(page.getByText("Sequential scan hotspots"))
     .toBeVisible();
   await expect.element(page.getByText("Cache hit by table")).toBeVisible();
-  await document.fonts.ready;
-  await expect(drawer).toMatchScreenshot(
-    "backend-database-query-insights-drawer"
-  );
 });
 
 test("query insights active filters match the shared toolbar", async () => {
@@ -1863,25 +1564,12 @@ test("query insights active filters match the shared toolbar", async () => {
   await expect
     .element(drawer.getByRole("button", { name: "Clear all" }))
     .toBeVisible();
-
-  const topQueriesCard = drawer
-    .getByText("Top queries by total time")
-    .element()
-    .closest('[data-slot="card"]');
-  if (!(topQueriesCard instanceof HTMLElement)) {
-    throw new Error("Expected top queries card");
-  }
-
-  await document.fonts.ready;
-  await expect(page.elementLocator(topQueriesCard)).toMatchScreenshot(
-    "backend-database-query-insights-active-filters"
-  );
 });
 
 test("query insights drawer caps its width at 64rem", async () => {
   const drawer = await openQueryInsightsDrawer(queryInsightsResponse());
   await expect.element(drawer).toBeVisible();
-  expect(getComputedStyle(drawer.element()).maxWidth).toBe("1024px");
+  await expect.element(drawer).toHaveCSS("max-width", "1024px");
 });
 
 test("partial query insights use the full drawer content width", async () => {
@@ -1890,15 +1578,16 @@ test("partial query insights use the full drawer content width", async () => {
   );
   await expect.element(drawer).toBeVisible();
 
-  const topQueriesCard = page
+  const topQueriesCard = screen
     .getByText("Top queries by total time")
-    .element()
     .closest('[data-slot="card"]');
   if (!(topQueriesCard instanceof HTMLElement)) {
     throw new Error("Expected top queries card");
   }
 
-  const drawerBox = drawer.element().getBoundingClientRect();
+  const drawerBox = screen
+    .getByRole("dialog", { name: "Query insights" })
+    .getBoundingClientRect();
   const cardBox = topQueriesCard.getBoundingClientRect();
   expect(drawerBox.right - cardBox.right).toBeLessThanOrEqual(32);
 });
@@ -1913,38 +1602,17 @@ test("query statistics retry uses the default button size", async () => {
     name: "Retry query statistics",
   });
   await expect.element(retryButton).toBeVisible();
-  expect(retryButton.element().getBoundingClientRect().height).toBe(36);
-});
-
-test("query statistics retry does not overlap its notice on phones", async () => {
-  await page.viewport(390, 844);
-
-  try {
-    const drawer = await openQueryInsightsDrawer(
-      queryInsightsWithoutQueryStatsResponse()
-    );
-    await expect.element(drawer).toBeVisible();
-
-    const title = page.getByText("Query statistics unavailable", {
-      exact: true,
-    });
-    await expect.element(title).toBeVisible();
-    const titleBox = title.element().getBoundingClientRect();
-    const retryBox = page
+  expect(
+    screen
       .getByRole("button", { name: "Retry query statistics" })
-      .element()
-      .getBoundingClientRect();
-
-    expect(retryBox.top).toBeGreaterThanOrEqual(titleBox.bottom);
-  } finally {
-    await page.viewport(1280, 1000);
-  }
+      .getBoundingClientRect().height
+  ).toBe(36);
 });
 
 test("backend database extensions page matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabaseExtensionsPage
@@ -1961,15 +1629,12 @@ test("backend database extensions page matches design source", async () => {
     .toBeVisible();
   await expect.element(page.getByText("pg_stat_statements")).toBeVisible();
   await expect.element(page.getByText("Observability")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-database-extensions"
-  );
 });
 
 test("backend database extensions toolbar stays contained on narrow screens", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div
         className="w-[320px] rounded-2xl border border-border bg-background p-4 text-foreground"
@@ -1986,15 +1651,13 @@ test("backend database extensions toolbar stays contained on narrow screens", as
 
   await expect.element(page.getByRole("tablist")).toBeVisible();
 
-  const surfaceBox = page
+  const surfaceBox = screen
     .getByTestId("narrow-extensions-page")
-    .element()
     .getBoundingClientRect();
-  const searchBox = page
+  const searchBox = screen
     .getByRole("textbox", { name: "Search extensions…" })
-    .element()
     .getBoundingClientRect();
-  const tabsBox = page.getByRole("tablist").element().getBoundingClientRect();
+  const tabsBox = screen.getByRole("tablist").getBoundingClientRect();
 
   expect(searchBox.right).toBeLessThanOrEqual(surfaceBox.right);
   expect(tabsBox.left).toBeGreaterThanOrEqual(surfaceBox.left);
@@ -2004,7 +1667,7 @@ test("backend database extensions toolbar stays contained on narrow screens", as
 test("backend database extensions drawer matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabaseExtensionsPage
@@ -2032,13 +1695,12 @@ test("backend database extensions drawer matches design source", async () => {
 
   await expect.element(page.getByText("pg_stat_statements view")).toBeVisible();
   await expect.element(page.getByText("track_planning setting")).toBeVisible();
-  await expect(drawer).toMatchScreenshot("backend-database-extensions-drawer");
 });
 
 test("backend database extensions available drawer matches design source", async () => {
   state.extensionQuery = { data: extensionDesignInventoryResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendDatabaseExtensionsPage
@@ -2055,9 +1717,6 @@ test("backend database extensions available drawer matches design source", async
     .fill("timescaledb");
   await expect.element(page.getByText("Time-series")).toBeVisible();
   await expect.element(page.getByText("1 of 7 extensions")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "backend-database-extensions-available"
-  );
 
   await page.getByRole("button", { name: TIMESCALEDB_BUTTON_NAME }).click();
 
@@ -2066,9 +1725,6 @@ test("backend database extensions available drawer matches design source", async
   await expect
     .element(page.getByText("Not installed in this database"))
     .toBeVisible();
-  await expect(drawer).toMatchScreenshot(
-    "backend-database-extensions-available-drawer"
-  );
 });
 
 test("backend instance delete navigates without waiting for catalog refresh", async () => {
@@ -2078,7 +1734,7 @@ test("backend instance delete navigates without waiting for catalog refresh", as
   };
   state.overviewQuery = { data: overviewResponse() };
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <BackendInstancePage
@@ -2095,7 +1751,7 @@ test("backend instance delete navigates without waiting for catalog refresh", as
     .getByRole("button", { name: "Delete instance" })
     .click();
   await page
-    .getByLabelText("Type instances/prod to confirm")
+    .getByLabel("Type instances/prod to confirm")
     .fill("instances/prod");
   await page
     .getByRole("alertdialog")

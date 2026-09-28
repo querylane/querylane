@@ -1,7 +1,7 @@
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { beforeEach, expect, rs, test } from "@rstest/core";
 import type { AnchorHTMLAttributes, ReactNode, Ref } from "react";
-import { beforeEach, expect, test, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
 import { AdminHeader } from "@/components/admin-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DatabaseLayout } from "@/components/database-layout";
@@ -17,8 +17,8 @@ import { useSetupStore } from "@/stores/setup-store";
 import { ThemeProvider } from "@/theme-provider";
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/;
-const navigateMock = vi.fn(async () => undefined);
-const adminHeaderMockState = vi.hoisted(() => ({
+const navigateMock = rs.fn(async () => undefined);
+const adminHeaderMockState = rs.hoisted(() => ({
   instanceMode: {
     isConfigManaged: true,
     isLoaded: true,
@@ -63,7 +63,7 @@ function MockCatchBoundary({ children }: { children: ReactNode }) {
   return children;
 }
 
-vi.mock("@tanstack/react-router", () => ({
+rs.mock("@tanstack/react-router", () => ({
   ...Object.fromEntries([
     ["CatchBoundary", MockCatchBoundary],
     ["Link", MockRouterLink],
@@ -130,7 +130,7 @@ const selectedDatabase = {
   resourceName: "instances/prod-analytics/databases/customer-events",
 } as const;
 
-vi.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context", () => ({
   useDb: () => ({
     databases: [
       selectedDatabase,
@@ -153,8 +153,8 @@ vi.mock("@/lib/db-context", () => ({
         status: "error",
       },
     ],
-    navigateToDatabase: vi.fn(),
-    navigateToInstance: vi.fn(),
+    navigateToDatabase: rs.fn(),
+    navigateToInstance: rs.fn(),
     navigationIds: {
       databaseId: "customer-events",
       instanceId: "prod-analytics",
@@ -163,18 +163,18 @@ vi.mock("@/lib/db-context", () => ({
       databases: queryState,
       instances: queryState,
     },
-    retryInstanceCatalog: vi.fn(async () => undefined),
+    retryInstanceCatalog: rs.fn(async () => undefined),
     scopeLevel: "database",
     selectedDatabase: adminHeaderMockState.isInstanceRolesRoute
       ? null
       : selectedDatabase,
     selectedInstance: adminHeaderMockState.selectedInstance,
     viewLevel: "database",
-    viewOverview: vi.fn(),
+    viewOverview: rs.fn(),
   }),
 }));
 
-vi.mock("@/hooks/api/console", () => ({
+rs.mock("@/hooks/api/console", () => ({
   CONSOLE_CONFIG_STATIC_QUERY_OPTIONS: {},
   useConfigManagedInstancesStatus: () => adminHeaderMockState.instanceMode,
   useGetConsoleConfigQuery: () => ({
@@ -192,11 +192,11 @@ vi.mock("@/hooks/api/console", () => ({
     adminHeaderMockState.instanceMode.isConfigManaged,
 }));
 
-vi.mock("@/hooks/api/github", () => ({
+rs.mock("@/hooks/api/github", () => ({
   useGithubRepoStarsQuery: () => ({ data: "1.2k" }),
 }));
 
-vi.mock("@/hooks/api/database-catalog", () => {
+rs.mock("@/hooks/api/database-catalog", () => {
   const catalogQuery = {
     data: {
       objects: [
@@ -242,7 +242,7 @@ vi.mock("@/hooks/api/database-catalog", () => {
   };
 });
 
-vi.mock("@/hooks/api/role", () => ({
+rs.mock("@/hooks/api/role", () => ({
   rolesForInstanceQueryInput: (instanceId: string) => ({ instanceId }),
   useListRolesQuery: () => ({
     data: { roles: [] },
@@ -265,19 +265,7 @@ vi.mock("@/hooks/api/role", () => ({
   }),
 }));
 
-function applyFixtureManagedScreenshotScale() {
-  const { frameElement } = window;
-  if (frameElement?.tagName !== "IFRAME") {
-    return;
-  }
-
-  const iframe = frameElement as HTMLIFrameElement;
-  iframe.style.transform = "none";
-  iframe.style.transformOrigin = "left top";
-}
-
 beforeEach(() => {
-  applyFixtureManagedScreenshotScale();
   navigateMock.mockClear();
   adminHeaderMockState.instanceMode = {
     isConfigManaged: true,
@@ -289,15 +277,24 @@ beforeEach(() => {
   useSetupStore.setState({ showDegradedBanner: false });
 });
 
+function leafElementWithText(root: ParentNode, text: string) {
+  return Array.from(root.querySelectorAll<HTMLElement>("*")).find(
+    (element) => element.textContent === text && element.childElementCount === 0
+  );
+}
+
+// Pixels for the shell, its overlays, and the phone and tablet layouts live in
+// e2e/visual/admin-shell.spec.ts, which drives the real app shell. Viewport
+// sizes are config-only here (1280x1000), so compact-layout behavior moved too.
 function renderAdminShell() {
-  render(
+  return render(
     <ThemeProvider
       defaultTheme="dark"
       storageKey="querylane-admin-shell-browser-test-theme"
     >
       <TooltipProvider>
         <div
-          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          className="dark h-[760px] w-[1100px] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
@@ -329,109 +326,38 @@ function renderAdminShell() {
   );
 }
 
-function renderAdminShellAtViewport({
-  width,
-  theme = "dark",
+function renderDatabaseLayout({
+  page: layoutPage,
+  showDegradedBanner = false,
+  title,
 }: {
-  width: 320 | 768;
-  theme?: "light" | "dark";
+  page: "database.explorer" | "database.overview";
+  showDegradedBanner?: boolean;
+  title: string;
 }) {
-  const widthClassName = width === 320 ? "w-[320px]" : "w-[768px]";
-  render(
-    <ThemeProvider
-      defaultTheme={theme}
-      storageKey={`querylane-admin-shell-browser-test-theme-${width}`}
-    >
-      <TooltipProvider>
-        <div
-          className={cn(
-            "h-[760px]",
-            theme === "dark" && "dark",
-            widthClassName,
-            "origin-top-left overflow-hidden rounded-2xl border border-border bg-background text-foreground"
-          )}
-          data-testid={`admin-shell-visual-root-${width}`}
-        >
-          <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <KeyboardShortcutsProvider>
-              <CommandPaletteProvider>
-                <SidebarProvider className="h-full max-h-full">
-                  <AppSidebar />
-                  <SidebarInset className="min-w-0">
-                    <AdminHeader />
-                    <main className="p-4 sm:p-6">
-                      <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-                        <h1 className="font-semibold text-2xl">
-                          Database overview
-                        </h1>
-                        <p className="mt-2 text-muted-foreground text-sm">
-                          Main content remains visible while compact navigation
-                          protects smaller viewports from overflow.
-                        </p>
-                      </div>
-                    </main>
-                  </SidebarInset>
-                </SidebarProvider>
-              </CommandPaletteProvider>
-            </KeyboardShortcutsProvider>
-          </div>
-        </div>
-      </TooltipProvider>
-    </ThemeProvider>
-  );
-}
-
-function renderDatabaseLayoutWithDegradedBanner() {
   const visualTheme =
     document.documentElement.dataset["visualTheme"] === "dark"
       ? "dark"
       : "light";
-  useSetupStore.setState({
-    onboardingState: null,
-    showDegradedBanner: true,
-  });
+  useSetupStore.setState({ onboardingState: null, showDegradedBanner });
 
-  render(
+  return render(
     <ThemeProvider
       defaultTheme={visualTheme}
-      storageKey="querylane-admin-shell-browser-test-theme-degraded"
+      storageKey="querylane-admin-shell-browser-test-theme-layout"
     >
       <TooltipProvider>
         <div
           className={cn(
             visualTheme,
-            "h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-lg border border-border bg-background text-foreground"
+            "h-[760px] w-[1100px] overflow-hidden rounded-lg border border-border bg-background text-foreground"
           )}
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <DatabaseLayout page="database.overview">
+            <DatabaseLayout page={layoutPage}>
               <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="font-semibold text-2xl">Database overview</h1>
-              </div>
-            </DatabaseLayout>
-          </div>
-        </div>
-      </TooltipProvider>
-    </ThemeProvider>
-  );
-}
-
-function renderDatabaseLayoutExplorerMode() {
-  render(
-    <ThemeProvider
-      defaultTheme="dark"
-      storageKey="querylane-admin-shell-browser-test-theme-explorer"
-    >
-      <TooltipProvider>
-        <div
-          className="dark h-[760px] w-[1100px] origin-top-left scale-[0.8] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
-          data-testid="admin-shell-visual-root"
-        >
-          <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <DatabaseLayout page="database.explorer">
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="font-semibold text-2xl">Explorer detail</h1>
+                <h1 className="font-semibold text-2xl">{title}</h1>
               </div>
             </DatabaseLayout>
           </div>
@@ -442,8 +368,10 @@ function renderDatabaseLayoutExplorerMode() {
 }
 
 test("explorer route swaps the workspace nav for a drill-in rail", async () => {
-  await page.viewport(1280, 800);
-  renderDatabaseLayoutExplorerMode();
+  await renderDatabaseLayout({
+    page: "database.explorer",
+    title: "Explorer detail",
+  });
 
   const backLink = page.getByRole("link", { name: "Back to workspace" });
   await expect.element(backLink).toBeVisible();
@@ -451,15 +379,15 @@ test("explorer route swaps the workspace nav for a drill-in rail", async () => {
   // The workspace nav is replaced in place — same rail, no nav links.
   await expect
     .element(page.getByRole("link", { name: "Database Data Explorer" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("link", { name: "Instance Overview" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   // Back leads to the database overview (mock Link keeps the route template).
-  expect(backLink.element().getAttribute("href")).toBe(
-    "/instances/$instanceId/databases/$databaseId"
-  );
+  await expect
+    .element(backLink)
+    .toHaveAttribute("href", "/instances/$instanceId/databases/$databaseId");
 
   // The rail footer stays available in explorer mode.
   await expect
@@ -468,18 +396,25 @@ test("explorer route swaps the workspace nav for a drill-in rail", async () => {
 });
 
 test("degraded mode banner starts after the desktop sidebar", async () => {
-  await page.viewport(1280, 800);
-  renderDatabaseLayoutWithDegradedBanner();
+  await renderDatabaseLayout({
+    page: "database.overview",
+    showDegradedBanner: true,
+    title: "Database overview",
+  });
 
   const bannerText =
     "Meta database unavailable. Querylane is running in degraded mode.";
+  const reconfigureButton = page.getByRole("button", {
+    name: "Reconfigure internal storage",
+  });
   await expect.element(page.getByText(bannerText)).toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Reconfigure internal storage" }))
-    .toBeVisible();
+  await expect.element(reconfigureButton).toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Collapse sidebar" }))
     .toBeVisible();
+  await expect
+    .element(reconfigureButton)
+    .not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   const banner = Array.from(document.querySelectorAll("output")).find((item) =>
     item.textContent.includes("Meta database unavailable")
@@ -498,26 +433,18 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
 
   expect(sidebarRect.right).toBeGreaterThan(0);
   expect(bannerRect.left).toBeGreaterThanOrEqual(sidebarRect.right - 1);
-  expect(
-    getComputedStyle(
-      page
-        .getByRole("button", { name: "Reconfigure internal storage" })
-        .element()
-    ).backgroundColor
-  ).not.toBe("rgba(0, 0, 0, 0)");
-
-  await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
-    "admin-shell-degraded-mode"
-  );
 });
 
 test("internal storage recovery dialog presents the reset steps", async () => {
-  await page.viewport(1280, 800);
-  renderDatabaseLayoutWithDegradedBanner();
+  await renderDatabaseLayout({
+    page: "database.overview",
+    showDegradedBanner: true,
+    title: "Database overview",
+  });
 
-  await userEvent.click(
-    page.getByRole("button", { name: "Reconfigure internal storage" })
-  );
+  await page
+    .getByRole("button", { name: "Reconfigure internal storage" })
+    .click();
 
   const dialog = page.getByRole("dialog", {
     name: "Reconfigure internal storage",
@@ -526,11 +453,10 @@ test("internal storage recovery dialog presents the reset steps", async () => {
   await expect
     .element(page.getByText("querylane server reset-config", { exact: false }))
     .toBeVisible();
-  await expect(dialog).toMatchScreenshot("internal-storage-recovery-dialog");
 });
 
 test("admin shell shows selected instance, database, scoped navigation, and actions", async () => {
-  renderAdminShell();
+  await renderAdminShell();
 
   await expect
     .element(page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }))
@@ -547,13 +473,7 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect
     .element(page.getByRole("button", { name: "Collapse sidebar" }))
     .toBeVisible();
-
-  const header = document.querySelector("header");
-  expect(header).not.toBeNull();
-
-  await expect(page.getByTestId("admin-shell-visual-root")).toMatchScreenshot(
-    "admin-shell-database-scope"
-  );
+  await expect.element(page.locator("header")).toBeAttached();
 });
 
 test("admin header truncates a long instance name without wrapping and exposes the full name", async () => {
@@ -564,7 +484,7 @@ test("admin header truncates a long instance name without wrapping and exposes t
     ...selectedInstance,
     name: longInstanceName,
   };
-  renderAdminShell();
+  await renderAdminShell();
 
   const instanceSelector = page.getByRole("button", {
     name: `Instance: ${longInstanceName}`,
@@ -576,72 +496,64 @@ test("admin header truncates a long instance name without wrapping and exposes t
 
   await expect.element(instanceSelector).toBeVisible();
   await expect.element(rolesBreadcrumb).toBeVisible();
+  await expect.element(instanceName).toHaveCSS("white-space", "nowrap");
 
-  const instanceNameElement = instanceName.element();
-  const rolesElement = rolesBreadcrumb.element();
+  const instanceNameElement = leafElementWithText(document, longInstanceName);
+  const breadcrumb = document.querySelector('nav[aria-label="Breadcrumb"]');
+  const rolesElement = breadcrumb && leafElementWithText(breadcrumb, "Roles");
+  if (!(instanceNameElement && rolesElement)) {
+    throw new Error("Expected instance name and roles breadcrumb elements");
+  }
 
   expect(instanceNameElement.scrollWidth).toBeGreaterThan(
     instanceNameElement.clientWidth
   );
-  expect(getComputedStyle(instanceNameElement).whiteSpace).toBe("nowrap");
   expect(instanceNameElement.getBoundingClientRect().right).toBeLessThanOrEqual(
     rolesElement.getBoundingClientRect().left
   );
+  expect(
+    instanceNameElement.closest('[data-slot="tooltip-trigger"]')
+  ).toBeInstanceOf(HTMLElement);
 
-  const tooltipTrigger = instanceNameElement.closest(
-    '[data-slot="tooltip-trigger"]'
-  );
-  if (!(tooltipTrigger instanceof HTMLElement)) {
-    throw new Error("Expected instance name overflow tooltip trigger");
-  }
   await instanceName.hover();
+  await expect.element(page.getByText(longInstanceName)).toHaveCount(2);
   await expect
-    .poll(() => page.getByText(longInstanceName).elements().length)
-    .toBe(2);
-  const tooltipContent = page
-    .getByText(longInstanceName)
-    .elements()
-    .find((element) => element.closest('[data-slot="tooltip-content"]'));
-  if (!(tooltipContent instanceof HTMLElement)) {
-    throw new Error("Expected instance name overflow tooltip content");
-  }
-  await expect.element(page.elementLocator(tooltipContent)).toBeVisible();
+    .element(
+      page.locator('[data-slot="tooltip-content"]').getByText(longInstanceName)
+    )
+    .toBeVisible();
 });
 
 test("command palette opens over the full admin layout", async () => {
-  await page.viewport(1280, 800);
-  renderAdminShell();
+  await renderAdminShell();
 
   await page.getByRole("button", { name: "Search or jump to" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Search or jump to" });
   await expect.element(dialog).toBeVisible();
   await expect.element(page.getByText("Go to")).toBeVisible();
-  await expect.element(page.getByText("Tables")).toBeVisible();
+  await expect.element(page.getByText("Tables", { exact: true })).toBeVisible();
   await expect
     .element(
       page.getByText("customer_events_with_long_identifier.public.shipments")
     )
     .toBeVisible();
-  await expect(page).toMatchScreenshot("admin-command-palette-layout-open");
 });
 
 test("keyboard shortcut help opens over the full admin layout", async () => {
-  await page.viewport(1280, 800);
-  renderAdminShell();
+  await renderAdminShell();
 
-  await userEvent.keyboard("{Shift>}?{/Shift}");
+  await page.locator("body").press("Shift+?");
 
   await expect
     .element(page.getByRole("dialog", { name: "Keyboard shortcuts" }))
     .toBeVisible();
   await expect.element(page.getByText("Show keyboard shortcuts")).toBeVisible();
   await expect.element(page.getByText("Move between cells")).toBeVisible();
-  await expect(page).toMatchScreenshot("keyboard-shortcuts-help-sheet");
 });
 
 test("sidebar footer omits global settings", async () => {
-  renderAdminShell();
+  await renderAdminShell();
 
   await expect
     .element(page.getByRole("button", { name: "Collapse sidebar" }))
@@ -649,8 +561,8 @@ test("sidebar footer omits global settings", async () => {
   expect(document.querySelector('[aria-label="Settings"]')).toBeNull();
   await expect
     .element(page.getByRole("button", { name: "Settings" }))
-    .not.toBeInTheDocument();
-  await expect.element(page.getByText("Data refresh")).not.toBeInTheDocument();
+    .not.toBeAttached();
+  await expect.element(page.getByText("Data refresh")).not.toBeAttached();
 });
 
 test("admin header instance selector uses a rich empty state with a create action", async () => {
@@ -660,7 +572,7 @@ test("admin header instance selector uses a rich empty state with a create actio
   };
   adminHeaderMockState.instances = [];
   adminHeaderMockState.selectedInstance = null;
-  renderAdminShell();
+  await renderAdminShell();
 
   await page.getByRole("button", { name: "Select instance" }).click();
 
@@ -685,7 +597,7 @@ test("admin header routes unreadable credentials to credential recovery", async 
     },
   ];
   adminHeaderMockState.selectedInstance = null;
-  renderAdminShell();
+  await renderAdminShell();
 
   await page.getByRole("button", { name: "Select instance" }).click();
   await expect
@@ -700,27 +612,24 @@ test("admin header routes unreadable credentials to credential recovery", async 
 });
 
 test("admin header keeps the disabled register instance tooltip open while hovered", async () => {
-  renderAdminShell();
+  await renderAdminShell();
 
   await page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }).click();
-  const registerInstanceText = page.getByText("Register instance");
-  const registerInstanceItem = registerInstanceText
-    .element()
-    .closest('[data-slot="command-item"]');
-  const tooltipTrigger = registerInstanceText
-    .element()
-    .closest("[data-base-ui-tooltip-trigger]");
-  if (!(registerInstanceItem instanceof HTMLElement)) {
-    throw new Error("Expected disabled register instance command item");
-  }
-  if (!(tooltipTrigger instanceof HTMLElement)) {
-    throw new Error("Expected register instance tooltip trigger");
-  }
+  const registerInstanceItem = page
+    .locator('[data-slot="command-item"]')
+    .filter({ hasText: "Register instance" });
+  await expect
+    .element(registerInstanceItem)
+    .toHaveAttribute("aria-disabled", "true");
+  await expect
+    .element(registerInstanceItem)
+    .toHaveAttribute("aria-selected", "false");
 
-  expect(registerInstanceItem.getAttribute("aria-disabled")).toBe("true");
-  expect(registerInstanceItem.getAttribute("aria-selected")).toBe("false");
-
-  await page.elementLocator(tooltipTrigger).hover();
+  const tooltipTrigger = page
+    .locator("[data-base-ui-tooltip-trigger]")
+    .filter({ hasText: "Register instance" });
+  await expect.element(tooltipTrigger).toBeAttached();
+  await tooltipTrigger.hover();
 
   const tooltip = page.getByText(
     "Instances are managed via the server configuration file. Add them to your config and restart the server."
@@ -731,58 +640,3 @@ test("admin header keeps the disabled register instance tooltip open while hover
 
   await expect.element(tooltip).toBeVisible();
 });
-
-test("admin shell phone viewport keeps compact header and drawer trigger stable", async () => {
-  await page.viewport(320, 900);
-  renderAdminShellAtViewport({ width: 320 });
-
-  await expect
-    .element(page.getByRole("button", { name: "Open navigation menu" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("customer_events_with_long_identifier"))
-    .toBeVisible();
-  await expect
-    .element(page.getByTestId("admin-shell-visual-root-320"))
-    .toMatchScreenshot("admin-shell-phone-compact");
-});
-
-test("admin shell tablet viewport keeps compact header without desktop sidebar", async () => {
-  await page.viewport(768, 900);
-  renderAdminShellAtViewport({ width: 768 });
-
-  await expect
-    .element(page.getByRole("button", { name: "Open navigation menu" }))
-    .toBeVisible();
-  await expect
-    .element(page.getByText("customer_events_with_long_identifier"))
-    .toBeVisible();
-  await expect
-    .element(page.getByRole("button", { name: "Collapse sidebar" }))
-    .not.toBeInTheDocument();
-  await expect
-    .element(page.getByTestId("admin-shell-visual-root-768"))
-    .toMatchScreenshot("admin-shell-tablet-compact");
-});
-
-test.each([320, 768] as const)(
-  "admin navigation at %ipx preserves drawer width and keyboard dismissal",
-  async (width) => {
-    await page.viewport(width, 900);
-    const theme =
-      document.documentElement.dataset["visualTheme"] === "light"
-        ? "light"
-        : "dark";
-    renderAdminShellAtViewport({ width, theme });
-    const trigger = page.getByRole("button", { name: "Open navigation menu" });
-    await trigger.click();
-    const dialog = page.getByRole("dialog");
-    await expect.element(dialog).toBeVisible();
-    expect(document.documentElement.classList.contains(theme)).toBe(true);
-    expect(dialog.element().getBoundingClientRect().width).toBe(288);
-    await expect(dialog).toMatchScreenshot(`admin-navigation-open-${width}`);
-    await userEvent.keyboard("{Escape}");
-    await expect.element(dialog).not.toBeInTheDocument();
-    await expect.element(trigger).toHaveFocus();
-  }
-);

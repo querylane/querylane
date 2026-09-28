@@ -4,7 +4,6 @@
   "extends": [
     "ultracite/biome/core",
     "ultracite/biome/react",
-    "ultracite/biome/vitest",
     "ultracite/biome/type-aware",
     "ultracite/biome/tanstack"
   ],
@@ -63,6 +62,8 @@
         "useValidAriaValues": "error"
       },
       "complexity": {
+        // Runner-agnostic test rules for rstest and Playwright specs.
+        "noExcessiveNestedTestSuites": "error",
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {
@@ -127,10 +128,7 @@
               "**/*.config.{ts,js,mts,cts,mjs,cjs}",
               "**/playwright.config.*",
               "**/rstest.*.{ts,js,mts,cts,mjs,cjs}",
-              "**/vitest.*.{ts,js,mts,cts,mjs,cjs}",
-              "**/vitest.*.config.*",
-              "**/rsbuild.config.*",
-              "**/postcss.config.*"
+              "**/rsbuild.config.*"
             ],
             "peerDependencies": true,
             "optionalDependencies": true
@@ -195,6 +193,7 @@
         "noSecrets": "error"
       },
       "style": {
+        "noDoneCallback": "error",
         "noCommonJs": "error",
         "noDefaultExport": "error",
         "noEnum": "error",
@@ -282,6 +281,11 @@
         "useSingleVarDeclarator": "error"
       },
       "suspicious": {
+        "noDuplicateTestHooks": "error",
+        "noExportsInTest": "error",
+        "noFocusedTests": "error",
+        "noMisplacedAssertion": "error",
+        "noSkippedTests": "error",
         "noArrayIndexKey": "error",
         "noAssignInExpressions": "error",
         "noBitwiseOperators": "error",
@@ -326,17 +330,6 @@
   },
   "overrides": [
     {
-      // Test/build config is allowed to read CI env directly.
-      "includes": ["vitest.browser.shared.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noProcessEnv": "off"
-          }
-        }
-      }
-    },
-    {
       "includes": [
         "src/components/ui/**",
         "src/routeTree.gen.ts",
@@ -367,14 +360,8 @@
       }
     },
     {
-      // Playwright, Lighthouse, and Vitest entrypoints run under Node/Bun.
-      "includes": [
-        "e2e/**/*",
-        "lighthouserc.*",
-        "rstest.shared.ts",
-        "vitest.browser.shared.ts",
-        "vitest.shared.ts"
-      ],
+      // Playwright, Lighthouse, and Rstest entrypoints run under Node/Bun.
+      "includes": ["e2e/**/*", "lighthouserc.*", "rstest.shared.ts"],
       "linter": {
         "rules": {
           "correctness": {

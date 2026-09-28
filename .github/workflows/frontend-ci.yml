@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:unit
           else
             bun run test:unit:changed
@@ -140,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:integration
           else
             bun run test:integration:changed
@@ -194,21 +194,11 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|postcss\.config\.mjs|rstest[^/]*\.ts|test\.console-guard\.ts|vitest[^/]*\.(ts|css)|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:browser:ci
           else
             bun run test:browser:changed
           fi
-      - name: Upload Vitest visual failure artifacts
-        if: failure()
-        uses: *action_upload_artifact
-        with:
-          name: vitest-visual-failure-artifacts
-          path: frontend/.vitest/attachments
-          retention-days: 1
-          overwrite: true
-          if-no-files-found: ignore
-          include-hidden-files: true
 
   visual:
     name: Frontend Visual

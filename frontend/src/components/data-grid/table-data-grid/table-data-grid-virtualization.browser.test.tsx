@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, rs, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
 import {
@@ -31,34 +31,33 @@ const metadataQuery = (data: unknown) => ({
   error: null,
   isFetching: false,
   isLoading: false,
-  refetch: vi.fn(),
+  refetch: rs.fn(),
 });
 
-const tableApi = vi.hoisted(() => ({
-  useGetTablePartitionMetadataQuery: vi.fn(),
-  useListTableColumnsQuery: vi.fn(),
-  useListTableConstraintsQuery: vi.fn(),
-  useListTableIndexesQuery: vi.fn(),
-  useListTablePoliciesQuery: vi.fn(),
-  useListTableTriggersQuery: vi.fn(),
+const tableApi = rs.hoisted(() => ({
+  useGetTablePartitionMetadataQuery: rs.fn(),
+  useListTableColumnsQuery: rs.fn(),
+  useListTableConstraintsQuery: rs.fn(),
+  useListTableIndexesQuery: rs.fn(),
+  useListTablePoliciesQuery: rs.fn(),
+  useListTableTriggersQuery: rs.fn(),
 }));
 
-const tableDataApi = vi.hoisted(() => ({
-  useReadCellValueMutation: vi.fn(() => ({
+const tableDataApi = rs.hoisted(() => ({
+  useReadCellValueMutation: rs.fn(() => ({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rs.fn(),
   })),
-  useReadRowsQuery: vi.fn(),
-  useReadRowsQueryActions: vi.fn(() => ({
-    fetch: vi.fn(() => Promise.resolve()),
-    getState: vi.fn(() => ({ fetchStatus: "idle", status: "success" })),
-    prefetch: vi.fn(),
+  useReadRowsQuery: rs.fn(),
+  useReadRowsQueryActions: rs.fn(() => ({
+    fetch: rs.fn(() => Promise.resolve()),
+    getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
+    prefetch: rs.fn(),
   })),
-  useStreamRowsExporter: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   useGetTablePartitionMetadataQuery: tableApi.useGetTablePartitionMetadataQuery,
   useListTableColumnsQuery: tableApi.useListTableColumnsQuery,
   useListTableConstraintsQuery: tableApi.useListTableConstraintsQuery,
@@ -67,11 +66,10 @@ vi.mock("@/hooks/api/table", () => ({
   useListTableTriggersQuery: tableApi.useListTableTriggersQuery,
 }));
 
-vi.mock("@/hooks/api/table-data", () => ({
+rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
   useReadRowsQuery: tableDataApi.useReadRowsQuery,
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
-  useStreamRowsExporter: tableDataApi.useStreamRowsExporter,
 }));
 
 const resultColumns = [
@@ -151,14 +149,14 @@ function seedTableDetailRows(rowCount = 500) {
     isFetching: false,
     isLoading: false,
     isPlaceholderData: false,
-    refetch: vi.fn(),
+    refetch: rs.fn(),
   });
 }
 
 test("table detail uses available height while keeping 500-row pages virtualized", async () => {
   seedTableDetailRows(500);
 
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="flex h-[1600px] w-[1120px] flex-col rounded-2xl border border-border bg-background p-6 text-foreground">
         <TableDetail
@@ -182,7 +180,5 @@ test("table detail uses available height while keeping 500-row pages virtualized
   expect(
     document.querySelectorAll(".rdg .rdg-cell").length
   ).toBeLessThanOrEqual(420);
-  await expect
-    .element(page.getByText("user-499@example.com"))
-    .not.toBeInTheDocument();
+  await expect.element(page.getByText("user-499@example.com")).toBeDetached();
 });

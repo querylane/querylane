@@ -56,11 +56,11 @@ bun run test:visual
 
 ## Visual regression
 
-Pixel comparisons live in `e2e/visual/*.spec.ts` and run in the `visual-light` and `visual-dark` projects. They replace Vitest `toMatchScreenshot`, which Rstest browser mode does not support.
+Pixel comparisons live in `e2e/visual/*.spec.ts` and run in the `visual-light` and `visual-dark` projects. Rstest browser mode has no screenshot assertions, so pixels live here.
 
 - Prefer the real route with mocked RPCs (`page.goto()` plus `page.route()`). This is what users see.
 - For isolated states no route can reach, add a scenario component under `src/visual-harness/` and register it in `scenarios.tsx`. Specs open `/visual.html?scenario=<name>`. The entry only exists when `QUERYLANE_VISUAL_HARNESS=1`, which the Playwright web server sets. Production builds never include it.
-- Render the same scenario component from the matching `*.rstest-browser.test.tsx` so behavior checks and pixels cover identical markup.
+- Render the same scenario component from the matching `*.browser.test.tsx` so behavior checks and pixels cover identical markup.
 - Screenshot the smallest stable region (the page `main`, a dialog, or a section), not the whole viewport.
 - Baselines are Linux-only and are captured in the official Playwright image that CI also uses. `updateSnapshots` is `none`, so a missing baseline fails instead of writing a local one.
 
@@ -107,7 +107,7 @@ Use features for real scenarios, not to expand smoke tests artificially:
 - OPFS storage state: no persisted origin-private files to restore.
 - `dialogclosed`: no native JavaScript dialog lifecycle in these smoke flows.
 - Stories registry typing: no experimental Playwright component-testing packages;
-  component tests remain on Rstest and Vitest.
+  component tests remain on Rstest.
 
 CI uses `ubuntu-latest`, not the removed Ubuntu 20.04 platform. Browser installation
 follows the pinned package's browser manifest; no manual browser version pins.

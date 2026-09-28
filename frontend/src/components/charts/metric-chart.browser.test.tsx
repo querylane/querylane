@@ -1,22 +1,19 @@
-import { expect, test } from "vitest";
-import { type Locator, page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
+import { type Locator, page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, test } from "@rstest/core";
+import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { MetricChart, MetricSparkline } from "@/components/charts/metric-chart";
-
-const minute = 60_000;
-const start = Date.UTC(2026, 7, 23, 12);
-const data = [
-  { previous: 9, requests: 12, time: start },
-  { previous: 12, requests: 18, time: start + minute },
-  { previous: 10, requests: 15, time: start + minute * 2 },
-  { previous: 15, requests: null, time: start + minute * 3 },
-  { previous: 14, requests: 22, time: start + minute * 4 },
-  { previous: 16, requests: 24, time: start + minute * 5 },
-];
+import {
+  CURRENT_LINE_SELECTOR,
+  METRIC_CHART_SAMPLE_DATA as data,
+  PREVIOUS_LINE_SELECTOR,
+} from "@/visual-harness/chart-scenario-data";
+import { MetricChartKitScenario } from "@/visual-harness/chart-scenarios";
 
 async function hoverLineEnd(chart: Locator, selector: string) {
-  const line = chart.element().querySelector<SVGPathElement>(selector);
+  const chartElement = screen.getByRole("img", { name: "Metric time series" });
+  const line = chartElement.querySelector<SVGPathElement>(selector);
   const transform = line?.getScreenCTM();
   if (!(line && transform)) {
     throw new Error(`Expected a chart line matching ${selector}`);
@@ -24,134 +21,82 @@ async function hoverLineEnd(chart: Locator, selector: string) {
   const point = line
     .getPointAtLength(line.getTotalLength())
     .matrixTransform(transform);
-  const bounds = chart.element().getBoundingClientRect();
+  const bounds = chartElement.getBoundingClientRect();
   await chart.hover({
     position: { x: point.x - bounds.left, y: point.y - bounds.top },
   });
   return point;
 }
 
+function tooltipRow(tooltip: Locator, label: string) {
+  return tooltip.locator(".ts-chart-tooltip__row").filter({ hasText: label });
+}
+
+// Pixels for the hovered chart kit live in e2e/visual/charts.spec.ts, which
+// opens the same scenario through the visual harness.
 test("renders the metric chart kit", async () => {
-  render(
+  await render(
     <ScreenshotFrame>
-      <div
-        className="w-[760px] space-y-6 rounded-xl border border-border bg-card p-6"
-        data-testid="metric-chart-fixture"
-      >
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-base">Requests</h2>
-              <p className="text-muted-foreground text-xs">
-                Current and previous five-minute windows
-              </p>
-            </div>
-            <div className="h-12 w-40">
-              <MetricSparkline
-                color="var(--color-chart-1)"
-                data={data}
-                seriesKey="requests"
-              />
-            </div>
-          </div>
-          <div className="h-72 w-full" data-testid="metric-chart-surface">
-            <MetricChart
-              data={data}
-              formatDetailedValue={(value) => `${value.toFixed(2)} req/s`}
-              formatValue={(value) => `${value} req/s`}
-              series={[
-                {
-                  color: "var(--color-chart-1)",
-                  dotClassName: "bg-chart-1",
-                  key: "requests",
-                  label: "Current",
-                },
-                {
-                  color: "var(--color-chart-1)",
-                  dashed: true,
-                  dotClassName: "bg-chart-1",
-                  key: "previous",
-                  label: "Previous",
-                },
-              ]}
-              thresholds={[
-                { label: "Alert threshold", tone: "critical", value: 20 },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
+      <MetricChartKitScenario />
     </ScreenshotFrame>
   );
 
-  await expect
-    .element(page.getByRole("img", { name: "Metric time series" }))
-    .toBeVisible();
+  const chart = page.getByRole("img", { name: "Metric time series" });
+  await expect.element(chart).toBeVisible();
   await expect
     .element(page.getByRole("img", { name: "Metric trend" }))
     .toBeVisible();
-  const filledAreaPaths = page
+  const filledAreaPaths = screen
     .getByTestId("metric-chart-fixture")
-    .element()
     .querySelectorAll<SVGPathElement>('path[fill^="url("]');
   expect(filledAreaPaths.length).toBeGreaterThanOrEqual(2);
   for (const path of filledAreaPaths) {
     expect(path.getAttribute("stroke-width")).toBe("0");
   }
   await expect.element(page.getByText("Alert threshold")).toBeVisible();
-  const chart = page.getByRole("img", { name: "Metric time series" });
-  const currentPoint = await hoverLineEnd(
-    chart,
-    'path[stroke="var(--color-chart-1)"][stroke-width="2"]'
-  );
+  const currentPoint = await hoverLineEnd(chart, CURRENT_LINE_SELECTOR);
   await expect.element(page.getByText("15.00 req/s")).toBeVisible();
   const tooltip = page.getByRole("status");
   await expect
-    .element(tooltip.getByText("Current").element().parentElement)
+    .element(tooltipRow(tooltip, "Current"))
     .toHaveAttribute("data-active", "true");
   await expect
-    .element(tooltip.getByText("Previous").element().parentElement)
+    .element(tooltipRow(tooltip, "Previous"))
     .toHaveAttribute("data-active", "false");
-  const activeRow = tooltip.getByText("Current").element().parentElement;
-  if (!activeRow) {
-    throw new Error("Expected an active tooltip row");
-  }
-  expect(getComputedStyle(activeRow).backgroundColor).toBe("rgba(0, 0, 0, 0)");
-  expect(getComputedStyle(activeRow).boxShadow).toBe("none");
-  expect(getComputedStyle(activeRow).fontWeight).toBe("500");
+  const activeRow = tooltipRow(tooltip, "Current");
+  await expect
+    .element(activeRow)
+    .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect.element(activeRow).toHaveCSS("box-shadow", "none");
+  await expect.element(activeRow).toHaveCSS("font-weight", "500");
   await expect.element(tooltip.getByText("10.00 req/s")).toBeVisible();
   await expect.element(tooltip).toHaveAttribute("data-placement", "top");
-  expect(tooltip.element().getBoundingClientRect().bottom).toBeLessThan(
-    currentPoint.y
-  );
-  await expect(page.getByTestId("metric-chart-fixture")).toMatchScreenshot(
-    "metric-chart-kit"
-  );
+  expect(
+    screen.getByRole("status").getBoundingClientRect().bottom
+  ).toBeLessThan(currentPoint.y);
 
-  await hoverLineEnd(
-    chart,
-    'path[stroke="var(--color-chart-1)"][stroke-dasharray="4 4"]'
-  );
+  await hoverLineEnd(chart, PREVIOUS_LINE_SELECTOR);
   await expect.element(tooltip.getByText("16.00 req/s")).toBeVisible();
   await expect
-    .element(tooltip.getByText("Previous").element().parentElement)
+    .element(tooltipRow(tooltip, "Previous"))
     .toHaveAttribute("data-active", "true");
   await expect
-    .element(tooltip.getByText("Current").element().parentElement)
+    .element(tooltipRow(tooltip, "Current"))
     .toHaveAttribute("data-active", "false");
 
-  const user = userEvent.setup();
-  await user.tab();
-  await user.keyboard("{Home}");
+  await chart.focus();
+  await chart.press("Home");
   await expect.element(tooltip.getByText("12.00 req/s")).toBeVisible();
-  await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+  await chart.press("ArrowRight");
+  await chart.press("ArrowRight");
+  await chart.press("ArrowRight");
   await expect.element(tooltip.getByText("–")).toBeVisible();
   await expect.element(tooltip.getByText("15.00 req/s")).toBeVisible();
-  await user.keyboard("{End}");
+  await chart.press("End");
   await expect.element(tooltip.getByText("24.00 req/s")).toBeVisible();
-  const tooltipElement = tooltip.element();
-  await user.tab();
-  await expect.element(tooltipElement).not.toBeVisible();
+  const tooltipElement = screen.getByRole("status");
+  await chart.blur();
+  await expect.poll(() => tooltipElement.checkVisibility()).toBe(false);
 });
 
 test.each([
@@ -214,9 +159,9 @@ test.each([
   await view.rerender(<div className={fixture.tallClassName}>{content}</div>);
   await expect.element(surface).toHaveAttribute("viewBox", fixture.tallViewBox);
 
-  const chartElement = surface.element();
+  const chartElement = screen.getByRole("img", { name: fixture.label });
   await view.rerender(<div className="hidden">{content}</div>);
-  await expect.element(chartElement).not.toBeVisible();
+  await expect.poll(() => chartElement.checkVisibility()).toBe(false);
   await view.rerender(
     <div className={fixture.compactClassName}>{content}</div>
   );
@@ -231,7 +176,6 @@ test.each([
 test.each(["line", "stacked"] as const)(
   "keeps same-colored %s series distinct during keyboard inspection",
   async (variant) => {
-    const user = userEvent.setup();
     await render(
       <div className="h-72 w-80">
         <MetricChart
@@ -255,20 +199,19 @@ test.each(["line", "stacked"] as const)(
         />
       </div>
     );
-    await expect
-      .element(page.getByRole("img", { name: "Metric time series" }))
-      .toBeVisible();
-    await user.tab();
-    await user.keyboard("{Home}");
+    const chart = page.getByRole("img", { name: "Metric time series" });
+    await expect.element(chart).toBeVisible();
+    await chart.focus();
+    await chart.press("Home");
     const tooltip = page.getByRole("status");
     await expect.element(tooltip.getByText("12 req/s")).toBeVisible();
     await expect.element(tooltip.getByText("9 req/s")).toBeVisible();
     // Grouped keyboard navigation picks the topmost point at each timestamp.
     const activeLabel = variant === "stacked" ? "Previous" : "Current";
     await expect
-      .element(tooltip.getByText(activeLabel).element().parentElement)
+      .element(tooltipRow(tooltip, activeLabel))
       .toHaveAttribute("data-active", "true");
-    await user.keyboard("{ArrowRight}");
+    await chart.press("ArrowRight");
     await expect.element(tooltip.getByText("18 req/s")).toBeVisible();
     await expect.element(tooltip.getByText("12 req/s")).toBeVisible();
   }

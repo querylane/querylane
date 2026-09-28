@@ -1,67 +1,37 @@
-import { useId } from "react";
-import { afterEach, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
-import { cleanup, render } from "vitest-browser-react";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
-import { LabeledInput } from "./labeled-input";
+import { OnboardingInvalidFieldsScenario } from "@/visual-harness/onboarding-scenarios";
 
-afterEach(async () => {
-  await cleanup();
-});
+// Pixels for each focus state live in e2e/visual/onboarding.spec.ts.
 
-function InvalidOnboardingFields() {
-  const hostId = useId();
-  const passwordId = useId();
-  return (
-    <ScreenshotFrame>
-      <div
-        aria-hidden="true"
-        className="hidden border-destructive dark:border-destructive/50"
-        data-testid="validation-color"
-      />
-      <div
-        className="w-96 bg-onboarding-backdrop p-6"
-        data-testid="invalid-fields"
-      >
-        <LabeledInput
-          defaultValue="localhost"
-          error="Enter a valid host"
-          id={hostId}
-          label="Host"
-        />
-        <LabeledInput
-          defaultValue="secret"
-          error="Enter a password"
-          id={passwordId}
-          label="Password"
-          type="password"
-        />
-      </div>
-    </ScreenshotFrame>
-  );
+function validationBorderColor() {
+  const swatch = document.querySelector('[data-testid="validation-color"]');
+  if (!(swatch instanceof HTMLElement)) {
+    throw new Error("Expected the validation color swatch.");
+  }
+  return getComputedStyle(swatch).borderColor;
 }
 
 test("invalid onboarding fields preserve validation styling through keyboard focus", async () => {
-  await render(<InvalidOnboardingFields />);
-  const fields = page.getByTestId("invalid-fields");
-  const host = page.getByLabelText("Host");
-  const password = page.getByLabelText("Password", { exact: true });
-  const expectedBorder = getComputedStyle(
-    page.getByTestId("validation-color").element()
-  ).borderColor;
+  await render(
+    <ScreenshotFrame>
+      <OnboardingInvalidFieldsScenario />
+    </ScreenshotFrame>
+  );
+  const host = page.getByLabel("Host");
+  const password = page.getByLabel("Password", { exact: true });
+  const expectedBorder = validationBorderColor();
 
-  expect(getComputedStyle(host.element()).borderColor).toBe(expectedBorder);
-  expect(getComputedStyle(password.element()).borderColor).toBe(expectedBorder);
-  await expect(fields).toMatchScreenshot("invalid-onboarding-fields");
+  await expect.element(host).toHaveCSS("border-color", expectedBorder);
+  await expect.element(password).toHaveCSS("border-color", expectedBorder);
 
-  const user = userEvent.setup();
-  await user.tab();
-  await expect.element(host).toHaveFocus();
-  expect(getComputedStyle(host.element()).borderColor).toBe(expectedBorder);
-  await expect(fields).toMatchScreenshot("invalid-onboarding-host-focus");
+  await host.focus();
+  await expect.element(host).toBeFocused();
+  await expect.element(host).toHaveCSS("border-color", expectedBorder);
 
-  await user.tab();
-  await expect.element(password).toHaveFocus();
-  expect(getComputedStyle(password.element()).borderColor).toBe(expectedBorder);
-  await expect(fields).toMatchScreenshot("invalid-onboarding-password-focus");
+  await host.press("Tab");
+  await expect.element(password).toBeFocused();
+  await expect.element(password).toHaveCSS("border-color", expectedBorder);
 });

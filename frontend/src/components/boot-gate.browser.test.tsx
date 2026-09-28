@@ -1,13 +1,15 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { cleanup, render } from "vitest-browser-react";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BootGate } from "@/components/boot-gate";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { useSetupStore } from "@/stores/setup-store";
 
-vi.mock("@tanstack/react-router", () => ({
+// Pixels for the boot error live in e2e/visual/feedback-states.spec.ts.
+
+rs.mock("@tanstack/react-router", () => ({
   useLocation: ({
     select,
   }: {
@@ -27,18 +29,17 @@ beforeEach(() => {
       new ConnectError("deadline exceeded", Code.DeadlineExceeded),
       { source: "boot" }
     ),
-    bootstrap: vi.fn(async () => undefined),
+    bootstrap: rs.fn(async () => undefined),
     status: "boot_error",
   });
 });
 
-afterEach(async () => {
-  await cleanup();
+afterEach(() => {
   useSetupStore.setState(initialSetupState, true);
 });
 
 test("boot failure keeps Querylane reachability guidance inside the app shell", async () => {
-  render(
+  await render(
     <ScreenshotFrame>
       <BootGate>
         <div>app</div>
@@ -59,7 +60,4 @@ test("boot failure keeps Querylane reachability guidance inside the app shell", 
   await expect
     .element(page.getByRole("button", { name: "Retry" }))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "boot-querylane-unreachable"
-  );
 });

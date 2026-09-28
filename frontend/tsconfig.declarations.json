@@ -9,5 +9,5 @@
     "outDir": "./node_modules/.tmp/tsconfig.declarations",
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.declarations.tsbuildinfo"
   },
-  "include": ["scripts/perf-budgets.ts", "vitest.browser-policy.ts"]
+  "include": ["scripts/perf-budgets.ts"]
 }

@@ -62,6 +62,5 @@ postgres_data
 /.dev-onboarding
 frontend/playwright-report
 frontend/test-results
-frontend/.vitest
 frontend/e2e/playwright-report
 frontend/e2e/test-results

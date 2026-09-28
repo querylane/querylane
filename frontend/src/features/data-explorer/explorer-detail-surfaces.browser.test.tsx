@@ -1,8 +1,18 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import * as actualConnectQuery from "@connectrpc/connect-query" with {
+  rstest: "importActual",
+};
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { expect, rs, test } from "@rstest/core";
+import * as actualReactQuery from "@tanstack/react-query" with {
+  rstest: "importActual",
+};
+import * as actualRouter from "@tanstack/react-router" with {
+  rstest: "importActual",
+};
+import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
-import { expect, test, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
-import { render } from "vitest-browser-react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
@@ -34,12 +44,10 @@ import {
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@tanstack/react-router")>();
+rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
   return {
-    ...actual,
+    ...actualRouter,
     [linkExportName]: ({
       children,
       className,
@@ -64,11 +72,9 @@ const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
 const SCHEMA_MAP_FILTER_RE = /^Schema$/;
 const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
 const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/;
-const DEFAULT_BROWSER_VIEWPORT = { height: 1000, width: 1280 } as const;
-const SCHEMA_MAP_BROWSER_VIEWPORT = { height: 1400, width: 2048 } as const;
 
 // 2024-01-01T23:00:00Z renders as "Last fetched 11:00:00 PM" under the pinned
-// TZ=GMT used for screenshots, matching the mocked data grid label below.
+// TZ=GMT this runner uses, matching the mocked data grid label below.
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
 const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
 const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
@@ -92,12 +98,12 @@ const TIMESTAMPTZ_TYPE_TITLE_RE =
 const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
 const CACHE_HIT_HEADER_LABEL =
   "Cache hit. PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
-const refreshableQueryFields = vi.hoisted(() => ({
+const refreshableQueryFields = rs.hoisted(() => ({
   dataUpdatedAt: 1_704_150_000_000,
   isFetching: false,
   refetch: () => Promise.resolve(),
 }));
-const tableQueries = vi.hoisted(() => ({
+const tableQueries = rs.hoisted(() => ({
   columns: {
     data: undefined as unknown,
     error: null,
@@ -143,13 +149,13 @@ const tableQueries = vi.hoisted(() => ({
     ...refreshableQueryFields,
   },
 }));
-const sqlQueryState = vi.hoisted(() => ({
+const sqlQueryState = rs.hoisted(() => ({
   data: undefined as { notices: string[] } | undefined,
   error: null as Error | null,
   isFetching: false,
   refetch: () => Promise.resolve(),
 }));
-const viewQueries = vi.hoisted(() => ({
+const viewQueries = rs.hoisted(() => ({
   dependencies: {
     data: { pages: [{ viewDependencies: [] }] },
     error: null,
@@ -166,7 +172,7 @@ const viewQueries = vi.hoisted(() => ({
     reset: () => undefined,
   },
 }));
-const schemaMapCatalog = vi.hoisted(() => ({
+const schemaMapCatalog = rs.hoisted(() => ({
   columnsByTable: {} as Record<string, unknown[]>,
   constraintsByTable: {} as Record<string, unknown[]>,
   errorMethods: [] as string[],
@@ -214,7 +220,7 @@ function requireColumnTypeTitle(displayType: string) {
   return title;
 }
 
-vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
+rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
   Object.fromEntries([
     [
       "TableDataGrid",
@@ -249,22 +255,12 @@ vi.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
   ])
 );
 
-vi.mock("@connectrpc/connect-query", async () => {
-  const actual = await vi.importActual<
-    typeof import("@connectrpc/connect-query")
-  >("@connectrpc/connect-query");
+rs.mock("@connectrpc/connect-query", () => ({
+  ...actualConnectQuery,
+  useTransport: () => ({}),
+}));
 
-  return {
-    ...actual,
-    useTransport: () => ({}),
-  };
-});
-
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
-    "@tanstack/react-query"
-  );
-
+rs.mock("@tanstack/react-query", () => {
   function schemaNameFromParent(parent: string | undefined) {
     return parent?.split("/").at(-1) ?? "";
   }
@@ -338,13 +334,13 @@ vi.mock("@tanstack/react-query", async () => {
   }
 
   return {
-    ...actual,
+    ...actualReactQuery,
     useQueries: ({ queries }: { queries: unknown[] }) =>
       queries.map(schemaMapQuery),
   };
 });
 
-vi.mock("@/hooks/api/table", () => ({
+rs.mock("@/hooks/api/table", () => ({
   tablesForSchemaQueryInput: ({
     databaseId,
     instanceId,
@@ -366,7 +362,7 @@ vi.mock("@/hooks/api/table", () => ({
   useListTableTriggersQuery: () => tableQueries.triggers,
 }));
 
-vi.mock("@/hooks/api/view", () => ({
+rs.mock("@/hooks/api/view", () => ({
   useListViewDependenciesQuery: () => viewQueries.dependencies,
   useRefreshMaterializedViewMutation: () => viewQueries.refresh,
   viewsForSchemaQueryInput: ({
@@ -387,15 +383,15 @@ vi.mock("@/hooks/api/view", () => ({
   }),
 }));
 
-vi.mock("@/hooks/api/sql", () => ({
+rs.mock("@/hooks/api/sql", () => ({
   useExplainQuery: () => sqlQueryState,
 }));
 
-function renderExplorerSurface(
+async function renderExplorerSurface(
   children: React.ReactNode,
   surfaceWidthClassName = "w-[1100px]"
 ) {
-  render(
+  await render(
     <ScreenshotFrame>
       <div
         className={cn(
@@ -409,8 +405,8 @@ function renderExplorerSurface(
   );
 }
 
-function renderScaledExplorerSurface(children: React.ReactNode) {
-  render(
+async function renderScaledExplorerSurface(children: React.ReactNode) {
+  await render(
     <ScreenshotFrame>
       <div
         className="relative h-[930px] w-[850px] overflow-hidden"
@@ -426,8 +422,8 @@ function renderScaledExplorerSurface(children: React.ReactNode) {
   );
 }
 
-function renderPaginatedIndexesSurface(children: React.ReactNode) {
-  render(
+async function renderPaginatedIndexesSurface(children: React.ReactNode) {
+  await render(
     <ScreenshotFrame>
       <div
         className="relative h-[1000px] w-[850px] overflow-hidden"
@@ -1406,7 +1402,7 @@ function seedTriggerRedesignQueries() {
 }
 
 test("data explorer schema detail keeps dense table summaries scannable", async () => {
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <SchemaDetail
       onSelectTable={() => undefined}
       onSelectView={() => undefined}
@@ -1487,15 +1483,15 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: OWNER_FILTER_RE }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("tab", { name: OBJECTS_TAB_RE }))
     .toBeVisible();
   await expect
     .element(page.getByRole("tab", { name: "Schema map" }))
     .toBeVisible();
-  const searchInput = page.getByLabelText("Search objects…").element();
-  const objectTable = page.getByRole("table").element();
+  const searchInput = screen.getByLabelText("Search objects…");
+  const objectTable = screen.getByRole("table");
   expect(
     searchInput.getBoundingClientRect().left -
       objectTable.getBoundingClientRect().left
@@ -1503,19 +1499,16 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
   await expect.element(page.getByText("MATERIALIZED")).toBeVisible();
   // The size column is right-aligned: the formatted cell sits flush to the
   // right edge of its cell.
-  const sizeCell = page.getByRole("cell", { name: "1.3 GB" }).element();
+  const sizeCell = screen.getByRole("cell", { name: "1.3 GB" });
   const sizeValue = sizeCell.querySelector("span") ?? sizeCell;
   expect(
     sizeCell.getBoundingClientRect().right -
       sizeValue.getBoundingClientRect().right
   ).toBeLessThanOrEqual(24);
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-schema-detail-summary"
-  );
 });
 
 test("data explorer schema detail captures active object filters", async () => {
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <SchemaDetail
       onSelectTable={() => undefined}
       onSelectView={() => undefined}
@@ -1556,7 +1549,7 @@ test("data explorer schema detail captures active object filters", async () => {
   await page.getByRole("heading", { name: "sales" }).click();
 
   await expect.element(page.getByText("daily_rollups")).toBeVisible();
-  await expect.element(page.getByText("orders")).not.toBeInTheDocument();
+  await expect.element(page.getByText("orders")).not.toBeAttached();
   await expect
     .element(page.getByRole("button", { name: ACTIVE_KIND_FILTER_RE }))
     .toBeVisible();
@@ -1566,15 +1559,12 @@ test("data explorer schema detail captures active object filters", async () => {
   await expect
     .element(page.getByRole("button", { name: "Clear all" }))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-schema-active-filters"
-  );
 });
 
 test("data explorer schema detail scopes the map to the selected schema", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <SchemaDetail
       activeTab="map"
       databaseId="logistics"
@@ -1595,8 +1585,8 @@ test("data explorer schema detail scopes the map to the selected schema", async 
   );
 
   await expect.element(page.getByText("shipments")).toBeVisible();
-  await expect.element(page.getByText("ports")).not.toBeInTheDocument();
-  await expect.element(page.getByText("change_log")).not.toBeInTheDocument();
+  await expect.element(page.getByText("ports")).not.toBeAttached();
+  await expect.element(page.getByText("change_log")).not.toBeAttached();
 
   const schemaListParents = schemaMapCatalog.observedQueries
     .filter(
@@ -1611,114 +1601,99 @@ test("data explorer schema detail scopes the map to the selected schema", async 
 
 test("data explorer schema map shows relationships without a floating help overlay", async () => {
   const catalog = seedSchemaMapVisualCatalog();
-  const onSelectTable = vi.fn();
+  const onSelectTable = rs.fn();
 
-  await page.viewport(
-    SCHEMA_MAP_BROWSER_VIEWPORT.width,
-    SCHEMA_MAP_BROWSER_VIEWPORT.height
+  await render(
+    <ScreenshotFrame>
+      <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
+        <ExplorerSchemaMap
+          activeSchemaName="shipping"
+          databaseId="logistics"
+          enabled={true}
+          instanceId="prod"
+          onSelectTable={onSelectTable}
+          schemas={catalog.schemas}
+        />
+      </div>
+    </ScreenshotFrame>
   );
-  try {
-    render(
-      <ScreenshotFrame>
-        <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
-          <ExplorerSchemaMap
-            activeSchemaName="shipping"
-            databaseId="logistics"
-            enabled={true}
-            instanceId="prod"
-            onSelectTable={onSelectTable}
-            schemas={catalog.schemas}
-          />
-        </div>
-      </ScreenshotFrame>
-    );
 
-    await expect
-      .element(page.getByRole("heading", { name: "Schema map" }))
-      .toBeVisible();
-    await expect.element(page.getByText("logistics")).toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
-      .toBeVisible();
-    await expect.element(page.getByText("shipment_event")).toBeVisible();
-    await expect.element(page.getByText("shipments")).toBeVisible();
-    await expect.element(page.getByText("carriers")).toBeVisible();
-    await expect.element(page.getByText("change_log")).toBeVisible();
-    await expect
-      .element(page.getByRole("searchbox", { name: "Find a table" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByText("Curved lines show foreign keys."))
-      .not.toBeInTheDocument();
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-schema-map"
-    );
+  await expect
+    .element(page.getByRole("heading", { name: "Schema map" }))
+    .toBeVisible();
+  await expect.element(page.getByText("logistics")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+    .toBeVisible();
+  await expect.element(page.getByText("shipment_event")).toBeVisible();
+  await expect.element(page.getByText("shipments")).toBeVisible();
+  await expect.element(page.getByText("carriers")).toBeVisible();
+  await expect.element(page.getByText("change_log")).toBeVisible();
+  await expect
+    .element(page.getByRole("searchbox", { name: "Find a table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Curved lines show foreign keys."))
+    .not.toBeAttached();
 
-    const metadataParents = schemaMapCatalog.observedQueries
-      .filter(({ methodName }) => methodName === "ListTableColumns")
-      .map(({ parent }) => parent);
-    expect(new Set(metadataParents)).toEqual(
-      new Set([...Object.keys(schemaMapCatalog.columnsByTable)])
-    );
+  const metadataParents = schemaMapCatalog.observedQueries
+    .filter(({ methodName }) => methodName === "ListTableColumns")
+    .map(({ parent }) => parent);
+  expect(new Set(metadataParents)).toEqual(
+    new Set([...Object.keys(schemaMapCatalog.columnsByTable)])
+  );
 
-    await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
-    await page.getByText("catalog").last().click();
-    expect(
-      schemaMapCatalog.observedQueries.some(
-        ({ methodName, parent }) =>
-          methodName === "ListTableColumns" &&
-          parent.includes("/schemas/catalog/")
-      )
-    ).toBe(true);
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
-      .toBeVisible();
-    await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+  await page.getByText("catalog").last().click();
+  expect(
+    schemaMapCatalog.observedQueries.some(
+      ({ methodName, parent }) =>
+        methodName === "ListTableColumns" &&
+        parent.includes("/schemas/catalog/")
+    )
+  ).toBe(true);
+  await expect
+    .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Reset" }).click();
 
-    const map = document.querySelector<SVGElement>(
-      'svg[data-testid="schema-map-canvas"]'
-    );
-    const initialWidth = Number(map?.getAttribute("width"));
-    await page.getByRole("button", { name: "Zoom in" }).click();
-    expect(Number(map?.getAttribute("width"))).toBeGreaterThan(initialWidth);
+  const map = document.querySelector<SVGElement>(
+    'svg[data-testid="schema-map-canvas"]'
+  );
+  const initialWidth = Number(map?.getAttribute("width"));
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  expect(Number(map?.getAttribute("width"))).toBeGreaterThan(initialWidth);
 
-    await page.getByRole("button", { name: "shipping.shipments" }).click();
-    await expect
-      .element(page.getByRole("button", { name: "Open data" }))
-      .toBeVisible();
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-schema-map-selected-table"
-    );
-    await page.getByRole("button", { name: "Open data" }).click();
-    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+  await page.getByRole("button", { name: "shipping.shipments" }).click();
+  await expect
+    .element(page.getByRole("button", { name: "Open data" }))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Open data" }).click();
+  expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
 
-    onSelectTable.mockClear();
-    const shipmentsButton = page
-      .getByRole("button", { name: "shipping.shipments" })
-      .element();
-    shipmentsButton.focus();
-    shipmentsButton.dispatchEvent(
-      new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
-    );
-    expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
+  onSelectTable.mockClear();
+  const shipmentsButton = screen.getByRole("button", {
+    name: "shipping.shipments",
+  });
+  shipmentsButton.focus();
+  shipmentsButton.dispatchEvent(
+    new KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
+  );
+  expect(onSelectTable).toHaveBeenCalledWith("shipping", "shipments");
 
-    await page
-      .getByRole("searchbox", { name: "Find a table" })
-      .fill("change_log");
-    await expect.element(page.getByText("change_log")).toBeVisible();
-    await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
-  } finally {
-    await page.viewport(
-      DEFAULT_BROWSER_VIEWPORT.width,
-      DEFAULT_BROWSER_VIEWPORT.height
-    );
-  }
+  await page
+    .getByRole("searchbox", { name: "Find a table" })
+    .fill("change_log");
+  await expect.element(page.getByText("change_log")).toBeVisible();
+  await expect
+    .element(page.getByText("shipments", { exact: true }))
+    .not.toBeAttached();
 }, 30_000);
 
 test("data explorer schema map loads table details without selection", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1732,7 +1707,7 @@ test("data explorer schema map loads table details without selection", async () 
   await expect.element(page.getByText("change_log")).toBeVisible();
   await expect
     .element(page.getByText("Select table to load details."))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   expect(
     schemaMapCatalog.observedQueries.some(
       ({ methodName, parent }) =>
@@ -1745,7 +1720,7 @@ test("data explorer schema map loads table details without selection", async () 
 test("data explorer schema map selection does not move nodes", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1786,50 +1761,39 @@ test("data explorer schema map selection does not move nodes", async () => {
 test("data explorer schema map uses a compact schema filter at narrow widths", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  await page.viewport(900, 1000);
-  try {
-    render(
-      <ScreenshotFrame>
-        <div className="flex h-[900px] w-[680px] bg-background text-foreground">
-          <ExplorerSchemaMap
-            activeSchemaName="shipping"
-            databaseId="logistics"
-            enabled={true}
-            instanceId="prod"
-            onSelectTable={() => undefined}
-            schemas={catalog.schemas}
-          />
-        </div>
-      </ScreenshotFrame>
-    );
+  await render(
+    <ScreenshotFrame>
+      <div className="flex h-[900px] w-[680px] bg-background text-foreground">
+        <ExplorerSchemaMap
+          activeSchemaName="shipping"
+          databaseId="logistics"
+          enabled={true}
+          instanceId="prod"
+          onSelectTable={() => undefined}
+          schemas={catalog.schemas}
+        />
+      </div>
+    </ScreenshotFrame>
+  );
 
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
-      .not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
+    .not.toBeAttached();
 
-    await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
-    await page.getByText("catalog").last().click();
+  await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+  await page.getByText("catalog").last().click();
 
-    await expect.element(page.getByText("ports")).toBeVisible();
-    await expect.element(page.getByText("shipments")).not.toBeInTheDocument();
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-schema-map-compact-toolbar"
-    );
-  } finally {
-    await page.viewport(
-      DEFAULT_BROWSER_VIEWPORT.width,
-      DEFAULT_BROWSER_VIEWPORT.height
-    );
-  }
+  await expect.element(page.getByText("ports")).toBeVisible();
+  await expect.element(page.getByText("shipments")).not.toBeAttached();
 });
 
 test("data explorer schema map keeps schema labels clear of group borders", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1863,7 +1827,7 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
 test("data explorer schema map spells out uppercase key labels", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1882,7 +1846,7 @@ test("data explorer schema map spells out uppercase key labels", async () => {
 test("data explorer schema map does not clip table card decoration", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1897,7 +1861,9 @@ test("data explorer schema map does not clip table card decoration", async () =>
     name: "shipping.carriers",
   });
   await expect.element(tableCardLocator).toBeVisible();
-  const tableCard = tableCardLocator.element();
+  const tableCard = screen.getByRole("button", {
+    name: "shipping.carriers",
+  });
   const cardBoundary = tableCard.closest("foreignObject");
   if (!(cardBoundary instanceof SVGElement)) {
     throw new Error("Expected the table card SVG boundary to render.");
@@ -1909,7 +1875,7 @@ test("data explorer schema map does not clip table card decoration", async () =>
 test("data explorer schema map emphasizes incoming and outgoing relationships", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1939,11 +1905,9 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
 
   for (const connected of [outgoing, incoming]) {
     expect(connected.getAttribute("stroke-dasharray")).toBe("7 5");
-    const style = getComputedStyle(connected);
-    expect(style.animationName).not.toBe("none");
-    expect(style.animationDuration).toBe("0.5s");
-    expect(style.animationIterationCount).toBe("infinite");
-    expect(style.opacity).toBe("0.95");
+    // The dash animation is covered in Playwright: this runner forces
+    // prefers-reduced-motion, which turns it off.
+    expect(getComputedStyle(connected).opacity).toBe("0.95");
   }
 
   await page.getByRole("button", { name: "shipping.carriers" }).click();
@@ -1954,7 +1918,7 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
 test("data explorer schema map places controls directly after the schema filter", async () => {
   const catalog = seedSchemaMapVisualCatalog();
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -1969,7 +1933,9 @@ test("data explorer schema map places controls directly after the schema filter"
     name: SCHEMA_MAP_FILTER_RE,
   });
   await expect.element(schemaFilterLocator).toBeVisible();
-  const schemaFilter = schemaFilterLocator.element();
+  const schemaFilter = screen.getByRole("button", {
+    name: SCHEMA_MAP_FILTER_RE,
+  });
   expect(
     schemaFilter.nextElementSibling?.querySelector(
       'input[aria-label="Find a table"]'
@@ -1982,7 +1948,7 @@ test("data explorer schema map surfaces partial catalog failures and truncation"
   schemaMapCatalog.errorMethods = ["ListViews"];
   schemaMapCatalog.truncatedSchemas = ["shipping"];
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -2009,7 +1975,7 @@ test("data explorer schema map omits tables whose details fail", async () => {
   const catalog = seedSchemaMapVisualCatalog();
   schemaMapCatalog.errorParents = [tableResource("catalog", "routes")];
 
-  render(
+  await render(
     <ExplorerSchemaMap
       activeSchemaName="shipping"
       databaseId="logistics"
@@ -2028,7 +1994,7 @@ test("data explorer schema map omits tables whose details fail", async () => {
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "catalog.routes" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 });
 
 test("data explorer materialized view detail stays readable", async () => {
@@ -2072,7 +2038,7 @@ test("data explorer materialized view detail stays readable", async () => {
   });
   viewQueries.dependencies.data = { pages: [{ viewDependencies: [] }] };
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <ViewDetail
       view={createProto(ViewSchema, {
         comment:
@@ -2100,9 +2066,6 @@ test("data explorer materialized view detail stays readable", async () => {
   await expect
     .element(page.getByText("Materialized view · owner: analytics_owner"))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-view-detail"
-  );
 });
 
 test("data explorer view notice check displays returned notices", async () => {
@@ -2115,7 +2078,7 @@ test("data explorer view notice check displays returned notices", async () => {
     ],
   };
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <ViewDetail
       view={createProto(ViewSchema, {
         comment: "Tracks paid revenue by day for finance reporting.",
@@ -2139,13 +2102,10 @@ test("data explorer view notice check displays returned notices", async () => {
   await expect
     .element(page.getByText("HINT: Refresh the view if estimates look stale"))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-view-notices"
-  );
 });
 
 test("data explorer schema detail highlights stale catalog warnings", async () => {
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <SchemaDetail
       onSelectTable={() => undefined}
       onSelectView={() => undefined}
@@ -2175,14 +2135,11 @@ test("data explorer schema detail highlights stale catalog warnings", async () =
   await expect
     .element(page.getByText("Showing cached catalog. Refresh failed."))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-schema-sync-warning"
-  );
 });
 
 test("data explorer table columns match the redesign inventory", async () => {
   seedShippingColumnsDesignQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="columns"
@@ -2201,40 +2158,36 @@ test("data explorer table columns match the redesign inventory", async () => {
   );
 
   await expect
-    .element(page.getByRole("cell", { exact: true, name: "Storage" }))
+    .element(page.getByRole("columnheader", { exact: true, name: "Storage" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("cell", { exact: true, name: "Distinct" }))
+    .element(page.getByRole("columnheader", { exact: true, name: "Distinct" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("cell", { exact: true, name: "Null %" }))
+    .element(page.getByRole("columnheader", { exact: true, name: "Null %" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("cell", { exact: true, name: "Avg width" }))
+    .element(page.getByRole("columnheader", { exact: true, name: "Avg width" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("cell", { name: ID_PRIMARY_KEY_CELL_RE }))
     .toBeVisible();
-  await expect.element(page.getByText("Unique")).toBeVisible();
+  await expect.element(page.getByText("Unique", { exact: true })).toBeVisible();
   await expect.element(page.getByText("Foreign key")).toBeVisible();
-  await expect.element(page.getByText("Index")).toBeVisible();
+  await expect.element(page.getByText("Index", { exact: true })).toBeVisible();
   await expect
     .element(page.getByText("Human-readable booking reference"))
     .toBeVisible();
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
   await expect
     .element(page.getByText("11 columns · 4 indexed · 1 nullable"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByText(TABLE_COLUMNS_LAST_FETCHED_RE))
     .toBeVisible();
-  await expect
-    .element(page.getByText("table · 4 columns"))
-    .not.toBeInTheDocument();
+  await expect.element(page.getByText("table · 4 columns")).not.toBeAttached();
 
-  const searchInput = page
-    .getByRole("textbox", { name: "Search columns…" })
-    .element();
+  const searchInput = screen.getByRole("textbox", { name: "Search columns…" });
   const filterBar = requireFacetFilterBar("column facet filters");
   expect(filterBar.textContent).toContain("Type");
   expect(filterBar.textContent).toContain("Key");
@@ -2288,9 +2241,6 @@ test("data explorer table columns match the redesign inventory", async () => {
   await expect
     .element(page.getByRole("button", { name: "Next page" }))
     .toBeEnabled();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-columns"
-  );
   await page.getByRole("button", { name: "Next page" }).click();
   await expect.element(page.getByText("created_at")).toBeVisible();
   await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
@@ -2315,13 +2265,13 @@ test("data explorer table columns match the redesign inventory", async () => {
   await expect.element(page.getByText("Set NULL once delivered")).toBeVisible();
   await expect
     .element(page.getByText("1 column · 0 indexed · 1 nullable"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
 });
 
 test("data explorer table keys preserve the existing relationship view", async () => {
   seedTableDetailQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="keys"
@@ -2349,9 +2299,6 @@ test("data explorer table keys preserve the existing relationship view", async (
   await expect
     .element(page.getByText("customers_status_account_idx"))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-keys"
-  );
 });
 
 test("data explorer table columns show generated and identity metadata", async () => {
@@ -2387,7 +2334,7 @@ test("data explorer table columns show generated and identity metadata", async (
     ],
   });
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="columns"
@@ -2408,7 +2355,7 @@ test("data explorer table columns show generated and identity metadata", async (
   await expect.element(page.getByText("GENERATED")).toBeVisible();
   await expect.element(page.getByText("AS lower(email)")).toBeVisible();
 
-  const badgeRow = page.getByText("IDENTITY").element().parentElement;
+  const badgeRow = screen.getByText("IDENTITY").parentElement;
   if (!badgeRow) {
     throw new Error("Expected identity badges to render in a row.");
   }
@@ -2417,7 +2364,7 @@ test("data explorer table columns show generated and identity metadata", async (
 
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
   seedTableDetailQueries();
-  render(
+  await render(
     <ScreenshotFrame>
       <div className="flex h-[320px] w-[1100px] flex-col overflow-hidden rounded-2xl border border-border bg-background p-8 text-foreground">
         <TableDetail
@@ -2454,7 +2401,7 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
 
 test("data explorer table indexes have a redesigned table baseline", async () => {
   seedTableDetailQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="indexes"
@@ -2480,9 +2427,7 @@ test("data explorer table indexes have a redesigned table baseline", async () =>
   expect(requireIndexSummaryStrip().textContent).toBe(
     "2 indexes · 416 KB total vs heap 40.5 MB · 30 scans since stats reset"
   );
-  const indexSearch = page
-    .getByRole("textbox", { name: "Search indexes…" })
-    .element();
+  const indexSearch = screen.getByRole("textbox", { name: "Search indexes…" });
   const indexFilterBar = requireFacetFilterBar("index facet filters");
   await expect
     .element(page.getByRole("button", { exact: true, name: "Method" }))
@@ -2504,17 +2449,14 @@ test("data explorer table indexes have a redesigned table baseline", async () =>
   await expect
     .element(page.getByTitle("(status, account_id) INCLUDE (last_seen_at)"))
     .toBeVisible();
-  expect(
-    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
-  ).toHaveLength(2);
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-indexes"
-  );
+  await expect
+    .element(page.getByRole("button", { name: "Copy CREATE INDEX SQL" }))
+    .toHaveCount(2);
 });
 
 test("data explorer table indexes constraints policies and triggers stay readable", async () => {
   seedTableDetailQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="indexes"
@@ -2547,18 +2489,28 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   await expect
     .element(page.getByTitle("(status, account_id) INCLUDE (last_seen_at)"))
     .toBeVisible();
-  expect(
-    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
-  ).toHaveLength(2);
+  await expect
+    .element(page.getByRole("button", { name: "Copy CREATE INDEX SQL" }))
+    .toHaveCount(2);
 
   await page.getByRole("tab", { exact: true, name: "Constraints 2" }).click();
-  await expect.element(page.getByText("customers_pkey")).toBeVisible();
+  // Visited tab panels stay mounted but hidden; scope to the visible one.
+  const constraintsPanel = page.getByRole("tabpanel", { name: "Constraints" });
   await expect
-    .element(page.getByText("customers_account_id_fkey"))
+    .element(constraintsPanel.getByText("customers_pkey"))
     .toBeVisible();
-  await expect.element(page.getByText("PRIMARY KEY")).toBeVisible();
-  await expect.element(page.getByText("FOREIGN KEY")).toBeVisible();
-  await expect.element(page.getByText("public.accounts ↗")).toBeVisible();
+  await expect
+    .element(constraintsPanel.getByText("customers_account_id_fkey"))
+    .toBeVisible();
+  await expect
+    .element(constraintsPanel.getByText("PRIMARY KEY", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(constraintsPanel.getByText("FOREIGN KEY", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(constraintsPanel.getByText("public.accounts ↗"))
+    .toBeVisible();
   expect(
     document.querySelector('[data-slot="facet-filter-bar"]')
   ).not.toBeNull();
@@ -2585,17 +2537,11 @@ test("data explorer table indexes constraints policies and triggers stay readabl
   await expect
     .element(page.getByRole("combobox", { name: "Policy command" }))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-policies"
-  );
 
   await page.getByRole("tab", { exact: true, name: "Triggers 1" }).click();
   await expect
     .element(page.getByText("customers_audit_trigger").first())
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-triggers"
-  );
 });
 
 test("data explorer constraints tab matches the redesigned table", async () => {
@@ -2658,7 +2604,7 @@ test("data explorer constraints tab matches the redesigned table", async () => {
     }
   );
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="constraints"
@@ -2680,8 +2626,12 @@ test("data explorer constraints tab matches the redesigned table", async () => {
   await expect
     .element(page.getByText("shipment_event_shipment_id_fkey"))
     .toBeVisible();
-  await expect.element(page.getByText("PRIMARY KEY")).toBeVisible();
-  await expect.element(page.getByText("FOREIGN KEY")).toBeVisible();
+  await expect
+    .element(page.getByText("PRIMARY KEY", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("FOREIGN KEY", { exact: true }))
+    .toBeVisible();
   // Referential actions live inside the definition cell (full text in title).
   await expect
     .element(
@@ -2715,9 +2665,6 @@ test("data explorer constraints tab matches the redesigned table", async () => {
     "Keys primary key and uniqueness"
   );
   expect(document.body.textContent).not.toContain("validated");
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-constraints-redesign"
-  );
 });
 
 test("data explorer constraints tab paginates the dense table", async () => {
@@ -2736,7 +2683,7 @@ test("data explorer constraints tab paginates the dense table", async () => {
     }
   );
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="constraints"
@@ -2765,9 +2712,6 @@ test("data explorer constraints tab paginates the dense table", async () => {
     .toBeVisible();
   await expect.element(page.getByText("Showing 11–11 of 11")).toBeVisible();
   await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-constraints-pagination"
-  );
 });
 
 test("data explorer constraints tab covers validation and action states", async () => {
@@ -2810,7 +2754,7 @@ test("data explorer constraints tab covers validation and action states", async 
     }
   );
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="constraints"
@@ -2836,7 +2780,9 @@ test("data explorer constraints tab covers validation and action states", async 
       )
     )
     .toBeVisible();
-  await expect.element(page.getByText("Not valid")).toBeVisible();
+  await expect
+    .element(page.getByText("Not valid", { exact: true }))
+    .toBeVisible();
   await expect.element(page.getByText("CHECK").first()).toBeVisible();
   await expect.element(page.getByText("EXCLUSION")).toBeVisible();
   expect(document.body.textContent).not.toContain(
@@ -2845,16 +2791,12 @@ test("data explorer constraints tab covers validation and action states", async 
   expect(document.body.textContent).not.toContain(
     "Other constraints exclusion and other rules"
   );
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-constraint-states"
-  );
 });
 
 test("data explorer table policies explain RLS composition", async () => {
-  await page.viewport(1280, 1300);
   seedTableDetailQueries();
   seedInvoicePolicies();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="billing"
       initialTab="policies"
@@ -2883,45 +2825,37 @@ test("data explorer table policies explain RLS composition", async () => {
   await expect
     .element(page.getByRole("button", { exact: true, name: "Mode" }))
     .toBeVisible();
-  const pageSizeHeight = page
+  const pageSizeHeight = screen
     .getByRole("combobox", { name: "Rows per page" })
-    .element()
     .getBoundingClientRect().height;
   expect(pageSizeHeight).toBeGreaterThanOrEqual(28);
-  const paginationBox = page
+  const paginationBox = screen
     .getByRole("group", { name: "Policies pagination" })
-    .element()
     .getBoundingClientRect();
-  const pageSizeBox = page
+  const pageSizeBox = screen
     .getByRole("combobox", { name: "Rows per page" })
-    .element()
     .getBoundingClientRect();
   expect(pageSizeBox.left).toBeGreaterThan(
     paginationBox.left + paginationBox.width / 2
   );
   expect(
-    page
+    screen
       .getByRole("button", { name: "Previous policies page" })
-      .element()
       .getBoundingClientRect().height
   ).toBe(28);
   expect(
-    page
+    screen
       .getByRole("button", { name: "Next policies page" })
-      .element()
       .getBoundingClientRect().height
   ).toBe(28);
   await expect
     .element(page.getByText("2 permissive policies apply", { exact: false }))
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-policies-rls-composition"
-  );
 });
 
 test("data explorer table indexes match the redesign complex usage scenario", async () => {
   seedShipmentIndexesRedesignQueries();
-  renderScaledExplorerSurface(
+  await renderScaledExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="indexes"
@@ -2958,7 +2892,7 @@ test("data explorer table indexes match the redesign complex usage scenario", as
   );
   await expect.element(page.getByText("48.1M")).toBeVisible();
   await expect.element(page.getByText("99.7%")).toBeVisible();
-  await expect.element(page.getByText("Unused")).toBeVisible();
+  await expect.element(page.getByText("Unused", { exact: true })).toBeVisible();
   // Predicate and expression details live in the Columns cells.
   await expect
     .element(page.getByTitle("(status) WHERE status <> 'delivered'"))
@@ -2973,12 +2907,9 @@ test("data explorer table indexes match the redesign complex usage scenario", as
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
-  expect(
-    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
-  ).toHaveLength(4);
-  await expect(page.getByTestId("indexes-complex-frame")).toMatchScreenshot(
-    "data-explorer-table-indexes-complex"
-  );
+  await expect
+    .element(page.getByRole("button", { name: "Copy CREATE INDEX SQL" }))
+    .toHaveCount(4);
 });
 
 test("data explorer table indexes pagination has a visual baseline", async () => {
@@ -2995,7 +2926,7 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
       })
     ),
   });
-  renderPaginatedIndexesSurface(
+  await renderPaginatedIndexesSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="indexes"
@@ -3021,14 +2952,11 @@ test("data explorer table indexes pagination has a visual baseline", async () =>
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
     .toBeVisible();
-  await expect(page.getByTestId("indexes-pagination-frame")).toMatchScreenshot(
-    "data-explorer-table-indexes-pagination"
-  );
 });
 
 test("data explorer table triggers match redesign", async () => {
   seedTriggerRedesignQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="triggers"
@@ -3056,8 +2984,12 @@ test("data explorer table triggers match redesign", async () => {
   });
   await expect.element(triggerSearch).toBeVisible();
   await expect.element(triggerStateFilter).toBeVisible();
-  const searchBounds = triggerSearch.element().getBoundingClientRect();
-  const stateBounds = triggerStateFilter.element().getBoundingClientRect();
+  const searchBounds = screen
+    .getByRole("textbox", { name: "Search triggers…" })
+    .getBoundingClientRect();
+  const stateBounds = screen
+    .getByRole("button", { name: "State" })
+    .getBoundingClientRect();
   expect(stateBounds.left).toBeGreaterThan(searchBounds.right);
   expect(Math.abs(stateBounds.top - searchBounds.top)).toBeLessThanOrEqual(1);
   await expect
@@ -3067,22 +2999,18 @@ test("data explorer table triggers match redesign", async () => {
     .element(page.getByText("→ shipping.enrich_event_location()"))
     .toBeVisible();
   await expect.element(page.getByText("ROW").first()).toBeVisible();
-  await expect.element(page.getByText("disabled")).toBeVisible();
   await expect
-    .element(page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))"))
+    .element(page.getByText("disabled", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(
+      page.getByText("WHEN ((old.status IS DISTINCT FROM new.status))", {
+        exact: true,
+      })
+    )
     .toBeVisible();
   await expect.element(page.getByText("STATEMENT").first()).toBeVisible();
   await document.fonts.ready;
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-triggers-redesign",
-    { timeout: 20_000 }
-  );
-  await expect(
-    page.getByTestId("data-explorer-table-triggers")
-  ).toMatchScreenshot("data-explorer-table-trigger-card-states", {
-    comparatorOptions: { threshold: 0.2 },
-    timeout: 20_000,
-  });
 
   await triggerStateFilter.click();
   const disabledOption = page.getByRole("option", {
@@ -3090,15 +3018,11 @@ test("data explorer table triggers match redesign", async () => {
     name: "Disabled",
   });
   await expect.element(disabledOption).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-trigger-filter-open",
-    { timeout: 20_000 }
-  );
 
   await disabledOption.click();
   await expect
     .element(page.getByText("trg_event_enrich").first())
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByText("trg_shipments_notify").first())
     .toBeVisible();
@@ -3107,10 +3031,6 @@ test("data explorer table triggers match redesign", async () => {
     .click();
   await triggerSearch.fill("missing");
   await expect.element(page.getByText("No triggers found")).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-trigger-filter-empty",
-    { timeout: 20_000 }
-  );
 });
 
 test("data explorer trigger cards paginate dense resources", async () => {
@@ -3128,7 +3048,7 @@ test("data explorer trigger cards paginate dense resources", async () => {
       });
     }),
   });
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="triggers"
@@ -3152,10 +3072,10 @@ test("data explorer trigger cards paginate dense resources", async () => {
   await expect.element(page.getByText("trg_bulk_00").first()).toBeVisible();
   await expect
     .element(page.getByText("trg_bulk_10").first())
-    .not.toBeInTheDocument();
-  const pageSizeSelect = page
-    .getByRole("combobox", { name: "Triggers per page" })
-    .element();
+    .not.toBeAttached();
+  const pageSizeSelect = screen.getByRole("combobox", {
+    name: "Triggers per page",
+  });
   const paginationFooter = pageSizeSelect.closest(
     '[data-slot="pagination-footer"]'
   );
@@ -3164,19 +3084,13 @@ test("data explorer trigger cards paginate dense resources", async () => {
   }
   paginationFooter.scrollIntoView({ block: "center" });
   await document.fonts.ready;
-  await expect(page.elementLocator(paginationFooter)).toMatchScreenshot(
-    "data-explorer-table-trigger-pagination",
-    {
-      timeout: 20_000,
-    }
-  );
 
   await page.getByRole("button", { name: "Next page" }).click();
   await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
   await expect.element(page.getByText("trg_bulk_10").first()).toBeVisible();
   await expect
     .element(page.getByText("trg_bulk_00").first())
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   await page.getByRole("combobox", { name: "Triggers per page" }).click();
   await page.getByRole("option", { exact: true, name: "25" }).click();
@@ -3187,7 +3101,7 @@ test("data explorer trigger cards paginate dense resources", async () => {
 
 test("data explorer table data tab has a visual baseline", async () => {
   seedTableDetailQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="data"
@@ -3211,81 +3125,67 @@ test("data explorer table data tab has a visual baseline", async () => {
   await expect
     .element(page.getByText(LAST_FETCHED_11_PM_RE).first())
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-data"
-  );
 });
 
 test("data explorer table definition tab has a visual baseline", async () => {
-  await page.viewport(1280, 1800);
-  try {
-    seedDefinitionDesignQueries();
-    renderExplorerSurface(
-      <TableDetail
-        databaseId="logistics"
-        initialTab="definition"
-        instanceId="prod"
-        schemaName="audit"
-        table={createProto(TableSchema, {
-          displayName: "change_log",
-          name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
-          owner: "app_owner",
-          rowCount: 4_200_000n,
-          sizeBytes: 4_187_000_000n,
-          tableType: Table_TableType.BASE_TABLE,
-        })}
-        tableName="change_log"
-      />
-    );
+  seedDefinitionDesignQueries();
+  await renderExplorerSurface(
+    <TableDetail
+      databaseId="logistics"
+      initialTab="definition"
+      instanceId="prod"
+      schemaName="audit"
+      table={createProto(TableSchema, {
+        displayName: "change_log",
+        name: "instances/prod/databases/logistics/schemas/audit/tables/change_log",
+        owner: "app_owner",
+        rowCount: 4_200_000n,
+        sizeBytes: 4_187_000_000n,
+        tableType: Table_TableType.BASE_TABLE,
+      })}
+      tableName="change_log"
+    />
+  );
 
-    await expect
-      .element(page.getByRole("heading", { name: "Create table" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Reproduce locally" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Policies" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByRole("heading", { name: "Triggers" }))
-      .toBeVisible();
-    await expect
-      .element(page.getByText("Copy all steps", { exact: true }))
-      .toBeVisible();
-    expect(
-      document.querySelectorAll(
-        'code.language-sql[data-syntax-highlighter="shiki"]'
-      ).length
-    ).toBeGreaterThan(2);
-    const dumpCommand = page
-      .getByRole("region", { name: "Dump schema only command" })
-      .element();
-    const dumpCommandCode = dumpCommand.querySelector("pre");
-    if (!dumpCommandCode) {
-      throw new Error("Expected the highlighted dump command to render.");
-    }
-    expect(getComputedStyle(dumpCommandCode).whiteSpace).toBe("pre");
-    await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-      "data-explorer-table-definition"
-    );
-  } finally {
-    await page.viewport(
-      DEFAULT_BROWSER_VIEWPORT.width,
-      DEFAULT_BROWSER_VIEWPORT.height
-    );
+  await expect
+    .element(page.getByRole("heading", { name: "Create table" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: POLICIES_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("tab", { name: TRIGGERS_ONE_TAB_RE }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Reproduce locally" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Policies" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Triggers" }))
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Copy all steps", { exact: true }))
+    .toBeVisible();
+  expect(
+    document.querySelectorAll(
+      'code.language-sql[data-syntax-highlighter="shiki"]'
+    ).length
+  ).toBeGreaterThan(2);
+  const dumpCommand = screen.getByRole("region", {
+    name: "Dump schema only command",
+  });
+  const dumpCommandCode = dumpCommand.querySelector("pre");
+  if (!dumpCommandCode) {
+    throw new Error("Expected the highlighted dump command to render.");
   }
+  expect(getComputedStyle(dumpCommandCode).whiteSpace).toBe("pre");
 }, 10_000);
 
 test("data explorer table definition stays a full-width vertical flow", async () => {
   seedDefinitionDesignQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="definition"
@@ -3307,9 +3207,8 @@ test("data explorer table definition stays a full-width vertical flow", async ()
     .toBeVisible();
 
   function cardForHeading(name: string) {
-    const card = page
+    const card = screen
       .getByRole("heading", { name })
-      .element()
       .closest<HTMLElement>('[data-slot="card"]');
     if (!card) {
       throw new Error(`Expected the ${name} card to render.`);
@@ -3335,13 +3234,13 @@ test("data explorer table definition stays a full-width vertical flow", async ()
   );
   expect(reproduceRect.top).toBeGreaterThan(referencedTablesRect.bottom);
 
-  const frame = page.getByTestId("screenshot-frame").element();
+  const frame = screen.getByTestId("screenshot-frame");
   expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth + 1);
 });
 
 test("data explorer definition toolbar keeps refresh reachable when narrow", async () => {
   seedDefinitionDesignQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="definition"
@@ -3361,11 +3260,9 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   await expect
     .element(page.getByRole("button", { exact: true, name: "Refresh" }))
     .toBeVisible();
-  const caption = page.getByText("Schema document", { exact: true }).element();
+  const caption = screen.getByText("Schema document");
   const toolbar = caption.parentElement;
-  const refresh = page
-    .getByRole("button", { exact: true, name: "Refresh" })
-    .element();
+  const refresh = screen.getByRole("button", { name: "Refresh" });
   if (!toolbar) {
     throw new Error("Expected the definition toolbar to render.");
   }
@@ -3374,12 +3271,11 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   expect(refresh.getBoundingClientRect().right).toBeLessThanOrEqual(
     toolbar.getBoundingClientRect().right + 1
   );
-  const highlightedCommand = page
-    .getByRole("region", { name: "Dump schema only command" })
-    .element();
-  const reproduceCard = page
+  const highlightedCommand = screen.getByRole("region", {
+    name: "Dump schema only command",
+  });
+  const reproduceCard = screen
     .getByRole("heading", { name: "Reproduce locally" })
-    .element()
     .closest<HTMLElement>('[data-slot="card"]');
   const definitionFlow = reproduceCard?.parentElement;
   if (!(reproduceCard && definitionFlow)) {
@@ -3393,14 +3289,11 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   );
   expect(getComputedStyle(highlightedCommand).overflowX).toBe("auto");
   expect(document.activeElement).not.toBe(highlightedCommand);
-  await expect(page.elementLocator(reproduceCard)).toMatchScreenshot(
-    "data-explorer-table-definition-reproduce-narrow"
-  );
 });
 
 test("data explorer definition commands are keyboard reachable", async () => {
   seedDefinitionDesignQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="logistics"
       initialTab="definition"
@@ -3417,23 +3310,21 @@ test("data explorer definition commands are keyboard reachable", async () => {
   await expect
     .element(page.getByRole("heading", { name: "Reproduce locally" }))
     .toBeVisible();
-  const highlightedCommand = page
-    .getByRole("region", { name: "Dump schema only command" })
-    .element();
+  const highlightedCommand = screen.getByRole("region", {
+    name: "Dump schema only command",
+  });
   expect(highlightedCommand.scrollWidth).toBeGreaterThan(
     highlightedCommand.clientWidth
   );
-  page
+  await page
     .getByRole("button", { name: "Copy dump schema only command" })
-    .element()
-    .focus();
-  await userEvent.tab();
+    .press("Tab");
   expect(document.activeElement).toBe(highlightedCommand);
 });
 
 test("data explorer index table stays inside narrow surfaces", async () => {
   seedTableDetailQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="indexes"
@@ -3456,11 +3347,11 @@ test("data explorer index table stays inside narrow surfaces", async () => {
   // Long definitions no longer render as SQL blocks; the Columns cell
   // truncates and keeps the full text in its title, and the CREATE INDEX SQL
   // moves into the per-row copy button value.
-  const columnsCell = page
-    .getByTitle("(status, account_id) INCLUDE (last_seen_at)")
-    .element();
+  const columnsCell = screen.getByTitle(
+    "(status, account_id) INCLUDE (last_seen_at)"
+  );
   const tableContainer = columnsCell.closest('[data-slot="table-container"]');
-  const frame = page.getByTestId("screenshot-frame").element();
+  const frame = screen.getByTestId("screenshot-frame");
 
   if (!(tableContainer && frame)) {
     throw new Error("Expected the index table to render inside the frame.");
@@ -3469,14 +3360,14 @@ test("data explorer index table stays inside narrow surfaces", async () => {
   expect(tableContainer.getBoundingClientRect().right).toBeLessThanOrEqual(
     frame.getBoundingClientRect().right + 1
   );
-  expect(
-    page.getByRole("button", { name: "Copy CREATE INDEX SQL" }).elements()
-  ).toHaveLength(2);
+  await expect
+    .element(page.getByRole("button", { name: "Copy CREATE INDEX SQL" }))
+    .toHaveCount(2);
 });
 
 test("data explorer table columns explain PostgreSQL type semantics", async () => {
   seedTypeAnnotationQueries();
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="columns"
@@ -3521,7 +3412,7 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     triggers: [],
   });
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="indexes"
@@ -3581,10 +3472,10 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
   ).not.toBeNull();
   await expect
     .element(page.getByText("How the server combines these"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByText("Preview visibility as"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   await page.getByRole("tab", { exact: true, name: "Triggers 0" }).click();
   await expect
@@ -3730,7 +3621,7 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     },
   };
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="partitions"
@@ -3750,16 +3641,16 @@ test("data explorer table partitions matches the imported redesign fixture", asy
 
   await expect
     .element(page.getByText("PostgreSQL statistics"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByText("4 partitions · pruning on", { exact: false }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Refresh" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("heading", { name: "Rows per partition" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByText("Partitioned by", { exact: false }))
     .toBeVisible();
@@ -3779,17 +3670,17 @@ test("data explorer table partitions matches the imported redesign fixture", asy
   await expect.element(page.getByText("2026-01-01 → 2026-04-01")).toBeVisible();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Schema" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Bound kind" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   await page
     .getByRole("textbox", { name: "Search partitions…" })
     .fill("archive");
   await expect
     .element(page.getByRole("row", { name: PARTITION_Q1_ROW_RE }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(page.getByRole("row", { name: PARTITION_DEFAULT_ROW_RE }))
     .toBeVisible();
@@ -3799,15 +3690,12 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     .toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
   await expect
     .element(
       page.getByText("The DEFAULT partition holds 46%", { exact: false })
     )
     .toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-partitions"
-  );
 });
 
 test("data explorer table partitions paginate large partition lists", async () => {
@@ -3839,7 +3727,7 @@ test("data explorer table partitions paginate large partition lists", async () =
     },
   };
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="partitions"
@@ -3864,14 +3752,14 @@ test("data explorer table partitions paginate large partition lists", async () =
   await expect.element(page.getByText("change_log_2026_m01")).toBeVisible();
   await expect
     .element(page.getByText("change_log_2026_m11"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   await page.getByRole("button", { name: "Next page" }).click();
   await expect.element(page.getByText(PARTITION_PAGE_TWO_RE)).toBeVisible();
   await expect.element(page.getByText("change_log_2026_m11")).toBeVisible();
   await expect
     .element(page.getByText("change_log_2026_m01"))
-    .not.toBeInTheDocument();
+    .not.toBeAttached();
 
   await page.getByRole("combobox", { name: "Rows per page" }).click();
   await page.getByRole("option", { exact: true, name: "25" }).click();
@@ -3893,7 +3781,7 @@ test("data explorer table child partition shows parent metadata", async () => {
     },
   };
 
-  renderExplorerSurface(
+  await renderExplorerSurface(
     <TableDetail
       databaseId="app"
       initialTab="partitions"
@@ -3917,7 +3805,4 @@ test("data explorer table child partition shows parent metadata", async () => {
     .element(page.getByText("analytics.events", { exact: true }))
     .toBeVisible();
   await expect.element(page.getByText(PARTITION_2024_BOUND_RE)).toBeVisible();
-  await expect(page.getByTestId("screenshot-frame")).toMatchScreenshot(
-    "data-explorer-table-child-partition"
-  );
 });

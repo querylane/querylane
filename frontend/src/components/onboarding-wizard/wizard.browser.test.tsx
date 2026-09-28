@@ -1,75 +1,41 @@
-import { create as createProto } from "@bufbuild/protobuf";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
-import { render } from "vitest-browser-react";
-import { OnboardingBrowserHarness } from "@/__tests__/browser-test-utils";
+import { page } from "@rstest/browser";
+import { render } from "@rstest/browser-react";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
+import { screen } from "@testing-library/dom";
+import {
+  OnboardingBrowserHarness,
+  ScreenshotFrame,
+} from "@/__tests__/browser-test-utils";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
-import { normalizeAppUiError } from "@/lib/ui-error";
-import {
-  AppDatabaseStatus_State,
-  AppDatabaseStatusSchema,
-} from "@/protogen/querylane/console/v1alpha1/console_pb";
-import {
-  GetOnboardingStateResponseSchema,
-  SetupMethod,
-  SetupProgressEventSchema,
-  SetupStep,
-  StepState,
-} from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
+import {
+  onboardingState,
+  STORAGE_FULL_ERROR_MESSAGE,
+} from "@/visual-harness/onboarding-scenario-data";
+import {
+  OnboardingProgressFailedScenario,
+  OnboardingProgressRunningScenario,
+  OnboardingProgressSuccessScenario,
+  OnboardingStorageFullScenario,
+  OnboardingYamlWaitingScenario,
+} from "@/visual-harness/onboarding-scenarios";
+
+// Pixels for every wizard phase live in e2e/visual/onboarding.spec.ts.
 
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/;
-const STORAGE_FULL_ERROR_MESSAGE =
-  "extract /Users/you/.querylane/embedded-postgres: no space left on device";
+const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 
-vi.mock("@/hooks/api/instance", () => ({
+rs.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
-    mutateAsync: vi.fn(async () => undefined),
+    mutateAsync: rs.fn(async () => undefined),
   }),
 }));
 
-function onboardingState() {
-  return createProto(GetOnboardingStateResponseSchema, {
-    appDatabaseStatus: createProto(AppDatabaseStatusSchema, {
-      state: AppDatabaseStatus_State.NOT_CONFIGURED,
-    }),
-    availableMethods: [
-      SetupMethod.UI_CONFIGURED,
-      SetupMethod.MANUAL_YAML,
-      SetupMethod.EMBEDDED,
-    ],
-    configFilePath: "/Users/you/.querylane/config.yaml",
-    embeddedDataPath: "/Users/you/.querylane/pgdata",
-    homePath: "/Users/you/.querylane",
-    isConfigured: false,
-    isHomeWritable: true,
-  });
-}
-
-function progressEvent({
-  stepId,
-  displayName,
-  state,
-  error = "",
-}: {
-  stepId: SetupStep;
-  displayName: string;
-  state: StepState;
-  error?: string;
-}) {
-  return createProto(SetupProgressEventSchema, {
-    displayName,
-    error,
-    state,
-    stepId,
-  });
-}
-
-function renderWizard() {
-  render(
+async function renderWizard() {
+  await render(
     <OnboardingBrowserHarness>
       <OnboardingWizardContent />
     </OnboardingBrowserHarness>
@@ -86,120 +52,12 @@ function getConfigurePhase(method: ConfigMethod) {
   return "configure_embedded";
 }
 
-function openConfigurePhase(method: ConfigMethod) {
+async function openConfigurePhase(method: ConfigMethod) {
   useOnboardingWizardStore.setState({
     phase: getConfigurePhase(method),
     selectedMethod: method,
   });
-  renderWizard();
-}
-
-function renderRunningProgress() {
-  useOnboardingWizardStore.setState({
-    phase: "progress_running",
-    progressEvents: [
-      progressEvent({
-        stepId: SetupStep.CONNECTING,
-        displayName: "Connect to PostgreSQL",
-        state: StepState.SUCCEEDED,
-      }),
-      progressEvent({
-        stepId: SetupStep.MIGRATING,
-        displayName: "Apply migrations",
-        state: StepState.IN_PROGRESS,
-      }),
-      progressEvent({
-        stepId: SetupStep.INITIALIZING_SERVICES,
-        displayName: "Initialize services",
-        state: StepState.PENDING,
-      }),
-    ],
-    selectedMethod: "ui_configured",
-  });
-  renderWizard();
-}
-
-function renderFailedProgress() {
-  const errorMessage = "password authentication failed for user querylane";
-  useOnboardingWizardStore.setState({
-    failedEvent: progressEvent({
-      stepId: SetupStep.MIGRATING,
-      displayName: "Apply migrations",
-      state: StepState.FAILED,
-      error: errorMessage,
-    }),
-    phase: "error_summary",
-    progressEvents: [
-      progressEvent({
-        stepId: SetupStep.CONNECTING,
-        displayName: "Connect to PostgreSQL",
-        state: StepState.SUCCEEDED,
-      }),
-      progressEvent({
-        stepId: SetupStep.MIGRATING,
-        displayName: "Apply migrations",
-        state: StepState.FAILED,
-        error: errorMessage,
-      }),
-    ],
-    selectedMethod: "ui_configured",
-    streamError: normalizeAppUiError(new Error(errorMessage), {
-      endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
-      source: "setup_stream",
-    }),
-  });
-  renderWizard();
-}
-
-function renderStorageFullProgress() {
-  useOnboardingWizardStore.setState({
-    failedEvent: progressEvent({
-      stepId: SetupStep.STARTING_EMBEDDED,
-      displayName: "Start embedded PostgreSQL",
-      state: StepState.FAILED,
-      error: STORAGE_FULL_ERROR_MESSAGE,
-    }),
-    phase: "error_summary",
-    progressEvents: [
-      progressEvent({
-        stepId: SetupStep.STARTING_EMBEDDED,
-        displayName: "Start embedded PostgreSQL",
-        state: StepState.FAILED,
-        error: STORAGE_FULL_ERROR_MESSAGE,
-      }),
-    ],
-    selectedMethod: "embedded",
-    streamError: normalizeAppUiError(new Error(STORAGE_FULL_ERROR_MESSAGE), {
-      endpoint: "/querylane.console.v1alpha1.ConsoleService/Setup",
-      source: "setup_stream",
-    }),
-  });
-  renderWizard();
-}
-
-function renderSuccessfulProgress() {
-  useOnboardingWizardStore.setState({
-    phase: "progress_success",
-    progressEvents: [
-      progressEvent({
-        stepId: SetupStep.CONNECTING,
-        displayName: "Connect to PostgreSQL",
-        state: StepState.SUCCEEDED,
-      }),
-      progressEvent({
-        stepId: SetupStep.MIGRATING,
-        displayName: "Apply migrations",
-        state: StepState.SUCCEEDED,
-      }),
-      progressEvent({
-        stepId: SetupStep.INITIALIZING_SERVICES,
-        displayName: "Initialize services",
-        state: StepState.SUCCEEDED,
-      }),
-    ],
-    selectedMethod: "ui_configured",
-  });
-  renderWizard();
+  await renderWizard();
 }
 
 beforeEach(() => {
@@ -214,9 +72,9 @@ beforeEach(() => {
   useOnboardingWizardStore.getState().resetSession();
 });
 
-describe("Onboarding wizard — browser visuals", () => {
+describe("Onboarding wizard — browser behavior", () => {
   test("method selection presents all available ways to get started", async () => {
-    renderWizard();
+    await renderWizard();
 
     await expect
       .element(
@@ -234,24 +92,19 @@ describe("Onboarding wizard — browser visuals", () => {
   });
 
   test("UI-configured path renders the default connection fields", async () => {
-    openConfigurePhase("ui_configured");
+    await openConfigurePhase("ui_configured");
 
     await expect
       .element(
         page.getByRole("heading", { name: "Querylane internal storage" })
       )
       .toBeVisible();
-    await expect.element(page.getByLabelText("Host")).toHaveValue("localhost");
-    await expect
-      .element(page.getByLabelText("Database"))
-      .toHaveValue("querylane");
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-ui-configured-fields"
-    );
+    await expect.element(page.getByLabel("Host")).toHaveValue("localhost");
+    await expect.element(page.getByLabel("Database")).toHaveValue("querylane");
   });
 
   test("UI-configured path renders advanced SSL negotiation options", async () => {
-    openConfigurePhase("ui_configured");
+    await openConfigurePhase("ui_configured");
 
     await page
       .getByRole("button", { name: ADVANCED_CONNECTION_OPTIONS_RE })
@@ -260,9 +113,6 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByRole("combobox", { name: "SSL negotiation" }))
       .toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-ui-configured-advanced-ssl"
-    );
   });
 
   test("UI-configured path requires a successful connection test before continuing", async () => {
@@ -270,40 +120,31 @@ describe("Onboarding wizard — browser visuals", () => {
 
     await page.getByRole("textbox", { name: "Password" }).fill("secret");
 
-    await expect
-      .element(page.getByRole("button", { name: "Continue" }))
-      .toBeDisabled();
     const continueButton = page.getByRole("button", { name: "Continue" });
-    const tooltipTrigger = continueButton
-      .element()
-      .closest("[data-base-ui-tooltip-trigger]");
-    if (!(tooltipTrigger instanceof HTMLElement)) {
-      throw new Error("Expected Continue tooltip trigger");
-    }
-    await page.elementLocator(tooltipTrigger).hover();
+    await expect.element(continueButton).toBeDisabled();
+    await page
+      .locator(TOOLTIP_TRIGGER_SELECTOR)
+      .filter({ has: continueButton })
+      .hover();
     await expect
       .element(page.getByText("Test this connection before continuing.").last())
       .toBeVisible();
 
     await page.getByRole("button", { name: "Test connection" }).click();
 
-    await expect
-      .element(page.getByRole("button", { name: "Continue" }))
-      .not.toBeDisabled();
+    await expect.element(continueButton).toBeEnabled();
 
-    await page.getByLabelText("Host").fill("db.internal");
+    await page.getByLabel("Host").fill("db.internal");
 
-    await expect
-      .element(page.getByRole("button", { name: "Continue" }))
-      .toBeDisabled();
+    await expect.element(continueButton).toBeDisabled();
   });
 
   test("UI-configured path applies a pasted connection string", async () => {
-    openConfigurePhase("ui_configured");
+    await openConfigurePhase("ui_configured");
 
     await page.getByRole("tab", { name: "Connection string" }).click();
     await page
-      .getByLabelText("PostgreSQL connection string")
+      .getByLabel("PostgreSQL connection string")
       .fill("not-a-connection-string");
     await page.getByRole("button", { name: "Apply" }).click();
     await expect
@@ -311,27 +152,22 @@ describe("Onboarding wizard — browser visuals", () => {
       .toBeVisible();
 
     await page
-      .getByLabelText("PostgreSQL connection string")
+      .getByLabel("PostgreSQL connection string")
       .fill(
         "postgres://admin:secret@db.internal:6432/querylane?sslmode=require"
       );
     await page.getByRole("button", { name: "Apply" }).click();
 
-    await expect
-      .element(page.getByLabelText("Host"))
-      .toHaveValue("db.internal");
-    await expect.element(page.getByLabelText("Port")).toHaveValue("6432");
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-ui-configured-applied-string"
-    );
+    await expect.element(page.getByLabel("Host")).toHaveValue("db.internal");
+    await expect.element(page.getByLabel("Port")).toHaveValue("6432");
   });
 
   test("UI-configured path warns about DSN parameters it cannot apply", async () => {
-    openConfigurePhase("ui_configured");
+    await openConfigurePhase("ui_configured");
 
     await page.getByRole("tab", { name: "Connection string" }).click();
     await page
-      .getByLabelText("PostgreSQL connection string")
+      .getByLabel("PostgreSQL connection string")
       .fill(
         "postgres://admin:secret@db.internal/querylane?sslmode=require&options=project%3Dquerylane"
       );
@@ -339,19 +175,19 @@ describe("Onboarding wizard — browser visuals", () => {
 
     await expect
       .element(page.getByRole("status"))
-      .toHaveTextContent("DSN parameters not applied: options.");
+      .toContainText("DSN parameters not applied: options.");
     expect(
-      page.getByRole("status").element().getBoundingClientRect().bottom
+      screen.getByRole("status").getBoundingClientRect().bottom
     ).toBeLessThanOrEqual(window.innerHeight);
 
     await page.getByRole("tab", { name: "Connection string" }).click();
     await expect
       .element(page.getByRole("status"))
-      .toHaveTextContent("DSN parameters not applied: options.");
+      .toContainText("DSN parameters not applied: options.");
   });
 
   test("manual YAML path shows copyable configuration", async () => {
-    openConfigurePhase("manual_yaml");
+    await openConfigurePhase("manual_yaml");
 
     await expect
       .element(page.getByRole("heading", { name: "YAML Configuration" }))
@@ -359,17 +195,14 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByText("/Users/you/.querylane/config.yaml").first())
       .toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-yaml-configuration"
-    );
   });
 
   test("manual YAML path shows the waiting-for-config state", async () => {
-    useOnboardingWizardStore.setState({
-      phase: "progress_waiting_for_config",
-      selectedMethod: "manual_yaml",
-    });
-    renderWizard();
+    await render(
+      <ScreenshotFrame>
+        <OnboardingYamlWaitingScenario />
+      </ScreenshotFrame>
+    );
 
     await expect
       .element(page.getByRole("heading", { name: "Waiting for configuration" }))
@@ -377,13 +210,10 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByRole("button", { name: "I've saved the file" }))
       .toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-yaml-waiting"
-    );
   });
 
   test("embedded path shows persistent storage details with automatic port", async () => {
-    openConfigurePhase("embedded");
+    await openConfigurePhase("embedded");
 
     await expect
       .element(page.getByRole("heading", { name: "Embedded PostgreSQL" }))
@@ -397,14 +227,14 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByText("Local port, chosen automatically"))
       .toBeVisible();
-
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-embedded-configuration"
-    );
   });
 
   test("running progress explains which setup step is active", async () => {
-    renderRunningProgress();
+    await render(
+      <ScreenshotFrame>
+        <OnboardingProgressRunningScenario />
+      </ScreenshotFrame>
+    );
 
     await expect
       .element(page.getByRole("heading", { name: "Setting up Querylane" }))
@@ -412,13 +242,14 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByText("Apply migrations").first())
       .toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-progress-running"
-    );
   });
 
   test("failed progress highlights likely configuration errors", async () => {
-    renderFailedProgress();
+    await render(
+      <ScreenshotFrame>
+        <OnboardingProgressFailedScenario />
+      </ScreenshotFrame>
+    );
 
     await expect
       .element(page.getByRole("heading", { name: "Setup failed" }))
@@ -426,13 +257,14 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByText("Likely a configuration issue"))
       .toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-progress-failed"
-    );
   });
 
   test("embedded storage exhaustion shows only applicable recovery actions", async () => {
-    renderStorageFullProgress();
+    await render(
+      <ScreenshotFrame>
+        <OnboardingStorageFullScenario />
+      </ScreenshotFrame>
+    );
 
     await expect.element(page.getByText("Storage full")).toBeVisible();
     await expect
@@ -445,29 +277,25 @@ describe("Onboarding wizard — browser visuals", () => {
     await expect
       .element(page.getByRole("button", { name: "Retry" }))
       .toBeVisible();
-    expect(
-      page.getByRole("button", { name: "Reconfigure" }).elements()
-    ).toHaveLength(0);
-    expect(
-      page.getByRole("link", { name: "Report bug" }).elements()
-    ).toHaveLength(0);
-    expect(page.getByText(STORAGE_FULL_ERROR_MESSAGE).elements()).toHaveLength(
-      0
-    );
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-storage-full"
-    );
+    await expect
+      .element(page.getByRole("button", { name: "Reconfigure" }))
+      .toHaveCount(0);
+    await expect
+      .element(page.getByRole("link", { name: "Report bug" }))
+      .toHaveCount(0);
+    expect(screen.queryByText(STORAGE_FULL_ERROR_MESSAGE)).toBeNull();
   });
 
   test("successful progress gives a clear finish state", async () => {
-    renderSuccessfulProgress();
+    await render(
+      <ScreenshotFrame>
+        <OnboardingProgressSuccessScenario />
+      </ScreenshotFrame>
+    );
 
     await expect
       .element(page.getByRole("heading", { name: "You're all set!" }))
       .toBeVisible();
     await expect.element(page.getByText("Ready to go!")).toBeVisible();
-    await expect(page.getByTestId("onboarding-panel")).toMatchScreenshot(
-      "onboarding-progress-success"
-    );
   });
 });
