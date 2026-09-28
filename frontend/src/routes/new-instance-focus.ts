@@ -1,12 +1,9 @@
-import { waitForNextFrame } from "@/lib/wait-for-next-frame";
-
+/** Call after React commits the error render, for example from an effect. */
 export function focusFirstCreateInstanceInvalidField() {
-  waitForNextFrame().then(() => {
-    for (const input of document.querySelectorAll<HTMLElement>("input")) {
-      if (input.ariaInvalid === "true") {
-        input.focus();
-        return;
-      }
+  for (const input of document.querySelectorAll<HTMLElement>("input")) {
+    if (input.getAttribute("aria-invalid") === "true") {
+      input.focus();
+      return;
     }
-  });
+  }
 }

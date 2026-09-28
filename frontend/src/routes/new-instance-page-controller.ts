@@ -2,7 +2,7 @@ import { useTransport } from "@connectrpc/connect-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { Dispatch } from "react";
-import { useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { extractCreateInstanceFieldViolations } from "@/features/create-instance-field-violations";
 import {
   buildCreateInstanceRequest,
@@ -52,7 +52,8 @@ type WorkflowDispatch = Dispatch<
 
 function applyCreateInstanceOutcome(
   outcome: CreateInstanceSubmitOutcome,
-  dispatch: WorkflowDispatch
+  dispatch: WorkflowDispatch,
+  requestInvalidFieldFocus: () => void
 ) {
   if (outcome.fieldErrors && outcome.firstInvalidField) {
     dispatch({
@@ -60,7 +61,7 @@ function applyCreateInstanceOutcome(
       formErrors: outcome.fieldErrors,
       type: "setFormErrors",
     });
-    focusFirstCreateInstanceInvalidField();
+    requestInvalidFieldFocus();
   }
   if (outcome.notice) {
     dispatch({ notice: outcome.notice, type: "setFormNotice" });
@@ -300,6 +301,20 @@ export function useCreateInstancePageController(
   const testInstanceConnectionMutation = useTestInstanceConnectionMutation();
   const isSubmittingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Focus waits for the commit that renders the errors: a frame can fire
+  // before React commits updates made after an awaited request.
+  const [invalidFieldFocusRequest, setInvalidFieldFocusRequest] = useState(0);
+  const requestInvalidFieldFocus = () => {
+    setInvalidFieldFocusRequest((request) => request + 1);
+  };
+  useEffect(
+    function focusFirstInvalidFieldAfterCommit() {
+      if (invalidFieldFocusRequest > 0) {
+        focusFirstCreateInstanceInvalidField();
+      }
+    },
+    [invalidFieldFocusRequest]
+  );
   const [state, dispatch] = useReducer(
     createInstanceWorkflowReducer,
     initialState,
@@ -350,7 +365,7 @@ export function useCreateInstancePageController(
         formErrors: validation.errors,
         type: "setFormErrors",
       });
-      focusFirstCreateInstanceInvalidField();
+      requestInvalidFieldFocus();
       return;
     }
     dispatch({
@@ -379,7 +394,7 @@ export function useCreateInstancePageController(
         formErrors: outcome.fieldErrors,
         type: "setFormErrors",
       });
-      focusFirstCreateInstanceInvalidField();
+      requestInvalidFieldFocus();
     }
     dispatch({
       result: outcome.notice,
@@ -405,7 +420,7 @@ export function useCreateInstancePageController(
         formErrors: validation.errors,
         type: "setFormErrors",
       });
-      focusFirstCreateInstanceInvalidField();
+      requestInvalidFieldFocus();
       return;
     }
     if (!canCreateInstance(state)) {
@@ -430,7 +445,7 @@ export function useCreateInstancePageController(
           queryClient,
           transport,
         });
-        applyCreateInstanceOutcome(outcome, dispatch);
+        applyCreateInstanceOutcome(outcome, dispatch, requestInvalidFieldFocus);
       },
     });
   };

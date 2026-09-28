@@ -200,6 +200,47 @@ describe("create instance backend field violations", () => {
     expect(screen.queryByText("database not found")).toBeNull();
   });
 
+  test("focuses the rejected field even when a frame fires before React commits", async () => {
+    // A loaded device can run the next animation frame before React commits
+    // the error render; focus must wait for the commit, not the frame.
+    rs.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 0;
+    });
+    const user = userEvent.setup();
+    renderCreateInstancePage({
+      createInstance: async () => ({}),
+      testInstanceConnection: () =>
+        Promise.reject(
+          new ConnectError("unreachable", Code.InvalidArgument, undefined, [
+            {
+              desc: BadRequestSchema,
+              value: createProto(BadRequestSchema, {
+                fieldViolations: [
+                  { description: HOST_VIOLATION, field: "config.host" },
+                ],
+              }),
+            },
+          ])
+        ),
+    });
+
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "Production" },
+    });
+    fireEvent.change(screen.getByLabelText("Host"), {
+      target: { value: "db.internal" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "secret" },
+    });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByLabelText("Host"));
+    });
+  });
+
   test("keeps the inline notice for errors without field violations", async () => {
     const user = userEvent.setup();
     renderCreateInstancePage({
