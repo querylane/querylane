@@ -44,6 +44,7 @@
     "test:browser:ci": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.config.ts --bail=1 && NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.dark.config.ts --bail=1",
     "test:browser:setup": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright install --with-deps --no-remove chromium",
     "test:browser:ui": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest watch --config rstest.browser.config.ts --browser.headless=false",
+    "test:docs": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/docs.config.ts",
     "test:e2e": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --project=chromium --grep-invert @a11y",
     "test:e2e:debug": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --debug",
     "test:e2e:debug:cli": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --debug=cli",
