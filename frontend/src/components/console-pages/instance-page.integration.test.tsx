@@ -620,6 +620,23 @@ function setFieldValue(label: string, value: string) {
 }
 
 describe("backend instance configuration save", () => {
+  test("sends edited labels with the labels update mask", async () => {
+    const user = userEvent.setup();
+    await renderInstanceConfiguration();
+
+    await user.click(screen.getByRole("button", { name: "Add label" }));
+    setFieldValue("Label key 1", "region");
+    setFieldValue("Label value 1", "eu");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(state.updateInstance).toHaveBeenCalledTimes(1);
+    });
+    const input = state.updateInstance.mock.calls[0]?.[0];
+    expect(input?.instance.labels).toEqual({ region: "eu" });
+    expect(input?.updateMask.paths).toEqual(["labels"]);
+  });
+
   test("trims text fields before building the update payload", async () => {
     const user = userEvent.setup();
     await renderInstanceConfiguration();
@@ -676,6 +693,19 @@ describe("backend instance configuration save", () => {
       expect(document.activeElement).toBe(screen.getByLabelText("Password"));
     });
     expect(screen.queryByText("authentication failed")).toBeNull();
+  });
+  test("validates a password that was edited and then cleared", async () => {
+    const user = userEvent.setup();
+    await renderInstanceConfiguration();
+
+    const password = screen.getByLabelText("Password");
+    setFieldValue("Password", "temporary");
+    await user.clear(password);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(state.updateInstance).not.toHaveBeenCalled();
+    expect(await screen.findByText("Password is required.")).toBeTruthy();
+    expect(password.getAttribute("aria-invalid")).toBe("true");
   });
 });
 

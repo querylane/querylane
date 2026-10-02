@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
@@ -7,6 +8,7 @@ import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
+import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import { InstanceSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { consoleInstance } from "@/test/fixtures/console-resource-fixtures";
 
@@ -40,19 +42,33 @@ function InstanceConfigServerFieldErrorFixture() {
       formNotice={formNotice}
       instance={createInstance()}
       isConfigManaged={false}
-      onInvalidSave={rs.fn()}
-      onSave={rs.fn(() => {
+      onInvalidSave={() => {
         setFormNotice({
           message: "Fix the highlighted fields, then save again.",
           variant: "error",
         });
-        return {
-          fieldErrors: {
-            password: passwordMessage,
-          },
-          firstInvalidField: "password" as const,
-        };
-      })}
+      }}
+      onSave={rs.fn(
+        () =>
+          new ConnectError(
+            "authentication failed",
+            Code.Unauthenticated,
+            undefined,
+            [
+              {
+                desc: BadRequestSchema,
+                value: createProto(BadRequestSchema, {
+                  fieldViolations: [
+                    {
+                      description: passwordMessage,
+                      field: "instance.config.password",
+                    },
+                  ],
+                }),
+              },
+            ]
+          )
+      )}
       pending={false}
     />
   );

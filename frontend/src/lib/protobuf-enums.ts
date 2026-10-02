@@ -1,4 +1,8 @@
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
+import type {
+  SslModeOptionValue,
+  SslNegotiationOptionValue,
+} from "@/lib/ssl-modes";
 import {
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
@@ -95,7 +99,9 @@ export function formatViewType(viewType: View_ViewType): string {
   }
 }
 
-export function formatSslMode(mode: PostgresConfig_SslMode): string {
+export function formatSslMode(
+  mode: PostgresConfig_SslMode
+): SslModeOptionValue {
   switch (mode) {
     case PostgresConfig_SslMode.ALLOW:
       return "allow";
@@ -131,7 +137,7 @@ export function toSslMode(value: string): PostgresConfig_SslMode {
 
 export function formatSslNegotiation(
   negotiation: PostgresConfig_SslNegotiation
-): string {
+): SslNegotiationOptionValue {
   if (
     normalizeSslNegotiation(negotiation) ===
     PostgresConfig_SslNegotiation.DIRECT
