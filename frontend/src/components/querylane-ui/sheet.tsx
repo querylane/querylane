@@ -49,6 +49,7 @@ const sheetHeaderPresentations = cva("", {
       drawer: "border-b px-5 py-4 pr-14",
       "record-drawer": "gap-2 border-b px-5 py-3.5 pr-14",
       inspector: "border-border border-b pr-12",
+      divided: "border-border border-b",
     },
   },
 });

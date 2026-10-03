@@ -1071,7 +1071,7 @@ function MaterializedViewDetail({
   }
 
   return (
-    <TableDataGrid allowInsertCopy={false} key={view.name} name={view.name}>
+    <TableDataGrid allowSqlExport={false} key={view.name} name={view.name}>
       {({ grid }) => <MaterializedViewSurface {...surfaceProps} grid={grid} />}
     </TableDataGrid>
   );

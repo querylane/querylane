@@ -78,6 +78,19 @@ const buttonPresentations = cva("", {
       "reference-cell": "p-0 font-mono text-xs",
       "access-summary-active":
         "gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/60",
+      "sql-tab":
+        "gap-1.5 rounded-none py-1.5 pr-1 pl-3 text-muted-foreground text-xs hover:bg-transparent hover:text-foreground focus-visible:ring-inset aria-selected:font-medium aria-selected:text-foreground",
+      "sql-tab-close":
+        "text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 group-data-[active=true]:opacity-100",
+      "sql-list-row": "gap-1 rounded-md px-3 py-2",
+      // A filled button that leads a ButtonGroup: registry buttons carry a
+      // transparent 1px border with a padding-box background, so at the
+      // join the page shows through as a white line. Drop that edge.
+      "group-lead": "border-r-0",
+      "sql-relation-row":
+        "text-(length:--text-caption) gap-2 px-1.5 py-0 font-normal hover:bg-accent/60",
+      "sql-row-delete":
+        "text-muted-foreground opacity-0 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100",
       "access-summary-inactive":
         "gap-3 rounded-lg border border-border/50 border-dashed px-3 py-2.5 transition-colors hover:bg-muted/60",
     },

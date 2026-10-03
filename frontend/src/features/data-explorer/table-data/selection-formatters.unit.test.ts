@@ -60,6 +60,29 @@ function row(
 describe("buildExport", () => {
   const columns = [nameColumn("id"), nameColumn("body")];
 
+  test("keeps every value of repeated column names by position", () => {
+    const duplicateColumns = [nameColumn("id"), nameColumn("id")];
+    const rows: SelectedRow[] = [
+      row({ id: stringCell("1"), "id#1": stringCell("2") }),
+    ];
+
+    const csv = buildExport({
+      exportFormat: "csv",
+      rows,
+      columns: duplicateColumns,
+      resourceName: RESOURCE,
+    });
+    const sql = buildExport({
+      exportFormat: "sql",
+      rows,
+      columns: duplicateColumns,
+      resourceName: RESOURCE,
+    });
+
+    expect(csv.ok && csv.payload.contents).toBe("id,id\n1,2\n");
+    expect(sql.ok && sql.payload.contents).toContain("('1', '2')");
+  });
+
   test("counts a row only once even when multiple cells in it are truncated", () => {
     const rows: SelectedRow[] = [
       row({

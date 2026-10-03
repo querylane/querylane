@@ -19,6 +19,8 @@ import {
 interface BuildColumnArgs {
   canHide: boolean;
   column: TableResultColumn;
+  /** Header sort/hide/freeze menu and drag-to-reorder; defaults to true. */
+  columnMenu?: boolean | undefined;
   foreignKeyReferences?: readonly TableForeignKeyReference[] | undefined;
   isFrozen: boolean;
   onCopyName: () => void;
@@ -41,6 +43,7 @@ const MAX_COLUMN_WIDTH = 500;
 
 function buildColumn({
   canHide,
+  columnMenu = true,
   column,
   foreignKeyReferences = [],
   isFrozen,
@@ -94,7 +97,7 @@ function buildColumn({
 
   return {
     cellClass: "",
-    draggable: true,
+    draggable: columnMenu,
     frozen: isFrozen,
     key: columnKey,
     maxWidth: MAX_COLUMN_WIDTH,
@@ -129,6 +132,7 @@ function buildColumn({
         onSortAsc={onSortAsc}
         onSortDesc={onSortDesc}
         onToggleFreeze={onToggleFreeze}
+        showMenu={columnMenu}
         sortDirection={sortDirection}
         sortPriority={sortPriority}
       />

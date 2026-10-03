@@ -13,6 +13,7 @@ const inputPresentations = cva("", {
       "onboarding-connection":
         "rounded-lg border border-white/10 bg-white/3 px-4 py-0 font-mono text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-info-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-info-400/25",
       identifier: "font-mono",
+      compact: "text-xs",
       password: "pr-12",
       onboarding:
         "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25",

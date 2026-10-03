@@ -1,84 +1,21 @@
 "use client";
 
 import { create } from "@bufbuild/protobuf";
-import { Maximize2 } from "lucide-react";
-import {
-  type ClipboardEvent,
-  type ReactNode,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
-import "react-data-grid/lib/styles.css";
-import {
-  type CellCopyArgs,
-  type CellKeyboardEvent,
-  type CellKeyDownArgs,
-  type CellMouseArgs,
-  type CellMouseEvent,
-  type Column,
-  SELECT_COLUMN_KEY,
-  SelectColumn,
-  type SortColumn,
-} from "react-data-grid";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import type { SortColumn } from "react-data-grid";
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
-import { CellContextMenu } from "@/components/data-grid/table-data-grid/cell-context-menu";
-import { isCellSelectionInteractiveTarget } from "@/components/data-grid/table-data-grid/cell-selection-interaction";
-import {
-  type CellCoordinate,
-  type CellSelectionClipboardField,
-  type CellSelectionRange,
-  type CellSelectionStore,
-  type CellSelectionSummary,
-  createCellSelectionStore,
-  formatCellSelectionForClipboard,
-  getCellSelectionBounds,
-  getCellSelectionSummary,
-} from "@/components/data-grid/table-data-grid/cell-selection-state";
-import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
-import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
 import type {
   RenderOpenReferencedTableLink,
   TableForeignKeyReference,
 } from "@/components/data-grid/table-data-grid/foreign-key-reference-state";
-import {
-  getGridCell,
-  setGridCell,
-} from "@/components/data-grid/table-data-grid/grid-cell-access";
-import {
-  writeClipboard,
-  writeClipboardDeferred,
-} from "@/components/data-grid/table-data-grid/grid-clipboard";
-import {
-  buildColumn,
-  buildPageLabel,
-} from "@/components/data-grid/table-data-grid/grid-helpers";
-import { GridBody } from "@/components/data-grid/table-data-grid/grid-rendering";
-import {
-  EXPAND_COLUMN_KEY,
-  EXPAND_COLUMN_WIDTH,
-  fallbackRowKey,
-  type GridRow,
-  ROW_KEY_FIELD,
-  SELECT_COLUMN_WIDTH,
-} from "@/components/data-grid/table-data-grid/grid-row-model";
-import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-status-bar";
-import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
-import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
+import { buildPageLabel } from "@/components/data-grid/table-data-grid/grid-helpers";
+import { ResultDataGrid } from "@/components/data-grid/table-data-grid/result-data-grid";
 import {
   useSelectedTableColumns,
   useTableColumnLayout,
 } from "@/components/data-grid/table-data-grid/use-table-column-layout";
 import { Button } from "@/components/querylane-ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/querylane-ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatLastFetchedLabel } from "@/features/data-explorer/last-fetched-label";
 import {
@@ -87,24 +24,10 @@ import {
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
 import {
-  cellNeedsFullValue,
   type FetchFullCell,
   READ_CELL_MAX_BYTES,
-  resolveFullCell,
-  resolveRowCells,
 } from "@/features/data-explorer/table-data/full-cell-resolver";
-import {
-  buildGridStatusItems,
-  type GridStatusItem,
-} from "@/features/data-explorer/table-data/grid-status";
-import {
-  buildExport,
-  type ExportFormat,
-  type ExportResult,
-  formatCellForClipboard,
-  type SelectedRow,
-} from "@/features/data-explorer/table-data/selection-formatters";
-import { toggleColumnSortDirection } from "@/features/data-explorer/table-data/sort-state";
+import { buildGridStatusItems } from "@/features/data-explorer/table-data/grid-status";
 import {
   serializeSortSearch,
   useTableDataQuery,
@@ -115,10 +38,7 @@ import {
 } from "@/features/user-settings/refresh-settings";
 import { useReadCellValueMutation } from "@/hooks/api/table-data";
 import { parseRelationQualifiedName } from "@/lib/console-resources";
-import { downloadBlob } from "@/lib/download-blob";
-import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { normalizeAppUiError } from "@/lib/ui-error";
-import { cn } from "@/lib/utils";
 import {
   ReadCellValueRequestSchema,
   type ReadRowsResponse,
@@ -126,15 +46,10 @@ import {
   type TableResultColumn,
   TableResultColumnSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
-import {
-  RowIdentity_Source,
-  type Column as TableColumn,
-} from "@/protogen/querylane/console/v1alpha1/table_pb";
-
-import "@/components/data-grid/table-data-grid/data-grid-theme.css";
+import type { Column as TableColumn } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface TableDataGridProps {
-  allowInsertCopy?: boolean | undefined;
+  allowSqlExport?: boolean | undefined;
   children?: (state: {
     grid: ReactNode;
     lastFetchedLabel: string;
@@ -145,15 +60,12 @@ interface TableDataGridProps {
   renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
 }
 
-interface ContextMenuState {
-  columnKey: string;
-  left: number;
-  returnFocusTo: HTMLElement;
-  row: GridRow;
-  top: number;
-}
-
 const DEFAULT_PAGE_SIZE = 50;
+// Stable empties keep row/column derivations referentially equal across
+// renders while data is undefined, so the React Compiler can memoize
+// everything downstream of them.
+const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
+const EMPTY_RESULT_ROWS: Array<{ rowKey: string; values: TableCell[] }> = [];
 
 function reportAutoRefreshError(error: unknown) {
   toast.error("Auto refresh failed", {
@@ -233,230 +145,43 @@ function useDataGridRefreshState({
   };
 }
 
-function useResetSelectionOnNavigation({
+/**
+ * Selections are page-scoped: prior keys don't map across page, page size,
+ * filter or sort changes, so the grid resets them when this key changes.
+ */
+function navigationStateKey({
   currentPageIndex,
   filterLogic,
+  filterRules,
   name,
   pageSize,
-  resetSelection,
   sortColumns,
-  filterRules,
 }: {
   currentPageIndex: number;
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
   name: string;
   pageSize: number;
-  resetSelection: () => void;
   sortColumns: SortColumn[];
-}) {
-  const resetCurrentSelection = useEffectEvent(resetSelection);
-  const navigationStateKey = `${name}:${currentPageIndex}:${pageSize}:${
+}): string {
+  return `${name}:${currentPageIndex}:${pageSize}:${
     serializeTableFilterSearch({ logic: filterLogic, rules: filterRules }) ?? ""
   }:${serializeSortSearch(sortColumns) ?? ""}`;
-  const previousNavigationStateKeyRef = useRef(navigationStateKey);
-
-  // Selection and the open record drawer are page-scoped: prior keys don't map
-  // across page/sort changes. Compare committed navigation keys so StrictMode's
-  // mount-effect replay stays a no-op, and keep the reset callback out of the
-  // navigation dependencies so selection changes do not retrigger the effect.
-  useEffect(
-    function resetSelectionOnPageChange() {
-      if (previousNavigationStateKeyRef.current === navigationStateKey) {
-        return;
-      }
-      previousNavigationStateKeyRef.current = navigationStateKey;
-      resetCurrentSelection();
-    },
-    [navigationStateKey]
-  );
 }
 
-function useResetCellSelectionOnLayoutChange({
-  cellSelectionStore,
-  columnKeys,
-  rowKeys,
-}: {
-  cellSelectionStore: CellSelectionStore;
-  columnKeys: string[];
-  rowKeys: string[];
-}) {
-  const layoutKey = JSON.stringify([columnKeys, rowKeys]);
-  const previousLayoutKeyRef = useRef(layoutKey);
-  const clearCellSelection = useEffectEvent(() => cellSelectionStore.clear());
-
-  useEffect(
-    function resetCellSelectionOnLayoutChange() {
-      if (previousLayoutKeyRef.current === layoutKey) {
-        return;
-      }
-      previousLayoutKeyRef.current = layoutKey;
-      clearCellSelection();
-    },
-    [layoutKey]
-  );
-}
-
-function useCellSelectionStore(): CellSelectionStore {
-  const storeRef = useRef<CellSelectionStore | null>(null);
-  if (storeRef.current === null) {
-    storeRef.current = createCellSelectionStore();
-  }
-  return storeRef.current;
-}
-
-function useOpenRowState(rows: GridRow[]) {
-  const [openRowKey, setOpenRowKey] = useState<string | null>(null);
-  const openRowIndex =
-    openRowKey === null
-      ? null
-      : rows.findIndex((row) => row[ROW_KEY_FIELD] === openRowKey);
-  const resolvedOpenRowIndex =
-    openRowIndex !== null && openRowIndex >= 0 ? openRowIndex : null;
-
-  function setOpenRowIndex(next: number | null) {
-    setOpenRowKey(next === null ? null : (rows[next]?.[ROW_KEY_FIELD] ?? null));
-  }
-
-  return {
-    openRowIndex: resolvedOpenRowIndex,
-    setOpenRowIndex,
-  };
-}
-
-// Stable empties keep row/column derivations referentially equal across
-// renders while data is undefined, so the React Compiler can memoize
-// buildGridRows and everything downstream of it.
-const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
-const EMPTY_RESULT_ROWS: Array<{ rowKey: string; values: TableCell[] }> = [];
-// Stable default so the grid columns are not rebuilt every render for tables
-// without foreign keys.
-const NO_FOREIGN_KEY_REFERENCES: readonly TableForeignKeyReference[] = [];
-
-function buildGridRows(
-  resultRows: Array<{ rowKey: string; values: TableCell[] }>,
-  resultColumns: TableResultColumn[]
-): GridRow[] {
-  return resultRows.map((row, rowIndex) => {
-    const grouped: GridRow = {
-      [ROW_KEY_FIELD]: row.rowKey || fallbackRowKey(rowIndex),
-      cells: new Map(),
-    };
-    resultColumns.forEach((column, columnIndex) => {
-      setGridCell(grouped, column, row.values[columnIndex]);
-    });
-    return grouped;
-  });
-}
-
-function buildOpenRowCells(
-  openRow: GridRow | undefined,
-  resultColumns: TableResultColumn[]
-): Map<string, TableCell | undefined> {
-  const openRowCells = new Map<string, TableCell | undefined>();
-  if (!openRow) {
-    return openRowCells;
-  }
-
-  for (const column of resultColumns) {
-    openRowCells.set(column.columnName, getGridCell(openRow, column));
-  }
-  return openRowCells;
-}
-
-function RecordDetailDrawerHost({
-  name,
-  openRowIndex,
-  pkColumnSet,
-  resultColumns,
-  rows,
-  setOpenRowIndex,
-}: {
-  name: string;
-  openRowIndex: number | null;
-  pkColumnSet: Set<string>;
-  resultColumns: TableResultColumn[];
-  rows: GridRow[];
-  setOpenRowIndex: (next: number | null) => void;
-}) {
-  const relationQualifiedName = parseRelationQualifiedName(name);
-  const openRow =
-    openRowIndex !== null && openRowIndex >= 0 && openRowIndex < rows.length
-      ? rows[openRowIndex]
-      : undefined;
-  const openRowCells = buildOpenRowCells(openRow, resultColumns);
-
-  return (
-    <RecordDetailDrawer
-      columns={resultColumns}
-      hasNext={openRowIndex !== null && openRowIndex < rows.length - 1}
-      hasPrev={openRowIndex !== null && openRowIndex > 0}
-      name={name}
-      onNext={() => {
-        if (openRowIndex !== null && openRowIndex < rows.length - 1) {
-          setOpenRowIndex(openRowIndex + 1);
-        }
-      }}
-      onOpenChange={(next) => {
-        if (!next) {
-          setOpenRowIndex(null);
-        }
-      }}
-      onPrev={() => {
-        if (openRowIndex !== null && openRowIndex > 0) {
-          setOpenRowIndex(openRowIndex - 1);
-        }
-      }}
-      onRowIndexChange={(nextRowIndex) => setOpenRowIndex(nextRowIndex)}
-      open={openRow !== undefined}
-      pkColumnSet={pkColumnSet}
-      rowCells={openRowCells}
-      rowCount={rows.length}
-      rowIndex={openRowIndex ?? 0}
-      tableName={{
-        schema: relationQualifiedName.schema,
-        table: relationQualifiedName.relation,
-      }}
-    />
-  );
-}
-
-function collectSelectedRows({
-  resultColumns,
-  rows,
-  selectedRows,
-}: {
-  resultColumns: TableResultColumn[];
-  rows: GridRow[];
-  selectedRows: ReadonlySet<string>;
-}): SelectedRow[] {
-  if (selectedRows.size === 0) {
-    return [];
-  }
-
-  const collected: SelectedRow[] = [];
-  for (const row of rows) {
-    if (!selectedRows.has(row[ROW_KEY_FIELD])) {
-      continue;
-    }
-    const cells = new Map<string, TableCell | undefined>();
-    for (const column of resultColumns) {
-      cells.set(column.columnName, getGridCell(row, column));
-    }
-    collected.push({ cells });
-  }
-  return collected;
-}
-
-function reportTruncatedExport(result: ExportResult & { ok: false }) {
-  const rowWord = result.truncatedRowCount === 1 ? "row" : "rows";
-  toast.error(
-    `Can't export ${result.truncatedRowCount} selected ${rowWord} with truncated values`,
-    {
-      description:
-        "Open the row drawer to fetch full cell values, or narrow your selection.",
-    }
-  );
+/** Truncated previews resolve through ReadCellValue on this table. */
+function useReadCellValueFetcher(name: string): FetchFullCell {
+  const readCellValue = useReadCellValueMutation();
+  return async (fullValueToken) =>
+    (
+      await readCellValue.mutateAsync(
+        create(ReadCellValueRequestSchema, {
+          fullValueToken,
+          maxBytes: READ_CELL_MAX_BYTES,
+          name,
+        })
+      )
+    ).value;
 }
 
 function TableDataGridAlerts({
@@ -522,357 +247,6 @@ function TableDataGridAlerts({
   return null;
 }
 
-interface TableDataGridChromeProps {
-  allowSqlExport: boolean;
-  availableColumns: TableResultColumn[];
-  cellSelectionStore: CellSelectionStore;
-  columnOrder: readonly string[];
-  columns: Column<GridRow>[];
-  fetchVisibleColumns: boolean;
-  filterLogic: TableFilterLogic;
-  filterRules: TableFilterRule[];
-  filterTitle: string;
-  hasStaleRows: boolean;
-  hiddenColumnKeys: ReadonlySet<string>;
-  invalidFilterRules: Array<{ id: string; message: string }>;
-  isColumnLayoutCustomized: boolean;
-  lastFetchedLabel: string;
-  onCellContextMenu: (
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) => void;
-  onCellCopy: (
-    args: CellCopyArgs<GridRow>,
-    event: ClipboardEvent<HTMLDivElement>
-  ) => void;
-  onCellKeyDown: (
-    args: CellKeyDownArgs<GridRow>,
-    event: CellKeyboardEvent
-  ) => void;
-  onCellMouseDown: (
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) => void;
-  onClearFilters: () => void;
-  onClearSelection: () => void;
-  onColumnLayoutReset: () => void;
-  onColumnOrderChange: (columnOrder: string[]) => void;
-  onColumnsReorder: (sourceColumnKey: string, targetColumnKey: string) => void;
-  onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
-  onCopySelection: (format: ExportFormat) => void;
-  onExportSelection: (format: ExportFormat) => void;
-  onFetchVisibleColumnsChange: (enabled: boolean) => void;
-  onFilterChange: (
-    nextRules: TableFilterRule[],
-    nextLogic?: TableFilterLogic
-  ) => void;
-  onNext: () => void;
-  onPageSizeChange: (next: number) => void;
-  onPrev: () => void;
-  onRefresh: () => Promise<unknown> | undefined;
-  onSelectedRowsChange: (next: ReadonlySet<string>) => void;
-  onSortChange: (next: SortColumn[]) => void;
-  onToggleExpanded: () => void;
-  queryError: Error | null;
-  rows: GridRow[];
-  selectedCount: number;
-  selectedRows: ReadonlySet<string>;
-  sortColumns: SortColumn[];
-  state: {
-    currentPageIndex: number;
-    gridLoading: boolean;
-    hasNext: boolean;
-    isFetching: boolean;
-    isRefetchingRows: boolean;
-    pageLabel: string;
-    pageSize: number;
-    variant: "default" | "expanded";
-  };
-  statusItems: GridStatusItem[];
-  suppressStatusAndPagination: boolean;
-}
-
-function pluralizedCount(
-  count: number,
-  singular: string,
-  plural = `${singular}s`
-): string {
-  return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
-}
-
-function getCellSelectionLiveLabel(summary: CellSelectionSummary): string {
-  if (summary.cellCount === 0) {
-    return "Cell selection cleared.";
-  }
-  if (summary.rangeCount !== 1) {
-    return `${pluralizedCount(
-      summary.cellCount,
-      "cell"
-    )} selected in ${pluralizedCount(summary.rangeCount, "range")}.`;
-  }
-  return `${pluralizedCount(
-    summary.cellCount,
-    "cell"
-  )} selected in ${pluralizedCount(
-    summary.rowCount ?? 0,
-    "row"
-  )} by ${pluralizedCount(summary.columnCount ?? 0, "column")}.`;
-}
-
-function CellSelectionLiveStatus({
-  cellSelectionStore,
-}: {
-  cellSelectionStore: CellSelectionStore;
-}) {
-  const state = useSyncExternalStore(
-    cellSelectionStore.subscribe,
-    cellSelectionStore.getState,
-    cellSelectionStore.getState
-  );
-  const summary = getCellSelectionSummary(state);
-  const hasHadSelectionRef = useRef(summary.cellCount > 0);
-  const liveLabel =
-    state.isDragging || (summary.cellCount === 0 && !hasHadSelectionRef.current)
-      ? ""
-      : getCellSelectionLiveLabel(summary);
-
-  useEffect(
-    function rememberCellSelection() {
-      if (summary.cellCount > 0) {
-        hasHadSelectionRef.current = true;
-      }
-    },
-    [summary.cellCount]
-  );
-
-  return (
-    <span
-      aria-label="Cell selection"
-      aria-live="polite"
-      className="sr-only"
-      role="status"
-    >
-      {liveLabel}
-    </span>
-  );
-}
-
-function TableDataGridChrome({
-  allowSqlExport,
-  availableColumns,
-  cellSelectionStore,
-  columnOrder,
-  columns,
-  fetchVisibleColumns,
-  filterLogic,
-  filterRules,
-  filterTitle,
-  invalidFilterRules,
-  hiddenColumnKeys,
-  hasStaleRows,
-  isColumnLayoutCustomized,
-  lastFetchedLabel,
-  onCellContextMenu,
-  onCellCopy,
-  onCellKeyDown,
-  onCellMouseDown,
-  onClearFilters,
-  onClearSelection,
-  onColumnOrderChange,
-  onColumnLayoutReset,
-  onColumnsReorder,
-  onColumnVisibilityChange,
-  onCopySelection,
-  onExportSelection,
-  onFetchVisibleColumnsChange,
-  onFilterChange,
-  onNext,
-  onPageSizeChange,
-  onPrev,
-  onRefresh,
-  onSelectedRowsChange,
-  onSortChange,
-  onToggleExpanded,
-  queryError,
-  rows,
-  selectedCount,
-  selectedRows,
-  sortColumns,
-  state,
-  statusItems,
-  suppressStatusAndPagination,
-}: TableDataGridChromeProps) {
-  // Default variant renders full-bleed inside the explorer pane: the toolbar,
-  // status bar, and pagination become padded bars while the grid itself runs
-  // edge-to-edge. The expanded dialog keeps the inset, rounded look.
-  const isFlush = state.variant !== "expanded";
-  return (
-    <>
-      <div
-        className={cn(
-          "flex shrink-0 flex-col gap-2",
-          isFlush && "px-3 pt-2 pb-2 sm:px-4"
-        )}
-      >
-        <DataGridToolbar
-          allowSqlExport={allowSqlExport}
-          className={state.variant === "expanded" ? "pr-12" : undefined}
-          columnOrder={columnOrder}
-          columns={availableColumns}
-          fetchVisibleColumns={fetchVisibleColumns}
-          filterLogic={filterLogic}
-          filterRules={filterRules}
-          filterTitle={filterTitle}
-          hiddenColumnKeys={hiddenColumnKeys}
-          isColumnLayoutCustomized={isColumnLayoutCustomized}
-          isExpanded={state.variant === "expanded"}
-          isFetching={state.isFetching}
-          lastFetchedLabel={lastFetchedLabel}
-          onClearSelection={onClearSelection}
-          onColumnLayoutReset={onColumnLayoutReset}
-          onColumnOrderChange={onColumnOrderChange}
-          onColumnVisibilityChange={onColumnVisibilityChange}
-          onCopySelection={onCopySelection}
-          onExportSelection={onExportSelection}
-          onFetchVisibleColumnsChange={onFetchVisibleColumnsChange}
-          onFilterChange={onFilterChange}
-          onRefresh={onRefresh}
-          onSortChange={onSortChange}
-          onToggleExpanded={onToggleExpanded}
-          selectedCount={selectedCount}
-          sortColumns={sortColumns}
-        />
-
-        <TableDataGridAlerts
-          hasStaleRows={hasStaleRows}
-          invalidFilterRules={invalidFilterRules}
-          onClearFilters={onClearFilters}
-          onRetry={onRefresh}
-          queryError={queryError}
-        />
-      </div>
-
-      <GridSurface
-        busy={state.isRefetchingRows}
-        loading={state.gridLoading || state.isRefetchingRows}
-        refreshStatusLabel={lastFetchedLabel}
-        variant={state.variant}
-      >
-        <GridBody
-          cellSelectionStore={cellSelectionStore}
-          columns={columns}
-          flush={isFlush}
-          hasActiveFilter={filterRules.length > 0}
-          isLoading={state.gridLoading}
-          onCellContextMenu={onCellContextMenu}
-          onCellCopy={onCellCopy}
-          onCellKeyDown={onCellKeyDown}
-          onCellMouseDown={onCellMouseDown}
-          onColumnsReorder={onColumnsReorder}
-          onSelectedRowsChange={onSelectedRowsChange}
-          onSortChange={onSortChange}
-          rows={rows}
-          selectedRows={selectedRows}
-          sortColumns={sortColumns}
-          suppressEmptyState={Boolean(queryError)}
-        />
-      </GridSurface>
-
-      {suppressStatusAndPagination ? null : (
-        <>
-          <GridStatusBar
-            className={isFlush ? "border-t-0 px-3 pt-1.5 sm:px-4" : undefined}
-            items={statusItems}
-          />
-
-          <PaginationFooter
-            className={isFlush ? "px-3 py-2 sm:px-4" : undefined}
-            hasNext={state.hasNext}
-            hasPrev={state.currentPageIndex > 0}
-            onNext={onNext}
-            onPageSizeChange={onPageSizeChange}
-            onPrev={onPrev}
-            pageLabel={state.pageLabel}
-            pageSize={state.pageSize}
-            pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
-          />
-        </>
-      )}
-    </>
-  );
-}
-
-function ExpandedDataGridDialog({
-  chromeProps,
-  onOpenChange,
-  open,
-}: {
-  chromeProps: TableDataGridChromeProps;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-}) {
-  return (
-    <Dialog
-      onOpenChange={(nextOpen, eventDetails) => {
-        // RDG prevents Escape when it clears a cell range. Honor that handled
-        // key instead of also dismissing the expanded grid.
-        if (
-          !nextOpen &&
-          eventDetails.reason === "escape-key" &&
-          eventDetails.event.defaultPrevented
-        ) {
-          eventDetails.cancel();
-          return;
-        }
-        onOpenChange(nextOpen);
-      }}
-      open={open}
-    >
-      <DialogContent
-        className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]"
-        presentation="canvas"
-      >
-        <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <TableDataGridChrome
-            {...chromeProps}
-            onToggleExpanded={() => onOpenChange(false)}
-            state={{ ...chromeProps.state, variant: "expanded" }}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function copyCellValue({
-  columnKey,
-  fetchFullCell,
-  resultColumns,
-  row,
-}: {
-  columnKey: string;
-  fetchFullCell: FetchFullCell;
-  resultColumns: TableResultColumn[];
-  row: GridRow;
-}) {
-  const meta = resultColumns.find((column) => column.columnName === columnKey);
-  if (!meta) {
-    return;
-  }
-  const cell = getGridCell(row, meta);
-  if (cell === undefined) {
-    return;
-  }
-  if (cellNeedsFullValue(cell)) {
-    writeClipboardDeferred(async () =>
-      formatCellForClipboard(await resolveFullCell(cell, fetchFullCell))
-    );
-    return;
-  }
-  writeClipboard(formatCellForClipboard(cell));
-}
-
 function buildAvailableColumns(
   columnCatalog: readonly TableColumn[],
   resultColumns: TableResultColumn[]
@@ -895,938 +269,6 @@ function hasColumnMetadata(
   resultSet: unknown
 ): boolean {
   return availableColumns.length > 0 || resultSet !== undefined;
-}
-
-function copyRowValues(
-  row: GridRow,
-  resultColumns: TableResultColumn[],
-  fetchFullCell: FetchFullCell
-) {
-  const cells = resultColumns.map((meta) => getGridCell(row, meta));
-  if (cells.some(cellNeedsFullValue)) {
-    writeClipboardDeferred(async () => {
-      const resolved = await Promise.all(
-        cells.map((cell) => resolveFullCell(cell, fetchFullCell))
-      );
-      return resolved.map(formatCellForClipboard).join("\t");
-    });
-    return;
-  }
-  writeClipboard(cells.map(formatCellForClipboard).join("\t"));
-}
-
-// Cap how many ReadCellValue round trips a single selection copy/export may
-// fan out. Beyond this, the toolbar export (StreamRows in FULL mode) is the
-// right tool.
-const MAX_SELECTION_FULL_VALUE_FETCHES = 100;
-const DATA_COLUMN_START_INDEX = 2;
-const DATA_GRID_HEADER_ROW_HEIGHT = 36;
-const DATA_GRID_ROW_HEIGHT = 32;
-const DEFAULT_PAGE_NAVIGATION_ROW_COUNT = 10;
-const CELL_ARROW_MOVEMENT: Readonly<Partial<Record<string, CellCoordinate>>> = {
-  ArrowDown: { columnIndex: 0, rowIndex: 1 },
-  ArrowLeft: { columnIndex: -1, rowIndex: 0 },
-  ArrowRight: { columnIndex: 1, rowIndex: 0 },
-  ArrowUp: { columnIndex: 0, rowIndex: -1 },
-};
-const NON_FORMULA_CELL_VALUE_CASES: ReadonlySet<string> = new Set([
-  "boolValue",
-  "doubleValue",
-  "int64Value",
-  "nullValue",
-  "numericValue",
-]);
-
-type CellSelectionBlocks = Array<Array<Array<TableCell | undefined>>>;
-
-function getPageNavigationRowCount(event: CellKeyboardEvent): number {
-  const grid = event.currentTarget.closest<HTMLElement>(".rdg");
-  if (!grid || grid.clientHeight <= DATA_GRID_HEADER_ROW_HEIGHT) {
-    return DEFAULT_PAGE_NAVIGATION_ROW_COUNT;
-  }
-  return Math.max(
-    1,
-    Math.floor(
-      (grid.clientHeight - DATA_GRID_HEADER_ROW_HEIGHT) / DATA_GRID_ROW_HEIGHT
-    )
-  );
-}
-
-function getArrowNavigationDestination({
-  columnIndex,
-  delta,
-  lastColumnIndex,
-  lastRowIndex,
-  moveToGridEdge,
-  rowIndex,
-}: {
-  columnIndex: number;
-  delta: CellCoordinate;
-  lastColumnIndex: number;
-  lastRowIndex: number;
-  moveToGridEdge: boolean;
-  rowIndex: number;
-}): CellCoordinate {
-  const destination = {
-    columnIndex: columnIndex + delta.columnIndex,
-    rowIndex: rowIndex + delta.rowIndex,
-  };
-  if (!moveToGridEdge) {
-    return destination;
-  }
-  if (delta.columnIndex < 0) {
-    destination.columnIndex = DATA_COLUMN_START_INDEX;
-  } else if (delta.columnIndex > 0) {
-    destination.columnIndex = lastColumnIndex;
-  }
-  if (delta.rowIndex < 0) {
-    destination.rowIndex = 0;
-  } else if (delta.rowIndex > 0) {
-    destination.rowIndex = lastRowIndex;
-  }
-  return destination;
-}
-
-function clampCellNavigationDestination(
-  coordinate: CellCoordinate,
-  lastColumnIndex: number,
-  lastRowIndex: number
-): CellCoordinate {
-  return {
-    columnIndex: Math.min(
-      lastColumnIndex,
-      Math.max(DATA_COLUMN_START_INDEX, coordinate.columnIndex)
-    ),
-    rowIndex: Math.min(lastRowIndex, Math.max(0, coordinate.rowIndex)),
-  };
-}
-
-function getCellKeyboardDestination({
-  columnIndex,
-  dataColumnCount,
-  event,
-  rowCount,
-  rowIndex,
-}: {
-  columnIndex: number;
-  dataColumnCount: number;
-  event: CellKeyboardEvent;
-  rowCount: number;
-  rowIndex: number;
-}): CellCoordinate | undefined {
-  if (event.altKey) {
-    return undefined;
-  }
-  const firstColumnIndex = DATA_COLUMN_START_INDEX;
-  const lastColumnIndex = firstColumnIndex + dataColumnCount - 1;
-  const lastRowIndex = rowCount - 1;
-  const moveToGridEdge = event.ctrlKey || event.metaKey;
-  let destination: CellCoordinate;
-
-  switch (event.key) {
-    case "Home":
-      destination = {
-        columnIndex: firstColumnIndex,
-        rowIndex: moveToGridEdge ? 0 : rowIndex,
-      };
-      break;
-    case "End":
-      destination = {
-        columnIndex: lastColumnIndex,
-        rowIndex: moveToGridEdge ? lastRowIndex : rowIndex,
-      };
-      break;
-    case "PageUp":
-      destination = {
-        columnIndex,
-        rowIndex: rowIndex - getPageNavigationRowCount(event),
-      };
-      break;
-    case "PageDown":
-      destination = {
-        columnIndex,
-        rowIndex: rowIndex + getPageNavigationRowCount(event),
-      };
-      break;
-    default: {
-      const delta = CELL_ARROW_MOVEMENT[event.key];
-      if (delta === undefined) {
-        return undefined;
-      }
-      destination = getArrowNavigationDestination({
-        columnIndex,
-        delta,
-        lastColumnIndex,
-        lastRowIndex,
-        moveToGridEdge,
-        rowIndex,
-      });
-    }
-  }
-
-  return clampCellNavigationDestination(
-    destination,
-    lastColumnIndex,
-    lastRowIndex
-  );
-}
-
-function getDisplayedDataColumnKeys(columns: Column<GridRow>[]): string[] {
-  const dataColumns = columns.filter(
-    (column) =>
-      column.key !== SELECT_COLUMN_KEY && column.key !== EXPAND_COLUMN_KEY
-  );
-  return [
-    ...dataColumns.filter((column) => column.frozen === true),
-    ...dataColumns.filter(
-      (column) => column.frozen !== true && column.frozen !== "end"
-    ),
-    ...dataColumns.filter((column) => column.frozen === "end"),
-  ].map((column) => column.key);
-}
-
-function collectCellSelectionBlocks({
-  cellSelectionStore,
-  dataColumnKeys,
-  resultColumns,
-  rows,
-}: {
-  cellSelectionStore: CellSelectionStore;
-  dataColumnKeys: string[];
-  resultColumns: TableResultColumn[];
-  rows: GridRow[];
-}): CellSelectionBlocks {
-  const resultColumnByName = new Map(
-    resultColumns.map((column) => [column.columnName, column])
-  );
-  const lastColumnIndex = DATA_COLUMN_START_INDEX + dataColumnKeys.length - 1;
-  const lastRowIndex = rows.length - 1;
-
-  const blocks: CellSelectionBlocks = [];
-  for (const range of cellSelectionStore.getState().ranges) {
-    const block = collectCellSelectionBlock({
-      dataColumnKeys,
-      lastColumnIndex,
-      lastRowIndex,
-      range,
-      resultColumnByName,
-      rows,
-    });
-    if (block.length > 0 && (block[0]?.length ?? 0) > 0) {
-      blocks.push(block);
-    }
-  }
-  return blocks;
-}
-
-function collectCellSelectionBlock({
-  dataColumnKeys,
-  lastColumnIndex,
-  lastRowIndex,
-  range,
-  resultColumnByName,
-  rows,
-}: {
-  dataColumnKeys: string[];
-  lastColumnIndex: number;
-  lastRowIndex: number;
-  range: CellSelectionRange;
-  resultColumnByName: Map<string, TableResultColumn>;
-  rows: GridRow[];
-}): CellSelectionBlocks[number] {
-  const bounds = getCellSelectionBounds(range);
-  const selectedRows = rows.slice(
-    Math.max(0, bounds.top),
-    Math.min(lastRowIndex, bounds.bottom) + 1
-  );
-  const left = Math.max(DATA_COLUMN_START_INDEX, bounds.left);
-  const right = Math.min(lastColumnIndex, bounds.right);
-  if (left > right) {
-    return [];
-  }
-  const selectedColumnKeys = dataColumnKeys.slice(
-    left - DATA_COLUMN_START_INDEX,
-    right - DATA_COLUMN_START_INDEX + 1
-  );
-  return selectedRows.map((row) =>
-    selectedColumnKeys.map((columnKey) => {
-      const resultColumn = resultColumnByName.get(columnKey);
-      return resultColumn === undefined
-        ? undefined
-        : getGridCell(row, resultColumn);
-    })
-  );
-}
-
-function countCellsNeedingFullValueInBlocks(
-  blocks: CellSelectionBlocks
-): number {
-  let count = 0;
-  for (const block of blocks) {
-    for (const row of block) {
-      for (const cell of row) {
-        if (cellNeedsFullValue(cell)) {
-          count += 1;
-        }
-      }
-    }
-  }
-  return count;
-}
-
-function formatCellSelectionBlocks(blocks: CellSelectionBlocks): string {
-  return formatCellSelectionForClipboard(
-    blocks.map((block) =>
-      block.map((row) =>
-        row.map(
-          (cell): CellSelectionClipboardField => ({
-            neutralizeFormula:
-              cell?.value?.kind.case !== undefined &&
-              !NON_FORMULA_CELL_VALUE_CASES.has(cell.value.kind.case),
-            text: formatCellForClipboard(cell),
-          })
-        )
-      )
-    )
-  );
-}
-
-function isSelectableDataColumn(columnKey: string): boolean {
-  return columnKey !== SELECT_COLUMN_KEY && columnKey !== EXPAND_COLUMN_KEY;
-}
-
-function stopCellKeyboardEvent(event: CellKeyboardEvent) {
-  event.preventDefault();
-  event.preventGridDefault();
-}
-
-function clearNativeTextSelection() {
-  window.getSelection()?.removeAllRanges();
-}
-
-function clearCellSelectionWithKeyboard(
-  cellSelectionStore: CellSelectionStore,
-  event: CellKeyboardEvent
-): boolean {
-  if (
-    event.key !== "Escape" ||
-    cellSelectionStore.getState().ranges.length === 0
-  ) {
-    return false;
-  }
-  stopCellKeyboardEvent(event);
-  cellSelectionStore.clear();
-  return true;
-}
-
-function selectAllCellsWithKeyboard({
-  cellSelectionStore,
-  dataColumnCount,
-  event,
-  rowCount,
-}: {
-  cellSelectionStore: CellSelectionStore;
-  dataColumnCount: number;
-  event: CellKeyboardEvent;
-  rowCount: number;
-}): boolean {
-  if (
-    event.key.toLowerCase() !== "a" ||
-    !(event.ctrlKey || event.metaKey) ||
-    event.altKey
-  ) {
-    return false;
-  }
-  stopCellKeyboardEvent(event);
-  clearNativeTextSelection();
-  cellSelectionStore.selectAll({
-    bottom: rowCount - 1,
-    left: DATA_COLUMN_START_INDEX,
-    right: DATA_COLUMN_START_INDEX + dataColumnCount - 1,
-    top: 0,
-  });
-  return true;
-}
-
-function countCellsNeedingFullValue(rows: SelectedRow[]): number {
-  let count = 0;
-  for (const row of rows) {
-    for (const cell of row.cells.values()) {
-      if (cellNeedsFullValue(cell)) {
-        count += 1;
-      }
-    }
-  }
-  return count;
-}
-
-function isNodeInside(parent: Node, child: Node | null): boolean {
-  return child !== null && parent.contains(child);
-}
-
-function hasActiveTextSelectionInsideGrid(
-  event: ClipboardEvent<HTMLDivElement> | undefined
-): boolean {
-  if (!event) {
-    return false;
-  }
-  const selection = window.getSelection();
-  if (
-    !selection ||
-    selection.isCollapsed ||
-    selection.toString().length === 0
-  ) {
-    return false;
-  }
-  return (
-    isNodeInside(event.currentTarget, selection.anchorNode) ||
-    isNodeInside(event.currentTarget, selection.focusNode)
-  );
-}
-
-function useSelectionActions({
-  cellSelectionStore,
-  columns,
-  name,
-  resultColumns,
-  rows,
-  selectedRows,
-  setSelectedRows,
-}: {
-  cellSelectionStore: CellSelectionStore;
-  columns: Column<GridRow>[];
-  name: string;
-  resultColumns: TableResultColumn[];
-  rows: GridRow[];
-  selectedRows: ReadonlySet<string>;
-  setSelectedRows: (next: ReadonlySet<string>) => void;
-}) {
-  const clearSelection = () => setSelectedRows(new Set());
-  const selected = () =>
-    collectSelectedRows({ resultColumns, rows, selectedRows });
-
-  const readCellValue = useReadCellValueMutation();
-  const fetchFullCell: FetchFullCell = async (fullValueToken) =>
-    (
-      await readCellValue.mutateAsync(
-        create(ReadCellValueRequestSchema, {
-          fullValueToken,
-          maxBytes: READ_CELL_MAX_BYTES,
-          name,
-        })
-      )
-    ).value;
-
-  const resolveSelectedRows = (
-    selectedForExport: SelectedRow[]
-  ): Promise<SelectedRow[]> =>
-    Promise.all(
-      selectedForExport.map(async (row) => ({
-        cells: await resolveRowCells(row.cells, fetchFullCell),
-      }))
-    );
-
-  const resolveCellSelectionBlocks = (
-    blocks: CellSelectionBlocks
-  ): Promise<CellSelectionBlocks> =>
-    Promise.all(
-      blocks.map((block) =>
-        Promise.all(
-          block.map((row) =>
-            Promise.all(row.map((cell) => resolveFullCell(cell, fetchFullCell)))
-          )
-        )
-      )
-    );
-
-  const copySelectedCells = (): boolean => {
-    const blocks = collectCellSelectionBlocks({
-      cellSelectionStore,
-      dataColumnKeys: getDisplayedDataColumnKeys(columns),
-      resultColumns,
-      rows,
-    });
-    if (blocks.length === 0) {
-      return false;
-    }
-    const pendingFetches = countCellsNeedingFullValueInBlocks(blocks);
-    if (pendingFetches > MAX_SELECTION_FULL_VALUE_FETCHES) {
-      toast.error(
-        `Cell selection has ${pendingFetches} oversized values — narrow the selection before copying`
-      );
-      return true;
-    }
-    if (pendingFetches > 0) {
-      writeClipboardDeferred(async () =>
-        formatCellSelectionBlocks(await resolveCellSelectionBlocks(blocks))
-      );
-      return true;
-    }
-    writeClipboard(formatCellSelectionBlocks(blocks));
-    return true;
-  };
-
-  // Returns null when there is nothing to export or the selection needs
-  // more full-value fetches than the cap allows; the caller must bail.
-  const selectionForFullExport = (): {
-    rows: Promise<SelectedRow[]>;
-  } | null => {
-    const selectedForExport = selected();
-    if (selectedForExport.length === 0) {
-      return null;
-    }
-    const pendingFetches = countCellsNeedingFullValue(selectedForExport);
-    if (pendingFetches > MAX_SELECTION_FULL_VALUE_FETCHES) {
-      toast.error(
-        `Selection has ${pendingFetches} oversized values — use the toolbar export instead`
-      );
-      return null;
-    }
-    return {
-      rows:
-        pendingFetches > 0
-          ? resolveSelectedRows(selectedForExport)
-          : Promise.resolve(selectedForExport),
-    };
-  };
-
-  const buildSelectionExport = (
-    exportFormat: ExportFormat,
-    exportRows: SelectedRow[]
-  ) =>
-    buildExport({
-      exportFormat,
-      rows: exportRows,
-      columns: resultColumns,
-      resourceName: name,
-    });
-
-  return {
-    clearSelection,
-    copyCellValue: (row: GridRow, columnKey: string) =>
-      copyCellValue({ columnKey, fetchFullCell, resultColumns, row }),
-    copyRowAsSqlInsert: (row: GridRow) => {
-      const cells = new Map<string, TableCell | undefined>();
-      for (const column of resultColumns) {
-        cells.set(column.columnName, getGridCell(row, column));
-      }
-      const buildSql = (sqlCells: Map<string, TableCell | undefined>) =>
-        buildSelectionExport("sql", [{ cells: sqlCells }]);
-      if ([...cells.values()].some(cellNeedsFullValue)) {
-        writeClipboardDeferred(async () => {
-          const result = buildSql(await resolveRowCells(cells, fetchFullCell));
-          if (!result.ok) {
-            reportTruncatedExport(result);
-            throw new Error("row contains unrecoverable truncated values");
-          }
-          return result.payload.contents;
-        });
-        return;
-      }
-      const result = buildSql(cells);
-      if (!result.ok) {
-        reportTruncatedExport(result);
-        return;
-      }
-      writeClipboard(result.payload.contents);
-    },
-    copyRowValues: (row: GridRow) =>
-      copyRowValues(row, resultColumns, fetchFullCell),
-    handleCellCopy: (
-      { row, column }: CellCopyArgs<GridRow>,
-      event?: ClipboardEvent<HTMLDivElement>
-    ) => {
-      if (hasActiveTextSelectionInsideGrid(event)) {
-        return;
-      }
-      if (copySelectedCells()) {
-        return;
-      }
-      copyCellValue({
-        columnKey: column.key,
-        fetchFullCell,
-        resultColumns,
-        row,
-      });
-    },
-    handleCopySelection: (exportFormat: ExportFormat) => {
-      const pending = selectionForFullExport();
-      if (pending === null) {
-        return;
-      }
-      writeClipboardDeferred(async () => {
-        const result = buildSelectionExport(exportFormat, await pending.rows);
-        if (!result.ok) {
-          reportTruncatedExport(result);
-          throw new Error("selection contains unrecoverable truncated values");
-        }
-        return result.payload.contents;
-      });
-    },
-    handleExportSelection: (exportFormat: ExportFormat) => {
-      const pending = selectionForFullExport();
-      if (pending === null) {
-        return;
-      }
-      pending.rows
-        .then((exportRows) => {
-          const result = buildSelectionExport(exportFormat, exportRows);
-          if (!result.ok) {
-            reportTruncatedExport(result);
-            return;
-          }
-          downloadBlob(
-            result.payload.filename,
-            result.payload.contents,
-            result.payload.mimeType
-          );
-        })
-        .catch(() => toast.error("Couldn't fetch full values for the export"));
-    },
-  };
-}
-
-function useGridColumns({
-  displayColumns,
-  foreignKeyReferences,
-  frozenColumns,
-  onFrozenColumnsChange,
-  onHideColumn,
-  renderOpenReferencedTableLink,
-  resultColumns,
-  rowIdentity,
-  setOpenRowIndex,
-  setSortColumns,
-  sortColumns,
-}: {
-  displayColumns: TableResultColumn[];
-  foreignKeyReferences: readonly TableForeignKeyReference[];
-  frozenColumns: ReadonlySet<string>;
-  onFrozenColumnsChange: (next: ReadonlySet<string>) => void;
-  onHideColumn: (columnKey: string) => void;
-  renderOpenReferencedTableLink?: RenderOpenReferencedTableLink | undefined;
-  resultColumns: TableResultColumn[];
-  rowIdentity:
-    | { columnNames: string[]; source: RowIdentity_Source }
-    | null
-    | undefined;
-  setOpenRowIndex: (next: number) => void;
-  setSortColumns: (next: SortColumn[]) => void;
-  sortColumns: SortColumn[];
-}): { columns: Column<GridRow>[]; pkColumnSet: Set<string> } {
-  "use memo";
-
-  const pkColumnSet = new Set(
-    rowIdentity && rowIdentity.source === RowIdentity_Source.PRIMARY_KEY
-      ? rowIdentity.columnNames
-      : []
-  );
-
-  function toggleColumnSort(columnKey: string, direction: "ASC" | "DESC") {
-    setSortColumns(
-      toggleColumnSortDirection({
-        columnKey,
-        direction,
-        sortColumns,
-      })
-    );
-  }
-
-  function toggleColumnFreeze(columnKey: string) {
-    const next = new Set(frozenColumns);
-    if (next.has(columnKey)) {
-      next.delete(columnKey);
-    } else {
-      next.add(columnKey);
-    }
-    onFrozenColumnsChange(next);
-  }
-
-  // Always pin the action region (select → expand) to the left so the row
-  // checkbox and expand affordance stay reachable while the data columns scroll
-  // horizontally. Frozen data columns, when present, extend the same sticky
-  // block immediately to the right.
-  const columns: Column<GridRow>[] = [
-    {
-      ...SelectColumn,
-      cellClass: "rdg-select-cell rdg-checkbox-cell",
-      frozen: true,
-      headerCellClass: "rdg-select-cell rdg-checkbox-cell",
-      maxWidth: SELECT_COLUMN_WIDTH,
-      minWidth: SELECT_COLUMN_WIDTH,
-      width: SELECT_COLUMN_WIDTH,
-    },
-    {
-      cellClass: "rdg-select-cell rdg-expand-cell",
-      frozen: true,
-      headerCellClass: "rdg-select-cell rdg-expand-cell",
-      key: EXPAND_COLUMN_KEY,
-      maxWidth: EXPAND_COLUMN_WIDTH,
-      minWidth: EXPAND_COLUMN_WIDTH,
-      name: "",
-      renderCell: ({ rowIdx }) => (
-        <Button
-          aria-label="Expand row"
-          onClick={() => setOpenRowIndex(rowIdx)}
-          presentation="expand-cell"
-          size="icon-xs"
-          type="button"
-          variant="ghost"
-        >
-          <Maximize2 />
-        </Button>
-      ),
-      renderHeaderCell: () => null,
-      resizable: false,
-      sortable: false,
-      width: EXPAND_COLUMN_WIDTH,
-    },
-    ...displayColumns.map((column) => {
-      const sortIndex = sortColumns.findIndex(
-        (sc) => sc.columnKey === column.columnName
-      );
-      const sortEntry = sortIndex === -1 ? undefined : sortColumns[sortIndex];
-      return buildColumn({
-        canHide: displayColumns.length > 1,
-        column,
-        foreignKeyReferences,
-        isFrozen: frozenColumns.has(column.columnName),
-        onCopyName: () => writeClipboard(column.columnName),
-        onHide: () => onHideColumn(column.columnName),
-        onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
-        onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
-        onToggleFreeze: () => toggleColumnFreeze(column.columnName),
-        pkColumnSet,
-        renderOpenReferencedTableLink,
-        resultColumns,
-        sortDirection: sortEntry?.direction,
-        sortPriority:
-          sortIndex !== -1 && sortColumns.length > 1
-            ? sortIndex + 1
-            : undefined,
-      });
-    }),
-  ];
-
-  return { columns, pkColumnSet };
-}
-
-function TableDataGridContent({
-  chromeProps,
-  contextMenu,
-  isDataGridExpanded,
-  name,
-  onCloseContextMenu,
-  onContextMenuCopyCell,
-  onContextMenuCopyRow,
-  onContextMenuCopyRowAsSql,
-  onDataGridExpandedChange,
-  openRowIndex,
-  pkColumnSet,
-  resultColumns,
-  rows,
-  setOpenRowIndex,
-}: {
-  chromeProps: TableDataGridChromeProps;
-  contextMenu: ContextMenuState | null;
-  isDataGridExpanded: boolean;
-  name: string;
-  onCloseContextMenu: () => void;
-  onContextMenuCopyCell: () => void;
-  onContextMenuCopyRow: () => void;
-  onContextMenuCopyRowAsSql?: (() => void) | undefined;
-  onDataGridExpandedChange: (next: boolean) => void;
-  openRowIndex: number | null;
-  pkColumnSet: Set<string>;
-  resultColumns: TableResultColumn[];
-  rows: GridRow[];
-  setOpenRowIndex: (next: number | null) => void;
-}) {
-  // Parent table tabs own the available height; keep RDG at that finite height
-  // so row virtualization stays active. Spacing between chrome pieces comes
-  // from the flush bars' own padding, not a flex gap.
-  return (
-    <div className="flex h-full min-h-[480px] flex-col">
-      <CellSelectionLiveStatus
-        cellSelectionStore={chromeProps.cellSelectionStore}
-      />
-      <TableDataGridChrome {...chromeProps} />
-      <ExpandedDataGridDialog
-        chromeProps={chromeProps}
-        onOpenChange={onDataGridExpandedChange}
-        open={isDataGridExpanded}
-      />
-
-      {contextMenu ? (
-        <CellContextMenu
-          left={contextMenu.left}
-          onClose={onCloseContextMenu}
-          onCopyCell={onContextMenuCopyCell}
-          onCopyRow={onContextMenuCopyRow}
-          onCopyRowAsSql={onContextMenuCopyRowAsSql}
-          returnFocusTo={contextMenu.returnFocusTo}
-          top={contextMenu.top}
-        />
-      ) : null}
-
-      <RecordDetailDrawerHost
-        name={name}
-        openRowIndex={openRowIndex}
-        pkColumnSet={pkColumnSet}
-        resultColumns={resultColumns}
-        rows={rows}
-        setOpenRowIndex={setOpenRowIndex}
-      />
-    </div>
-  );
-}
-
-// Grid cell mouse/selection handlers plus the context-menu copy actions. Built
-// per render from the current rows and menu position; hoisted out of
-// TableDataGrid to keep the component itself readable.
-function buildCellInteractionHandlers({
-  cellSelectionStore,
-  contextMenu,
-  dataColumnCount,
-  rowCount,
-  selectionActions,
-  setContextMenu,
-}: {
-  cellSelectionStore: CellSelectionStore;
-  contextMenu: ContextMenuState | null;
-  dataColumnCount: number;
-  rowCount: number;
-  selectionActions: ReturnType<typeof useSelectionActions>;
-  setContextMenu: (next: ContextMenuState | null) => void;
-}) {
-  function handleCellMouseDown(
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) {
-    if (
-      event.button !== 0 ||
-      !isSelectableDataColumn(args.column.key) ||
-      isCellSelectionInteractiveTarget(event.target, event.currentTarget)
-    ) {
-      return;
-    }
-    cellSelectionStore.start(
-      {
-        columnIndex: args.column.idx,
-        rowIndex: args.rowIdx,
-      },
-      {
-        additive: event.ctrlKey || event.metaKey,
-        extend: event.shiftKey,
-      }
-    );
-  }
-
-  function handleCellKeyDown(
-    args: CellKeyDownArgs<GridRow>,
-    event: CellKeyboardEvent
-  ) {
-    if (
-      args.mode !== "ACTIVE" ||
-      args.column === undefined ||
-      args.row === undefined ||
-      !isSelectableDataColumn(args.column.key)
-    ) {
-      return;
-    }
-
-    if (clearCellSelectionWithKeyboard(cellSelectionStore, event)) {
-      return;
-    }
-
-    if (
-      selectAllCellsWithKeyboard({
-        cellSelectionStore,
-        dataColumnCount,
-        event,
-        rowCount,
-      })
-    ) {
-      return;
-    }
-
-    const next = getCellKeyboardDestination({
-      columnIndex: args.column.idx,
-      dataColumnCount,
-      event,
-      rowCount,
-      rowIndex: args.rowIdx,
-    });
-    if (next === undefined) {
-      return;
-    }
-    stopCellKeyboardEvent(event);
-    clearNativeTextSelection();
-    cellSelectionStore.start(next, { extend: event.shiftKey });
-    cellSelectionStore.end();
-    args.setActivePosition(
-      { idx: next.columnIndex, rowIdx: next.rowIndex },
-      { shouldFocus: true }
-    );
-  }
-
-  function handleCellContextMenu(
-    args: CellMouseArgs<GridRow>,
-    event: CellMouseEvent
-  ) {
-    if (
-      args.column.key === SELECT_COLUMN_KEY ||
-      args.column.key === EXPAND_COLUMN_KEY
-    ) {
-      return;
-    }
-    event.preventGridDefault();
-    event.preventDefault();
-    setContextMenu({
-      columnKey: args.column.key,
-      left: event.clientX,
-      returnFocusTo: event.currentTarget,
-      row: args.row,
-      top: event.clientY,
-    });
-  }
-
-  function handleContextMenuCopyCell() {
-    if (!contextMenu) {
-      return;
-    }
-    selectionActions.copyCellValue(contextMenu.row, contextMenu.columnKey);
-  }
-
-  function handleContextMenuCopyRow() {
-    if (!contextMenu) {
-      return;
-    }
-    selectionActions.copyRowValues(contextMenu.row);
-  }
-
-  function handleContextMenuCopyRowAsSql() {
-    if (!contextMenu) {
-      return;
-    }
-    selectionActions.copyRowAsSqlInsert(contextMenu.row);
-  }
-
-  return {
-    handleCellContextMenu,
-    handleCellKeyDown,
-    handleCellMouseDown,
-    handleContextMenuCopyCell,
-    handleContextMenuCopyRow,
-    handleContextMenuCopyRowAsSql,
-  };
-}
-
-function optionalHandler(
-  enabled: boolean,
-  handler: () => void
-): (() => void) | undefined {
-  return enabled ? handler : undefined;
 }
 
 function availableNextPageToken({
@@ -1872,11 +314,10 @@ function shouldSuppressStatusAndPagination({
 }): boolean {
   return Boolean(isPreviousRequestFallback || (error && rowCount === 0));
 }
-
 function TableDataGrid({
-  allowInsertCopy = true,
+  allowSqlExport = true,
   children,
-  foreignKeyReferences = NO_FOREIGN_KEY_REFERENCES,
+  foreignKeyReferences,
   name,
   initialPageSize = DEFAULT_PAGE_SIZE,
   renderOpenReferencedTableLink,
@@ -1933,6 +374,7 @@ function TableDataGrid({
     isFetching,
     refetch,
   });
+  const fetchFullCell = useReadCellValueFetcher(name);
   const gridLoading = isLoading || isQueryStateValidationLoading;
   // A page/sort/filter change starts a new request while `placeholderData`
   // keeps the prior rows on screen (isPlaceholderData). Dim those rows and
@@ -1941,41 +383,11 @@ function TableDataGrid({
   // same-key refetch — the toolbar Refresh button or a reconnect — doesn't
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [isDataGridExpanded, setIsDataGridExpanded] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<ReadonlySet<string>>(
-    () => new Set()
-  );
-  const cellSelectionStore = useCellSelectionStore();
 
   const resultColumns = visibleData?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
   const availableColumns = buildAvailableColumns(columnCatalog, resultColumns);
   const resultRows = visibleData?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
   const rowCount = visibleData?.resultSet?.rowCount;
-  const rows = buildGridRows(resultRows, resultColumns);
-  const { openRowIndex, setOpenRowIndex } = useOpenRowState(rows);
-
-  useResetSelectionOnNavigation({
-    currentPageIndex: controller.currentPageIndex,
-    filterLogic,
-    filterRules,
-    name,
-    pageSize: controller.pageSize,
-    resetSelection: () => {
-      cellSelectionStore.clear();
-      if (selectedRows.size > 0) {
-        setSelectedRows(new Set());
-      }
-      if (openRowIndex !== null) {
-        setOpenRowIndex(null);
-      }
-    },
-    sortColumns: controller.sortColumns,
-  });
-
-  const [frozenColumns, setFrozenColumns] = useState<ReadonlySet<string>>(
-    () => new Set()
-  );
 
   const columnLayout = useTableColumnLayout({
     availableColumns,
@@ -1985,27 +397,6 @@ function TableDataGrid({
       visibleData?.resultSet
     ),
     tableName: name,
-  });
-
-  const { columns, pkColumnSet } = useGridColumns({
-    displayColumns: columnLayout.displayColumns,
-    foreignKeyReferences,
-    frozenColumns,
-    onFrozenColumnsChange: setFrozenColumns,
-    onHideColumn: (columnKey) =>
-      columnLayout.setColumnVisibility(columnKey, false),
-    renderOpenReferencedTableLink,
-    resultColumns,
-    rowIdentity: visibleData?.resultSet?.rowIdentity,
-    setOpenRowIndex,
-    setSortColumns: controller.setSortColumns,
-    sortColumns: controller.sortColumns,
-  });
-  const displayedDataColumnKeys = getDisplayedDataColumnKeys(columns);
-  useResetCellSelectionOnLayoutChange({
-    cellSelectionStore,
-    columnKeys: displayedDataColumnKeys,
-    rowKeys: rows.map((row) => row[ROW_KEY_FIELD]),
   });
 
   const pageLabel =
@@ -2030,34 +421,6 @@ function TableDataGrid({
         rowsReturned: resultRows.length,
       })
     : [];
-  const selectionActions = useSelectionActions({
-    cellSelectionStore,
-    columns,
-    name,
-    resultColumns,
-    rows,
-    selectedRows,
-    setSelectedRows,
-  });
-
-  const cellHandlers = buildCellInteractionHandlers({
-    cellSelectionStore,
-    contextMenu,
-    dataColumnCount: displayedDataColumnKeys.length,
-    rowCount: rows.length,
-    selectionActions,
-    setContextMenu,
-  });
-
-  function handleSortChange(next: SortColumn[]) {
-    controller.setSortColumns(next);
-  }
-
-  function handleNext() {
-    if (nextPageToken) {
-      controller.goNext(nextPageToken);
-    }
-  }
 
   const handleFilterChange = (
     next: TableFilterRule[],
@@ -2067,87 +430,75 @@ function TableDataGrid({
       serializeTableFilterSearch({ logic: nextLogic, rules: next })
     );
   const clearFilters = () => setFilterSearch(undefined);
-  const chromeProps: TableDataGridChromeProps = {
-    allowSqlExport: allowInsertCopy,
-    availableColumns,
-    cellSelectionStore,
-    columnOrder: columnLayout.columnOrder,
-    columns,
-    fetchVisibleColumns: columnLayout.fetchVisibleColumns,
-    filterLogic,
-    filterRules,
-    filterTitle: `Filter ${relationQualifiedName.schema}.${relationQualifiedName.relation}`,
-    hiddenColumnKeys: columnLayout.hiddenColumnKeys,
-    hasStaleRows,
-    invalidFilterRules,
-    isColumnLayoutCustomized: columnLayout.isCustomized,
-    lastFetchedLabel: refreshState.lastFetchedLabel,
-    onCellContextMenu: cellHandlers.handleCellContextMenu,
-    onCellCopy: selectionActions.handleCellCopy,
-    onCellKeyDown: cellHandlers.handleCellKeyDown,
-    onCellMouseDown: cellHandlers.handleCellMouseDown,
-    onClearFilters: clearFilters,
-    onClearSelection: selectionActions.clearSelection,
-    onColumnLayoutReset: columnLayout.reset,
-    onColumnOrderChange: columnLayout.setColumnOrder,
-    onColumnsReorder: columnLayout.reorderColumns,
-    onColumnVisibilityChange: columnLayout.setColumnVisibility,
-    onCopySelection: selectionActions.handleCopySelection,
-    onExportSelection: selectionActions.handleExportSelection,
-    onFetchVisibleColumnsChange: columnLayout.setFetchVisibleColumns,
-    onFilterChange: handleFilterChange,
-    onNext: handleNext,
-    onPageSizeChange: controller.setPageSize,
-    onPrev: controller.goPrev,
-    onRefresh: refreshState.refreshNow,
-    onSelectedRowsChange: setSelectedRows,
-    onSortChange: handleSortChange,
-    onToggleExpanded: () => setIsDataGridExpanded(true),
-    queryError,
-    rows,
-    selectedCount: selectedRows.size,
-    selectedRows,
-    sortColumns: controller.sortColumns,
-    state: {
-      currentPageIndex: controller.currentPageIndex,
-      gridLoading,
-      hasNext,
-      isFetching,
-      isRefetchingRows,
-      pageLabel,
-      pageSize: controller.pageSize,
-      variant: "default",
-    },
-    statusItems,
-    suppressStatusAndPagination: shouldSuppressStatusAndPagination({
-      error: queryError,
-      isPreviousRequestFallback,
-      rowCount: rows.length,
-    }),
-  };
+  const handleRefresh = () => refreshState.refreshNow();
+  const handleSortChange = (next: SortColumn[]) =>
+    controller.setSortColumns(next);
 
   const grid = (
-    <DataValueDialogProvider>
-      <TableDataGridContent
-        chromeProps={chromeProps}
-        contextMenu={contextMenu}
-        isDataGridExpanded={isDataGridExpanded}
-        name={name}
-        onCloseContextMenu={() => setContextMenu(null)}
-        onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
-        onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
-        onContextMenuCopyRowAsSql={optionalHandler(
-          allowInsertCopy,
-          cellHandlers.handleContextMenuCopyRowAsSql
-        )}
-        onDataGridExpandedChange={setIsDataGridExpanded}
-        openRowIndex={openRowIndex}
-        pkColumnSet={pkColumnSet}
-        resultColumns={resultColumns}
-        rows={rows}
-        setOpenRowIndex={setOpenRowIndex}
-      />
-    </DataValueDialogProvider>
+    <ResultDataGrid
+      alerts={
+        <TableDataGridAlerts
+          hasStaleRows={hasStaleRows}
+          invalidFilterRules={invalidFilterRules}
+          onClearFilters={clearFilters}
+          onRetry={handleRefresh}
+          queryError={queryError}
+        />
+      }
+      allowSqlExport={allowSqlExport}
+      availableColumns={availableColumns}
+      columnLayout={columnLayout}
+      fetchFullCell={fetchFullCell}
+      filters={{
+        logic: filterLogic,
+        onChange: handleFilterChange,
+        rules: filterRules,
+        title: `Filter ${relationQualifiedName.schema}.${relationQualifiedName.relation}`,
+      }}
+      foreignKeyReferences={foreignKeyReferences}
+      isLoading={gridLoading}
+      isRefetchingRows={isRefetchingRows}
+      onSortChange={handleSortChange}
+      pagination={{
+        currentPageIndex: controller.currentPageIndex,
+        hasNext,
+        onNext: () => {
+          if (nextPageToken) {
+            controller.goNext(nextPageToken);
+          }
+        },
+        onPageSizeChange: controller.setPageSize,
+        onPrev: controller.goPrev,
+        pageLabel,
+        pageSize: controller.pageSize,
+      }}
+      queryErrorActive={Boolean(queryError)}
+      refresh={{
+        isFetching,
+        lastFetchedLabel: refreshState.lastFetchedLabel,
+        onRefresh: handleRefresh,
+      }}
+      renderOpenReferencedTableLink={renderOpenReferencedTableLink}
+      resetKey={navigationStateKey({
+        currentPageIndex: controller.currentPageIndex,
+        filterLogic,
+        filterRules,
+        name,
+        pageSize: controller.pageSize,
+        sortColumns: controller.sortColumns,
+      })}
+      resourceName={name}
+      resultColumns={resultColumns}
+      resultRows={resultRows}
+      rowIdentity={visibleData?.resultSet?.rowIdentity}
+      sortColumns={controller.sortColumns}
+      statusItems={statusItems}
+      suppressStatusAndPagination={shouldSuppressStatusAndPagination({
+        error: queryError,
+        isPreviousRequestFallback,
+        rowCount: resultRows.length,
+      })}
+    />
   );
 
   if (children) {
