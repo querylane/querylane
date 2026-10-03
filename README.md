@@ -33,7 +33,7 @@
 - **Configuration as code** — declare instances in `querylane.yaml` with secrets from environment variables, or manage them in the UI with encrypted storage.
 - **Simple to run** — one distroless container serving API and UI on one port; horizontally scalable against a shared metadata database.
 
-Querylane is read-first today. A SQL editor and row editing are [planned](https://docs.querylane.net/roadmap).
+Querylane is read-first today. The SQL workbench runs read-only statements inside a read-only transaction; row editing is [planned](https://docs.querylane.net/roadmap).
 
 ## Get started
 
