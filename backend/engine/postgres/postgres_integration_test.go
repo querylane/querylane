@@ -926,6 +926,57 @@ func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryCapturesPostgresWar
 	s.Contains(strings.Join(stream.Stats().Notices, "\n"), "WARNING 01000: querylane warning: execute")
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryReportsCommandTag() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	tests := []struct {
+		name         string
+		statement    string
+		rowLimit     int
+		wantColumns  int
+		wantTag      string
+		wantAffected int64
+	}{
+		{
+			name:         "select reports the full count even when truncated",
+			statement:    "SELECT g FROM generate_series(1, 5) AS g",
+			rowLimit:     2,
+			wantColumns:  1,
+			wantTag:      "SELECT 5",
+			wantAffected: 5,
+		},
+		{
+			name:        "utility command without a result set",
+			statement:   "SET LOCAL work_mem = '8MB'",
+			wantColumns: 0,
+			wantTag:     "SET",
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			stream, err := s.eng.ExecuteQuery(ctx, testDB, engine.ExecuteQueryParams{
+				Statement: tt.statement,
+				RowLimit:  tt.rowLimit,
+				Timeout:   5 * time.Second,
+			})
+			s.Require().NoError(err)
+
+			for stream.Next() {
+			}
+
+			s.Require().NoError(stream.Err())
+			s.Require().NoError(stream.Close())
+			s.Len(stream.Columns(), tt.wantColumns)
+			s.Equal(tt.wantTag, stream.Stats().CommandTag)
+			s.Equal(tt.wantAffected, stream.Stats().RowsAffected)
+		})
+	}
+}
+
 func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryPreservesTypedValuesLikeReadRows() {
 	ctx := context.Background()
 
@@ -993,6 +1044,148 @@ func (s *PostgresEngineIntegrationTestSuite) TestExplainQueryCapturesPostgresWar
 	s.Require().NoError(err)
 	s.NotEmpty(result.Plan)
 	s.Contains(strings.Join(result.Notices, "\n"), "WARNING 01000: querylane warning: explain")
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestValidateQueryReportsProblemsWithoutRunning() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, "CREATE TABLE public.ql_validate_probe (id int PRIMARY KEY, email text)")
+	s.Require().NoError(err)
+
+	validate := func(statement string) *engine.QueryDiagnostic {
+		result, err := s.eng.ValidateQuery(ctx, testDB, engine.ValidateQueryParams{Statement: statement, Timeout: 5 * time.Second})
+		s.Require().NoError(err)
+
+		return result.Diagnostic
+	}
+
+	s.Nil(validate("SELECT id, email FROM public.ql_validate_probe WHERE id = 1"))
+
+	// "FORM" parses as an alias for id, so PostgreSQL trips on the next token.
+	syntax := validate("SELECT id FORM public.ql_validate_probe")
+	s.Require().NotNil(syntax)
+	s.Equal("42601", syntax.SQLState)
+	s.Contains(syntax.Message, `"public"`)
+	s.Equal(int32(16), syntax.Position)
+
+	column := validate("SELECT emial FROM public.ql_validate_probe")
+	s.Require().NotNil(column)
+	s.Equal("42703", column.SQLState)
+	s.Equal(int32(8), column.Position)
+	s.Contains(column.Hint, "email")
+
+	// Validation must not execute: the sleep would take far longer than the
+	// timeout if it ran, and the row count proves the insert never happened.
+	start := time.Now()
+	s.Nil(validate("SELECT pg_sleep(30)"))
+	s.Less(time.Since(start), 5*time.Second)
+	s.Nil(validate("INSERT INTO public.ql_validate_probe (id) VALUES (42)"))
+
+	var count int
+	s.Require().NoError(testDB.QueryRowContext(ctx, "SELECT count(*) FROM public.ql_validate_probe").Scan(&count))
+	s.Equal(0, count)
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestValidateQueryResolvesNamesInDefaultSchema() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	// One pooled connection, so the search_path check below runs on the very
+	// connection validation used.
+	testDB.SetMaxOpenConns(1)
+
+	_, err := testDB.ExecContext(ctx, `CREATE SCHEMA "ql Validate"; CREATE TABLE "ql Validate".orders_only_here (id int)`)
+	s.Require().NoError(err)
+
+	validate := func(defaultSchema string) *engine.QueryDiagnostic {
+		result, err := s.eng.ValidateQuery(ctx, testDB, engine.ValidateQueryParams{
+			Statement:     "SELECT id FROM orders_only_here",
+			Timeout:       5 * time.Second,
+			DefaultSchema: defaultSchema,
+		})
+		s.Require().NoError(err)
+
+		return result.Diagnostic
+	}
+
+	s.Nil(validate("ql Validate"), "unqualified name resolves in the chosen schema")
+
+	missing := validate("")
+	s.Require().NotNil(missing, "without a default schema the name is unknown")
+	s.Equal("42P01", missing.SQLState)
+
+	// A failed statement aborts the scoped transaction; it must still roll back.
+	s.Require().NotNil(validate("public"))
+
+	var searchPath string
+	s.Require().NoError(testDB.QueryRowContext(ctx, "SHOW search_path").Scan(&searchPath))
+	s.NotContains(searchPath, "ql Validate", "SET LOCAL must not leak into the pool")
+
+	conn, err := testDB.Conn(ctx)
+	s.Require().NoError(err)
+
+	defer conn.Close()
+
+	s.Require().NoError(conn.Raw(func(driverConn any) error {
+		pgxConn, ok := engine.UnwrapPostgresConn(driverConn)
+		s.Require().True(ok)
+		// 'I' = idle: the pooled connection is not left inside a transaction.
+		s.Equal(byte('I'), pgxConn.PgConn().TxStatus())
+
+		return nil
+	}))
+}
+
+func (s *PostgresEngineIntegrationTestSuite) TestValidateQueryGivesUpOnLockedRelations() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, "CREATE TABLE public.ql_validate_locked (id int)")
+	s.Require().NoError(err)
+
+	// A migration-style lock: analysis needs AccessShare on the table, which
+	// ACCESS EXCLUSIVE blocks until this transaction ends.
+	locker, err := testDB.BeginTx(ctx, nil)
+	s.Require().NoError(err)
+
+	defer func() { _ = locker.Rollback() }()
+
+	_, err = locker.ExecContext(ctx, "LOCK TABLE public.ql_validate_locked IN ACCESS EXCLUSIVE MODE")
+	s.Require().NoError(err)
+
+	validateDB := s.getTestDBConnection()
+	defer validateDB.Close()
+
+	validateDB.SetMaxOpenConns(1)
+
+	start := time.Now()
+	_, err = s.eng.ValidateQuery(ctx, validateDB, engine.ValidateQueryParams{
+		Statement: "SELECT id FROM public.ql_validate_locked",
+		Timeout:   5 * time.Second,
+	})
+	s.Require().Error(err, "a lock timeout is a failed check, not a diagnostic about the statement")
+	s.Less(time.Since(start), 3*time.Second, "lock_timeout must end the wait well before statement_timeout")
+
+	conn, err := validateDB.Conn(ctx)
+	s.Require().NoError(err)
+
+	defer conn.Close()
+
+	s.Require().NoError(conn.Raw(func(driverConn any) error {
+		pgxConn, ok := engine.UnwrapPostgresConn(driverConn)
+		s.Require().True(ok)
+		// 'I' = idle: the throwaway transaction was rolled back.
+		s.Equal(byte('I'), pgxConn.PgConn().TxStatus())
+
+		return nil
+	}))
 }
 
 func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryNoticeCaptureDoesNotLeakBetweenRequests() {

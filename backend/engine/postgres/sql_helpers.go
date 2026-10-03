@@ -48,6 +48,13 @@ func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
+// searchPathStatement scopes unqualified names to one schema for the current
+// transaction. Every SQL console path (execute, explain, validate) uses it so
+// a statement resolves names the same way it is checked.
+func searchPathStatement(schema string) string {
+	return "SET LOCAL search_path = " + quoteIdent(schema)
+}
+
 // columnRef returns a SQL expression that references a column for projection
 // or comparison. `ctid` is a system pseudo-column referenced bare; all others
 // are double-quoted to preserve case and escape embedded quotes.

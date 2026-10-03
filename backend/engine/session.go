@@ -194,6 +194,10 @@ func (s *databaseSession) ExplainQuery(ctx context.Context, params ExplainQueryP
 	return s.queryDriver.ExplainQuery(ctx, s.db, params)
 }
 
+func (s *databaseSession) ValidateQuery(ctx context.Context, params ValidateQueryParams) (*ValidateQueryResult, error) {
+	return s.queryDriver.ValidateQuery(ctx, s.db, params)
+}
+
 // Close releases an ephemeral session's private pool. For pooled sessions it
 // is a no-op: their pools are owned by the instancePool and intentionally
 // outlive request-scoped sessions.
