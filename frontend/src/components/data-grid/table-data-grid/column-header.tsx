@@ -15,12 +15,15 @@ interface ColumnHeaderProps {
   onSortAsc: () => void;
   onSortDesc: () => void;
   onToggleFreeze: () => void;
+  /** Hides the sort/hide/freeze menu (read-only result views). */
+  showMenu?: boolean | undefined;
   sortDirection?: SortDirection | undefined;
   sortPriority?: number | undefined;
 }
 
 function ColumnHeader({
   canHide,
+  showMenu = true,
   column,
   isFrozen,
   isPrimaryKey,
@@ -73,20 +76,22 @@ function ColumnHeader({
           </span>
         ) : null}
       </div>
-      <span className="ml-auto shrink-0">
-        <ColumnHeaderMenu
-          canHide={canHide}
-          columnName={column.columnName}
-          columnRawType={column.rawType}
-          isFrozen={isFrozen}
-          onCopyName={onCopyName}
-          onHide={onHide}
-          onSortAsc={onSortAsc}
-          onSortDesc={onSortDesc}
-          onToggleFreeze={onToggleFreeze}
-          sortDirection={sortDirection}
-        />
-      </span>
+      {showMenu ? (
+        <span className="ml-auto shrink-0">
+          <ColumnHeaderMenu
+            canHide={canHide}
+            columnName={column.columnName}
+            columnRawType={column.rawType}
+            isFrozen={isFrozen}
+            onCopyName={onCopyName}
+            onHide={onHide}
+            onSortAsc={onSortAsc}
+            onSortDesc={onSortDesc}
+            onToggleFreeze={onToggleFreeze}
+            sortDirection={sortDirection}
+          />
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -145,6 +145,8 @@ interface RecordDetailDrawerProps {
   rowCount: number;
   rowIndex: number;
   tableName: QualifiedTableName;
+  /** Heading override; defaults to `schema.table`. */
+  title?: string | undefined;
 }
 function RecordDetailDrawer({
   columns,
@@ -161,6 +163,7 @@ function RecordDetailDrawer({
   rowCells,
   rowIndex,
   tableName,
+  title,
 }: RecordDetailDrawerProps) {
   const primaryKeyValues: string[] = [];
   for (const column of columns) {
@@ -187,7 +190,7 @@ function RecordDetailDrawer({
         <SheetHeader presentation="record-drawer">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <SheetTitle className="min-w-0 break-all" presentation="record">
-              {tableName.schema}.{tableName.table}
+              {title ?? `${tableName.schema}.${tableName.table}`}
             </SheetTitle>
             <RowNumberNavigator
               hasNext={hasNext}

@@ -22,9 +22,9 @@ interface DataGridToolbarProps {
   className?: string | undefined;
   columnOrder: readonly string[];
   columns: TableResultColumn[];
-  fetchVisibleColumns: boolean;
-  filterLogic: TableFilterLogic;
-  filterRules: TableFilterRule[];
+  fetchVisibleColumns?: boolean | undefined;
+  filterLogic?: TableFilterLogic | undefined;
+  filterRules?: TableFilterRule[] | undefined;
   filterTitle?: string | undefined;
   hiddenColumnKeys: ReadonlySet<string>;
   isColumnLayoutCustomized: boolean;
@@ -37,17 +37,21 @@ interface DataGridToolbarProps {
   onColumnVisibilityChange: (columnKey: string, visible: boolean) => void;
   onCopySelection: (format: ExportFormat) => void;
   onExportSelection: (format: ExportFormat) => void;
-  onFetchVisibleColumnsChange: (enabled: boolean) => void;
-  onFilterChange: (
-    nextRules: TableFilterRule[],
-    nextLogic?: TableFilterLogic
-  ) => void;
-  onRefresh: () => Promise<unknown> | undefined;
+  /** Omit when rows are not fetched by column (hides the toggle). */
+  onFetchVisibleColumnsChange?: ((enabled: boolean) => void) | undefined;
+  /** Omit for results that cannot be filtered server-side (hides filters). */
+  onFilterChange?:
+    | ((nextRules: TableFilterRule[], nextLogic?: TableFilterLogic) => void)
+    | undefined;
+  /** Omit for results that cannot be re-read (hides refresh). */
+  onRefresh?: (() => Promise<unknown> | undefined) | undefined;
   onSortChange: (next: SortColumn[]) => void;
   onToggleExpanded?: (() => void) | undefined;
   selectedCount: number;
   sortColumns: SortColumn[];
 }
+
+const NO_FILTER_RULES: TableFilterRule[] = [];
 
 function DataGridExpandToggle({
   isExpanded,
@@ -146,12 +150,12 @@ function DataGridToolbar({
   className,
   columnOrder,
   columns,
-  fetchVisibleColumns,
+  fetchVisibleColumns = false,
   hiddenColumnKeys,
   isColumnLayoutCustomized,
   filterTitle,
-  filterLogic,
-  filterRules,
+  filterLogic = "and",
+  filterRules = NO_FILTER_RULES,
   isExpanded = false,
   isFetching,
   lastFetchedLabel = "Not fetched yet",
@@ -188,14 +192,16 @@ function DataGridToolbar({
       ref={setPopoverBoundary}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <FilterPopover
-          columns={columns}
-          logic={filterLogic}
-          onChange={onFilterChange}
-          popoverBoundary={popoverBoundary}
-          rules={filterRules}
-          title={filterTitle}
-        />
+        {onFilterChange ? (
+          <FilterPopover
+            columns={columns}
+            logic={filterLogic}
+            onChange={onFilterChange}
+            popoverBoundary={popoverBoundary}
+            rules={filterRules}
+            title={filterTitle}
+          />
+        ) : null}
         <SortPopover
           columns={columns}
           onChange={onSortChange}
@@ -228,20 +234,24 @@ function DataGridToolbar({
             onExportSelection={onExportSelection}
             selectedCount={selectedCount}
           />
-          <RefreshControl
-            ariaLabel="Refresh rows"
-            className="-me-1"
-            isRefreshing={isFetching}
-            lastFetchedLabel={lastFetchedLabel}
-            onRefresh={onRefresh}
-          />
+          {onRefresh ? (
+            <RefreshControl
+              ariaLabel="Refresh rows"
+              className="-me-1"
+              isRefreshing={isFetching}
+              lastFetchedLabel={lastFetchedLabel}
+              onRefresh={onRefresh}
+            />
+          ) : null}
         </div>
       </div>
-      <FilterChips
-        logic={filterLogic}
-        onChange={onFilterChange}
-        rules={filterRules}
-      />
+      {onFilterChange ? (
+        <FilterChips
+          logic={filterLogic}
+          onChange={onFilterChange}
+          rules={filterRules}
+        />
+      ) : null}
     </div>
   );
 }

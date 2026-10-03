@@ -7,6 +7,21 @@ import {
 } from "@/features/user-settings/table-column-layout-settings";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
+/** What the result grid needs from a column layout, persisted or not. */
+interface TableColumnLayoutController {
+  columnOrder: readonly string[];
+  displayColumns: TableResultColumn[];
+  fetchVisibleColumns: boolean;
+  hiddenColumnKeys: ReadonlySet<string>;
+  isCustomized: boolean;
+  reorderColumns: (sourceColumnKey: string, targetColumnKey: string) => void;
+  reset: () => void;
+  setColumnOrder: (order: string[]) => void;
+  setColumnVisibility: (columnKey: string, visible: boolean) => void;
+  /** Absent when rows are not fetched by column (no projection toggle). */
+  setFetchVisibleColumns?: ((enabled: boolean) => void) | undefined;
+}
+
 interface UseTableColumnLayoutOptions {
   availableColumns: TableResultColumn[];
   columns: TableResultColumn[];
@@ -26,7 +41,7 @@ function useTableColumnLayout({
   columns,
   hasColumnMetadata,
   tableName,
-}: UseTableColumnLayoutOptions) {
+}: UseTableColumnLayoutOptions): TableColumnLayoutController {
   const savedLayout = useTableColumnLayoutSettingsStore(
     (state) => state.layouts[tableName]
   );
@@ -135,4 +150,32 @@ function useTableColumnLayout({
   };
 }
 
-export { useSelectedTableColumns, useTableColumnLayout };
+const NO_HIDDEN_COLUMNS: ReadonlySet<string> = new Set();
+
+function ignoreLayoutChange() {
+  // Static layouts have no column controls to call this.
+}
+
+/**
+ * The layout of a grid that offers no column controls (query results): the
+ * columns exactly as returned, in order, none hidden. The setters are never
+ * reachable from the UI there.
+ */
+function staticColumnLayout(
+  columns: readonly TableResultColumn[]
+): TableColumnLayoutController {
+  return {
+    columnOrder: columns.map((column) => column.columnName),
+    displayColumns: [...columns],
+    fetchVisibleColumns: false,
+    hiddenColumnKeys: NO_HIDDEN_COLUMNS,
+    isCustomized: false,
+    reorderColumns: ignoreLayoutChange,
+    reset: ignoreLayoutChange,
+    setColumnOrder: ignoreLayoutChange,
+    setColumnVisibility: ignoreLayoutChange,
+  };
+}
+
+export type { TableColumnLayoutController };
+export { staticColumnLayout, useSelectedTableColumns, useTableColumnLayout };
