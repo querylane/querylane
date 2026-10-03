@@ -39,8 +39,10 @@ into `ChartRow[]`/`ChartSeries[]` and passes formatters in.
 - **2 formatter grades**: axis = compact (`12.3K`), tooltip = detailed
   (`12,345`). The tick-step and the formatter must agree or labels collide.
 - **Dash = context, never measurement**: dashed strokes are reserved for the
-  previous-period overlay and threshold/limit lines. The grid is dashed-faint
-  chrome; the hover crosshair is dashed foreground at 40%.
+  previous-period overlay and threshold/limit lines. The grid is solid
+  border-token chrome (explicit opacity 1; the library default 0.11 makes it
+  invisible) with no axis rules; the hover crosshair is dashed
+  foreground at 40%.
 - **Gaps stay gaps** (`null` remains in each mark's value channel): probe outages and counter
   resets must be visible, never bridged.
 - **Color follows the entity**: series keep their `--chart-N` token across

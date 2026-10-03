@@ -112,31 +112,18 @@ export function InstanceStatItem({
   children,
   hint,
   label,
-  notice,
   progress,
   suffix,
-  renderTrend,
 }: {
   children: React.ReactNode;
   /** Optional plain-language explanation shown in a tooltip on the label. */
   hint?: string | undefined;
   label: string;
-  notice?: React.ReactNode | undefined;
   progress?: number | undefined;
   suffix?: string | undefined;
-  /** Renders an optional trend glyph (for example, a sparkline) right-aligned to the value. */
-  renderTrend?: (() => React.ReactNode) | undefined;
 }) {
   return (
     <div className="relative flex min-h-24 flex-col px-4 pt-3.5 pb-8">
-      {renderTrend ? (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-4 bottom-0 h-7 opacity-45 empty:hidden"
-        >
-          {renderTrend()}
-        </div>
-      ) : null}
       <div className="relative flex flex-col gap-1">
         {hint ? (
           <Tooltip>
@@ -164,11 +151,6 @@ export function InstanceStatItem({
         {progress === undefined ? null : (
           <Progress density="compact" value={progress} />
         )}
-        {notice ? (
-          <div className="text-warning-600 text-xs leading-snug dark:text-warning-400">
-            {notice}
-          </div>
-        ) : null}
       </div>
     </div>
   );

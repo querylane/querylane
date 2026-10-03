@@ -473,6 +473,13 @@ export function metricTickBase(unit: MetricUnit): 10 | 1024 {
     : DECIMAL_TICK_BASE;
 }
 
+/** A series' finite values in order, gaps dropped: the input of a stat-tile sparkline. */
+export function sparklineValues(series: MetricSeries | undefined): number[] {
+  return (series?.points?.values ?? []).filter((value) =>
+    Number.isFinite(value)
+  );
+}
+
 /** Formats a metric value for display using its unit as the hint. */
 export function formatMetricValue(
   value: number | null | undefined,
@@ -487,6 +494,8 @@ export function formatMetricValue(
       return formatBytes(Math.round(value));
     case MetricUnit.BYTES_PER_SECOND:
       return `${formatBytes(Math.round(value))}/s`;
+    case MetricUnit.PER_SECOND:
+      return `${formatCompactNumber(value)}/s`;
     case MetricUnit.RATIO: {
       let rounded = Number(
         (value * PERCENT_MULTIPLIER).toFixed(RATIO_DECIMALS)
@@ -521,6 +530,8 @@ export function formatMetricValueDetailed(
       return formatBytes(Math.round(value));
     case MetricUnit.BYTES_PER_SECOND:
       return `${formatBytes(Math.round(value))}/s`;
+    case MetricUnit.PER_SECOND:
+      return `${detailedNumberFormatter.format(value)}/s`;
     case MetricUnit.RATIO: {
       let rounded = Number(
         (value * PERCENT_MULTIPLIER).toFixed(DETAILED_RATIO_DECIMALS)

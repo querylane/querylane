@@ -138,7 +138,7 @@ test.describe("instance overview", () => {
       page,
       "main div.grid",
       "Connections",
-      "Cache Hit Ratio"
+      "Cache hit ratio"
     );
     await expectPassiveSparkline(page, statStrip);
     await expect(statStrip).toHaveScreenshot(

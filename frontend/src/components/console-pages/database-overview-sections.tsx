@@ -8,12 +8,12 @@ import {
   Table2,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
-import { useId } from "react";
 import {
   formatMs,
   ratioToPercent,
   toSortedSchemas,
 } from "@/components/console-pages/database-overview-model";
+import { StatCell, StatStrip } from "@/components/console-pages/stat-strip";
 import { Button } from "@/components/querylane-ui/button";
 import { Card, CardContent, CardHeader } from "@/components/querylane-ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -24,6 +24,7 @@ import type {
   DatabaseCatalogResult,
 } from "@/hooks/api/database-catalog";
 import { formatBytes, parseResourceLeafId } from "@/lib/console-resources";
+import { sparklineValues } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
   Database,
@@ -35,10 +36,6 @@ const EXPLORER_ROUTE =
   "/instances/$instanceId/databases/$databaseId/explorer" as const;
 const DATABASE_ROUTE = "/instances/$instanceId/databases/$databaseId" as const;
 const INSTANCE_ROUTE = "/instances/$instanceId" as const;
-const SPARKLINE_WIDTH = 64;
-const SPARKLINE_HEIGHT = 32;
-/** Where a flat (zero-span) series draws: centered in the sparkline box. */
-const SPARKLINE_FLAT_POSITION = 0.5;
 const LOADING_ROW_KEYS = ["first", "second", "third", "fourth"] as const;
 const MAX_DATABASE_ROWS = 8;
 const SCHEMA_WIDE_COLUMN_COUNT = 3;
@@ -77,104 +74,6 @@ function CardLoadingRows({ label }: { label: string }) {
       {LOADING_ROW_KEYS.map((key) => (
         <Skeleton aria-hidden="true" className="h-7 w-full" key={key} />
       ))}
-    </div>
-  );
-}
-
-/** Bounded trailing values of a metric series, NaN gaps removed. */
-function sparklineValues(series: MetricSeries | undefined): number[] {
-  return (series?.points?.values ?? []).filter((value) =>
-    Number.isFinite(value)
-  );
-}
-
-function sparklinePath(values: number[]): string {
-  const minimum = Math.min(...values);
-  const maximum = Math.max(...values);
-  const span = maximum - minimum;
-  const stepX = SPARKLINE_WIDTH / Math.max(values.length - 1, 1);
-  return values
-    .map((value, index) => {
-      const x = index * stepX;
-      const normalized =
-        span === 0 ? SPARKLINE_FLAT_POSITION : (value - minimum) / span;
-      const y = SPARKLINE_HEIGHT - normalized * (SPARKLINE_HEIGHT - 2) - 1;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
-
-function TrendSparkline({ values }: { values: number[] }) {
-  const gradientId = useId();
-  if (values.length < 2) {
-    return null;
-  }
-  const path = sparklinePath(values);
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-full text-chart-1 opacity-60"
-      fill="none"
-      preserveAspectRatio="none"
-      viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity={0.14} />
-          <stop offset="100%" stopColor="currentColor" stopOpacity={0.01} />
-        </linearGradient>
-      </defs>
-      <path
-        d={`${path} L${SPARKLINE_WIDTH},${SPARKLINE_HEIGHT} L0,${SPARKLINE_HEIGHT} Z`}
-        fill={`url(#${gradientId})`}
-      />
-      <path d={path} stroke="currentColor" strokeWidth={1} />
-    </svg>
-  );
-}
-
-function StatCell({
-  className,
-  label,
-  sparklineValues: sparkline,
-  sub,
-  value,
-}: {
-  className?: string | undefined;
-  label: string;
-  sparklineValues?: number[] | undefined;
-  sub?: string | undefined;
-  value: string;
-}) {
-  const hasSparkline = sparkline !== undefined && sparkline.length >= 2;
-  return (
-    <div
-      className={cn(
-        "relative flex min-h-24 flex-col px-5 pt-4 pb-8",
-        className
-      )}
-    >
-      {hasSparkline ? (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-7 opacity-70"
-        >
-          <TrendSparkline values={sparkline} />
-        </div>
-      ) : null}
-      <div className="relative flex flex-col gap-1.5">
-        <span className="text-(length:--text-label-sm) font-medium text-muted-foreground uppercase tracking-heading">
-          {label}
-        </span>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-(length:--text-heading-sm) font-mono font-semibold text-foreground tabular-nums leading-none tracking-tight">
-            {value}
-          </span>
-          {sub ? (
-            <span className="mt-1 text-muted-foreground text-xs">{sub}</span>
-          ) : null}
-        </div>
-      </div>
     </div>
   );
 }
@@ -238,43 +137,32 @@ function DatabaseStatStrip({
   const estimatedRows = totals
     ? formatCatalogMeasure(formatRows(totals.estimatedRows), objectsPartial)
     : "Not loaded";
-  // Below md the strip is a 2×2 grid: separate the rows with a border on the
-  // first two cells and the columns with a border on odd cells.
-  const cellBorders =
-    "border-border max-md:odd:border-r max-md:nth-[-n+2]:border-b";
   return (
-    <Card
-      className="grid grid-cols-2 overflow-hidden md:grid-cols-4"
-      presentation="split"
-    >
+    <StatStrip>
       <StatCell
-        className={cellBorders}
         label="Total size"
         sparklineValues={sparklineValues(sizeSeries)}
         sub={schemaCount}
         value={pendingValue ?? totalSize}
       />
       <StatCell
-        className={cellBorders}
         label="Tables"
         sub={viewCount}
         value={pendingValue ?? tableCount}
       />
       <StatCell
-        className={cellBorders}
         label="Est. rows"
         sparklineValues={sparklineValues(liveTuplesSeries)}
         sub="across user tables"
         value={pendingValue ?? estimatedRows}
       />
       <StatCell
-        className={cellBorders}
         label="Dead tuples"
         sparklineValues={deadValues}
         sub="awaiting vacuum"
         value={deadNow === null ? "Not reported" : formatRows(deadNow)}
       />
-    </Card>
+    </StatStrip>
   );
 }
 

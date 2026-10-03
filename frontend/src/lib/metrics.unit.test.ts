@@ -8,6 +8,7 @@ import {
   decodePoints,
   formatElapsedDuration,
   formatMetricValue,
+  formatMetricValueDetailed,
   formatTrend,
   hasDrawablePoints,
   hasRenderableSpan,
@@ -46,8 +47,15 @@ describe("formatMetricValue", () => {
     );
   });
 
+  test("formats per-second rates with a /s suffix", () => {
+    expect(formatMetricValue(1.04, MetricUnit.PER_SECOND)).toBe("1.04/s");
+    expect(formatMetricValueDetailed(12_345, MetricUnit.PER_SECOND)).toBe(
+      "12,345/s"
+    );
+  });
+
   test("keeps decimals on small fractional values so axis ticks stay distinct", () => {
-    expect(formatMetricValue(0.5, MetricUnit.PER_SECOND)).toBe("0.5");
+    expect(formatMetricValue(0.5, MetricUnit.PER_SECOND)).toBe("0.5/s");
     expect(formatMetricValue(1.5, MetricUnit.COUNT)).toBe("1.5");
     expect(formatMetricValue(2, MetricUnit.COUNT)).toBe("2");
     expect(formatMetricValue(42.7, MetricUnit.COUNT)).toBe("43");

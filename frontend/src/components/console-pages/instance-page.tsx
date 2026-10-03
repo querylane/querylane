@@ -13,13 +13,10 @@ import {
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { AsyncSectionState } from "@/components/async-section-state";
-import { MetricSparkline } from "@/components/charts/metric-chart";
 import { ConfigManagedNotice } from "@/components/config-managed-notice";
 import {
   CopyableHost,
   InstanceNotFoundState,
-  InstanceStatItem,
-  InstanceStatsBar,
   ResourcePageState,
   SummaryCountValue,
 } from "@/components/console-pages/console-layout";
@@ -37,6 +34,7 @@ import {
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
 import { InstanceHealthSection } from "@/components/console-pages/instance-health-section";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
+import { StatCell, StatStrip } from "@/components/console-pages/stat-strip";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -83,14 +81,11 @@ import {
   type MetricPartialErrors,
 } from "@/lib/instance-health";
 import {
-  CHART_COLORS,
-  type ChartRow,
   DEFAULT_METRIC_RANGE,
-  decodePoints,
-  hasRenderableSpan,
   type MetricRange,
   metricRangeByHours,
   seriesByMetric,
+  sparklineValues,
 } from "@/lib/metrics";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { formatReplicationRole } from "@/lib/protobuf-enums";
@@ -115,7 +110,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
   MetricId,
-  type MetricSeries,
   type QueryMetricsResponse,
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
@@ -269,39 +263,13 @@ interface InstancePageHeaderDatabasesState {
   isUnavailable: boolean;
 }
 
-function StatValue({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-bold font-mono text-xl tabular-nums tracking-tight">
-      {children}
-    </span>
-  );
-}
-
-/**
- * The quiet trend glyph beside a header stat value: the metric's queried
- * window as a sparkline. Renders nothing until the series has enough finite
- * points, so tiles stay clean on fresh instances and disconnected ones.
- */
-function StatSparkline({
-  color,
-  series,
-}: {
-  color: string;
-  series: MetricSeries | undefined;
-}) {
-  if (!series) {
-    return null;
+function connectionsCaption(overview: InstanceOverview | undefined) {
+  if (!overview?.connections) {
+    return;
   }
-
-  const data: ChartRow[] = decodePoints(series.points).map((point) => ({
-    time: point.time,
-    value: point.value,
-  }));
-  if (!hasRenderableSpan(data)) {
-    return null;
-  }
-
-  return <MetricSparkline color={color} data={data} seriesKey="value" />;
+  const pct = getConnectionPct(overview);
+  const max = `of ${overview.connections.maxConnections.toLocaleString()} max`;
+  return pct === undefined ? max : `${max} · ${Math.round(pct)}%`;
 }
 
 function CoreInstanceStatsBar({
@@ -315,73 +283,57 @@ function CoreInstanceStatsBar({
   metricsResponse?: QueryMetricsResponse | undefined;
   overview?: InstanceOverview | undefined;
 }) {
-  const connectionPct = getConnectionPct(overview);
   const metricSeries = seriesByMetric(metricsResponse);
   return (
-    <InstanceStatsBar>
-      <InstanceStatItem
+    <StatStrip>
+      <StatCell
         label="Connections"
         notice={getMetricNotice(metricPartialErrors, "connections")}
-        progress={connectionPct}
-        renderTrend={() => (
-          <StatSparkline
-            color={CHART_COLORS[2].color}
-            series={metricSeries.get(MetricId.CONNECTIONS_TOTAL)}
-          />
+        sparklineValues={sparklineValues(
+          metricSeries.get(MetricId.CONNECTIONS_TOTAL)
         )}
-        suffix={
-          overview?.connections
-            ? `/ ${overview.connections.maxConnections}`
-            : undefined
+        sub={connectionsCaption(overview)}
+        value={
+          overview?.connections ? overview.connections.totalConnections : "—"
         }
-      >
-        <StatValue>
-          {overview?.connections ? overview.connections.totalConnections : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem
-        label="Cache Hit Ratio"
+      />
+      <StatCell
+        label="Cache hit ratio"
         notice={getMetricNotice(metricPartialErrors, "cache")}
-        renderTrend={() => (
-          <StatSparkline
-            color={CHART_COLORS[3].color}
-            series={metricSeries.get(MetricId.CACHE_HIT_RATIO)}
-          />
+        sparklineValues={sparklineValues(
+          metricSeries.get(MetricId.CACHE_HIT_RATIO)
         )}
-      >
-        <StatValue>
-          {overview?.cache
+        sub="buffer cache, all databases"
+        value={
+          overview?.cache
             ? `${Math.round(overview.cache.hitRatio * PERCENT_MULTIPLIER)}%`
-            : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem
+            : "—"
+        }
+      />
+      <StatCell
         label="Storage"
         notice={getMetricNotice(metricPartialErrors, "storage")}
-        renderTrend={() => (
-          <StatSparkline
-            color="var(--color-muted-foreground)"
-            series={metricSeries.get(MetricId.STORAGE_TOTAL_BYTES)}
-          />
+        sparklineValues={sparklineValues(
+          metricSeries.get(MetricId.STORAGE_TOTAL_BYTES)
         )}
-      >
-        <StatValue>
-          {overview?.storage
-            ? formatBytes(overview.storage.totalSizeBytes)
-            : "—"}
-        </StatValue>
-      </InstanceStatItem>
-      <InstanceStatItem label="Databases">
-        <StatValue>
+        sub="across all databases"
+        value={
+          overview?.storage ? formatBytes(overview.storage.totalSizeBytes) : "—"
+        }
+      />
+      <StatCell
+        label="Databases"
+        sub="on this instance"
+        value={
           <SummaryCountValue
             count={databasesState.count}
             error={databasesState.error}
             isPending={databasesState.isPending}
             isUnavailable={databasesState.isUnavailable}
           />
-        </StatValue>
-      </InstanceStatItem>
-    </InstanceStatsBar>
+        }
+      />
+    </StatStrip>
   );
 }
 

@@ -336,7 +336,7 @@ function TabChart({
   // Default gutter axis: the plot reserves space for y-labels so dense series
   // never run underneath them.
   return (
-    <div className="h-72 w-full pt-4">
+    <div className="h-72 w-full px-4 pt-4">
       <MetricChart
         data={mergeSeriesData(dataSeries)}
         formatDetailedValue={(value) => formatMetricValueDetailed(value, unit)}

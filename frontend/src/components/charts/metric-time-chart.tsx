@@ -1,5 +1,6 @@
 import {
   areaY,
+  type ChartGuideLineStyle,
   crosshair,
   defineChart,
   lineY,
@@ -62,6 +63,12 @@ const DASHED_STROKE_WIDTH = 1.5;
 const DASHED_STROKE_OPACITY = 0.55;
 const Y_DOMAIN_SEGMENTS = 4;
 const INITIAL_WIDTH = 320;
+// Explicit opacity: the library default (0.11) multiplies the already
+// translucent border token into invisibility.
+const GRID_LINE: ChartGuideLineStyle = {
+  stroke: "var(--color-border)",
+  strokeOpacity: 1,
+};
 
 function extentOf(data: ChartRow[]): [number, number] {
   const first = data[0]?.time ?? 0;
@@ -401,7 +408,7 @@ function MetricTimeChart({
                     values: valueTicks,
                   },
                 },
-          grid: true,
+          grid: GRID_LINE,
           scale: scaleLinear().domain(valueDomain),
         },
       },
