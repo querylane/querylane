@@ -1,5 +1,5 @@
 /**
- * Records each demo scene from https://demo.querylane.net via a CDP screencast
+ * Records the demo from https://demo.querylane.net via a CDP screencast
  * at 2x device scale, then assembles public/clips/<scene>.mp4 with ffmpeg.
  *
  *   bun run record.ts            # all scenes
@@ -180,18 +180,13 @@ async function take(page: Page, mark: (id: string, label: string) => void) {
   await clickAt(page, de.x, de.y, 100);
   mark("explorer", "Data Explorer · schema objects");
   await page.locator('td:has-text("orders")').first().waitFor();
-  await sleep(1300);
+  await sleep(800);
 
   // -> orders table
   await clickSel(page, 'td:has-text("orders")', 100);
   mark("grid", "public.orders · 40k rows");
   await page.getByRole("grid", { name: "Table data" }).waitFor({ timeout: 20000 });
-  await sleep(700);
-  await glide(page, 1000, 520, 600);
-  await smoothWheel(page, 420, 600);
-  await sleep(500);
-  await smoothWheel(page, -420, 600);
-  await sleep(400);
+  await sleep(900);
 
   // filter: amount > 200
   await clickSel(page, 'button:has-text("Filter")', 350);
@@ -214,16 +209,36 @@ async function take(page: Page, mark: (id: string, label: string) => void) {
   await clickAt(page, bb.x + Math.min(60, bb.width / 2), bb.y + bb.height / 2, 200);
   mark("fk", "Foreign key → referenced row");
   await page.getByRole("status", { name: "Referenced row loaded" }).waitFor({ timeout: 15000 }).catch(() => {});
-  await sleep(1800);
+  await sleep(1300);
   await page.keyboard.press("Escape");
-  await sleep(400);
+  await sleep(300);
 
   // structure tabs
   await clickSel(page, '[role="tab"]:has-text("Indexes")', 200);
   mark("structure", "Indexes · constraints · DDL");
-  await settle(page, 1200);
-  await clickSel(page, '[role="tab"]:has-text("Definition")', 200);
-  await settle(page, 1600);
+  await settle(page, 800);
+
+  // SQL workbench, reached through the command palette: the explorer's
+  // sidebar is a drill-in object tree, and "Back to workspace" would detour
+  // through the database overview.
+  await clickSel(page, 'role=button[name="Search or jump to"]', 250);
+  await page.locator('[role="dialog"] [cmdk-input]').waitFor({ timeout: 10000 });
+  await typeSlow(page, "sql", 90);
+  await page.locator('[role="dialog"] [cmdk-item]:has-text("SQL workbench")').first().waitFor({ timeout: 10000 });
+  await sleep(450);
+  await page.keyboard.press("Enter");
+  mark("sql", "SQL workbench");
+  await page.locator(".cm-content").waitFor({ timeout: 15000 });
+  await sleep(400);
+  await clickSel(page, ".cm-content", 150);
+  await typeSlow(page, "select status, count(*) from orders", 45);
+  await sleep(200);
+  await typeSlow(page, " group by 1", 40);
+  await page.keyboard.press("Escape"); // close the completion popup before running
+  await sleep(250);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await page.getByRole("grid", { name: "Query results" }).waitFor({ timeout: 15000 });
+  await sleep(1800);
 }
 
 async function main() {
@@ -246,8 +261,9 @@ async function main() {
   await page.getByRole("grid", { name: "Table data" }).waitFor({ timeout: 20000 });
   await page.getByRole("tab", { name: /^Indexes/ }).click();
   await settle(page, 500);
-  await page.getByRole("tab", { name: /^Definition/ }).click();
-  await settle(page, 500);
+  await page.goto(`${BASE}/instances/${INSTANCE}/databases/${DB}/sql`);
+  await page.locator(".cm-content").waitFor({ timeout: 20000 });
+  await settle(page, 800);
   await page.goto(`${BASE}/instances/${INSTANCE}`);
   await settle(page, 1500);
   await page.mouse.move(900, 600);
