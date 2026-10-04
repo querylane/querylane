@@ -10,6 +10,7 @@ const badgePresentations = cva("", {
       identifier: "font-mono text-xs",
       filter: "gap-1 truncate font-mono text-xs",
       count: "px-1 font-mono text-xs",
+      "sql-count": "px-1.5 font-mono text-xs",
       "schema-warning": "bg-chart-4/15 px-1 text-chart-4 text-xs",
       "schema-info": "bg-chart-1/15 px-1 text-chart-1 text-xs",
       compact: "px-1 text-xs",

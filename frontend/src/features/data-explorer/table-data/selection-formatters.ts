@@ -25,6 +25,11 @@ interface ExportFileDetails {
   mimeType: string;
 }
 
+/**
+ * A row to export. `cells` is keyed by {@link resultColumnKeys}: the column
+ * name when names are unique, which explorer selections always are, and a
+ * position-suffixed name for repeated names in ad-hoc SQL results.
+ */
 interface SelectedRow {
   cells: Map<string, TableCell | undefined>;
 }
@@ -43,6 +48,20 @@ interface ChunkedExportBuilder {
   finish: () => ChunkedExportResult;
 }
 
+/**
+ * Result columns may repeat a name (`SELECT a.id, b.id`). Every consumer that
+ * keys cells by column needs a unique key per position, so repeated names are
+ * suffixed with their occurrence; the first occurrence keeps the bare name.
+ */
+function resultColumnKeys(columns: readonly TableResultColumn[]): string[] {
+  const seen = new Map<string, number>();
+  return columns.map((column) => {
+    const count = seen.get(column.columnName) ?? 0;
+    seen.set(column.columnName, count + 1);
+    return count === 0 ? column.columnName : `${column.columnName}#${count}`;
+  });
+}
+
 // countRowsWithTruncatedCells reports how many selected rows have at least
 // one cell where the server-returned preview was truncated. Exports refuse
 // to serialise such rows: the displayed cell is a prefix, and writing it
@@ -50,12 +69,12 @@ interface ChunkedExportBuilder {
 // (especially the SQL INSERT, which looks authoritative).
 function countRowsWithTruncatedCells(
   rows: SelectedRow[],
-  columns: TableResultColumn[]
+  keys: readonly string[]
 ): number {
   let count = 0;
   for (const row of rows) {
-    for (const column of columns) {
-      if (row.cells.get(column.columnName)?.truncated === true) {
+    for (const key of keys) {
+      if (row.cells.get(key)?.truncated === true) {
         count += 1;
         break;
       }
@@ -183,9 +202,9 @@ function formatCellForClipboard(cell: TableCell | undefined): string {
   return rawCellText(rawCellValue(cell));
 }
 
-function formatCsvRow(row: SelectedRow, columns: TableResultColumn[]): string {
-  const cells = columns.map((column) => {
-    const raw = rawCellValue(row.cells.get(column.columnName));
+function formatCsvRow(row: SelectedRow, keys: readonly string[]): string {
+  const cells = keys.map((key) => {
+    const raw = rawCellValue(row.cells.get(key));
     return raw.kind === "null"
       ? ""
       : escapeCsv(rawCellText(raw), raw.kind === "text");
@@ -202,9 +221,10 @@ function formatRowsAsCsv(
   const header = columns
     .map((column) => escapeCsv(column.columnName))
     .join(",");
+  const keys = resultColumnKeys(columns);
   const lines = [header];
   for (const row of rows) {
-    lines.push(formatCsvRow(row, columns));
+    lines.push(formatCsvRow(row, keys));
   }
   return {
     contents: `${lines.join("\n")}\n`,
@@ -213,13 +233,16 @@ function formatRowsAsCsv(
   };
 }
 
+// Repeated column names collapse to the last value, as PostgreSQL's own
+// row_to_json output does once parsed; JSON objects cannot carry duplicates.
 function formatJsonRecord(
   row: SelectedRow,
-  columns: TableResultColumn[]
+  columns: TableResultColumn[],
+  keys: readonly string[]
 ): Record<string, string | boolean | null> {
   const record: Record<string, string | boolean | null> = {};
-  for (const column of columns) {
-    const raw = rawCellValue(row.cells.get(column.columnName));
+  for (const [index, column] of columns.entries()) {
+    const raw = rawCellValue(row.cells.get(keys[index] ?? column.columnName));
     if (raw.kind === "null") {
       record[column.columnName] = null;
     } else if (raw.kind === "bool") {
@@ -239,7 +262,8 @@ function formatRowsAsJson(
   resourceName: string
 ): ExportPayload {
   const { table } = parseTableQualifiedName(resourceName);
-  const records = rows.map((row) => formatJsonRecord(row, columns));
+  const keys = resultColumnKeys(columns);
+  const records = rows.map((row) => formatJsonRecord(row, columns, keys));
   return {
     contents: `${JSON.stringify(records, null, 2)}\n`,
     filename: buildFilename(table, "json"),
@@ -267,12 +291,9 @@ function formatSqlLiteral(cell: TableCell | undefined): string {
   return `'${raw.text.replace(SQL_QUOTE_PATTERN, "''")}'`;
 }
 
-function formatSqlValueRow(
-  row: SelectedRow,
-  columns: TableResultColumn[]
-): string {
-  const literals = columns
-    .map((column) => formatSqlLiteral(row.cells.get(column.columnName)))
+function formatSqlValueRow(row: SelectedRow, keys: readonly string[]): string {
+  const literals = keys
+    .map((key) => formatSqlLiteral(row.cells.get(key)))
     .join(", ");
   return `  (${literals})`;
 }
@@ -296,7 +317,8 @@ function formatRowsAsSql(
     };
   }
 
-  const valueLines = rows.map((row) => formatSqlValueRow(row, columns));
+  const keys = resultColumnKeys(columns);
+  const valueLines = rows.map((row) => formatSqlValueRow(row, keys));
 
   const contents = `INSERT INTO ${qualified} (${columnList}) VALUES\n${valueLines.join(
     ",\n"
@@ -318,10 +340,10 @@ function indentJsonChunk(json: string): string {
 function appendCsvRows(
   chunks: string[],
   rows: SelectedRow[],
-  columns: TableResultColumn[]
+  keys: readonly string[]
 ): number {
   for (const row of rows) {
-    chunks.push(formatCsvRow(row, columns));
+    chunks.push(formatCsvRow(row, keys));
     chunks.push("\n");
   }
   return rows.length;
@@ -331,18 +353,22 @@ function appendJsonRows({
   chunks,
   rows,
   columns,
+  keys,
   initialRowCount,
 }: {
   chunks: string[];
   rows: SelectedRow[];
   columns: TableResultColumn[];
+  keys: readonly string[];
   initialRowCount: number;
 }): number {
   let appended = 0;
   for (const row of rows) {
     chunks.push(initialRowCount + appended === 0 ? "\n" : ",\n");
     chunks.push(
-      indentJsonChunk(JSON.stringify(formatJsonRecord(row, columns), null, 2))
+      indentJsonChunk(
+        JSON.stringify(formatJsonRecord(row, columns, keys), null, 2)
+      )
     );
     appended += 1;
   }
@@ -353,6 +379,7 @@ interface AppendSqlRowsArgs {
   chunks: string[];
   columns: TableResultColumn[];
   initialRowCount: number;
+  keys: readonly string[];
   rows: SelectedRow[];
   schema: string;
   table: string;
@@ -361,6 +388,7 @@ interface AppendSqlRowsArgs {
 function appendSqlRows({
   chunks,
   columns,
+  keys,
   initialRowCount,
   rows,
   schema,
@@ -382,7 +410,7 @@ function appendSqlRows({
       chunks.push(",\n");
     }
 
-    chunks.push(formatSqlValueRow(row, columns));
+    chunks.push(formatSqlValueRow(row, keys));
     appended += 1;
   }
   return appended;
@@ -398,6 +426,7 @@ function createChunkedExportBuilder(
   resourceName: string
 ): ChunkedExportBuilder {
   const { schema, table } = parseTableQualifiedName(resourceName);
+  const keys = resultColumnKeys(columns);
   const normalizedFormat =
     exportFormat === "json" || exportFormat === "sql" ? exportFormat : "csv";
   const chunks: string[] = [];
@@ -416,14 +445,14 @@ function createChunkedExportBuilder(
   }
 
   const addRows = (rows: SelectedRow[]) => {
-    const nextTruncatedRowCount = countRowsWithTruncatedCells(rows, columns);
+    const nextTruncatedRowCount = countRowsWithTruncatedCells(rows, keys);
     if (nextTruncatedRowCount > 0) {
       truncatedRowCount += nextTruncatedRowCount;
       return;
     }
 
     if (normalizedFormat === "csv") {
-      rowCount += appendCsvRows(chunks, rows, columns);
+      rowCount += appendCsvRows(chunks, rows, keys);
       return;
     }
 
@@ -432,6 +461,7 @@ function createChunkedExportBuilder(
         chunks,
         rows,
         columns,
+        keys,
         initialRowCount: rowCount,
       });
       return;
@@ -440,6 +470,7 @@ function createChunkedExportBuilder(
     rowCount += appendSqlRows({
       chunks,
       columns,
+      keys,
       initialRowCount: rowCount,
       rows,
       schema,
@@ -523,7 +554,10 @@ function buildExport({
   columns: TableResultColumn[];
   resourceName: string;
 }): ExportResult {
-  const truncatedRowCount = countRowsWithTruncatedCells(rows, columns);
+  const truncatedRowCount = countRowsWithTruncatedCells(
+    rows,
+    resultColumnKeys(columns)
+  );
   if (truncatedRowCount > 0) {
     return { ok: false, reason: "truncated", truncatedRowCount };
   }
@@ -559,4 +593,5 @@ export {
   createChunkedExportBuilder,
   formatCellForClipboard,
   getExportFileDetails,
+  resultColumnKeys,
 };

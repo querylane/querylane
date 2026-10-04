@@ -7,6 +7,7 @@ const skeletonPresentations = cva("", {
   variants: {
     presentation: {
       control: "rounded-md",
+      glyph: "rounded-sm",
       round: "rounded-full",
     },
   },

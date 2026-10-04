@@ -10,3 +10,12 @@ import { SQLService } from "./sql_pb";
  * @generated from rpc querylane.console.v1alpha1.SQLService.ExplainQuery
  */
 export const explainQuery = SQLService.method.explainQuery;
+
+/**
+ * Checks a single statement without running it. PostgreSQL parses the
+ * statement and resolves every table, column, function and type it
+ * references, so the result covers syntax errors and unknown objects alike.
+ *
+ * @generated from rpc querylane.console.v1alpha1.SQLService.ValidateQuery
+ */
+export const validateQuery = SQLService.method.validateQuery;

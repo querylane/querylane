@@ -91,6 +91,7 @@ const selectTriggerPresentations = cva("", {
   variants: {
     presentation: {
       identifier: "font-mono",
+      compact: "gap-1 text-xs",
       onboarding:
         "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 [&_svg]:text-white/68",
     },

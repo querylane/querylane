@@ -12,6 +12,7 @@ export function GridSurface({
   busy,
   children,
   className,
+  fill = false,
   loading,
   refreshStatusLabel,
   variant = "default",
@@ -19,6 +20,8 @@ export function GridSurface({
   busy: boolean;
   children: ReactNode;
   className?: string | undefined;
+  /** Shrink with a resizable parent instead of keeping a minimum height. */
+  fill?: boolean | undefined;
   loading: boolean;
   refreshStatusLabel?: string | undefined;
   variant?: "default" | "expanded" | undefined;
@@ -28,7 +31,7 @@ export function GridSurface({
       aria-busy={loading}
       className={cn(
         "relative flex flex-1 flex-col",
-        variant === "expanded" ? "min-h-0" : "min-h-[400px]",
+        variant === "expanded" || fill ? "min-h-0" : "min-h-[400px]",
         className
       )}
       data-testid="grid-refresh-surface"

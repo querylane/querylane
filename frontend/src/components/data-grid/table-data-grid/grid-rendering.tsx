@@ -22,7 +22,6 @@ import {
   DataGrid,
   type DefaultColumnOptions,
   type Renderers,
-  SELECT_COLUMN_KEY,
   type SortColumn,
 } from "react-data-grid";
 import { isCellSelectionInteractiveTarget } from "@/components/data-grid/table-data-grid/cell-selection-interaction";
@@ -39,10 +38,12 @@ import {
 } from "@/components/data-grid/table-data-grid/cell-selection-state";
 import { DataGridCheckbox } from "@/components/data-grid/table-data-grid/data-grid-checkbox";
 import {
-  EXPAND_COLUMN_KEY,
   type GridRow,
+  isGridActionColumnKey,
   ROW_KEY_FIELD,
 } from "@/components/data-grid/table-data-grid/grid-row-model";
+import type { GridEmptyMessage } from "@/components/data-grid/table-data-grid/result-data-grid-types";
+import { usePinnedColumnWidths } from "@/components/data-grid/table-data-grid/use-pinned-column-widths";
 import {
   Empty,
   EmptyDescription,
@@ -75,7 +76,7 @@ const CellSelectionContext = createContext<CellSelectionStore>(
 );
 
 function isDataCell(columnKey: string): boolean {
-  return columnKey !== SELECT_COLUMN_KEY && columnKey !== EXPAND_COLUMN_KEY;
+  return !isGridActionColumnKey(columnKey);
 }
 
 function hasAppearance(appearance: string, flag: string): true | undefined {
@@ -307,7 +308,22 @@ function gridRowKeyGetter(row: GridRow): string {
  * below the 36px header row and ignores pointer events, so header interactions
  * (resize, reorder, context menus) keep working.
  */
-function NoRowsOverlay({ hasActiveFilter }: { hasActiveFilter: boolean }) {
+function defaultEmptyMessage(hasActiveFilter: boolean): GridEmptyMessage {
+  return {
+    description: hasActiveFilter
+      ? "Try a different search or filter."
+      : "This table is empty.",
+    title: "No rows found",
+  };
+}
+
+function NoRowsOverlay({
+  hasActiveFilter,
+  message,
+}: {
+  hasActiveFilter: boolean;
+  message: GridEmptyMessage;
+}) {
   const Icon = hasActiveFilter ? SearchX : Rows3;
   return (
     <div
@@ -319,12 +335,8 @@ function NoRowsOverlay({ hasActiveFilter }: { hasActiveFilter: boolean }) {
           <EmptyMedia variant="icon">
             <Icon aria-hidden={true} className="size-5" />
           </EmptyMedia>
-          <EmptyTitle presentation="compact">No rows found</EmptyTitle>
-          <EmptyDescription>
-            {hasActiveFilter
-              ? "Try a different search or filter."
-              : "This table is empty."}
-          </EmptyDescription>
+          <EmptyTitle presentation="compact">{message.title}</EmptyTitle>
+          <EmptyDescription>{message.description}</EmptyDescription>
         </EmptyHeader>
       </Empty>
     </div>
@@ -342,8 +354,12 @@ function LoadingSkeleton() {
 }
 
 interface GridBodyProps {
+  /** Accessible name of the grid; defaults to "Table data". */
+  ariaLabel?: string | undefined;
   cellSelectionStore: CellSelectionStore;
   columns: Column<GridRow>[];
+  /** Replaces the default "No rows found" copy. */
+  emptyMessage?: GridEmptyMessage | undefined;
   /** Full-bleed mode: no side borders/rounding; inset loading/empty panels. */
   flush?: boolean;
   hasActiveFilter: boolean;
@@ -374,7 +390,9 @@ interface GridBodyProps {
 }
 
 function GridBody({
+  ariaLabel = "Table data",
   columns,
+  emptyMessage,
   flush = false,
   hasActiveFilter,
   isLoading,
@@ -392,6 +410,11 @@ function GridBody({
   suppressEmptyState = false,
 }: GridBodyProps) {
   const gridRootRef = useRef<HTMLDivElement>(null);
+  const { columnWidths, onColumnWidthsChange: handleColumnWidthsChange } =
+    usePinnedColumnWidths({
+      columnSignature: columns.map((column) => column.key).join("\u0000"),
+      hasRows: rows.length > 0,
+    });
 
   useEffect(
     function trackPointerCellSelection() {
@@ -554,9 +577,10 @@ function GridBody({
         ref={gridRootRef}
       >
         <DataGrid
-          aria-label="Table data"
+          aria-label={ariaLabel}
           className={cn("rdg-light", flush && "rounded-none! border-x-0!")}
           columns={columns}
+          columnWidths={columnWidths}
           defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
           // Keep RDG virtualization on. Wide/complex result sets otherwise mount
           // every visible-page cell and stall the explorer.
@@ -567,6 +591,7 @@ function GridBody({
           onCellKeyDown={onCellKeyDown}
           onCellMouseDown={onCellMouseDown}
           onColumnsReorder={onColumnsReorder}
+          onColumnWidthsChange={handleColumnWidthsChange}
           onSelectedRowsChange={onSelectedRowsChange}
           onSortColumnsChange={onSortChange}
           renderers={DATA_GRID_RENDERERS}
@@ -577,7 +602,10 @@ function GridBody({
           sortColumns={sortColumns}
         />
         {rows.length === 0 && !suppressEmptyState ? (
-          <NoRowsOverlay hasActiveFilter={hasActiveFilter} />
+          <NoRowsOverlay
+            hasActiveFilter={hasActiveFilter}
+            message={emptyMessage ?? defaultEmptyMessage(hasActiveFilter)}
+          />
         ) : null}
       </div>
     </CellSelectionContext>

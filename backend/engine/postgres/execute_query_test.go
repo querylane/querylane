@@ -26,6 +26,7 @@ type executeQueryFakeDriver struct {
 
 type executeQueryFakeState struct {
 	values     []int64
+	typeName   string
 	nextErrAt  int
 	queryErr   error
 	rowsClosed atomic.Bool
@@ -102,8 +103,15 @@ func (r *executeQueryFakeRows) Next(dest []driver.Value) error {
 	return nil
 }
 
-func (r *executeQueryFakeRows) ColumnTypeScanType(int) reflect.Type   { return reflect.TypeFor[int64]() }
-func (r *executeQueryFakeRows) ColumnTypeDatabaseTypeName(int) string { return "INT8" }
+func (r *executeQueryFakeRows) ColumnTypeScanType(int) reflect.Type { return reflect.TypeFor[int64]() }
+
+func (r *executeQueryFakeRows) ColumnTypeDatabaseTypeName(int) string {
+	if r.state.typeName != "" {
+		return r.state.typeName
+	}
+
+	return "INT8"
+}
 
 func TestExecuteQueryStreamCloseFinalizesPartialRead(t *testing.T) {
 	t.Parallel()

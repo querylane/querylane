@@ -60,6 +60,7 @@ const tabsListPresentations = cva("", {
   variants: {
     presentation: {
       flush: "gap-0 p-0",
+      "sql-results": "bg-transparent p-0",
       metrics:
         "divide-x divide-y divide-border rounded-none border-border border-b bg-transparent p-0 sm:divide-y-0",
     },
@@ -85,6 +86,8 @@ const tabsTriggerPresentations = cva("", {
     presentation: {
       inspector: "px-3",
       truncated: "truncate",
+      "sql-compact": "gap-1.5 px-2.5 text-xs",
+      "sql-plan-mode": "px-2 text-xs",
       metric:
         "gap-1.5 rounded-none border-0 px-4 py-3 before:bg-primary before:opacity-0 hover:bg-muted/50 data-active:bg-transparent data-active:before:opacity-100 group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:bg-transparent",
     },

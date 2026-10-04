@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Puzzle,
   Settings,
+  SquareTerminal,
   Users,
 } from "lucide-react";
 import type {
@@ -72,6 +73,7 @@ function buildNavLinkProps({
     linkToPage({ page: "database.overview" });
     linkToPage({ page: "database.extensions" });
     linkToPage({ page: "database.explorer" });
+    linkToPage({ page: "database.sql" });
   }
 
   return links;
@@ -148,6 +150,13 @@ function getDatabaseNav({
           isDisabled: !paths.databaseExplorer,
           key: "database.explorer",
           label: "Data Explorer",
+        },
+        {
+          icon: SquareTerminal,
+          isActive: active.databaseSql,
+          isDisabled: !paths.databaseSql,
+          key: "database.sql",
+          label: "SQL",
         },
       ],
       title: "Database",

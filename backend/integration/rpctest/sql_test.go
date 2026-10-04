@@ -319,3 +319,58 @@ func (s *RPCSuite) createSQLWarningFunction(ctx context.Context) {
 	`)
 	s.Require().NoError(err)
 }
+
+func (s *RPCSuite) TestValidateQuery_ValidStatementHasNoDiagnostic() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.sqlClient.ValidateQuery(ctx, connect.NewRequest(&consolev1alpha1.ValidateQueryRequest{
+		Parent:    s.databaseName(),
+		Statement: "SELECT id, first_name FROM public.customers",
+	}))
+	s.Require().NoError(err)
+	s.Nil(resp.Msg.GetDiagnostic())
+}
+
+func (s *RPCSuite) TestValidateQuery_ReportsPositionAndHint() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.sqlClient.ValidateQuery(ctx, connect.NewRequest(&consolev1alpha1.ValidateQueryRequest{
+		Parent:    s.databaseName(),
+		Statement: "SELECT frist_name FROM public.customers",
+	}))
+	s.Require().NoError(err, "a bad statement is a diagnostic, not an RPC error")
+
+	diagnostic := resp.Msg.GetDiagnostic()
+	s.Require().NotNil(diagnostic)
+	s.Equal("42703", diagnostic.GetSqlstate())
+	s.Contains(diagnostic.GetMessage(), "frist_name")
+	s.Equal(int32(8), diagnostic.GetPosition())
+	s.Contains(diagnostic.GetHint(), "first_name")
+}
+
+func (s *RPCSuite) TestValidateQuery_ResolvesNamesInDefaultSchema() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.sqlClient.ValidateQuery(ctx, connect.NewRequest(&consolev1alpha1.ValidateQueryRequest{
+		Parent:        s.databaseName(),
+		Statement:     "SELECT id FROM customers",
+		DefaultSchema: "public",
+	}))
+	s.Require().NoError(err)
+	s.Nil(resp.Msg.GetDiagnostic())
+}
+
+func (s *RPCSuite) TestValidateQuery_RejectsMalformedParent() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := s.sqlClient.ValidateQuery(ctx, connect.NewRequest(&consolev1alpha1.ValidateQueryRequest{
+		Parent:    "databases/missing-instance",
+		Statement: "SELECT 1",
+	}))
+	s.Require().Error(err)
+	s.Equal(connect.CodeInvalidArgument, connect.CodeOf(err))
+}
