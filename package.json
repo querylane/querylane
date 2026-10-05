@@ -2,7 +2,7 @@
 	"name": "querylane",
 	"devDependencies": {
 		"@types/node": "26.6.1",
-		"blume": "^2.0.3",
+		"blume": "2.1.0",
 		"zod": "4.6.5"
 	},
 	"overrides": {
@@ -19,6 +19,7 @@
 		"docs:diagrams:generate": "bun scripts/generate-doc-diagram-themes.ts",
 		"docs:eval": "blume eval --agent codex --json",
 		"docs:test": "bun test scripts/docs-*.test.ts",
+		"docs:test:browser": "bun run --cwd frontend test:docs",
 		"docs:test:content": "bun test scripts/docs-content.test.ts",
 		"docs:test:runtime": "bun test scripts/docs-runtime.spec.ts",
 		"docs:validate": "blume validate --strict",

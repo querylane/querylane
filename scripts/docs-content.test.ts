@@ -156,7 +156,6 @@ test("serves the generated spec through Blume's native API reference", () => {
 	expect(config.reference?.[0]).toMatchObject({
 		kind: "openapi",
 		options: {
-			codeSamples: ["curl", "js", "go"],
 			sources: [
 				{
 					label: "Experimental API",

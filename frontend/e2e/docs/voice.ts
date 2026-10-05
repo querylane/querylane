@@ -17,7 +17,9 @@ export const installBrowserVoice = async (page: Page) => {
       speak: (utterance: SpeechSynthesisUtterance) => {
         speaking = true;
         paused = false;
-        utterance.dispatchEvent(new SpeechSynthesisEvent("start"));
+        utterance.dispatchEvent(
+          new SpeechSynthesisEvent("start", { utterance })
+        );
       },
       cancel: () => {
         speaking = false;

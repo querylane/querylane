@@ -42,4 +42,7 @@ test("Go request stays synchronized with playground input", async ({
     page.getByRole("tabpanel").filter({ hasText: "package main" })
   ).toContainText("instances/docs-demo");
   await expect(page).toHaveScreenshot("api-go.png");
+  await expect(page.locator("blume-panel-tabs").first()).toHaveScreenshot(
+    "api-samples.png"
+  );
 });

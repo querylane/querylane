@@ -25,7 +25,7 @@ import {
 } from "blume/components/openapi/security.ts";
 import { visibleOperationParameters } from "./parameters.ts";
 import RpcBadge from "./RpcBadge.astro";
-import { querylaneSampleLanguages } from "./request-samples.ts";
+import { sampleLanguages } from "blume/components/openapi/snippets.ts";
 import { rpcPresentationForReference } from "./rpc-kind.ts";
 
 interface Props {
@@ -120,7 +120,7 @@ const model =
 			})
 		: null;
 const sample = model ? buildRequest(model, defaultValues(model)) : null;
-const languages = querylaneSampleLanguages(spec?.codeSamples ?? []);
+const languages = sampleLanguages(spec?.codeSamples ?? []);
 const presentation = ref
 	? rpcPresentationForReference(spec?.document, ref)
 	: undefined;
@@ -162,7 +162,7 @@ const presentation = ref
           )}
         </div>
         {sample && model && (
-          <querylane-operation-panel
+          <div
             class="xl:sticky xl:top-24 xl:self-start"
             data-operation-panel
           >
@@ -180,13 +180,9 @@ const presentation = ref
               sample={sample}
               schemas={schemas}
             />
-          </querylane-operation-panel>
+          </div>
         )}
       </div>
     </div>
   )
 }
-
-<script>
-  import "./go-playground.ts";
-</script>

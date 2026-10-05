@@ -101,8 +101,24 @@ bun install
 bun run docs:dev       # local preview
 bun run docs:validate  # links and anchors
 bun run docs:build
-bun run docs:test:runtime  # built Node server: search and agent docs
+bun run docs:test:runtime  # built Node server: search, reader actions, and metadata
+bun run docs:test:browser  # reader flows and visual checks (install frontend deps first)
 ```
+
+For a docs container build, run from a regular checkout with full history (not a
+linked worktree). Pass Git as a separate BuildKit context so update dates reflect
+source commits rather than build times:
+
+```sh
+docker buildx build -f Dockerfile.docs \
+  --build-context docs-git=.git .
+```
+
+CI fetches full history; Git and history stay in build/verification stages only.
+Browser narration uses device voices, PDF uses the browser print dialog, and EPUB
+is generated locally. No provider keys are needed. Browser-language routing is
+enabled and respects manual choices; English is currently the only content locale.
+The export menu and source-edit link are in the desktop page-actions sidebar.
 
 `bun run docs:eval` checks whether the docs answer the questions in `evals.yaml`.
 It uses the Codex CLI with an OpenAI API key, so install and authenticate Codex
