@@ -139,8 +139,8 @@ test("keeps Blume authorization and playground behavior in RPC operations", asyn
 	expect(operation).toContain("operationModel({");
 	expect(operation).toContain("<Playground");
 	expect(operation).toContain("spec.playground.enabled");
-	expect(operation).toContain("<querylane-operation-panel");
-	expect(operation).toContain('import "./go-playground.ts"');
+	expect(operation).toContain("data-operation-panel");
+	expect(operation).toContain("sampleLanguages(spec?.codeSamples ?? [])");
 });
 
 test("wraps long RPC summaries and routes in API overview cards", async () => {

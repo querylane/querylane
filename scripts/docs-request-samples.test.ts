@@ -1,28 +1,42 @@
 import { expect, test } from "bun:test";
+import { buildRequest } from "blume/components/openapi/request.ts";
+import { sampleLanguages } from "blume/components/openapi/snippets.ts";
 import config from "../blume.config";
-import { goSampleForValues } from "../docs/components/openapi/go-playground";
-import { querylaneSampleLanguages } from "../docs/components/openapi/request-samples";
 
-test("offers Go instead of Python for API request samples", () => {
+test("offers all 18 API sample languages", () => {
 	const reference = config.reference?.[0];
 	expect(reference?.kind).toBe("openapi");
 	if (reference?.kind !== "openapi") {
 		throw new Error("Expected the native OpenAPI reference");
 	}
-	expect(reference.options.codeSamples).toEqual(["curl", "js", "go"]);
+	const expectedLanguages = [
+		"curl",
+		"python",
+		"js",
+		"node",
+		"typescript",
+		"php",
+		"go",
+		"java",
+		"ruby",
+		"powershell",
+		"swift",
+		"csharp",
+		"dotnet",
+		"c",
+		"cpp",
+		"kotlin",
+		"rust",
+		"dart",
+	];
+	expect(reference.options.codeSamples).toEqual(expectedLanguages);
 
-	const languages = querylaneSampleLanguages(
-		reference.options.codeSamples ?? [],
-	);
-	expect(languages.map(({ id, label }) => ({ id, label }))).toEqual([
-		{ id: "curl", label: "cURL" },
-		{ id: "js", label: "JavaScript" },
-		{ id: "go", label: "Go" },
-	]);
+	const languages = sampleLanguages(reference.options.codeSamples ?? []);
+	expect(languages.map(({ id }) => id)).toEqual(expectedLanguages);
 });
 
 test("builds a standard-library Go request with the generated body and headers", () => {
-	const go = querylaneSampleLanguages(["go"])[0];
+	const go = sampleLanguages(["go"])[0];
 	expect(go).toBeDefined();
 
 	const code = go?.build({
@@ -47,8 +61,8 @@ test("builds a standard-library Go request with the generated body and headers",
 	expect(code).toContain("http.DefaultClient.Do(req)");
 });
 
-test("keeps the Go sample synchronized with playground values", () => {
-	const code = goSampleForValues(
+test("builds every configured sample from the same playground request", () => {
+	const request = buildRequest(
 		{
 			auth: [],
 			authOptional: false,
@@ -85,6 +99,16 @@ test("keeps the Go sample synchronized with playground values", () => {
 		},
 	);
 
+	for (const { build } of sampleLanguages(
+		config.reference?.[0]?.kind === "openapi"
+			? (config.reference[0].options.codeSamples ?? [])
+			: [],
+	)) {
+		const code = build(request);
+		expect(code).toContain("instances/demo");
+		expect(code).toContain("Connect-Protocol-Version");
+	}
+	const code = sampleLanguages(["go"])[0]?.build(request);
 	expect(code).toContain("instances/demo");
 	expect(code).toContain('req.Header.Set("Connect-Protocol-Version", "1")');
 });

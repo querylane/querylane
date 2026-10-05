@@ -29,12 +29,17 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 	content: {
 		root: "docs/site",
 	},
+	narration: true,
+	export: true,
+	lastModified: "git",
 	github: {
 		owner: "querylane",
 		repo: "querylane",
+		branch: "main",
 	},
 	i18n: {
 		defaultLocale: "en",
+		routeByBrowserLanguage: true,
 		locales: [{ code: "en", label: "English" }],
 		ui: {
 			en: {
@@ -47,7 +52,26 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 	},
 	reference: [
 		openapi({
-			codeSamples: ["curl", "js", "go"],
+			codeSamples: [
+				"curl",
+				"python",
+				"js",
+				"node",
+				"typescript",
+				"php",
+				"go",
+				"java",
+				"ruby",
+				"powershell",
+				"swift",
+				"csharp",
+				"dotnet",
+				"c",
+				"cpp",
+				"kotlin",
+				"rust",
+				"dart",
+			],
 			sources: [
 				{
 					label: "Experimental API",

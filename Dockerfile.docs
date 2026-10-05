@@ -4,6 +4,10 @@ FROM --platform=$BUILDPLATFORM oven/bun:1.4.0-alpine AS builder
 
 WORKDIR /app
 
+# Only build/verification stages need Git; the runtime ships neither Git nor history.
+RUN apk add --no-cache git
+COPY --from=docs-git / /app/.git
+
 COPY package.json bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts
@@ -28,6 +32,7 @@ RUN bun run docs:audit
 
 # Verify the built site using the same Node version as the deployed server.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS verified
+RUN apk add --no-cache git
 WORKDIR /app
 COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=builder /app /app

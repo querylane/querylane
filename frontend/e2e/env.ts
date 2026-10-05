@@ -23,6 +23,7 @@ export const e2eEnv = createEnv({
   server: {
     BASE_URL: z.string().url().optional(),
     CI: booleanFlag,
+    DOCS_BASE_URL: z.string().url().optional(),
     PLAYWRIGHT_BASE_URL: z.string().url().optional(),
     PLAYWRIGHT_PORT: optionalPort,
     PORT: optionalPort,

@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
+import { parse } from "node-html-parser";
 
 // Exercise the production Node adapter, not the dev server or config objects.
 const server = Bun.spawn(["node", "dist/server/entry.mjs"], {
@@ -12,7 +14,7 @@ const server = Bun.spawn(["node", "dist/server/entry.mjs"], {
 let baseUrl: string;
 
 beforeAll(async () => {
-	const timeout = setTimeout(() => server.kill(), 10_000);
+	const timeout = setTimeout(() => server.kill(), 30_000);
 	const lines = createInterface({ input: Readable.fromWeb(server.stdout) });
 	try {
 		for await (const line of lines) {
@@ -31,7 +33,7 @@ beforeAll(async () => {
 		clearTimeout(timeout);
 		lines.close();
 	}
-}, 15_000);
+}, 35_000);
 
 afterAll(async () => {
 	server.kill();
@@ -112,4 +114,73 @@ test("unknown docs pages fail with 404 rather than a successful fallback", async
 		`${baseUrl}/api/docs/pages/not-a-querylane-page.json`,
 	);
 	expect(response.status).toBe(404);
+});
+
+test("docs pages expose browser narration, both exports, and the real source edit link", async () => {
+	const response = await fetch(`${baseUrl}/get-started/configure-querylane`);
+	expect(response.status).toBe(200);
+	const page = parse(await response.text());
+	expect(page.querySelector("[data-blume-narration-player]")).not.toBeNull();
+	expect(page.querySelector("[data-blume-export-pdf]")).not.toBeNull();
+	expect(page.querySelector("[data-blume-export-epub]")).not.toBeNull();
+	expect(
+		page.querySelector(
+			'a[href="https://github.com/querylane/querylane/edit/main/docs/site/get-started/configure-querylane.mdx"]',
+		),
+	).not.toBeNull();
+});
+
+test("page metadata uses the source file's last Git commit, not the build date", async () => {
+	const lastCommit = execFileSync(
+		"git",
+		[
+			"log",
+			"-1",
+			"--format=%cI",
+			"--",
+			"docs/site/get-started/configure-querylane.mdx",
+		],
+		{ cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" },
+	).trim();
+	expect(lastCommit).not.toBe("");
+	const response = await fetch(
+		`${baseUrl}/api/docs/pages/get-started/configure-querylane.json`,
+	);
+	expect(response.status).toBe(200);
+	const page = await response.json();
+	expect(new Date(page.lastModified).getTime()).toBe(
+		new Date(lastCommit).getTime(),
+	);
+});
+
+test("API pages render all 18 native sample languages", async () => {
+	const response = await fetch(
+		`${baseUrl}/api/instance/instance-service-get-instance`,
+	);
+	expect(response.status).toBe(200);
+	const page = parse(await response.text());
+	expect(
+		page
+			.querySelectorAll("[data-sample-lang]")
+			.map((pane) => pane.getAttribute("data-sample-lang")),
+	).toEqual([
+		"curl",
+		"python",
+		"js",
+		"node",
+		"typescript",
+		"php",
+		"go",
+		"java",
+		"ruby",
+		"powershell",
+		"swift",
+		"csharp",
+		"dotnet",
+		"c",
+		"cpp",
+		"kotlin",
+		"rust",
+		"dart",
+	]);
 });

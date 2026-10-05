@@ -94,6 +94,8 @@ jobs:
         with:
           context: .
           file: ${{ inputs.dockerfile }}
+          # Keep history out of the default context and the final docs image.
+          build-contexts: ${{ inputs.dockerfile == './Dockerfile.docs' && 'docs-git=.git' || '' }}
           platforms: ${{ env.PLATFORMS }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
