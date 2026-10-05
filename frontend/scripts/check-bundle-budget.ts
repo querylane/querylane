@@ -17,7 +17,7 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
 const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 200;
-// Recharts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
+// TanStack Charts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
 // with the instance health section redesign.

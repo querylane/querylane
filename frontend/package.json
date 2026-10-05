@@ -94,7 +94,7 @@
     "@shikijs/themes": "4.3.1",
     "@standard-schema/spec": "1.1.0",
     "@t3-oss/env-core": "0.13.11",
-    "@tanstack/charts": "0.18.0",
+    "@tanstack/charts": "1.0.0",
     "@tanstack/react-query": "5.103.1",
     "@tanstack/react-query-devtools": "5.103.1",
     "@tanstack/react-router": "1.170.38",

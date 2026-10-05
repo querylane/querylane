@@ -1,8 +1,8 @@
 /**
- * Y-axis tick generation for the chart kit. Recharts' own tick generator
- * picks fractional steps (0 / 0.75 / 1.5 / 2.25) that a whole-number
- * formatter collapses into duplicate labels ("0, 1, 2, 2"), and its auto
- * domain overshoots the data (a 105% tick on a ratio). These helpers own the
+ * Y-axis tick generation for the chart kit. Generic tick generators can
+ * pick fractional steps (0 / 0.75 / 1.5 / 2.25) that a whole-number
+ * formatter collapses into duplicate labels ("0, 1, 2, 2"), and automatic
+ * domains can overshoot the data (a 105% tick on a ratio). These helpers own the
  * ladder instead: every tick is a round number in the unit's own base, and
  * the domain is pinned to the top tick.
  */
