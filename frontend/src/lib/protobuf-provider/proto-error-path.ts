@@ -1,10 +1,5 @@
 import type { DescField, DescMessage, DescOneof } from "@bufbuild/protobuf";
 
-/**
- * Convert a server-side proto field path into the camelCase form path used by
- * Protoform adapters. Oneof branches flatten under `{oneofLocalName}.value`.
- * Repeated-field indexes may use `items[0]` or `items.0`.
- */
 export function protoPathToFormPath(schema: DescMessage, serverPath: string): string | null {
   if (!serverPath) {
     return null;
@@ -98,5 +93,5 @@ function findMember(message: DescMessage, protoName: string): Resolved | undefin
       return { field: member, kind: "field" };
     }
   }
-  return;
+  return undefined;
 }

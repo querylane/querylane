@@ -42,7 +42,6 @@ function valuesEqual(left: unknown, right: unknown): boolean {
   );
 }
 
-/** Build the dirty-field tree expected by createUpdateMask from two value snapshots. */
 export function dirtyFieldsFromValues(current: unknown, initial: unknown): FormRecord {
   if (valuesEqual(current, initial)) {
     return {};
@@ -158,7 +157,6 @@ function compareFieldOrder(schema: DescMessage, left: string, right: string): nu
   return left.localeCompare(right);
 }
 
-/** Build a validated, canonical FieldMask from TypeScript or protobuf paths. */
 export function createFieldMask(schema: DescMessage, paths: readonly string[]): FieldMask {
   const normalizedPaths = [...new Set(paths.map((path) => normalizeFieldPath(schema, path)))];
   if (normalizedPaths.includes("*")) {
@@ -260,7 +258,6 @@ function collectMessagePaths(
   });
 }
 
-/** Build an update mask from react-hook-form's dirty field tree. */
 export function createUpdateMask(
   schema: DescMessage,
   dirtyFields: unknown,

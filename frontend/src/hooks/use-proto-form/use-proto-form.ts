@@ -29,10 +29,8 @@ import { createProtoResolver } from "./proto-resolver.js";
 
 export type { ConnectErrorContext } from "../../lib/protobuf-provider/format-error.js";
 
-/** MessageShape with proto oneofs flattened so react-hook-form Path<T> works. */
 type FormShape<Desc extends DescMessage> = FlattenProtoOneofs<MessageShape<Desc>>;
 
-/** Extract nested error shape for a given path (e.g. oneof error drilling). */
 type NestedErrors<T> = {
   [K in keyof T]?: T[K] extends object ? NestedErrors<T[K]> & { message?: string } : { message?: string };
 };
@@ -44,98 +42,27 @@ interface ModifiedFieldTree {
 export type ProtoValidationScope = "all" | "modified-fields";
 
 export interface UseProtoFormOptions<Desc extends DescMessage> extends Omit<UseFormProps<FormShape<Desc>>, "resolver"> {
-  /** Per-field repeated-string conversion overrides keyed by descriptor path. */
   emptyRepeatedStringPolicies?: ProtoConversionOptions["emptyRepeatedStringPolicies"];
-  /** Translates Protoform-owned validation copy. */
   formatMessage?: ProtoFormOptions["formatMessage"];
-  /**
-   * Strip a leading server-path prefix before mapping server-side field
-   * violations onto the form (e.g. `'notification'` when the RPC wraps the
-   * message in `CreateNotificationRequest { notification: Notification }`).
-   */
   serverPathPrefix?: string;
-  /**
-   * Strip any of several leading server-path prefixes before mapping
-   * violations. Prefixes are checked in order after `serverPathPrefix`.
-   */
   serverPathPrefixes?: readonly string[];
-  /**
-   * `modified-fields` validates only fields intentionally changed since the
-   * last reset and uses the same sticky field set for update masks. Root
-   * issues remain visible. Defaults to full-message validation.
-   */
   validationScope?: ProtoValidationScope;
 }
 
 export type UseProtoFormReturn<Desc extends DescMessage> = UseFormReturn<FormShape<Desc>> & {
-  /** Build a fully-typed protobuf message from current or provided form values. */
   createMessage: (values?: FormShape<Desc>) => MessageShape<Desc>;
-  /** Build an AIP-safe FieldMask from the fields changed since the last reset. */
   createUpdateMask: () => FieldMask;
-  /**
-   * Set a oneof field value without casts. Marks the field dirty by default so
-   * switching branches is visible to `dirtyFields`-driven FieldMask builders.
-   * @example form.setOneofValue('delivery', 'webhook', create(WebhookDeliverySchema, { signingSecretRef: '' }));
-   */
   setOneofValue: (path: string, oneofCase: string, value: unknown, options?: SetValueConfig) => void;
-  /** Drill nested errors by form path (e.g. `'delivery.value'`) without casts. */
   getNestedErrors: <T = Record<string, { message?: string }>>(path: string) => NestedErrors<T> | undefined;
-  /**
-   * Map a `ConnectError` with `BadRequest.FieldViolation` details onto the form
-   * by walking the proto descriptor. Snake_case field paths are converted to
-   * camelCase; oneof branches flatten under `{oneofLocalName}.value`.
-   *
-   * Also extracts every other `google.rpc.*` detail (LocalizedMessage, Help,
-   * ErrorInfo, RequestInfo, RetryInfo, DebugInfo, PreconditionFailure,
-   * QuotaFailure, ResourceInfo) into `form.serverErrorContext` so the summary
-   * can surface top-level message, help links, request ID, etc.
-   *
-   * Returns `unmapped` so the caller can fall back to a toast for field
-   * violations the form can't surface, plus the full `context` for convenience.
-   */
   setServerErrors: (error: unknown) => {
     context: ConnectErrorContext;
     handled: boolean;
     unmapped: { field: string; description: string }[];
   };
-  /** Current backend error context (set by `setServerErrors`). Undefined when no recent error. */
   serverErrorContext: ConnectErrorContext | undefined;
-  /** Clear `serverErrorContext`. Call when the user starts a new submit attempt. */
   clearServerErrorContext: () => void;
 };
 
-/**
- * Creates a react-hook-form instance with proto-driven validation.
- *
- * - Validation rules come from `buf.validate` annotations via `@bufbuild/protovalidate`.
- * - Oneofs are type-flattened so `register('config.value.apiKey')` works without casts.
- * - Default `mode: 'onChange'`.
- *
- * Caller handles submit / loading / summary. The hook derives update masks,
- * while `setServerErrors` turns backend `BadRequest.FieldViolation` details
- * into per-field form errors using descriptor metadata only.
- *
- * @example
- * ```tsx
- * const form = useProtoForm(NotificationSchema, {
- *   defaultValues: create(NotificationSchema, { displayName, enabled: true }),
- *   serverPathPrefix: 'notification',
- * });
- *
- * const onSubmit = async () => {
- *   try {
- *     const message = form.createMessage();
- *     await mutation.mutateAsync(
- *       create(CreateNotificationRequestSchema, { notification: message })
- *     );
- *     navigate(...);
- *   } catch (error) {
- *     const { handled, unmapped } = form.setServerErrors(error);
- *     if (!handled || unmapped.length > 0) toast.add({ title: "Request failed", type: "error" });
- *   }
- * };
- * ```
- */
 export function useProtoForm<Desc extends DescMessage>(
   schema: Desc,
   options?: UseProtoFormOptions<Desc>
@@ -153,7 +80,10 @@ export function useProtoForm<Desc extends DescMessage>(
     emptyRepeatedStringPolicies,
     formatMessage,
   };
-  const pathPrefixes = serverPathPrefix ? [serverPathPrefix, ...serverPathPrefixes] : serverPathPrefixes;
+  const pathPrefixes =
+    serverPathPrefix !== undefined && serverPathPrefix !== ""
+      ? [serverPathPrefix, ...serverPathPrefixes]
+      : serverPathPrefixes;
   const sourceMessage = isMessage(rest.defaultValues, schema) ? rest.defaultValues : undefined;
   const modifiedFieldsRef = useRef<ModifiedFieldTree>({});
   const suppressModifiedTrackingRef = useRef(false);
@@ -185,7 +115,6 @@ export function useProtoForm<Desc extends DescMessage>(
     },
     [form]
   );
-  // Read during render so react-hook-form subscribes this hook to error updates.
   const { defaultValues: initialValues, dirtyFields, errors: formErrors } = form.formState;
   const trackModifiedField = (path: string) => {
     if (validationScope === "modified-fields" && !suppressModifiedTrackingRef.current) {
@@ -197,8 +126,6 @@ export function useProtoForm<Desc extends DescMessage>(
       if (validationScope !== "modified-fields") {
         return;
       }
-      // allow: form-watch side-effect subscription observes the field name
-      // synchronously before RHF invokes its resolver and does not re-render.
       const subscription = form.watch((_values, { name }) => {
         if (name && !suppressModifiedTrackingRef.current) {
           setModifiedPath(modifiedFieldsRef.current, name);
@@ -261,10 +188,9 @@ export function useProtoForm<Desc extends DescMessage>(
       );
     }
     const prev = current as { case?: string; value?: unknown } | undefined;
-    if (prev?.case && prev.case !== oneofCase) {
+    if (prev?.case !== undefined && prev?.case !== "" && prev.case !== oneofCase) {
       setValue(path as Path<FormShape<Desc>>, { case: "", value: {} } as never);
     }
-    // `shouldDirty: true` default: switching a branch is a meaningful edit.
     setValue(path as Path<FormShape<Desc>>, { case: oneofCase, value } as never, {
       shouldDirty: true,
       shouldValidate: true,
@@ -303,7 +229,7 @@ export function useProtoForm<Desc extends DescMessage>(
     for (const violation of extractFieldViolations(error)) {
       const bare = stripPrefix(violation.field, pathPrefixes);
       const formPath = protoPathToFormPath(schema, bare);
-      if (!formPath) {
+      if (!(formPath !== null && formPath !== "")) {
         unmapped.push(violation);
         continue;
       }
@@ -336,10 +262,6 @@ export function useProtoForm<Desc extends DescMessage>(
   };
 }
 
-/**
- * Type-safe default values helper. Wraps `create()` and returns the value typed
- * as `FormShape<Desc>` so `defaultValues` compiles cleanly.
- */
 export function useProtoFormDefaults<Desc extends DescMessage>(
   schema: Desc,
   init?: MessageInitShape<Desc>
