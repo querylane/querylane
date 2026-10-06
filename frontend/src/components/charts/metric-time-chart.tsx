@@ -1,16 +1,14 @@
-import {
-  areaY,
-  type ChartGuideLineStyle,
-  crosshair,
-  defineChart,
-  lineY,
-  ruleY,
-  stack,
-  text,
-} from "@tanstack/charts";
+import { areaY } from "@tanstack/charts/area";
+import { crosshair } from "@tanstack/charts/crosshair";
+import { lineY } from "@tanstack/charts/line";
 import { decorative } from "@tanstack/charts/mark/decorative";
+import { ruleY } from "@tanstack/charts/rule";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { defineChart } from "@tanstack/charts/scene";
+import { stack } from "@tanstack/charts/stack";
+import { text } from "@tanstack/charts/text";
 import { tooltip } from "@tanstack/charts/tooltip";
+import type { ChartGuideLineStyle } from "@tanstack/charts/types/core";
 import { useId } from "react";
 import { ChartContainer } from "@/components/charts/chart-container";
 import type {
