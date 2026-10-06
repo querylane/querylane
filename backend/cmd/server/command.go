@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -41,8 +42,7 @@ func (cmd *StartCmd) Run(g *config.Globals) error {
 
 	configManager, err := config.NewConfigManager(context.Background(), defaultConfig(), options...)
 	if err != nil {
-		logger.Error("failed to create config manager", slog.Any("error", err))
-		return err
+		return fmt.Errorf("creating config manager: %w", err)
 	}
 	defer configManager.Stop()
 
@@ -57,18 +57,8 @@ func (cmd *StartCmd) Run(g *config.Globals) error {
 		"config_path", configManager.ConfigFilePath())
 
 	// 3. Setup server with context cancellation
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-
-	// Setup signal handling to cancel context and log when we actually receive a signal
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-signalChan
-		slog.InfoContext(ctx, "received signal")
-		cancel()
-	}()
 
 	ctrl := NewController(configManager)
 	// CLI flags take precedence over the configured listen address.
@@ -76,12 +66,6 @@ func (cmd *StartCmd) Run(g *config.Globals) error {
 
 	// 4. Start server. The server will watch for context cancellation and initiate
 	// a clean server shutdown and stops all its own managed dependencies.
-	err = ctrl.Run(ctx)
-	if err != nil {
-		// If we return the error here, it will be logged by the CLI again, possibly in
-		// a different logging format, more suitable for the normal commands.
-		slog.ErrorContext(ctx, "server stopped with an error", slog.Any("error", err))
-	}
-
-	return nil
+	// Kong reports terminal errors once at the CLI entrypoint.
+	return ctrl.Run(ctx)
 }

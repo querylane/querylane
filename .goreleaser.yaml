@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: querylane
+
+before:
+  hooks:
+    - bash scripts/prepare-cli.sh
+
+builds:
+  - id: querylane
+    dir: backend
+    binary: querylane
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    tags: [embed_frontend]
+    flags: [-trimpath]
+    ldflags:
+      - >-
+        -s -w
+        -X github.com/querylane/querylane/backend/service/console.Version={{ .Version }}
+        -X github.com/querylane/querylane/backend/service/console.GitBranch={{ if eq .Branch "HEAD" }}unknown{{ else }}{{ .Branch }}{{ end }}
+    hooks:
+      post:
+        # This runs before packaging/publishing, not after users can download it.
+        - cmd: >-
+            bash -c 'case "{{ .Target }}:$(uname -s):$(uname -m)" in linux_amd64*:Linux:x86_64|darwin_arm64*:Darwin:arm64|darwin_amd64*:Darwin:x86_64) python3 scripts/smoke-cli.py "{{ .Path }}" "{{ .Version }}";; esac'
+          dir: .
+          output: true
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+nfpms:
+  - package_name: querylane
+    file_name_template: "{{ .ConventionalFileName }}"
+    homepage: https://docs.querylane.net
+    maintainer: Querylane contributors
+    description: PostgreSQL admin UI for managing multiple servers
+    license: Apache-2.0
+    formats: [deb, rpm]
+    dependencies: [ca-certificates]
+
+snapshot:
+  version_template: "{{ .Version }}-dev"
+
+changelog:
+  disable: true
+
+release:
+  # Attaching or retrying binary assets must not replace existing release notes.
+  mode: keep-existing
+  replace_existing_artifacts: true

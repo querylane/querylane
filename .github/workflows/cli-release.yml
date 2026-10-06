@@ -1,0 +1,47 @@
+name: CLI release
+
+# Changesets invokes _cli-build directly: tags pushed with GITHUB_TOKEN do not
+# trigger another workflow. This entrypoint repairs an existing release only.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing release version without v (for example, 0.2.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cli-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.0
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Prevent replaying an older release over the stable tap
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ "$(jq -r .version frontend/package.json)" != "$RELEASE_VERSION" ]; then
+            echo "::error::Only the current version on main can be retried. An older release would downgrade the stable Homebrew formula."
+            exit 1
+          fi
+
+  publish:
+    needs: validate
+    uses: ./.github/workflows/_cli-build.yml
+    with:
+      version: ${{ inputs.version }}
+      publish: true
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
