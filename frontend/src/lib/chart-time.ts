@@ -1,6 +1,6 @@
 /**
  * Time-axis helpers for the chart kit: calendar-aligned "nice" tick generation
- * and range-adaptive label formatting. Recharts' numeric tick generator picks
+ * and range-adaptive label formatting. Numeric tick generators can pick
  * multiples of powers of ten, which are ugly as times (e.g. 13:47, 15:23);
  * these helpers snap ticks to whole minutes/hours/days instead, the way d3's
  * time scales do, without pulling in d3 directly.
