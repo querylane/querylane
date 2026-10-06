@@ -20,7 +20,7 @@ function normalizeMetadataValue(value: string | undefined): string {
 }
 
 function normalizeVersion(value: string): string {
-  if (value === UNKNOWN_METADATA_VALUE) {
+  if (value === UNKNOWN_METADATA_VALUE || value === "dev") {
     return value;
   }
 

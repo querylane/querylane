@@ -13,7 +13,16 @@ Start with a non-production server and a dedicated read-only PostgreSQL login. F
 
 ## 1. Start Querylane
 
-The fastest path is the Docker quick start. It starts Querylane, its metadata database, and a demo PostgreSQL server with a live workload, and needs only Docker:
+For a local installation without Docker, [install the CLI](/get-started/install-cli):
+
+```sh
+brew install querylane/tap/querylane
+querylane server start --host=127.0.0.1
+```
+
+Open `http://localhost:8080`, then continue to [step 2](#2-configure-querylane-storage).
+
+To try a preconfigured demo instead, use the Docker quick start. It starts Querylane, its metadata database, and a demo PostgreSQL server with a live workload, and needs only Docker:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/querylane/querylane/main/deploy/quick-start/compose.yaml | docker compose -f - up

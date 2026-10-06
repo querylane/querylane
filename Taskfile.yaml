@@ -14,6 +14,7 @@ vars:
 
 includes:
   backend: taskfiles/backend.yaml
+  cli: taskfiles/cli.yaml
   docker: taskfiles/docker.yaml
   proto: taskfiles/proto.yaml
   install: taskfiles/install.yaml
