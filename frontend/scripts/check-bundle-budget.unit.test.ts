@@ -26,6 +26,110 @@ afterEach(() => {
 });
 
 describe("collectBundleBudgetStats", () => {
+  test("rejects chart runtime in the initial download", () => {
+    const distDir = createDistDir();
+    writeAsset(
+      distDir,
+      "index.html",
+      '<script src="/static/js/index.js"></script>'
+    );
+    writeAsset(distDir, "static/js/index.js", "console.info('chart');");
+    writeAsset(
+      distDir,
+      "static/js/index.js.map",
+      JSON.stringify({
+        sources: ["../../node_modules/@tanstack/charts/dist/scene.js"],
+      })
+    );
+
+    const stats = collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    });
+
+    expect(stats.chartContractViolations).toEqual([
+      "Chart runtime must stay deferred: static/js/index.js",
+    ]);
+  });
+
+  test.each([
+    "@tanstack/charts/dist/canvas.js",
+    "@tanstack/charts/dist/motion.js",
+    "@tanstack/charts/dist/spring.js",
+    "d3-scale/src/index.js",
+  ])("rejects unused chart capability %s", (modulePath) => {
+    const distDir = createDistDir();
+    writeAsset(distDir, "index.html", "<main></main>");
+    writeAsset(distDir, "static/js/async/chart.js", "console.info('chart');");
+    writeAsset(
+      distDir,
+      "static/js/async/chart.js.map",
+      JSON.stringify({
+        sources: [`../../node_modules/${modulePath}`],
+      })
+    );
+
+    const stats = collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    });
+
+    expect(stats.chartContractViolations).toEqual([
+      `Unused chart capability in static/js/async/chart.js: ../../node_modules/${modulePath}`,
+    ]);
+  });
+
+  test("allows SVG marks, compact scales and unrelated visualization D3", () => {
+    const distDir = createDistDir();
+    writeAsset(
+      distDir,
+      "index.html",
+      '<script src="/static/js/index.js"></script>'
+    );
+    writeAsset(distDir, "static/js/index.js", "console.info('lazy boundary');");
+    writeAsset(
+      distDir,
+      "static/js/index.js.map",
+      JSON.stringify({
+        sources: ["../../src/components/charts/metric-chart.tsx"],
+      })
+    );
+    writeAsset(distDir, "static/js/async/chart.js", "console.info('chart');");
+    writeAsset(
+      distDir,
+      "static/js/async/chart.js.map",
+      JSON.stringify({
+        sources: [
+          "../../node_modules/@tanstack/charts/dist/area.js",
+          "../../node_modules/@tanstack/charts/dist/line.js",
+          "../../node_modules/@tanstack/charts/dist/scales/linear.js",
+          "../../node_modules/@tanstack/charts/dist/tooltip.js",
+        ],
+      })
+    );
+    writeAsset(distDir, "static/js/async/flow.js", "console.info('flow');");
+    writeAsset(
+      distDir,
+      "static/js/async/flow.js.map",
+      JSON.stringify({
+        sources: [
+          "../../node_modules/@xyflow/react/dist/esm/index.js",
+          "../../node_modules/d3-zoom/src/index.js",
+        ],
+      })
+    );
+
+    const stats = collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    });
+
+    expect(stats.chartContractViolations).toEqual([]);
+    expect(stats.deferredChartsAssets.map((asset) => asset.path)).toEqual([
+      "static/js/async/chart.js",
+    ]);
+  });
+
   test("keeps deferred visualization chunks out of the core total budget", () => {
     const distDir = createDistDir();
     writeAsset(

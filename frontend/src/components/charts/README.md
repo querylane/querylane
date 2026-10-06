@@ -7,9 +7,33 @@ hand-assembled chart-library primitives.
 
 TanStack Charts 1.0.0 is pinned exactly. Its documented APIs follow the
 [v1 compatibility contract](https://tanstack.com/charts/latest/docs/compatibility).
-Definitions use `@tanstack/charts`, the React host uses
-`@tanstack/charts/react`, and optional capabilities use exact package subpaths.
+Definitions use `@tanstack/charts/scene`, the React SVG host uses
+`@tanstack/charts/react`, and marks, scales, and interactions use exact subpaths.
 Keep chart behavior and bundle-budget checks green when upgrading.
+
+## Compose, do not replace
+
+Follow the Charts 1.0 announcement's "keep the pieces you already have" approach:
+
+- Monitoring presets compose native marks: an area fill plus a line, stacked
+  areas, dashed comparison lines, threshold rules, text labels, and a crosshair.
+  Extend these definitions for a new encoding instead of adding a specialized
+  wrapper for every combination. Keep shared sizing, themes, and data preparation.
+- Preserve typed rows through mark channels and tooltip callbacks. Do not erase
+  inference with casts or replace missing values with fabricated zeros.
+- Give measurements interaction ownership. Supporting fills, rules, and labels
+  use `decorative` so keyboard traversal and tooltips do not duplicate values.
+- SVG is the default. Compact `scales/linear` handles our numeric values and
+  epoch-ms positions; calendar-aware tick generation remains application-owned.
+  Canvas, motion, and D3 scales are optional capabilities, not default imports.
+- Keep the lazy boundaries in `metric-chart.tsx`. `bun run build` checks chart
+  bytes, rejects eager chart runtime, and rejects unused Canvas, motion, spring,
+  or D3-scale modules, including separate shared chunks. React Flow's unrelated
+  D3 dependencies remain allowed. A justified new capability needs an explicit
+  contract/budget update and browser evidence, not a blanket budget increase.
+
+Use the existing browser and visual harnesses to verify tooltips, keyboard
+navigation, gaps, same-colored series, resize, and teardown in both themes.
 
 ## Modules
 

@@ -10,6 +10,11 @@ const DIST_DIR = join(SCRIPT_DIR, "..", "dist");
 const INDEX_HTML_PATH = join(DIST_DIR, "index.html");
 const BUILD_ASSET_EXTENSION_PATTERN = /\.(?:html|css|js)$/;
 const LEADING_SLASH_PATTERN = /^\//;
+// Monitoring charts use SVG and compact numeric scales. Adding another
+// capability requires an intentional budget/contract update, not an implicit
+// dependency from a barrel or adapter import. D3 used by React Flow is separate.
+const UNUSED_CHART_CAPABILITY_PATTERN =
+  /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
@@ -17,7 +22,7 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
 const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 200;
-// TanStack Charts (+ its d3 deps) is lazy-loaded and only pulled in on the instance
+// TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
 // with the instance health section redesign.
@@ -46,6 +51,7 @@ interface BundleBudgetAsset {
 interface BundleBudgetStats {
   allAssets: BundleBudgetAsset[];
   asyncScripts: BundleBudgetAsset[];
+  chartContractViolations: string[];
   coreAssets: BundleBudgetAsset[];
   coreTotalBrotli: number;
   coreTotalGzip: number;
@@ -266,6 +272,18 @@ function collectBundleBudgetStats({
       )
   );
   const initialPaths = new Set(files);
+  const chartContractViolations = allAssets.flatMap((asset) => {
+    const violations: string[] = [];
+    if (initialPaths.has(asset.path) && deferredChartsPaths.has(asset.path)) {
+      violations.push(`Chart runtime must stay deferred: ${asset.path}`);
+    }
+    for (const source of sourceMapSources(distDir, asset.path)) {
+      if (UNUSED_CHART_CAPABILITY_PATTERN.test(source.replaceAll("\\", "/"))) {
+        violations.push(`Unused chart capability in ${asset.path}: ${source}`);
+      }
+    }
+    return violations;
+  });
   const asyncScripts = allAssets.filter(
     (asset) => asset.path.endsWith(".js") && !initialPaths.has(asset.path)
   );
@@ -347,6 +365,7 @@ function collectBundleBudgetStats({
   return {
     allAssets,
     asyncScripts,
+    chartContractViolations,
     coreAssets,
     coreTotalBrotli,
     coreTotalGzip,
@@ -400,7 +419,7 @@ function check({
 
 function runBundleBudgetCheck() {
   const stats = collectBundleBudgetStats();
-  const failures: string[] = [];
+  const failures = [...stats.chartContractViolations];
 
   check({
     failures,

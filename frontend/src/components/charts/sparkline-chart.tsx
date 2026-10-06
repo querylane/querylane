@@ -1,5 +1,7 @@
-import { areaY, defineChart, lineY } from "@tanstack/charts";
+import { areaY } from "@tanstack/charts/area";
+import { lineY } from "@tanstack/charts/line";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { defineChart } from "@tanstack/charts/scene";
 import { useId } from "react";
 import type { ChartRow } from "@/components/charts/chart-context";
 import { ResponsiveChart } from "@/components/charts/responsive-chart";

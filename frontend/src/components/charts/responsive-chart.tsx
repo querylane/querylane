@@ -1,5 +1,5 @@
-import type { ChartValue } from "@tanstack/charts";
 import { Chart, type ChartDefinition } from "@tanstack/charts/react";
+import type { ChartValue } from "@tanstack/charts/types/core";
 
 interface ResponsiveChartProps<
   Datum,
