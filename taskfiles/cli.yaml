@@ -1,0 +1,28 @@
+version: 3
+
+tasks:
+  build:
+    desc: Build a standalone CLI with the Web UI (build/bin/querylane)
+    dir: "{{.BACKEND_ROOT}}"
+    vars:
+      CLI_VERSION:
+        sh: bun -p 'JSON.parse(require("node:fs").readFileSync("{{.FRONTEND_ROOT}}/package.json", "utf8")).version'
+    cmds:
+      - bash "{{.ROOT_DIR}}/scripts/prepare-cli.sh"
+      - mkdir -p "{{.ROOT_DIR}}/build/bin"
+      - >-
+        CGO_ENABLED=0 go build -trimpath -tags embed_frontend
+        -ldflags "-s -w -X github.com/querylane/querylane/backend/service/console.Version={{.CLI_VERSION}}-dev -X github.com/querylane/querylane/backend/service/console.GitBranch={{.BRANCH_SLUG}}"
+        -o "{{.ROOT_DIR}}/build/bin/querylane" .
+
+  snapshot:
+    desc: Build release archives and Linux packages without publishing (requires GoReleaser 2.18.2)
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - goreleaser release --snapshot --clean --skip=publish
+
+  test:
+    desc: Build and smoke-test the standalone CLI
+    cmds:
+      - task: build
+      - python3 scripts/smoke-cli.py build/bin/querylane

@@ -1,5 +1,7 @@
 "use client";
 
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
+
 import {
   Link,
   type RegisteredRouter,
@@ -19,6 +21,15 @@ import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
 import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { Button } from "@/components/querylane-ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/querylane-ui/combobox";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import {
   Sidebar,
@@ -51,16 +62,6 @@ import {
   type NavSection,
   type SidebarPaths,
 } from "@/components/sidebar-paths";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-  createComboboxItems,
-} from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -490,7 +491,7 @@ function renderSidebarNavigationItem({
 function SidebarDatabaseSelector() {
   const { databases, navigateToDatabase, queryStates, selectedDatabase } =
     useDb();
-  const items = createComboboxItems(databases, {
+  const items = ComboboxPrimitive.createItems(databases, {
     getLabel: (database) => database.name,
     getValue: (database) => database.id,
   });

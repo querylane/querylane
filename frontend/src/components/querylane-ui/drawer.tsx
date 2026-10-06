@@ -1,5 +1,6 @@
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "@/lib/utils";
+import styles from "./drawer.module.css";
 
 function Drawer(
   props: Omit<DrawerPrimitive.Root.Props, "swipeDirection"> & {
@@ -17,7 +18,11 @@ function DrawerContent({
   return (
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Backdrop
-        className="fixed inset-0 z-50 bg-background/80 opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*200ms)] data-swiping:transition-none motion-reduce:transition-none"
+        className={cn(
+          "fixed inset-0 z-50 bg-background/80 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:transition-none motion-reduce:transition-none",
+          styles["backdrop"],
+          styles["swipeTransition"]
+        )}
         data-slot="drawer-overlay"
       />
       <DrawerPrimitive.Viewport
@@ -26,7 +31,13 @@ function DrawerContent({
       >
         <DrawerPrimitive.Popup
           className={cn(
-            "fixed inset-y-0 flex h-full w-3/4 translate-x-(--drawer-swipe-movement-x) flex-col bg-popover text-popover-foreground shadow-lg transition-transform duration-200 data-[swipe-direction=left]:left-0 data-[swipe-direction=left]:border-r data-[swipe-direction=right]:right-0 data-[swipe-direction=right]:border-l data-[swipe-direction=left]:data-starting-style:-translate-x-full data-[swipe-direction=left]:data-ending-style:-translate-x-full data-[swipe-direction=right]:data-starting-style:translate-x-full data-[swipe-direction=right]:data-ending-style:translate-x-full data-ending-style:duration-[calc(var(--drawer-swipe-strength)*200ms)] data-swiping:transition-none motion-reduce:transition-none sm:max-w-sm",
+            "fixed inset-y-0 flex h-full w-3/4 translate-x-(--drawer-swipe-movement-x) flex-col bg-popover text-popover-foreground shadow-lg transition-transform duration-200",
+            "data-[swipe-direction=right]:right-0 data-[swipe-direction=left]:left-0 data-[swipe-direction=left]:border-r data-[swipe-direction=right]:border-l",
+            "data-[swipe-direction=left]:data-ending-style:-translate-x-full data-[swipe-direction=left]:data-starting-style:-translate-x-full",
+            "data-[swipe-direction=right]:data-ending-style:translate-x-full data-[swipe-direction=right]:data-starting-style:translate-x-full",
+            "data-swiping:transition-none",
+            styles["swipeTransition"],
+            "motion-reduce:transition-none sm:max-w-sm",
             className
           )}
           data-slot="drawer-content"

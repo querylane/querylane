@@ -1,3 +1,4 @@
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
@@ -11,8 +12,7 @@ import {
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-  createComboboxItems,
-} from "@/components/ui/combobox";
+} from "@/components/querylane-ui/combobox";
 
 interface DatabaseOption {
   id: string;
@@ -26,13 +26,17 @@ function AsyncDatabasePicker({
   options: readonly DatabaseOption[];
   onValueChange: (id: string | null) => void;
 }) {
-  const items = createComboboxItems(options, {
+  const items = ComboboxPrimitive.createItems(options, {
     getLabel: (database) => database.name,
     getValue: (database) => database.id,
   });
   return (
     <ScreenshotFrame>
-      <Combobox autoHighlight items={items} onValueChange={onValueChange}>
+      <Combobox
+        autoHighlight={true}
+        items={items}
+        onValueChange={onValueChange}
+      >
         <ComboboxTrigger aria-label="Pick database">
           Pick database
         </ComboboxTrigger>
@@ -55,7 +59,7 @@ function AsyncDatabasePicker({
 test("async results highlight after typing and duplicate labels retain distinct values", async () => {
   const onValueChange = rs.fn();
   const { rerender } = await render(
-    <AsyncDatabasePicker options={[]} onValueChange={onValueChange} />
+    <AsyncDatabasePicker onValueChange={onValueChange} options={[]} />
   );
   await page.getByRole("combobox", { name: "Pick database" }).click();
   const input = page.getByRole("combobox", { name: "Search databases" });
@@ -63,11 +67,11 @@ test("async results highlight after typing and duplicate labels retain distinct 
   await expect.element(page.getByText("No databases found")).toBeVisible();
   await rerender(
     <AsyncDatabasePicker
+      onValueChange={onValueChange}
       options={[
         { id: "primary", name: "reports" },
         { id: "replica", name: "reports" },
       ]}
-      onValueChange={onValueChange}
     />
   );
   const options = page.getByRole("option", { name: "reports", exact: true });
