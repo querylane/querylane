@@ -23,6 +23,10 @@ const unknownBuildValue = "unknown"
 
 // Build-time variables injected via -ldflags.
 var (
+	// Version is the release version shared by the CLI and console API.
+	// Source builds report dev; release builds inject it with -ldflags.
+	Version = "dev"
+
 	// GitBranch is the git branch this binary was built from.
 	// This is populated at build time via -ldflags.
 	GitBranch = unknownBuildValue
@@ -110,7 +114,7 @@ func (s *Service) getDatabaseStatus(ctx context.Context) *v1alpha1.AppDatabaseSt
 // from the embedded build information, and includes the git branch from build-time injection.
 func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1.BuildInfo {
 	result := &v1alpha1.BuildInfo{
-		Version:   unknownBuildValue,
+		Version:   Version,
 		GitCommit: unknownBuildValue,
 		GitBranch: GitBranch,
 		BuiltAt:   nil,
@@ -121,7 +125,7 @@ func extractBuildInfo(ctx context.Context, buildInfo *debug.BuildInfo) *v1alpha1
 	}
 
 	// Extract version from Main module
-	if buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
+	if Version == "dev" && buildInfo.Main.Version != "" && buildInfo.Main.Version != "(devel)" {
 		result.Version = buildInfo.Main.Version
 	}
 

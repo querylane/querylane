@@ -1,0 +1,106 @@
+---
+title: Install the CLI
+description: Install Querylane with Homebrew, a standalone executable, or a Linux package. Run the API and Web UI without Docker.
+---
+
+The `querylane` executable includes the API and Web UI. No Docker, Node.js, Bun, or Go installation is needed to run it.
+
+## Homebrew
+
+On macOS or Linux:
+
+```sh
+brew install querylane/tap/querylane
+querylane --version
+querylane server start --host=127.0.0.1
+```
+
+Open [http://localhost:8080](http://localhost:8080). Keep the terminal running; press **Ctrl+C** to stop Querylane.
+
+To upgrade:
+
+```sh
+brew update
+brew upgrade querylane
+```
+
+Configuration and embedded storage in `~/.querylane` survive upgrades and `brew uninstall querylane`.
+
+## Standalone executable
+
+Download an archive and `checksums.txt` from the same [GitHub Release](https://github.com/querylane/querylane/releases).
+
+| Platform | Archive suffix |
+| --- | --- |
+| macOS, Apple Silicon | `darwin_arm64.tar.gz` |
+| macOS, Intel | `darwin_amd64.tar.gz` |
+| Linux, ARM64 | `linux_arm64.tar.gz` |
+| Linux, x86-64 | `linux_amd64.tar.gz` |
+| Windows, ARM64 | `windows_arm64.zip` |
+| Windows, x86-64 | `windows_amd64.zip` |
+
+Archives are named `querylane_<version>_<platform>_<architecture>.<format>`. Verify the downloaded archive against `checksums.txt` before extracting it:
+
+```sh macOS
+shasum -a 256 querylane_*.tar.gz
+```
+
+```sh Linux
+sha256sum querylane_*.tar.gz
+```
+
+```powershell Windows
+Get-FileHash .\querylane_*.zip -Algorithm SHA256
+```
+
+Compare the hash with the matching filename in `checksums.txt`. Extract the archive, put `querylane` on your `PATH`, then run:
+
+```sh
+querylane server start --host=127.0.0.1
+```
+
+On Windows, run `querylane.exe` instead. To upgrade a standalone installation, stop Querylane and replace the executable with the new version. Back up your metadata database first; startup applies pending schema migrations.
+
+## Linux packages
+
+Debian/Ubuntu `.deb` and Fedora/RHEL `.rpm` packages for x86-64 and ARM64 are attached to the same release. Verify their checksums, then install the package for your architecture:
+
+```sh Debian or Ubuntu
+sudo apt install ./querylane_<version>_amd64.deb
+```
+
+```sh Fedora or RHEL
+sudo dnf install ./querylane-<version>-1.x86_64.rpm
+```
+
+Packages install the executable, not a background service. Start Querylane as your normal user, not with `sudo`.
+
+## First launch
+
+The first-launch wizard configures **Querylane's metadata database**, not the PostgreSQL instance you want to inspect:
+
+- **Embedded PostgreSQL**: for a local installation, downloads PostgreSQL on first setup and keeps its data in `~/.querylane/pgdata`. Initial setup needs internet access and a supported host runtime. Linux hosts need glibc; use external storage on musl-based systems.
+- **External PostgreSQL**: use your own metadata database for a durable deployment.
+
+The wizard persists configuration to `~/.querylane/config.yaml`. Later launches load it automatically, regardless of your current directory. To use another configuration:
+
+```sh
+querylane server start --host=127.0.0.1 --port=8081 --config=/path/to/querylane.yaml
+```
+
+Then [register an instance](/get-started#3-register-a-postgresql-instance). See [Configure Querylane](/get-started/configure-querylane) for storage, secrets, and configuration-as-code.
+
+:::warning
+Querylane has no built-in authentication. The examples bind to `127.0.0.1` so only this computer can access it. Do not bind to a public interface without an authenticating proxy. Read [Deploy Querylane](/get-started/deploy-querylane) before using production credentials.
+:::
+
+## Build from source
+
+Install Go 1.27, Bun 1.4, and [Task](https://taskfile.dev/), then run from the repository root:
+
+```sh
+task cli:build
+./build/bin/querylane server start --host=127.0.0.1
+```
+
+`task cli:test` builds and exercises the executable from an empty temporary directory, including the embedded UI, onboarding API, startup failures, and shutdown. With GoReleaser 2.18.2 installed, `task cli:snapshot` builds all release archives and Linux packages without publishing them.

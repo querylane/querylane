@@ -287,6 +287,7 @@ test("keeps installation and production setup ahead of product guides", async ()
 	const getStartedRoot = join(root, "docs/site/get-started");
 	const mainPages = [
 		"index.mdx",
+		"install-cli.mdx",
 		"install-docker.mdx",
 		"install-helm.mdx",
 		"configure-querylane.mdx",
@@ -304,6 +305,7 @@ test("keeps installation and production setup ahead of product guides", async ()
 			{
 				items: [
 					"/get-started",
+					"/get-started/install-cli",
 					"/get-started/install-docker",
 					"/get-started/install-helm",
 					"/get-started/configure-querylane",
@@ -339,9 +341,10 @@ test("guides a new user through a successful first session", async () => {
 	expect(config.description).toContain("Get started");
 	expect(home).toContain('href="/get-started"');
 	expect(meta).toMatch(
-		/"index",\s*"install-docker",\s*"install-helm",\s*"configure-querylane",\s*"deploy-querylane",\s*"operate-querylane"/u,
+		/"index",\s*"install-cli",\s*"install-docker",\s*"install-helm",\s*"configure-querylane",\s*"deploy-querylane",\s*"operate-querylane"/u,
 	);
 	for (const destination of [
+		"/get-started/install-cli",
 		"/get-started/install-docker",
 		"/get-started/install-helm",
 		"/get-started/configure-querylane",
@@ -360,7 +363,7 @@ test("keeps getting-started pages in 1 ordered hierarchy level", async () => {
 	const entries = await readdir(getStartedRoot, { withFileTypes: true });
 	expect(entries.filter((entry) => entry.isDirectory())).toEqual([]);
 	expect(entries.filter((entry) => entry.name.endsWith(".mdx"))).toHaveLength(
-		6,
+		7,
 	);
 });
 

@@ -455,7 +455,5 @@ func (c *Controller) runServer(ctx context.Context) error {
 		return nil
 	}
 
-	slog.ErrorContext(ctx, "HTTP server stopped unexpectedly", slog.Any("error", err))
-
 	return err
 }
