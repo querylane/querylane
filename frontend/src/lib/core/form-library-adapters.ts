@@ -2,16 +2,13 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 export type FormValidationErrorValue = FormValidationErrors | FormValidationErrorValue[] | string | undefined;
 
-/** Nested error shape consumed by Formik and Final Form. */
 export interface FormValidationErrors {
   [key: string]: FormValidationErrorValue;
   [key: number]: FormValidationErrorValue;
   [key: symbol]: FormValidationErrorValue;
 }
 
-/** Configure Standard Schema validation and form-library error mapping. */
 export interface FormValidatorOptions extends StandardSchemaV1.Options {
-  /** Override the library-specific key used for issues without a field path. */
   rootErrorKey?: PropertyKey;
 }
 
@@ -103,7 +100,6 @@ function addIssue(errors: FormValidationErrors, issue: StandardSchemaV1.Issue, r
   }
 }
 
-/** Convert every Standard Schema issue into a nested, prototype-safe form error tree. */
 export function standardSchemaIssuesToFormErrors(
   issues: readonly StandardSchemaV1.Issue[],
   options?: FormValidatorOptions
@@ -139,7 +135,6 @@ function createValidator<Input, Output>(
   };
 }
 
-/** Create Formik form-level validation with `_form` as the default root error key. */
 export function createFormikValidator<Input, Output>(
   schema: StandardSchemaV1<Input, Output>,
   options?: FormValidatorOptions
@@ -150,7 +145,6 @@ export function createFormikValidator<Input, Output>(
   });
 }
 
-/** Create Final Form whole-record validation. Pass Final Form's `FORM_ERROR` as `rootErrorKey`. */
 export function createFinalFormValidator<Input, Output>(
   schema: StandardSchemaV1<Input, Output>,
   options?: FormValidatorOptions

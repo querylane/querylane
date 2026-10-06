@@ -15,7 +15,6 @@ import {
 import { createDescriptorAwareStandardSchema } from "../../lib/protobuf-provider/validation-schema.js";
 
 export interface ProtoResolverOptions {
-  /** Resolve the current validation mask. Omit it to validate the full message. */
   getValidationMask?: (values: FormValues) => FieldMask | undefined;
 }
 
@@ -42,10 +41,6 @@ export function createProtoResolver<Desc extends DescMessage>(
       };
     }
 
-    // Flatten errors, preferring custom CEL messages over generic constraint messages.
-    // When a field has both (e.g., `required = true` -> "value is required" AND
-    // a CEL -> "Server URL is required."), keep the custom one.
-    // Then humanize whatever remains as a safety net.
     const rawErrors: Record<string, { message: string; isGeneric: boolean }> = {};
     for (const issue of validationResult.issues) {
       if (issue.path.length === 0) {
@@ -57,7 +52,6 @@ export function createProtoResolver<Desc extends DescMessage>(
       if (!existing) {
         rawErrors[path] = { isGeneric: generic, message: issue.message };
       } else if (existing.isGeneric && !generic) {
-        // Replace generic message with custom CEL message
         rawErrors[path] = { isGeneric: false, message: issue.message };
       }
     }
@@ -79,10 +73,7 @@ export function createProtoResolver<Desc extends DescMessage>(
     }
 
     const [rootMessage] = rootMessages;
-    if (rootMessage) {
-      // Object.assign keeps the intersection type: react-hook-form's
-      // FieldErrors "root" slot for index-signature form types cannot be
-      // satisfied by an annotated object literal.
+    if (rootMessage !== undefined && rootMessage !== "") {
       const errors = Object.assign(nestedErrors, {
         root: {
           message: rootMessages.join("\n"),

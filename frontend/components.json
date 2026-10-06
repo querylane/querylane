@@ -22,6 +22,6 @@
   "menuColor": "default",
   "menuAccent": "subtle",
   "registries": {
-    "@protoform": "https://raw.githubusercontent.com/malinskibeniamin/protoform/1fd88bda2dd65160b66de08c8e45e147b7549145/public/r/{name}.json"
+    "@protoform": "https://raw.githubusercontent.com/malinskibeniamin/protoform/a179fc14356cc98dce69402ae62c406107b0bf5b/public/r/{name}.json"
   }
 }

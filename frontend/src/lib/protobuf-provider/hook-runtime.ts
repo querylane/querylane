@@ -73,10 +73,6 @@ export interface ProtoMapFormEntry {
 }
 
 export interface ProtoConversionOptions {
-  /**
-   * Per-field policies keyed by descriptor path. Empty and whitespace-only
-   * repeated strings are discarded unless the field is set to `preserve`.
-   */
   emptyRepeatedStringPolicies?: Readonly<Record<string, EmptyRepeatedStringPolicy>> | undefined;
 }
 
@@ -85,7 +81,7 @@ export interface ProtoFormOptions extends ValidatorOptions, ProtoConversionOptio
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function toDateTimeLocalValue(timestamp: MessageShape<typeof TimestampSchema> | undefined): string | undefined {
@@ -139,6 +135,7 @@ function isJsonValue(value: unknown): value is JsonValue {
 }
 
 function fieldToFormValue(field: DescField, value: unknown): unknown {
+  const hasValue = Boolean(value);
   switch (field.fieldKind) {
     case "scalar": {
       if (field.scalar === ScalarType.BYTES) {
@@ -167,7 +164,7 @@ function fieldToFormValue(field: DescField, value: unknown): unknown {
         case TIMESTAMP_TYPE:
           return toDateTimeLocalValue(value as MessageShape<typeof TimestampSchema> | undefined);
         case DURATION_TYPE:
-          return value
+          return hasValue
             ? toJsonString(DurationSchema, value as MessageShape<typeof DurationSchema>).replace(/"/gu, "")
             : undefined;
         case FIELD_MASK_TYPE:
@@ -190,7 +187,7 @@ function fieldToFormValue(field: DescField, value: unknown): unknown {
           }
           return Array.isArray(value) && isJsonValue(value) ? structuredClone(value) : undefined;
         case ANY_TYPE:
-          return value && isPlainObject(value)
+          return isPlainObject(value)
             ? {
                 typeUrl:
                   typeof (value as { typeUrl?: unknown }).typeUrl === "string"
@@ -203,7 +200,7 @@ function fieldToFormValue(field: DescField, value: unknown): unknown {
               }
             : undefined;
         default:
-          return value ? messageToFormValues(field.message, value as AnyObject) : undefined;
+          return hasValue ? messageToFormValues(field.message, value as AnyObject) : undefined;
       }
     }
     case "list":
@@ -226,7 +223,8 @@ function fieldToFormValue(field: DescField, value: unknown): unknown {
 }
 
 function listItemToFormValue(field: ListField, value: unknown): unknown {
-  if (field.listKind === "message" && value) {
+  const hasValue = Boolean(value);
+  if (field.listKind === "message" && hasValue) {
     if (isWrapperDesc(field.message)) {
       return value;
     }
@@ -245,7 +243,8 @@ function listItemToFormValue(field: ListField, value: unknown): unknown {
 }
 
 function mapValueToFormValue(field: MapField, value: unknown): unknown {
-  if (field.mapKind === "message" && value) {
+  const hasValue = Boolean(value);
+  if (field.mapKind === "message" && hasValue) {
     if (isWrapperDesc(field.message)) {
       return value;
     }
@@ -279,7 +278,7 @@ function messageToFormValues(desc: DescMessage, value: AnyObject): Record<string
   for (const member of desc.members) {
     if (member.kind === "oneof") {
       const oneofValue = value[member.localName] as { case?: string; value?: unknown } | undefined;
-      if (!oneofValue?.case) {
+      if (!(oneofValue?.case !== undefined && oneofValue?.case !== "")) {
         result[member.localName] = { case: undefined, value: undefined };
         continue;
       }
@@ -361,10 +360,10 @@ function normalizeBigIntValue(value: unknown): bigint | undefined {
     try {
       return BigInt(value);
     } catch {
-      return;
+      return undefined;
     }
   }
-  return;
+  return undefined;
 }
 
 function normalizeScalarValue(field: DescField, value: unknown): unknown {
@@ -415,9 +414,11 @@ function normalizeMessageFieldValue(
 
   switch (field.message.typeName) {
     case TIMESTAMP_TYPE:
-      return typeof value === "string" && value ? timestampFromDate(new Date(value)) : undefined;
+      return typeof value === "string" && value !== "" ? timestampFromDate(new Date(value)) : undefined;
     case DURATION_TYPE:
-      return typeof value === "string" && value ? fromJsonString(DurationSchema, JSON.stringify(value)) : undefined;
+      return typeof value === "string" && value !== ""
+        ? fromJsonString(DurationSchema, JSON.stringify(value))
+        : undefined;
     case FIELD_MASK_TYPE:
       return Array.isArray(value) && value.length > 0
         ? {
@@ -432,7 +433,12 @@ function normalizeMessageFieldValue(
       return value === undefined ? undefined : fromJson(ListValueSchema, value as JsonValue);
     case ANY_TYPE: {
       const anyValue = isPlainObject(value) ? (value as ProtoAnyFormValue) : undefined;
-      if (!(anyValue?.typeUrl || anyValue?.valueBase64)) {
+      if (
+        !(
+          (anyValue?.typeUrl !== undefined && anyValue?.typeUrl !== "") ||
+          (anyValue?.valueBase64 !== undefined && anyValue?.valueBase64 !== "")
+        )
+      ) {
         return;
       }
       return {
@@ -568,7 +574,7 @@ function messageToProtoInit(
   for (const member of desc.members) {
     if (member.kind === "oneof") {
       const oneofValue = value[member.localName] as { case?: string; value?: unknown } | undefined;
-      if (!oneofValue?.case) {
+      if (!(oneofValue?.case !== undefined && oneofValue?.case !== "")) {
         continue;
       }
 
@@ -699,7 +705,8 @@ function preserveFieldUnknownFields(field: DescField, target: unknown, source: u
 }
 
 function preserveMessageUnknownFields(desc: DescMessage, target: AnyObject, source: AnyObject): void {
-  if (source["$unknown"]) {
+  const hasUnknownFields = Boolean(source["$unknown"]);
+  if (hasUnknownFields) {
     target["$unknown"] = structuredClone(source["$unknown"]);
   }
 
@@ -725,11 +732,6 @@ function preserveMessageUnknownFields(desc: DescMessage, target: AnyObject, sour
   }
 }
 
-/**
- * Returns a validated protobuf message with unknown wire fields restored from
- * the corresponding surviving nodes in its edit source. The target is cloned
- * when a source is present.
- */
 export function preserveProtoMessageSource<Desc extends DescMessage>(
   desc: Desc,
   target: MessageShape<Desc>,
@@ -743,11 +745,6 @@ export function preserveProtoMessageSource<Desc extends DescMessage>(
   return message;
 }
 
-/**
- * Builds an edited message from form values while retaining unknown wire
- * fields from the parsed source message. Unknown fields are not part of the
- * form model, so reconstructing a message from values alone would drop them.
- */
 export function formValuesToProto<Desc extends DescMessage>(
   desc: Desc,
   values: Record<string, unknown>,
@@ -769,13 +766,6 @@ export function protoFormValuesToPayload<Desc extends DescMessage>(
   try {
     const init = formValuesToProtoInit(desc, values, options);
     const message = create(desc, init);
-    // `alwaysEmitImplicit: true` forces every scalar / message field to
-    // appear in the serialized JSON even when the form hasn't been
-    // touched. Without it, an untouched form renders as `{}` in the
-    // summary panel — so users have to start typing just to see the
-    // request shape. Emitting defaults gives them the full schema
-    // skeleton up front and reduces the interactions needed to
-    // visualise what will actually be sent.
     return toJson(desc, message, { alwaysEmitImplicit: true }) as unknown;
   } catch {
     try {
@@ -794,7 +784,7 @@ export function protoPayloadToFormValues<Desc extends DescMessage>(
     const message = fromJson(desc, (payload ?? {}) as JsonValue);
     return protoToFormValues(desc, message);
   } catch {
-    return;
+    return undefined;
   }
 }
 
@@ -812,7 +802,7 @@ function normalizeIssuePath(
 
   for (let index = 0; index < issue.path.length; index += 1) {
     const segment: StandardSchemaV1.PathSegment | PropertyKey | undefined = issue.path[index];
-    const key = typeof segment === "object" && segment && "key" in segment ? segment.key : segment;
+    const key = segment !== null && typeof segment === "object" && "key" in segment ? segment.key : segment;
 
     if (typeof key === "number") {
       normalizedPath.push(key);
@@ -857,8 +847,6 @@ function normalizeIssuePath(
         continue;
       }
 
-      // If the protovalidate key no longer matches a rendered map entry, keep the error on the
-      // map field itself instead of targeting a stale array index in RHF state.
       return normalizedPath;
     }
 
@@ -874,9 +862,6 @@ function normalizeIssuePath(
       if (isWrapperDesc(matchedField.message) || PROTO_JSON_FALLBACK_TYPES.includes(matchedField.message.typeName)) {
         return normalizedPath;
       }
-      // Guard against stale array indices: if the next segment is a numeric index,
-      // verify the array still has that many entries. If not, anchor the error on
-      // the list field itself (same fallback strategy as map fields).
       const nextSegment = issue.path[index + 1];
       const nextKey =
         typeof nextSegment === "object" && nextSegment && "key" in nextSegment ? nextSegment.key : nextSegment;
@@ -896,7 +881,6 @@ function normalizeIssuePath(
   return normalizedPath;
 }
 
-/** A Standard Schema issue whose path is already normalized to form paths. */
 export interface NormalizedProtoIssue {
   message: string;
   path: (string | number)[];
@@ -907,10 +891,6 @@ export type NormalizedProtoValidationResult<Output> =
   | { readonly issues: readonly NormalizedProtoIssue[] };
 
 export interface ProtoValidationContext {
-  /**
-   * Restrict pathful issues to fields overlapping this mask. Message-level
-   * issues remain visible because they cannot be attributed safely.
-   */
   validationMask?: FieldMask | undefined;
 }
 
@@ -957,13 +937,13 @@ function getScalarConversionIssue(field: ScalarField, value: unknown): string | 
       return "Enter a signed 64-bit integer.";
     }
   }
-  if (UNSIGNED_64_SCALARS.includes(field.scalar)) {
-    const bigintValue = normalizeBigIntValue(value);
-    if (bigintValue === undefined || bigintValue < 0n || bigintValue > UNSIGNED_64_MAX) {
-      return "Enter an unsigned 64-bit integer.";
-    }
+  if (!UNSIGNED_64_SCALARS.includes(field.scalar)) {
+    return;
   }
-  return;
+  const bigintValue = normalizeBigIntValue(value);
+  return bigintValue === undefined || bigintValue < 0n || bigintValue > UNSIGNED_64_MAX
+    ? "Enter an unsigned 64-bit integer."
+    : undefined;
 }
 
 function getMessageConversionIssue(field: MessageField, value: unknown): string | undefined {
@@ -995,10 +975,10 @@ function getMessageConversionIssue(field: MessageField, value: unknown): string 
   }
   try {
     base64Decode(valueBase64);
-    return;
   } catch {
     return "Enter valid base64 data.";
   }
+  return undefined;
 }
 
 function getMapConversionIssue(value: unknown): string | undefined {
@@ -1028,7 +1008,7 @@ function getFormConversionIssues(desc: DescMessage, values: Record<string, unkno
     } else if (member.fieldKind === "map") {
       message = getMapConversionIssue(values[member.localName]);
     }
-    return message ? [{ message, path: [member.localName] }] : [];
+    return message !== undefined && message !== "" ? [{ message, path: [member.localName] }] : [];
   });
 }
 
@@ -1083,7 +1063,7 @@ function filterValidationIssues(
 
   const formPaths = validationMask.paths.flatMap((path) => {
     const formPath = protoPathToFormPath(desc, path);
-    return formPath ? [formPath] : [];
+    return formPath !== null && formPath !== "" ? [formPath] : [];
   });
 
   return issues.filter((issue) => {
@@ -1098,14 +1078,6 @@ function filterValidationIssues(
   });
 }
 
-/**
- * Shared validation pipeline: form values → proto init → `create()` →
- * protovalidate Standard Schema → issues re-pathed to FORM paths
- * (camelCase keys, oneofs flattened, map keys resolved to entry indices).
- *
- * Both `createProtoFormSchema` and `ProtoProvider.validateSchema` (and the
- * registry's react-hook-form resolver) flow through this single function.
- */
 export function validateFormValuesAgainstProtoSchema<Desc extends DescMessage>(
   desc: Desc,
   values: Record<string, unknown>,

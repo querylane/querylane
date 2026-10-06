@@ -32,8 +32,6 @@ const KNOWN_PATTERNS: Record<string, PatternDescription> = {
     description: "Must be empty or UPPER_SNAKE_CASE (uppercase letters, digits, and underscores)",
     example: "MY_API_KEY",
   },
-  // Match the URL pattern with or without a trailing `$` anchor. Both
-  // appear in protovalidate output depending on how the rule was authored.
   "^https?://.+": {
     description: "Must be a valid URL starting with http:// or https://",
     example: "https://example.com",
@@ -44,14 +42,8 @@ const KNOWN_PATTERNS: Record<string, PatternDescription> = {
   },
 };
 
-/** Known generic protovalidate messages that should be replaced by custom CEL messages when available. */
 const GENERIC_MESSAGES = new Set(["value is required", "exactly one field is required in oneof"]);
 
-/**
- * Returns true if the message is a generic protovalidate constraint message
- * (i.e., not a custom CEL message). Used by the resolver to prefer custom
- * messages over generic ones when a field has multiple validation errors.
- */
 export function isGenericValidationMessage(message: string): boolean {
   if (GENERIC_MESSAGES.has(message)) {
     return true;
@@ -93,7 +85,7 @@ function humanizeLengthConstraint(message: string, formatter?: ProtoformMessageF
       `Must be at most ${limit} characters.`
     );
   }
-  return;
+  return undefined;
 }
 
 function humanizeItemConstraint(message: string, formatter?: ProtoformMessageFormatter): string | undefined {
@@ -117,7 +109,7 @@ function humanizeItemConstraint(message: string, formatter?: ProtoformMessageFor
       limit === 1 ? "At most one item is allowed." : `At most ${limit} items are allowed.`
     );
   }
-  return;
+  return undefined;
 }
 
 function humanizeNumericBound(message: string, formatter?: ProtoformMessageFormatter): string | undefined {
@@ -157,7 +149,7 @@ function humanizeNumericBound(message: string, formatter?: ProtoformMessageForma
       `Must be less than ${ltMatch[1]}.`
     );
   }
-  return;
+  return undefined;
 }
 
 function humanizeRegexError(message: string, formatter?: ProtoformMessageFormatter): string | undefined {
@@ -175,10 +167,6 @@ function humanizeRegexError(message: string, formatter?: ProtoformMessageFormatt
   );
 }
 
-/**
- * Replace raw protovalidate error messages with human-readable descriptions.
- * Returns the original message if it's already a custom CEL message.
- */
 export function humanizeValidationError(message: string, formatter?: ProtoformMessageFormatter): string {
   if (message === "value is required") {
     return formatProtoformMessage(formatter, "validation.required", {}, "Enter a value.");
@@ -198,7 +186,6 @@ export function humanizeValidationError(message: string, formatter?: ProtoformMe
 
 export const SERVER_FIELD_ERROR_FALLBACK = "Review this value and try again.";
 
-/** Humanize a server field violation and ensure blank descriptions stay actionable. */
 export function humanizeServerFieldError(description: string, formatter?: ProtoformMessageFormatter): string {
   const message = description.trim();
   return message

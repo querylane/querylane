@@ -31,17 +31,10 @@ const CODE_LABELS: Record<number, string> = {
   [Code.Unauthenticated]: "unauthenticated",
 };
 
-/**
- * Get a human-readable label for a gRPC status code.
- */
 export function grpcCodeLabel(code: number): string {
   return CODE_LABELS[code] ?? `code_${code}`;
 }
 
-/**
- * Extract a human-readable message from a Connect/gRPC error.
- * Preserves all available information: message, field violations, and gRPC code.
- */
 export function formatConnectError(error: unknown): string {
   if (error instanceof ConnectError) {
     const violations = extractFieldViolations(error);
@@ -71,11 +64,6 @@ export interface FieldViolation {
   field: string;
 }
 
-/**
- * Extract field violations from Connect error details via the generated
- * `google.rpc.BadRequest` schema. Returns an empty array when no
- * BadRequest detail is attached or parsing fails.
- */
 export function extractFieldViolations(error: ConnectError): FieldViolation[] {
   const violations: FieldViolation[] = [];
   try {
@@ -85,15 +73,11 @@ export function extractFieldViolations(error: ConnectError): FieldViolation[] {
       }
     }
   } catch {
-    // Unexpected parse failure: fall through to empty.
+    return violations;
   }
   return violations;
 }
 
-/**
- * Format a toast error message for API operations.
- * Pattern: "Failed to {action} {entity}: {formatted error with code}"
- */
 export function formatToastErrorMessage({
   action,
   entity,
@@ -123,37 +107,23 @@ export interface QuotaViolation {
 }
 
 export interface ConnectErrorContext {
-  /** gRPC status code label (e.g. "invalid_argument"). Always populated for ConnectError. */
   code?: string;
-  /** Dev-only stack frames / detail from google.rpc.DebugInfo. */
   debug?: { detail?: string; stackEntries?: string[] };
-  /** Service domain from `google.rpc.ErrorInfo`. */
   domain?: string;
-  /** Links the backend suggests the user follow (docs, status pages). */
   helpLinks: HelpLink[];
-  /** Human-friendly top-level message. Prefers `LocalizedMessage.message` over `rawMessage`. */
   message?: string;
-  /** Locale of the localized message if one was provided. */
   messageLocale?: string;
-  /** Extra ErrorInfo metadata the server attached. */
   metadata?: Record<string, string>;
-  /** Precondition failures (typed, not per-field). */
   preconditionViolations: PreconditionViolation[];
-  /** Quota failures. */
   quotaViolations: QuotaViolation[];
-  /** Domain-scoped machine reason from `google.rpc.ErrorInfo` (useful for logs/telemetry). */
   reason?: string;
-  /** Opaque request identifier for support tickets. */
   requestId?: string;
-  /** Affected resource, if reported. */
   resource?: {
     name?: string | undefined;
     type?: string | undefined;
     description?: string | undefined;
   };
-  /** Retry hint in seconds. Set on rate-limit / resource-exhausted responses. */
   retryAfterSeconds?: number;
-  /** Detail type names not interpreted by Protoform, preserved for fallback UI and telemetry. */
   unmappedDetails: string[];
 }
 
@@ -177,16 +147,6 @@ function connectDetailTypeName(detail: ConnectError["details"][number]): string 
   return detail.type || undefined;
 }
 
-/**
- * Extract every surfacable detail from a `ConnectError` into one context object.
- * Non-ConnectError inputs yield an empty context (safe to render). All fields
- * optional; callers render only the pieces that are present.
- *
- * Uses `ConnectError.findDetails(Schema)` with the generated google.rpc.*
- * schemas so we don't hand-walk wire-format JSON. Types come from the proto
- * source of truth and handle both `value` (binary) and `debug` (JSON)
- * representations the Connect runtime surfaces.
- */
 export function extractConnectErrorContext(error: unknown): ConnectErrorContext {
   const context: ConnectErrorContext = {
     helpLinks: [],
@@ -207,13 +167,12 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
     ...new Set(
       error.details.flatMap((detail) => {
         const typeName = connectDetailTypeName(detail);
-        return typeName && !MAPPED_DETAIL_TYPES.has(typeName) ? [typeName] : [];
+        return typeName !== undefined && typeName !== "" && !MAPPED_DETAIL_TYPES.has(typeName) ? [typeName] : [];
       })
     ),
   ];
 
   try {
-    // LocalizedMessage overrides rawMessage when present, carries locale.
     for (const localized of error.findDetails(LocalizedMessageSchema)) {
       if (localized.message) {
         context.message = localized.message;
@@ -223,7 +182,6 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       }
     }
 
-    // Help: docs / status links the backend suggests.
     for (const help of error.findDetails(HelpSchema)) {
       for (const link of help.links) {
         if (link.url) {
@@ -235,7 +193,6 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       }
     }
 
-    // ErrorInfo: machine reason/domain for telemetry, plus metadata (request_id stash).
     for (const info of error.findDetails(ErrorInfoSchema)) {
       if (info.reason) {
         context.reason = info.reason;
@@ -247,21 +204,18 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       if (metaKeys.length > 0) {
         context.metadata = { ...info.metadata };
         const metaReq = info.metadata["request_id"] ?? info.metadata["requestId"];
-        if (metaReq && !context.requestId) {
+        if (metaReq && !(context.requestId !== undefined && context.requestId !== "")) {
           context.requestId = metaReq;
         }
       }
     }
 
-    // RequestInfo: explicit request id (takes precedence over ErrorInfo.metadata).
     for (const req of error.findDetails(RequestInfoSchema)) {
       if (req.requestId) {
         context.requestId = req.requestId;
       }
     }
 
-    // RetryInfo: seconds-until-retry hint. google.protobuf.Duration has
-    // `seconds: bigint` + `nanos: number` in proto v2 generated types.
     for (const retry of error.findDetails(RetryInfoSchema)) {
       if (retry.retryDelay) {
         const { nanos, seconds: retrySeconds } = retry.retryDelay;
@@ -270,12 +224,10 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       }
     }
 
-    // DebugInfo: dev-only stack trace / detail.
     for (const dbg of error.findDetails(DebugInfoSchema)) {
       context.debug = { detail: dbg.detail, stackEntries: dbg.stackEntries };
     }
 
-    // PreconditionFailure: typed violations (TOS, plan, etc.).
     for (const pre of error.findDetails(PreconditionFailureSchema)) {
       for (const v of pre.violations) {
         context.preconditionViolations.push({
@@ -286,7 +238,6 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       }
     }
 
-    // QuotaFailure: quota exhaustion details.
     for (const quota of error.findDetails(QuotaFailureSchema)) {
       for (const v of quota.violations) {
         context.quotaViolations.push({
@@ -296,7 +247,6 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       }
     }
 
-    // ResourceInfo: affected resource descriptor.
     for (const resource of error.findDetails(ResourceInfoSchema)) {
       context.resource = {
         description: resource.description || undefined,
@@ -305,7 +255,7 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
       };
     }
   } catch {
-    // Malformed details: fall through with whatever we extracted so far.
+    return context;
   }
 
   return context;

@@ -76,8 +76,6 @@ export function createDescriptorAwareStandardSchema<Desc extends DescMessage>(
             return { issues: result.violations.map((violation) => violationToIssue(violation, formatMessage)) };
           case "error":
             if (result.error instanceof RuntimeError) {
-              // Runtime failures are schema defects, not user input errors. Fail
-              // open so form adapters never surface CEL internals to end users.
               return {
                 value: result.message as MessageValidType<Desc>,
               };
