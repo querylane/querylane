@@ -133,6 +133,7 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 					collapsed: false,
 					items: [
 						"/get-started",
+						"/get-started/install-cli",
 						"/get-started/install-docker",
 						"/get-started/install-helm",
 						"/get-started/configure-querylane",

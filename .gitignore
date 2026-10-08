@@ -24,6 +24,7 @@ __debug_bin*
 /.blume
 .blume-verify/
 /dist
+/backend/frontend/dist/
 .codex/*
 !.codex/README.md
 !.codex/config.toml
