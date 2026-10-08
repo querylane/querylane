@@ -96,7 +96,7 @@ test("JSON page index advertises a readable Markdown and JSON page", async () =>
 	expect(await markdown.text()).toContain("PRODUCTION_DATABASE_PASSWORD");
 });
 
-test("API Markdown exposes the callable endpoint instead of an MDX component", async () => {
+test("API Markdown exposes endpoint, request, and response data to agents", async () => {
 	const response = await fetch(
 		`${baseUrl}/api/instance/instance-service-get-instance.md`,
 	);
@@ -105,6 +105,11 @@ test("API Markdown exposes the callable endpoint instead of an MDX component", a
 	expect(markdown).toContain(
 		"POST /querylane.console.v1alpha1.InstanceService/GetInstance",
 	);
+	expect(markdown).toContain(
+		"Required. The name of the instance record to retrieve.",
+	);
+	expect(markdown).toContain("`200` — Success");
+	expect(markdown).toContain('"instance":');
 	expect(markdown).not.toContain("<Operation ");
 	expect(markdown).not.toContain("Querylane experimental API API");
 });
