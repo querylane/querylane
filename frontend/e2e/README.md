@@ -40,6 +40,7 @@ bun run test:browser:setup
 bun run test:e2e:list
 bun run test:e2e
 bun run test:e2e:repeat
+bun run test:e2e:shuffle
 bun run test:accessibility
 bun run test:e2e:ui
 bun run test:e2e:debug
@@ -70,7 +71,13 @@ bun run test:visual:update          # rewrite baselines in the Playwright contai
 bun run test:visual:update e2e/visual/console-roles.spec.ts   # one spec
 ```
 
-## Playwright 1.63 diagnostics
+## Playwright 1.64 diagnostics
+
+- A plain `playwright test --config=e2e/playwright.config.ts` runs functional
+  Chromium tests. Visual projects use `default: false`; `bun run test:visual`
+  still selects both explicitly, including in CI.
+- `bun run test:e2e:shuffle` probes accidental test-order dependencies. Replay
+  the printed seed with `bun run test:e2e:shuffle 271828182`.
 
 - Failed tests retain DOM, accessibility, and screen snapshots in their trace.
   Open the trace viewer's Display Aria mode to inspect accessible names beside

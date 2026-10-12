@@ -6,6 +6,14 @@ import rstestBrowserDarkConfig from "../rstest.browser.dark.config";
 const VISUAL_PROJECT_NAMES = ["visual-light", "visual-dark"];
 
 describe("test harness config", () => {
+  test("runs functional tests by default and keeps visual projects opt-in", () => {
+    expect(
+      (playwrightConfig.projects ?? [])
+        .filter((project) => project.default !== false)
+        .map((project) => project.name)
+    ).toEqual(["chromium"]);
+  });
+
   test("keeps rstest browser checks fast, deterministic, and Chromium only", () => {
     for (const config of [rstestBrowserConfig, rstestBrowserDarkConfig]) {
       expect(config.testTimeout).toBeLessThanOrEqual(10_000);

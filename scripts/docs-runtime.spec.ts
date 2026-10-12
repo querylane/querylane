@@ -158,6 +158,43 @@ test("page metadata uses the source file's last Git commit, not the build date",
 	);
 });
 
+test("page structured data uses the first Git commit as its publication date", async () => {
+	const firstCommit = execFileSync(
+		"git",
+		[
+			"log",
+			"--follow",
+			"--diff-filter=A",
+			"--format=%cI",
+			"--",
+			"docs/site/get-started/configure-querylane.mdx",
+		],
+		{ cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" },
+	)
+		.trim()
+		.split("\n")
+		.at(-1);
+	expect(firstCommit).toBeTruthy();
+	const response = await fetch(`${baseUrl}/get-started/configure-querylane`);
+	expect(response.status).toBe(200);
+	const page = parse(await response.text());
+	const structuredData = page
+		.querySelectorAll('script[type="application/ld+json"]')
+		.flatMap((script) => JSON.parse(script.textContent));
+	expect(structuredData).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				"@graph": expect.arrayContaining([
+					expect.objectContaining({
+						"@type": "TechArticle",
+						datePublished: new Date(firstCommit ?? "").toISOString(),
+					}),
+				]),
+			}),
+		]),
+	);
+});
+
 test("API pages render all 18 native sample languages", async () => {
 	const response = await fetch(
 		`${baseUrl}/api/instance/instance-service-get-instance`,

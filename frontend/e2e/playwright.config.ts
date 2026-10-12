@@ -88,6 +88,8 @@ export default defineConfig({
         },
       },
       name: `visual-${colorScheme}`,
+      // Pixel checks remain available through explicit --project selections.
+      default: false,
       testDir: "./visual",
       use: {
         ...devices["Desktop Chrome"],

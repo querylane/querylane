@@ -32,6 +32,7 @@ Start with the [quickstart](https://docs.querylane.net/get-started). For product
 	narration: true,
 	export: true,
 	lastModified: "git",
+	seo: { datePublished: "git" },
 	github: {
 		owner: "querylane",
 		repo: "querylane",
