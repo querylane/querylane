@@ -43,6 +43,7 @@ import {
   SqlPlanDeepScenario,
   SqlPlanEstimatesScenario,
   SqlPlanRawScenario,
+  SqlPlanSpillScenario,
 } from "@/visual-harness/sql-plan-scenarios";
 import { DatabaseStructureMapScenario } from "@/visual-harness/structure-map-scenarios";
 
@@ -83,6 +84,7 @@ const VISUAL_SCENARIOS = {
   "sql-plan-deep": SqlPlanDeepScenario,
   "sql-plan-estimates": SqlPlanEstimatesScenario,
   "sql-plan-raw": SqlPlanRawScenario,
+  "sql-plan-spills": SqlPlanSpillScenario,
 } satisfies Record<string, ComponentType>;
 
 type VisualScenarioName = keyof typeof VISUAL_SCENARIOS;

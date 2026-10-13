@@ -107,9 +107,71 @@ function SqlPlanRawScenario() {
   return <SqlPlanScenario analyze={false} rawPlan="Unsupported plan output" />;
 }
 
+function SqlPlanSpillScenario() {
+  return (
+    <SqlPlanScenario
+      analyze={true}
+      rawPlan={JSON.stringify([
+        {
+          "Execution Time": 105,
+          "Planning Time": 0.8,
+          Plan: {
+            "Node Type": "Gather",
+            "Actual Total Time": 100,
+            "Actual Loops": 1,
+            "Actual Rows": 300,
+            "Plan Rows": 300,
+            "Workers Planned": 2,
+            "Workers Launched": 2,
+            "Shared Hit Blocks": 3000,
+            "Shared Read Blocks": 120,
+            "Temp Written Blocks": 640,
+            Plans: [
+              {
+                "Node Type": "Sort",
+                "Actual Total Time": 80,
+                "Actual Loops": 3,
+                "Actual Rows": 100,
+                "Plan Rows": 100,
+                "Sort Space Type": "Disk",
+                "Sort Space Used": 2048,
+                "Sort Method": "external merge",
+                "Sort Key": ["events.created_at"],
+                Plans: [
+                  {
+                    "Node Type": "Hash",
+                    "Actual Total Time": 50,
+                    "Actual Loops": 3,
+                    "Hash Batches": 8,
+                    "Peak Memory Usage": 512,
+                    Plans: [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Relation Name": "events",
+                        "Parallel Aware": true,
+                        "Actual Total Time": 40,
+                        "Actual Loops": 3,
+                        "Actual Rows": 100,
+                        "Plan Rows": 100,
+                        "Rows Removed by Filter": 9900,
+                        Filter: "(status = 'pending'::text)",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ])}
+    />
+  );
+}
+
 export {
   SqlPlanAnalyzerScenario,
   SqlPlanDeepScenario,
   SqlPlanEstimatesScenario,
   SqlPlanRawScenario,
+  SqlPlanSpillScenario,
 };
