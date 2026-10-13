@@ -1,15 +1,22 @@
 import { afterEach, expect, test } from "@rstest/core";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { parseExplainPlan } from "@/features/sql-workbench/explain-plan-model";
 import { ExplainPlanView } from "@/features/sql-workbench/explain-plan-view";
 
 const MORE_ROWS = /more than estimated/;
-const TIMING_CAVEAT = /not a chronological waterfall/;
+const TIMING_CAVEAT = /Not a timeline/;
+const PARALLEL_CAVEAT = /Parallel work and subplans are approximate/;
 const INDEX_WORK = /Index Scan.*10 ms/;
 const INDEX_DETAILS = /Show details for Index Scan/;
 const INDEX_CONDITION = /"Index Cond"/;
-const TIMING_PROMPT = /Run Explain analyze to measure node timings/;
+const TIMING_PROMPT = /Run Explain analyze for timings/;
 const PARSE_ERROR = /could not be parsed/;
 
 const rawPlan = JSON.stringify([
@@ -60,6 +67,14 @@ test("inspect a graph node, compare timing, and retain tree and JSON views", asy
   expect(within(inspector).getByText("(id = customers.id)")).toBeDefined();
   expect(within(inspector).getByText("20")).toBeDefined();
   expect(screen.queryByText(MORE_ROWS)).toBeNull();
+  expect(screen.queryByRole("dialog", { name: "Plan metrics" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "About plan metrics" }));
+  const notes = await screen.findByRole("dialog", { name: "Plan metrics" });
+  expect(within(notes).getByText(PARALLEL_CAVEAT)).toBeDefined();
+  await user.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "Plan metrics" })).toBeNull()
+  );
   await user.click(screen.getByRole("tab", { name: "Timing" }));
   expect(screen.getByText(TIMING_CAVEAT)).toBeDefined();
   expect(screen.getByRole("img", { name: INDEX_WORK })).toBeDefined();

@@ -1,5 +1,11 @@
-import { Activity, Database, Search, TriangleAlert } from "lucide-react";
+import { Activity, Database, Info, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/querylane-ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/querylane-ui/popover";
 import {
   type ExplainPlan,
   estimateMismatch,
@@ -27,16 +33,16 @@ function PlanMetrics({
   nodeCount: number;
 }) {
   const metrics = [
-    { label: "Execution time", value: measuredTime(plan.executionTimeMs) },
-    { label: "Planning time", value: measuredTime(plan.planningTimeMs) },
+    { label: "Execution", value: measuredTime(plan.executionTimeMs) },
+    { label: "Planning", value: measuredTime(plan.planningTimeMs) },
     {
       label:
         plan.root.actualRows === undefined
           ? "Estimated output rows"
-          : "Output rows per loop",
+          : "Output rows / loop",
       value: plan.root.actualRows ?? plan.root.planRows,
     },
-    { label: "Plan nodes", value: nodeCount },
+    { label: "Nodes", value: nodeCount },
   ];
   return (
     <dl className="grid grid-cols-2 gap-3 border-border border-b p-4 lg:grid-cols-4">
@@ -71,6 +77,40 @@ function WorkBar({ node, maxMs }: { node: PlanNode; maxMs: number }) {
         style={{ "--work-width": `${width}%` }}
       />
     </div>
+  );
+}
+
+function PlanMetricNotes() {
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label="About plan metrics"
+            size="icon-xs"
+            type="button"
+            variant="ghost"
+          >
+            <Info aria-hidden="true" className="size-3.5" />
+          </Button>
+        }
+      />
+      <PopoverContent align="start" presentation="compact">
+        <PopoverTitle>Plan metrics</PopoverTitle>
+        <ul className="space-y-2 text-muted-foreground text-xs">
+          <li>
+            Self time ≈ total time × loops − child work, clamped at zero.
+            Parallel work and subplans are approximate.
+          </li>
+          <li>Lines connect parents and children, not execution order.</li>
+          <li>Rows and total time are per loop. Costs are not milliseconds.</li>
+          <li>
+            Root buffers include children. Reads may come from the operating
+            system cache.
+          </li>
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -172,18 +212,12 @@ function PlanTiming({
   if (!measured) {
     return (
       <p className="rounded-lg border border-dashed p-6 text-muted-foreground text-sm">
-        Run Explain analyze to measure node timings. Estimated costs are not
-        milliseconds.
+        Run Explain analyze for timings.
       </p>
     );
   }
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-xs">
-        Estimated self time across all loops, longest node = full bar. This is
-        work attribution, not a chronological waterfall. PostgreSQL does not
-        report node start timestamps.
-      </p>
       <ol className="space-y-4">
         {nodes.map((node) => (
           <li className="rounded-lg border bg-card p-3" key={node.id}>
@@ -205,7 +239,7 @@ function PlanTiming({
             </div>
             <WorkBar maxMs={maxMs} node={node} />
             <p className="mt-2 font-mono text-muted-foreground text-xs">
-              Inclusive / loop {measuredTime(node.actualTotalMs)} · loops{" "}
+              Total / loop {measuredTime(node.actualTotalMs)} · loops{" "}
               {node.actualLoops === undefined
                 ? "—"
                 : formatCount(node.actualLoops)}
@@ -237,16 +271,12 @@ function BufferInsights({
           </p>
           <p className="text-muted-foreground text-xs">
             {accesses > 0
-              ? `${Math.round((buffers.hits / accesses) * PERCENT)}% shared-buffer hits. `
-              : "No shared-buffer accesses. "}
-            Root counters include child nodes. Reads may be served by the
-            operating system cache.
+              ? `${Math.round((buffers.hits / accesses) * PERCENT)}% hits`
+              : "No accesses"}
           </p>
         </>
       ) : (
-        <p className="text-muted-foreground text-xs">
-          Buffer counters not reported.
-        </p>
+        <p className="text-muted-foreground text-xs">Not reported</p>
       )}
     </div>
   );
@@ -272,8 +302,7 @@ function SlowestInsight({
         <span className="break-words text-left">{nodeTitle(node)}</span>
       </Button>
       <p className="text-muted-foreground text-xs">
-        {measuredTime(node.exclusiveMs)} estimated self time across all loops.
-        Start inspection here.
+        {measuredTime(node.exclusiveMs)}
       </p>
     </div>
   );
@@ -292,15 +321,15 @@ function PlanInsights({
     <section aria-label="Plan insights" className="space-y-4">
       <h3 className="flex items-center gap-2 font-semibold text-sm">
         <Activity aria-hidden="true" className="size-4" />
-        Plan insights
+        Insights
       </h3>
       {summary.slowestNode ? (
         <SlowestInsight node={summary.slowestNode} onSelect={onSelect} />
       ) : (
         <p className="text-muted-foreground text-xs">
           {plan.root.actualTotalMs === undefined
-            ? "Run Explain analyze for measured diagnostics."
-            : "No measurable self time was reported."}
+            ? "Timings not measured"
+            : "No measured self time"}
         </p>
       )}
       <div className="space-y-1">
@@ -327,31 +356,23 @@ function PlanInsights({
         ) : (
           <p className="text-muted-foreground text-xs">
             {plan.root.actualRows === undefined
-              ? "Actual rows not reported."
-              : "No executed node differs by 10× or more."}
+              ? "Not measured"
+              : "No ≥10× mismatches"}
           </p>
         )}
-        {summary.estimateMismatches.length > 0 ? (
-          <p className="text-muted-foreground text-xs">
-            Compare rows per loop. Inspect predicates and column statistics; a
-            mismatch alone does not prove stale statistics.
-          </p>
-        ) : null}
       </div>
       <BufferInsights buffers={summary.sharedBuffers} />
       {tempWrittenBlocks > 0 ? (
         <div className="space-y-1">
           <h4 className="font-medium text-xs">Temporary writes</h4>
           <p className="text-muted-foreground text-xs">
-            {formatCount(tempWrittenBlocks)} blocks written. Inspect sort and
-            hash nodes for spills.
+            {formatCount(tempWrittenBlocks)} blocks
           </p>
         </div>
       ) : null}
       {summary.hasParallelWork ? (
         <p className="rounded-md border p-2 text-muted-foreground text-xs">
-          Parallel workers can overlap. Summed node work can exceed execution
-          time; self-time attribution is approximate.
+          Parallel timing is approximate.
         </p>
       ) : null}
     </section>
@@ -360,15 +381,15 @@ function PlanInsights({
 
 function NodeInspector({ node }: { node: PlanNode }) {
   const metrics = [
-    { label: "Actual rows per loop", value: node.actualRows },
-    { label: "Estimated rows per loop", value: node.planRows },
+    { label: "Rows / loop", value: node.actualRows },
+    { label: "Estimated rows / loop", value: node.planRows },
     { label: "Loops", value: node.actualLoops },
     {
-      label: "Inclusive time per loop",
+      label: "Total time / loop",
       value: measuredTime(node.actualTotalMs),
     },
     {
-      label: "Estimated self time, all loops",
+      label: "Self time (all loops)",
       value: measuredTime(node.exclusiveMs),
     },
     { label: "Planner cost (not ms)", value: node.totalCost },
@@ -378,7 +399,7 @@ function NodeInspector({ node }: { node: PlanNode }) {
       aria-label="Selected node"
       className="space-y-3 border-border border-t pt-4"
     >
-      <h3 className="font-semibold text-sm">Selected node</h3>
+      <h3 className="font-semibold text-sm">Node</h3>
       <p className="break-words font-medium font-mono text-sm">
         {nodeTitle(node)}
       </p>
@@ -426,28 +447,26 @@ function ExplainPlanAnalyzer({
       <PlanMetrics nodeCount={summary.nodes.length} plan={plan} />
       <div className="grid flex-1 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-3 bg-muted/20 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
+            <span>Estimated self time · all loops</span>
+            {mode === "timing" ? <span>Not a timeline.</span> : null}
+            <PlanMetricNotes />
+          </div>
           {mode === "graph" ? (
-            <>
-              <p className="text-muted-foreground text-xs">
-                Select a node to inspect it. Lines show parent → child
-                relationships, not execution order. Bars show estimated self
-                time across all loops.
-              </p>
-              <section
-                aria-label="Query plan graph"
-                className="overflow-x-auto p-1"
-              >
-                <ul>
-                  <GraphNode
-                    maxMs={maxMs}
-                    node={plan.root}
-                    onSelect={onSelect}
-                    selectedId={selected.id}
-                    slowestId={summary.slowestNode?.id}
-                  />
-                </ul>
-              </section>
-            </>
+            <section
+              aria-label="Query plan graph"
+              className="overflow-x-auto p-1"
+            >
+              <ul>
+                <GraphNode
+                  maxMs={maxMs}
+                  node={plan.root}
+                  onSelect={onSelect}
+                  selectedId={selected.id}
+                  slowestId={summary.slowestNode?.id}
+                />
+              </ul>
+            </section>
           ) : (
             <PlanTiming
               maxMs={maxMs}
@@ -456,10 +475,6 @@ function ExplainPlanAnalyzer({
               selectedId={selected.id}
             />
           )}
-          <p className="text-muted-foreground text-xs">
-            Self time = inclusive time × loops − child work, clamped at zero.
-            Parallelism and subplans can make attribution approximate.
-          </p>
         </div>
         <aside className="min-w-0 space-y-4 border-border border-t bg-background p-4 lg:border-t-0 lg:border-l">
           <PlanInsights onSelect={onSelect} plan={plan} />
