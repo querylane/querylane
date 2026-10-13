@@ -1,5 +1,8 @@
+export type {
+  ProtoFormShape,
+  ProtoFormValues,
+} from "../../lib/protobuf-provider/form-values.js";
 export { protoPathToFormPath } from "./proto-error-path.js";
-export type { FlattenProtoOneofs } from "./proto-paths.js";
 export {
   createProtoResolver,
   type ProtoResolverOptions,
