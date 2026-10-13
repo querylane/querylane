@@ -51,7 +51,6 @@
     "test:e2e:list": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --list --reporter=list",
     "test:e2e:profile": "bun run test:e2e --add-reporter=perfetto",
     "test:e2e:repeat": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --project=chromium --grep-invert @a11y --repeat-each=2",
-    "test:e2e:shuffle": "bun run test:e2e --shuffle",
     "test:e2e:ui": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --ui",
     "test:integration": "rstest --config rstest.integration.config.ts --bail=1",
     "test:integration:changed": "rstest --config rstest.integration.config.ts --changed ${QUALITY_BASE_REF:-origin/main} --passWithNoTests --bail=1",
