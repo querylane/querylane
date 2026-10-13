@@ -48,7 +48,6 @@ export interface FieldRenderHints {
   optionGroups?: OptionGroup[] | undefined;
   optionLabels?: Record<string, string> | undefined;
   placeholder?: string | undefined;
-  secretScope?: string | undefined;
   sensitive?: boolean | undefined;
   step?: string | undefined;
   summaryLabel?: string | undefined;

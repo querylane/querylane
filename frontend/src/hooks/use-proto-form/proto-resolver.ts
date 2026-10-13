@@ -14,7 +14,8 @@ import {
 } from "../../lib/protobuf-provider/humanize-validation-error.js";
 import { createDescriptorAwareStandardSchema } from "../../lib/protobuf-provider/validation-schema.js";
 
-export interface ProtoResolverOptions {
+export interface ProtoResolverOptions<Desc extends DescMessage = DescMessage> {
+  getSourceMessage?: () => MessageShape<Desc> | undefined;
   getValidationMask?: (values: FormValues) => FieldMask | undefined;
 }
 
@@ -22,14 +23,21 @@ export function createProtoResolver<Desc extends DescMessage>(
   desc: Desc,
   options: ProtoFormOptions = {},
   source?: MessageShape<Desc>,
-  protoResolverOptions: ProtoResolverOptions = {}
+  protoResolverOptions: ProtoResolverOptions<Desc> = {}
 ): Resolver<FormValues, unknown, MessageValidType<Desc>> {
   const standardSchema = createDescriptorAwareStandardSchema(desc, options);
 
   return async (values, _context, resolverOptions) => {
-    const validationResult = await validateFormValuesAgainstProtoSchema(desc, values, standardSchema, options, source, {
-      validationMask: protoResolverOptions.getValidationMask?.(values),
-    });
+    const validationResult = await validateFormValuesAgainstProtoSchema(
+      desc,
+      values,
+      standardSchema,
+      options,
+      protoResolverOptions.getSourceMessage ? protoResolverOptions.getSourceMessage() : source,
+      {
+        validationMask: protoResolverOptions.getValidationMask?.(values),
+      }
+    );
 
     if (!validationResult.issues) {
       if (resolverOptions.shouldUseNativeValidation) {

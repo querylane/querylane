@@ -21,7 +21,7 @@ import {
   isWrapperDesc,
   ListValueSchema,
   StructSchema,
-  type TimestampSchema,
+  TimestampSchema,
   timestampDate,
   timestampFromDate,
   ValueSchema,
@@ -45,7 +45,11 @@ import {
   tracksPresence,
   VALUE_TYPE,
 } from "./descriptor-utils.js";
+import type { ProtoFormShape } from "./form-values.js";
 import { protoPathToFormPath } from "./proto-error-path.js";
+
+const TRAILING_FRACTION_ZEROES = /0+$/u;
+const TIMESTAMP_FRACTION = /\.(\d{1,9})/u;
 
 const PROTO_JSON_FALLBACK_TYPES = [
   TIMESTAMP_TYPE,
@@ -89,7 +93,7 @@ function toDateTimeLocalValue(timestamp: MessageShape<typeof TimestampSchema> | 
     return;
   }
 
-  const date = timestampDate(timestamp);
+  const date = timestampDate({ ...timestamp, nanos: Math.floor(timestamp.nanos / 1_000_000) * 1_000_000 });
   if (Number.isNaN(date.getTime())) {
     return;
   }
@@ -100,7 +104,11 @@ function toDateTimeLocalValue(timestamp: MessageShape<typeof TimestampSchema> | 
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
 
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const fraction = date.getMilliseconds()
+    ? `.${String(date.getMilliseconds()).padStart(3, "0").replace(TRAILING_FRACTION_ZEROES, "")}`
+    : "";
+  return `${year}-${month}-${day}T${hours}:${minutes}${date.getSeconds() || fraction ? `:${seconds}${fraction}` : ""}`;
 }
 
 function objectHasValues(value: Record<string, unknown>): boolean {
@@ -300,9 +308,9 @@ function messageToFormValues(desc: DescMessage, value: AnyObject): Record<string
 export function protoToFormValues<Desc extends DescMessage>(
   desc: Desc,
   value?: MessageShape<Desc>
-): Record<string, unknown> {
+): ProtoFormShape<Desc> {
   const baseValue = (value ?? create(desc)) as AnyObject;
-  return messageToFormValues(desc, baseValue);
+  return messageToFormValues(desc, baseValue) as ProtoFormShape<Desc>;
 }
 
 function normalizeBooleanValue(value: unknown): boolean | undefined {
@@ -414,7 +422,17 @@ function normalizeMessageFieldValue(
 
   switch (field.message.typeName) {
     case TIMESTAMP_TYPE:
-      return typeof value === "string" && value !== "" ? timestampFromDate(new Date(value)) : undefined;
+      if (typeof value !== "string" || value === "") {
+        return undefined;
+      }
+      {
+        const timestamp = timestampFromDate(new Date(value));
+        const fraction = TIMESTAMP_FRACTION.exec(value)?.[1];
+        if (fraction !== undefined && fraction !== "") {
+          timestamp.nanos = Number(fraction.padEnd(9, "0"));
+        }
+        return timestamp;
+      }
     case DURATION_TYPE:
       return typeof value === "string" && value !== ""
         ? fromJsonString(DurationSchema, JSON.stringify(value))
@@ -612,11 +630,29 @@ export function formValuesToProtoInit<Desc extends DescMessage>(
   return messageToProtoInit(desc, values, options, []) as MessageInitShape<Desc>;
 }
 
-function knownMessageValuesEqual(desc: DescMessage, left: AnyObject, right: AnyObject): boolean {
-  return toJsonString(desc, left as never) === toJsonString(desc, right as never);
+function knownMessageValuesEqual(
+  desc: DescMessage,
+  left: AnyObject,
+  right: AnyObject,
+  preserveTimestampPrecision: boolean
+): boolean {
+  if (toJsonString(desc, left as never) === toJsonString(desc, right as never)) {
+    return true;
+  }
+  if (!(preserveTimestampPrecision && isMessage(left, desc))) {
+    return false;
+  }
+  const comparable = clone(desc, left);
+  preserveMessageUnknownFields(desc, comparable, right, true);
+  return toJsonString(desc, comparable) === toJsonString(desc, right as never);
 }
 
-function preserveRepeatedMessageUnknownFields(desc: DescMessage, target: unknown[], source: unknown[]): void {
+function preserveRepeatedMessageUnknownFields(
+  desc: DescMessage,
+  target: unknown[],
+  source: unknown[],
+  preserveTimestampPrecision: boolean
+): void {
   const matchedSourceIndexes = new Set<number>();
   const matchedTargetIndexes = new Set<number>();
 
@@ -627,7 +663,7 @@ function preserveRepeatedMessageUnknownFields(desc: DescMessage, target: unknown
     const candidates = source.flatMap((candidateSourceValue, candidateSourceIndex) =>
       !matchedSourceIndexes.has(candidateSourceIndex) &&
       isPlainObject(candidateSourceValue) &&
-      knownMessageValuesEqual(desc, targetValue, candidateSourceValue)
+      knownMessageValuesEqual(desc, targetValue, candidateSourceValue, preserveTimestampPrecision)
         ? [candidateSourceIndex]
         : []
     );
@@ -646,12 +682,12 @@ function preserveRepeatedMessageUnknownFields(desc: DescMessage, target: unknown
       (candidate, candidateIndex) =>
         !matchedTargetIndexes.has(candidateIndex) &&
         isPlainObject(candidate) &&
-        knownMessageValuesEqual(desc, candidate, sourceValue)
+        knownMessageValuesEqual(desc, candidate, sourceValue, preserveTimestampPrecision)
     ).length;
     if (competingTargetCount !== 1) {
       continue;
     }
-    preserveMessageUnknownFields(desc, targetValue, sourceValue);
+    preserveMessageUnknownFields(desc, targetValue, sourceValue, preserveTimestampPrecision);
     matchedSourceIndexes.add(sourceIndex);
     matchedTargetIndexes.add(targetIndex);
   }
@@ -670,20 +706,25 @@ function preserveRepeatedMessageUnknownFields(desc: DescMessage, target: unknown
     ) {
       continue;
     }
-    preserveMessageUnknownFields(desc, targetValue, sourceValue);
+    preserveMessageUnknownFields(desc, targetValue, sourceValue, preserveTimestampPrecision);
   }
 }
 
-function preserveFieldUnknownFields(field: DescField, target: unknown, source: unknown): void {
+function preserveFieldUnknownFields(
+  field: DescField,
+  target: unknown,
+  source: unknown,
+  preserveTimestampPrecision: boolean
+): void {
   switch (field.fieldKind) {
     case "message":
       if (isPlainObject(target) && isPlainObject(source)) {
-        preserveMessageUnknownFields(field.message, target, source);
+        preserveMessageUnknownFields(field.message, target, source, preserveTimestampPrecision);
       }
       return;
     case "list":
       if (field.listKind === "message" && Array.isArray(target) && Array.isArray(source)) {
-        preserveRepeatedMessageUnknownFields(field.message, target, source);
+        preserveRepeatedMessageUnknownFields(field.message, target, source, preserveTimestampPrecision);
       }
       return;
     case "map":
@@ -691,7 +732,7 @@ function preserveFieldUnknownFields(field: DescField, target: unknown, source: u
         for (const [key, targetValue] of Object.entries(target)) {
           const sourceValue = source[key];
           if (isPlainObject(targetValue) && isPlainObject(sourceValue)) {
-            preserveMessageUnknownFields(field.message, targetValue, sourceValue);
+            preserveMessageUnknownFields(field.message, targetValue, sourceValue, preserveTimestampPrecision);
           }
         }
       }
@@ -704,7 +745,24 @@ function preserveFieldUnknownFields(field: DescField, target: unknown, source: u
   }
 }
 
-function preserveMessageUnknownFields(desc: DescMessage, target: AnyObject, source: AnyObject): void {
+function preserveMessageUnknownFields(
+  desc: DescMessage,
+  target: AnyObject,
+  source: AnyObject,
+  preserveTimestampPrecision = false
+): void {
+  if (
+    preserveTimestampPrecision &&
+    isMessage(target, TimestampSchema) &&
+    isMessage(source, TimestampSchema) &&
+    target.nanos % 1_000_000 === 0
+  ) {
+    const sourceValue = toDateTimeLocalValue(source);
+    if (sourceValue !== undefined && sourceValue !== "" && sourceValue === toDateTimeLocalValue(target)) {
+      target.seconds = source.seconds;
+      target.nanos = source.nanos;
+    }
+  }
   const hasUnknownFields = Boolean(source["$unknown"]);
   if (hasUnknownFields) {
     target["$unknown"] = structuredClone(source["$unknown"]);
@@ -723,12 +781,12 @@ function preserveMessageUnknownFields(desc: DescMessage, target: AnyObject, sour
       }
       const activeField = member.fields.find((field) => field.localName === targetCase);
       if (activeField) {
-        preserveFieldUnknownFields(activeField, targetOneof["value"], sourceOneof["value"]);
+        preserveFieldUnknownFields(activeField, targetOneof["value"], sourceOneof["value"], preserveTimestampPrecision);
       }
       continue;
     }
 
-    preserveFieldUnknownFields(member, target[member.localName], source[member.localName]);
+    preserveFieldUnknownFields(member, target[member.localName], source[member.localName], preserveTimestampPrecision);
   }
 }
 
@@ -753,7 +811,7 @@ export function formValuesToProto<Desc extends DescMessage>(
 ): MessageShape<Desc> {
   const message = create(desc, formValuesToProtoInit(desc, values, options));
   if (source) {
-    preserveMessageUnknownFields(desc, message, source);
+    preserveMessageUnknownFields(desc, message, source, true);
   }
   return message;
 }
@@ -995,20 +1053,83 @@ function getMapConversionIssue(value: unknown): string | undefined {
   return new Set(keys).size === keys.length ? undefined : "Map keys must be unique.";
 }
 
-function getFormConversionIssues(desc: DescMessage, values: Record<string, unknown>): NormalizedProtoIssue[] {
+function getFieldConversionIssues(
+  field: DescField,
+  value: unknown,
+  path: Array<string | number>
+): NormalizedProtoIssue[] {
+  let message: string | undefined;
+  switch (field.fieldKind) {
+    case "scalar":
+      message = getScalarConversionIssue(field, value);
+      break;
+    case "enum":
+      break;
+    case "message":
+      if (isWrapperDesc(field.message)) {
+        return getFieldConversionIssues(
+          cloneField(field, {
+            fieldKind: "scalar",
+            scalar: field.message.fields[0]?.scalar,
+          }),
+          value,
+          path
+        );
+      }
+      message = getMessageConversionIssue(field, value);
+      if (!PROTO_JSON_FALLBACK_TYPES.includes(field.message.typeName) && isPlainObject(value)) {
+        return getFormConversionIssues(field.message, value, path);
+      }
+      break;
+    case "list":
+      return Array.isArray(value)
+        ? value.flatMap((entry, index) =>
+            getFieldConversionIssues(cloneField(field, { fieldKind: field.listKind, oneof: undefined }), entry, [
+              ...path,
+              index,
+            ])
+          )
+        : [];
+    case "map": {
+      message = getMapConversionIssue(value);
+      const issues: NormalizedProtoIssue[] = message !== undefined && message !== "" ? [{ message, path }] : [];
+      const valueField = cloneField(field, { fieldKind: field.mapKind, oneof: undefined });
+      if (Array.isArray(value)) {
+        return issues.concat(
+          value.flatMap((entry, index) =>
+            isPlainObject(entry) ? getFieldConversionIssues(valueField, entry["value"], [...path, index, "value"]) : []
+          )
+        );
+      }
+      return isPlainObject(value)
+        ? issues.concat(
+            Object.entries(value).flatMap(([key, entry]) => getFieldConversionIssues(valueField, entry, [...path, key]))
+          )
+        : issues;
+    }
+    default:
+      return field satisfies never;
+  }
+  return message !== undefined && message !== "" ? [{ message, path }] : [];
+}
+
+function getFormConversionIssues(
+  desc: DescMessage,
+  values: Record<string, unknown>,
+  path: Array<string | number> = []
+): NormalizedProtoIssue[] {
   return desc.members.flatMap((member) => {
     if (member.kind === "oneof") {
-      return [];
+      const selection = values[member.localName];
+      if (!isPlainObject(selection)) {
+        return [];
+      }
+      const selected = member.fields.find((field) => field.localName === selection["case"]);
+      return selected
+        ? getFieldConversionIssues(selected, selection["value"], [...path, member.localName, "value"])
+        : [];
     }
-    let message: string | undefined;
-    if (member.fieldKind === "scalar") {
-      message = getScalarConversionIssue(member, values[member.localName]);
-    } else if (member.fieldKind === "message") {
-      message = getMessageConversionIssue(member, values[member.localName]);
-    } else if (member.fieldKind === "map") {
-      message = getMapConversionIssue(values[member.localName]);
-    }
-    return message !== undefined && message !== "" ? [{ message, path: [member.localName] }] : [];
+    return getFieldConversionIssues(member, values[member.localName], [...path, member.localName]);
   });
 }
 

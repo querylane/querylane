@@ -5,6 +5,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { useProtoForm } from "@/hooks/use-proto-form";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import {
+  CreateInstanceSpecSchema,
   PostgresConfig_SslMode,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -93,6 +94,55 @@ describe("useProtoForm", () => {
 
     expect(result.current.errors.host?.message).toBeTruthy();
     expect(result.current.errors.database?.message).toBeTruthy();
+  });
+
+  test("retains multiple server violations on the same field", () => {
+    const { result } = renderPostgresConfigForm("secret");
+    const error = new ConnectError(
+      "invalid request",
+      Code.InvalidArgument,
+      undefined,
+      [
+        {
+          desc: BadRequestSchema,
+          value: create(BadRequestSchema, {
+            fieldViolations: [
+              { field: "host", description: "Host is not reachable" },
+              { field: "host", description: "Host is not permitted" },
+            ],
+          }),
+        },
+      ]
+    );
+
+    act(() => result.current.form.setServerErrors(error));
+
+    expect(Object.values(result.current.errors.host?.types ?? {})).toEqual([
+      "Host is not reachable",
+      "Host is not permitted",
+    ]);
+    expect(result.current.errors.host?.message).toBe("Host is not reachable");
+  });
+
+  test("resets an unregistered nested section to its default values", async () => {
+    const { result } = renderHook(() => {
+      const form = useProtoForm(CreateInstanceSpecSchema, {
+        defaultValues: { config: { host: "localhost" } },
+      });
+      return { form, isDirty: form.formState.isDirty };
+    });
+
+    act(() =>
+      result.current.form.setValue("config.host", "changed.internal", {
+        shouldDirty: true,
+      })
+    );
+    expect(result.current.isDirty).toBe(true);
+
+    await act(async () => result.current.form.resetField("config"));
+
+    expect(result.current.form.createMessage().config?.host).toBe("localhost");
+    expect(result.current.isDirty).toBe(false);
   });
 
   test("validates and masks a modified field even when restored to its default", async () => {

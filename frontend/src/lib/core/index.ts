@@ -17,14 +17,6 @@ export {
   type UiRule,
 } from "./field-model.js";
 export {
-  createFinalFormValidator,
-  createFormikValidator,
-  type FormValidationErrors,
-  type FormValidator,
-  type FormValidatorOptions,
-  standardSchemaIssuesToFormErrors,
-} from "./form-library-adapters.js";
-export {
   formatProtoformMessage,
   type ProtoformMessageCode,
   type ProtoformMessageFormatter,
