@@ -21,7 +21,10 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
-const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 200;
+// 205 (was 200): the restored plan analyzer adds 4.8 KiB gzip to the
+// measured main baseline of 198.5 KiB. Includes graph, timing and diagnostics;
+// no added dependencies. Keep initial/core budgets unchanged.
+const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
 // TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew

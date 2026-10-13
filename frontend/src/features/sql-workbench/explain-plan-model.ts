@@ -4,6 +4,8 @@
  * kept for the "details" disclosure.
  */
 
+import { formatCount } from "@/features/sql-workbench/sql-workbench-format";
+
 interface PlanNode {
   actualLoops?: number | undefined;
   actualRows?: number | undefined;
@@ -13,14 +15,22 @@ interface PlanNode {
   details: Array<{ label: string; value: string }>;
   /** Exclusive time in ms: this node minus its children, times loops. */
   exclusiveMs?: number | undefined;
+  hashBatches?: number | undefined;
   id: string;
   indexName?: string | undefined;
   nodeType: string;
+  parallelAware: boolean;
   planRows?: number | undefined;
   relationName?: string | undefined;
-  /** Share of the root's total time attributed exclusively to this node. */
+  rowsRemovedByFilter?: number | undefined;
+  /** Share of summed derived self work, not execution wall time. */
   share?: number | undefined;
+  sharedHitBlocks?: number | undefined;
+  sharedReadBlocks?: number | undefined;
+  sortSpaceType?: string | undefined;
+  tempWrittenBlocks?: number | undefined;
   totalCost?: number | undefined;
+  workersPlanned?: number | undefined;
 }
 
 interface ExplainPlan {
@@ -30,6 +40,10 @@ interface ExplainPlan {
 }
 
 type JsonRecord = Record<string, unknown>;
+
+const HEAVY_FILTER_MIN_ROWS = 1000;
+const HEAVY_FILTER_RATIO = 0.9;
+const PERCENT = 100;
 
 const DETAIL_KEYS_TO_SKIP = new Set([
   "Actual Loops",
@@ -88,7 +102,12 @@ function buildNode(record: JsonRecord, id: string): PlanNode {
   const actualLoops = numberField(record, "Actual Loops");
   const actualTotalMs = numberField(record, "Actual Total Time");
   let exclusiveMs: number | undefined;
-  if (actualTotalMs !== undefined) {
+  if (
+    actualTotalMs !== undefined &&
+    children.every(
+      (child) => child.actualTotalMs !== undefined || child.actualLoops === 0
+    )
+  ) {
     const loops = actualLoops ?? 1;
     const inclusive = actualTotalMs * loops;
     const childTime = children.reduce(
@@ -106,6 +125,14 @@ function buildNode(record: JsonRecord, id: string): PlanNode {
     details: buildDetails(record),
     exclusiveMs,
     id,
+    hashBatches: numberField(record, "Hash Batches"),
+    rowsRemovedByFilter: numberField(record, "Rows Removed by Filter"),
+    sortSpaceType: stringField(record, "Sort Space Type"),
+    sharedHitBlocks: numberField(record, "Shared Hit Blocks"),
+    sharedReadBlocks: numberField(record, "Shared Read Blocks"),
+    tempWrittenBlocks: numberField(record, "Temp Written Blocks"),
+    parallelAware: record["Parallel Aware"] === true,
+    workersPlanned: numberField(record, "Workers Planned"),
     indexName: stringField(record, "Index Name"),
     nodeType: stringField(record, "Node Type") ?? "Unknown",
     planRows: numberField(record, "Plan Rows"),
@@ -160,5 +187,126 @@ function flattenPlan(node: PlanNode): PlanNode[] {
   return [node, ...node.children.flatMap(flattenPlan)];
 }
 
+/** Row estimates and actual rows are both per invocation, not total loop rows. */
+function estimateMismatch(node: PlanNode): string | undefined {
+  const threshold = 10;
+  const actual = node.actualRows;
+  const estimated = node.planRows;
+  if (
+    actual === undefined ||
+    estimated === undefined ||
+    node.actualLoops === 0 ||
+    node.nodeType === "BitmapAnd" ||
+    node.nodeType === "BitmapOr"
+  ) {
+    return undefined;
+  }
+  if (actual === 0 && estimated >= threshold) {
+    return `No rows; estimated ${estimated.toLocaleString("en-US")}`;
+  }
+  if (estimated === 0 && actual > 0) {
+    return "Rows returned; estimated none";
+  }
+  if (actual === 0 || estimated === 0) {
+    return undefined;
+  }
+  const ratio = actual / estimated;
+  if (ratio >= threshold) {
+    return `${Math.round(ratio)}× more than estimated`;
+  }
+  if (ratio <= 1 / threshold) {
+    return `${Math.round(1 / ratio)}× fewer than estimated`;
+  }
+  return undefined;
+}
+
+function nodeTitle(node: PlanNode): string {
+  return [
+    node.nodeType,
+    node.relationName ? `on ${node.relationName}` : "",
+    node.indexName ? `using ${node.indexName}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+interface PlanFinding {
+  kind: "spill" | "filter" | "estimate";
+  label: string;
+  node: PlanNode;
+}
+
+/** Observations, not tuning prescriptions. Filter counts are per-loop averages. */
+function nodeFindings(node: PlanNode): PlanFinding[] {
+  if (node.actualLoops === 0) {
+    return [];
+  }
+  const findings: PlanFinding[] = [];
+  if (node.sortSpaceType === "Disk") {
+    findings.push({ node, kind: "spill", label: "Sort used disk" });
+  }
+  if ((node.hashBatches ?? 0) > 1) {
+    findings.push({
+      node,
+      kind: "spill",
+      label: `Hash used ${formatCount(node.hashBatches ?? 0)} batches`,
+    });
+  }
+  const removed = node.rowsRemovedByFilter ?? 0;
+  const inspected = removed + (node.actualRows ?? 0);
+  if (
+    node.actualRows !== undefined &&
+    removed >= HEAVY_FILTER_MIN_ROWS &&
+    removed / inspected >= HEAVY_FILTER_RATIO
+  ) {
+    findings.push({
+      node,
+      kind: "filter",
+      label: `${((PERCENT * removed) / inspected).toFixed(1)}% filtered`,
+    });
+  }
+  const mismatch = estimateMismatch(node);
+  if (mismatch) {
+    findings.push({ node, kind: "estimate", label: mismatch });
+  }
+  return findings;
+}
+function summarizeExplainPlan(plan: ExplainPlan) {
+  const nodes = flattenPlan(plan.root);
+  const slowestNode = nodes.reduce<PlanNode | undefined>(
+    (slowest, node) =>
+      (node.exclusiveMs ?? 0) > (slowest?.exclusiveMs ?? 0) ? node : slowest,
+    undefined
+  );
+  const workNodes = nodes.toSorted(
+    (a, b) => (b.exclusiveMs ?? 0) - (a.exclusiveMs ?? 0)
+  );
+  const hits = plan.root.sharedHitBlocks;
+  const reads = plan.root.sharedReadBlocks;
+  return {
+    nodes,
+    workNodes,
+    findings: workNodes.flatMap(nodeFindings),
+    slowestNode,
+    estimateMismatches: nodes.flatMap((node) => {
+      const label = estimateMismatch(node);
+      return label ? [{ node, label }] : [];
+    }),
+    // Upper-level buffer counters include their descendants. Never sum nodes.
+    sharedBuffers:
+      hits === undefined || reads === undefined ? undefined : { hits, reads },
+    hasParallelWork: nodes.some(
+      (node) => node.parallelAware || (node.workersPlanned ?? 0) > 0
+    ),
+    tempWrittenBlocks: plan.root.tempWrittenBlocks,
+  };
+}
+
 export type { ExplainPlan, PlanNode };
-export { flattenPlan, parseExplainPlan };
+export {
+  estimateMismatch,
+  flattenPlan,
+  nodeTitle,
+  parseExplainPlan,
+  summarizeExplainPlan,
+};

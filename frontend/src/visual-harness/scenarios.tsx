@@ -38,6 +38,13 @@ import {
   OnboardingStorageFullScenario,
   OnboardingYamlWaitingScenario,
 } from "@/visual-harness/onboarding-scenarios";
+import {
+  SqlPlanAnalyzerScenario,
+  SqlPlanDeepScenario,
+  SqlPlanEstimatesScenario,
+  SqlPlanRawScenario,
+  SqlPlanSpillScenario,
+} from "@/visual-harness/sql-plan-scenarios";
 import { DatabaseStructureMapScenario } from "@/visual-harness/structure-map-scenarios";
 
 // Keys are the `scenario` query parameter that Playwright visual specs open.
@@ -73,6 +80,11 @@ const VISUAL_SCENARIOS = {
   "onboarding-storage-full": OnboardingStorageFullScenario,
   "onboarding-yaml-waiting": OnboardingYamlWaitingScenario,
   "record-detail-drawer": RecordDetailDrawerScenario,
+  "sql-plan-analyzer": SqlPlanAnalyzerScenario,
+  "sql-plan-deep": SqlPlanDeepScenario,
+  "sql-plan-estimates": SqlPlanEstimatesScenario,
+  "sql-plan-raw": SqlPlanRawScenario,
+  "sql-plan-spills": SqlPlanSpillScenario,
 } satisfies Record<string, ComponentType>;
 
 type VisualScenarioName = keyof typeof VISUAL_SCENARIOS;
