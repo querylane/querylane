@@ -2,6 +2,7 @@ import { describe, expect, test } from "@rstest/core";
 import {
   flattenPlan,
   parseExplainPlan,
+  summarizeExplainPlan,
 } from "@/features/query-plan/explain-plan-model";
 
 const ANALYZE_PLAN = JSON.stringify([
@@ -147,5 +148,79 @@ describe("flattenPlan", () => {
       "0.0",
       "0.1",
     ]);
+  });
+});
+
+describe("plan diagnostics", () => {
+  it("compares row estimates per loop and uses inclusive root buffer counters", () => {
+    const plan = parseExplainPlan(
+      JSON.stringify([
+        {
+          Plan: {
+            "Node Type": "Nested Loop",
+            "Actual Total Time": 20,
+            "Actual Loops": 1,
+            "Shared Hit Blocks": 100,
+            "Shared Read Blocks": 25,
+            Plans: [
+              {
+                "Node Type": "Index Scan",
+                "Actual Rows": 5,
+                "Plan Rows": 5,
+                "Actual Loops": 100,
+                "Actual Total Time": 0.1,
+                "Shared Hit Blocks": 100,
+              },
+              {
+                "Node Type": "Seq Scan",
+                "Actual Rows": 200,
+                "Plan Rows": 10,
+                "Actual Loops": 1,
+                "Actual Total Time": 8,
+                "Shared Read Blocks": 25,
+              },
+            ],
+          },
+        },
+      ])
+    );
+    if (!plan) {
+      throw new Error("expected a plan");
+    }
+    const summary = summarizeExplainPlan(plan);
+    expect(summary.slowestNode?.id).toBe("0.0");
+    expect(
+      summary.estimateMismatches.map(({ node, label }) => [node.id, label])
+    ).toEqual([["0.1", "20× more than estimated"]]);
+    expect(summary.sharedBuffers).toEqual({ hits: 100, reads: 25 });
+  });
+
+  it("does not invent measurements or diagnose nodes that never ran", () => {
+    const plan = parseExplainPlan(
+      JSON.stringify([
+        {
+          Plan: {
+            "Node Type": "Result",
+            "Plan Rows": 1,
+            Plans: [
+              {
+                "Node Type": "Seq Scan",
+                "Plan Rows": 100,
+                "Actual Rows": 0,
+                "Actual Loops": 0,
+                "Actual Total Time": 0,
+              },
+            ],
+          },
+        },
+      ])
+    );
+    if (!plan) {
+      throw new Error("expected a plan");
+    }
+    const summary = summarizeExplainPlan(plan);
+    expect(summary.slowestNode).toBeUndefined();
+    expect(summary.sharedBuffers).toBeUndefined();
+    expect(summary.estimateMismatches).toEqual([]);
   });
 });
