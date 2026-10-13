@@ -1,5 +1,6 @@
 "use strict";
 const { env } = require("node:process");
+const runtimeEnv = new Map(Object.entries(env));
 const LIGHTHOUSE_PORT = 4173;
 const PERF_DEMO_PATH = [
   "instances",
@@ -20,7 +21,7 @@ const DEFAULT_LIGHTHOUSE_RUNS = 3;
 const MIN_LIGHTHOUSE_RUNS = 1;
 
 function readLighthouseRuns() {
-  const rawRuns = env.LIGHTHOUSE_RUNS?.trim();
+  const rawRuns = runtimeEnv.get("LIGHTHOUSE_RUNS")?.trim();
   if (!rawRuns) {
     return DEFAULT_LIGHTHOUSE_RUNS;
   }
@@ -32,7 +33,7 @@ function readLighthouseRuns() {
 }
 
 function readUploadConfig() {
-  const uploadTarget = env.LIGHTHOUSE_UPLOAD_TARGET?.trim();
+  const uploadTarget = runtimeEnv.get("LIGHTHOUSE_UPLOAD_TARGET")?.trim();
   if (uploadTarget === PUBLIC_UPLOAD_TARGET) {
     return { target: PUBLIC_UPLOAD_TARGET };
   }

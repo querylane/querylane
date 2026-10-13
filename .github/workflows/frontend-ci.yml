@@ -22,7 +22,7 @@ env:
   NODE_VERSION: &node_version 24
   # Keep in sync with the `playwright` version in frontend/package.json. The
   # visual job fails fast when they drift, because baselines depend on it.
-  PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.63.0-noble
+  PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.64.0-noble
 
 permissions:
   contents: read
@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|react-doctor-policy|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|react-doctor-policy)\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:unit
           else
             bun run test:unit:changed
@@ -140,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:integration
           else
             bun run test:integration:changed
@@ -194,7 +194,7 @@ jobs:
         run: |
           set -euo pipefail
           changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|test-harness-config)\.unit\.test\.ts))$' <<<"$changed_files"; then
+          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
             bun run test:browser:ci
           else
             bun run test:browser:changed
