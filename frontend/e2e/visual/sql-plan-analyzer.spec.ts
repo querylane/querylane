@@ -121,3 +121,54 @@ test("deep plans keep readable, inspectable cards without widening the page", as
   ).toBeVisible();
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
+
+test("findings reveal spills in a collapsed parallel plan and search keeps ancestors", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.goto("/visual.html?scenario=sql-plan-spills");
+  await page
+    .getByRole("button", { name: "Collapse Gather", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Inspect Sort", exact: true })
+  ).toBeHidden();
+  await page
+    .getByRole("button", { name: "Sort used disk · Sort", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Inspect Sort", exact: true })
+  ).toHaveAttribute("aria-pressed", "true");
+  const inspector = page.getByRole("region", { name: "Selected node" });
+  await expect(
+    inspector.getByText("external merge", { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByText("Parallel timing is approximate.", { exact: true })
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot("spill-inspector.png");
+  await page
+    .getByRole("searchbox", { name: "Find an operator" })
+    .fill("events");
+  await expect(
+    page.getByRole("button", { name: "Inspect Gather", exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Inspect Seq Scan on events",
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot("operator-search.png");
+  await page
+    .getByRole("searchbox", { name: "Find an operator" })
+    .fill("missing");
+  await expect(
+    page.getByText("No operators match.", { exact: true })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Inspect Sort", exact: true })
+  ).toHaveAttribute("aria-pressed", "true");
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});

@@ -105,3 +105,71 @@ test("estimates and unparseable plans do not invent actual time", async () => {
   expect(screen.getByText("invalid plan")).toBeDefined();
   expect(screen.getByText(PARSE_ERROR)).toBeDefined();
 });
+
+test("ranked work and findings reveal a collapsed operator without losing selection", async () => {
+  const user = userEvent.setup();
+  const raw = JSON.stringify([
+    {
+      Plan: {
+        "Node Type": "Nested Loop",
+        "Actual Loops": 1,
+        "Actual Total Time": 50,
+        Plans: [
+          {
+            "Node Type": "Seq Scan",
+            "Relation Name": "events",
+            "Actual Loops": 1,
+            "Actual Total Time": 40,
+            "Actual Rows": 20,
+            "Plan Rows": 20,
+            "Rows Removed by Filter": 1980,
+          },
+        ],
+      },
+    },
+  ]);
+  render(
+    <ExplainPlanView
+      analyze={true}
+      plan={parseExplainPlan(raw) ?? undefined}
+      rawPlan={raw}
+    />
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Collapse Nested Loop" })
+  );
+  expect(
+    screen.queryByRole("button", { name: "Inspect Seq Scan on events" })
+  ).toBeNull();
+  await user.click(
+    within(screen.getByRole("region", { name: "Plan insights" })).getByRole(
+      "button",
+      { name: "99.0% filtered · Seq Scan on events" }
+    )
+  );
+  const search = screen.getByRole("searchbox", { name: "Find an operator" });
+  await user.type(search, "events");
+  expect(
+    screen.getByRole("button", { name: "Inspect Nested Loop" })
+  ).toBeDefined();
+  await user.clear(search);
+  await user.type(search, "missing-table");
+  expect(screen.getByText("No operators match.")).toBeDefined();
+  await user.click(screen.getByRole("button", { name: "Clear search" }));
+  const node = screen.getByRole("button", {
+    name: "Inspect Seq Scan on events",
+  });
+  expect(node.getAttribute("aria-pressed")).toBe("true");
+  expect(
+    within(screen.getByRole("region", { name: "Selected node" })).getByText(
+      "1980"
+    )
+  ).toBeDefined();
+  await user.click(screen.getByRole("tab", { name: "Timing" }));
+  const timing = screen.getByRole("region", { name: "Ranked plan work" });
+  const rows = within(timing).getAllByRole("button");
+  expect(rows[0]?.getAttribute("aria-label")).toBe(
+    "Inspect Seq Scan on events"
+  );
+  expect(rows[0]?.getAttribute("aria-pressed")).toBe("true");
+});
