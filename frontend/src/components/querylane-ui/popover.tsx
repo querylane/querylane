@@ -13,8 +13,6 @@ import { cn } from "@/lib/utils";
 const popoverTriggerPresentations = cva("", {
   variants: {
     presentation: {
-      "sidebar-switcher":
-        "gap-2 rounded-md border border-sidebar-border bg-sidebar-accent px-2.5 shadow-sm outline-none transition-colors hover:border-ring focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[popup-open]:border-ring",
       breadcrumb:
         "gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     },

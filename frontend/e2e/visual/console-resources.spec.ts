@@ -311,7 +311,9 @@ test.describe("database overview", () => {
         .getByRole("textbox", { name: "Search queries…" })
         .fill("SELECT");
       await drawer.getByRole("button", { name: "Type" }).click();
-      await page.getByRole("option", { name: "Read queries" }).click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "Read queries" })
+        .click();
       await drawer.getByText("Top queries by total time").click();
       await expect(
         drawer.getByRole("button", { name: "Type Read queries" })

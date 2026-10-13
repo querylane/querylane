@@ -39,7 +39,10 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 960 (was 950): the instance overview metrics/health work landed at 950.2,
 // exactly at the previous line. Deferred database visualization chunks are
 // split out and guarded by a separate feature budget.
-const MAX_TOTAL_GZIP_KIB = 975;
+// 1010 (was 975): Base UI 1.9.0's filterable facets, native database
+// combobox, and gesture-enabled mobile Drawer add ~34 KiB gzip to deferred UI.
+// Measured core: 971.6 -> 1005.8 KiB; initial stays ~325 KiB (budget: 450).
+const MAX_TOTAL_GZIP_KIB = 1010;
 
 interface BundleBudgetAsset {
   brotli: number;

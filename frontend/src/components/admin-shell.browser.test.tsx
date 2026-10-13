@@ -29,6 +29,7 @@ import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/;
 const navigateMock = rs.fn(async () => undefined);
+const navigateToDatabaseMock = rs.fn();
 const adminHeaderMockState = rs.hoisted(() => ({
   instances: undefined as unknown,
   isInstanceRolesRoute: false,
@@ -160,7 +161,7 @@ rs.mock("@/lib/db-context", () => ({
         status: "error",
       },
     ],
-    navigateToDatabase: rs.fn(),
+    navigateToDatabase: navigateToDatabaseMock,
     navigateToInstance: rs.fn(),
     navigationIds: {
       databaseId: CONSOLE_DATABASE_ID,
@@ -188,6 +189,7 @@ rs.mock("@/hooks/api/github", () => ({
 
 beforeEach(() => {
   navigateMock.mockClear();
+  navigateToDatabaseMock.mockClear();
   adminHeaderMockState.instances = undefined;
   adminHeaderMockState.isInstanceRolesRoute = false;
   adminHeaderMockState.selectedInstance = selectedInstance;
@@ -298,6 +300,28 @@ function renderDatabaseLayout({
     </ThemeProvider>
   );
 }
+
+test("sidebar database combobox exposes the selection and switches with Enter", async () => {
+  await renderAdminShell();
+  const trigger = page.getByRole("combobox", {
+    name: `Database: ${LONG_DATABASE_NAME}`,
+  });
+  await expect.element(trigger).toBeVisible();
+  await trigger.click();
+  await expect
+    .element(page.getByRole("option", { name: new RegExp(LONG_DATABASE_NAME) }))
+    .toHaveAttribute("aria-selected", "true");
+  const input = page.getByRole("combobox", { name: "Search databases…" });
+  await input.fill("missing database");
+  await expect.element(page.getByText("No databases found")).toBeVisible();
+  await input.fill("warehouse");
+  await input.press("Enter");
+  expect(navigateToDatabaseMock).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ id: "warehouse" })
+  );
+  await expect.element(page.getByRole("listbox")).toBeDetached();
+  await expect.element(trigger).toBeFocused();
+});
 
 test("explorer route swaps the workspace nav for a drill-in rail", async () => {
   await renderDatabaseLayout({

@@ -19,20 +19,7 @@ import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
 import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { Button } from "@/components/querylane-ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/querylane-ui/command";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/querylane-ui/popover";
 import {
   Sidebar,
   SidebarContent,
@@ -65,6 +52,16 @@ import {
   type SidebarPaths,
 } from "@/components/sidebar-paths";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  createComboboxItems,
+} from "@/components/ui/combobox";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -94,6 +91,7 @@ import {
 import { assertNever } from "@/lib/assert-never";
 import { useDb } from "@/lib/db-context";
 import type { ScopeLevel } from "@/lib/db-navigation";
+import type { PostgresDatabase } from "@/lib/db-resource-mappers";
 import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
 import { preloadRouteCode } from "@/lib/route-code-preload";
 import { normalizeAppUiError } from "@/lib/ui-error";
@@ -490,18 +488,34 @@ function renderSidebarNavigationItem({
 // selector lives with the database-scoped nav rather than in the global
 // topbar.
 function SidebarDatabaseSelector() {
-  const { databases, navigateToDatabase, selectedDatabase } = useDb();
-  const [open, setOpen] = useState(false);
+  const { databases, navigateToDatabase, queryStates, selectedDatabase } =
+    useDb();
+  const items = createComboboxItems(databases, {
+    getLabel: (database) => database.name,
+    getValue: (database) => database.id,
+  });
+  const databaseError = queryStates.databases.error
+    ? normalizeAppUiError(queryStates.databases.error)
+    : null;
   return (
-    <Popover onOpenChange={setOpen} open={open}>
-      <PopoverTrigger
+    <Combobox
+      autoHighlight={true}
+      items={items}
+      onValueChange={(id) => {
+        const database = databases.find((item) => item.id === id);
+        if (database) {
+          navigateToDatabase(database);
+        }
+      }}
+      value={selectedDatabase?.id ?? null}
+    >
+      <ComboboxTrigger
         aria-label={
           selectedDatabase
             ? `Database: ${selectedDatabase.name}`
             : "Select database"
         }
-        className="flex h-9 w-full items-center text-left"
-        presentation="sidebar-switcher"
+        presentation="sidebar"
       >
         <HardDrive
           aria-hidden="true"
@@ -519,50 +533,47 @@ function SidebarDatabaseSelector() {
           aria-hidden="true"
           className="size-3.5 shrink-0 text-muted-foreground"
         />
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-60" presentation="flush">
-        <Command
-          filter={(value, search) =>
-            value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
-          }
-        >
-          <CommandInput placeholder="Search databases…" />
-          <CommandList>
-            <CommandEmpty className="text-center" presentation="compact">
-              No databases found
-            </CommandEmpty>
-            <CommandGroup>
-              {databases.map((database) => (
-                <CommandItem
-                  data-checked={selectedDatabase?.id === database.id}
-                  key={database.id}
-                  onSelect={() => {
-                    navigateToDatabase(database);
-                    setOpen(false);
-                  }}
-                  value={database.name}
-                >
-                  <HardDrive
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-muted-foreground"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="min-w-0 truncate text-sm">
-                      {database.name}
-                    </span>
-                    {database.owner ? (
-                      <span className="min-w-0 truncate text-muted-foreground text-xs">
-                        owner {database.owner}
-                      </span>
-                    ) : null}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </ComboboxTrigger>
+      <ComboboxContent>
+        <ComboboxInput
+          aria-label="Search databases…"
+          placeholder="Search databases…"
+        />
+        {databaseError ? (
+          <AppInlineError className="m-2" error={databaseError} />
+        ) : null}
+        {queryStates.databases.isPending ? (
+          <output className="block p-3 text-muted-foreground text-sm">
+            Loading databases…
+          </output>
+        ) : null}
+        <ComboboxEmpty>
+          {databaseError || queryStates.databases.isPending
+            ? null
+            : "No databases found"}
+        </ComboboxEmpty>
+        <ComboboxList aria-label="Databases">
+          {(database: PostgresDatabase) => (
+            <ComboboxItem key={database.id} value={database.id}>
+              <HardDrive
+                aria-hidden="true"
+                className="size-4 shrink-0 text-muted-foreground"
+              />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="min-w-0 truncate text-sm">
+                  {database.name}
+                </span>
+                {database.owner ? (
+                  <span className="min-w-0 truncate text-muted-foreground text-xs">
+                    owner {database.owner}
+                  </span>
+                ) : null}
+              </div>
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   );
 }
 

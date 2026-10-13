@@ -1,23 +1,18 @@
 "use client";
 
-import { Check, ListFilter } from "lucide-react";
-import { useId, useRef } from "react";
+import { Menu } from "@base-ui/react/menu";
+import { Check, ListFilter, SearchIcon } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface FacetedFilterOption {
@@ -29,13 +24,12 @@ interface FacetedFilterOption {
 // Beyond this many selected values the trigger collapses the chips into a
 // single "{n} selected" badge so the button stays compact.
 const MAX_INLINE_BADGES = 2;
-const CLEAR_ITEM_VALUE = "__clear-faceted-filter__";
 // Show the search box only when the option set is large enough to warrant it.
 // Bounded facets of 6 or fewer items scan faster by eye than by typing.
 const SEARCH_MIN_OPTIONS = 6;
 
-// Shadcn data-table faceted filter: a dashed-border trigger with a filter icon
-// and the facet title, opening a searchable command list of controlled options.
+// Facets are toggle actions, so a filterable menu exposes their checked state
+// without pretending that the highlighted option is the selected value.
 function DataTableFacetedFilter({
   emptyText = "No options found.",
   onSelectedValuesChange,
@@ -54,9 +48,7 @@ function DataTableFacetedFilter({
   title: string;
 }) {
   const showSearch = options.length > SEARCH_MIN_OPTIONS;
-  const commandListRef = useRef<HTMLDivElement>(null);
-  const includedDescriptionId = useId();
-  const notIncludedDescriptionId = useId();
+  const [open, setOpen] = useState(false);
   const selected = new Set(selectedValues);
   const availableValues = new Set(options.map((option) => option.value));
   const selectedOptions: FacetedFilterOption[] = [];
@@ -86,9 +78,9 @@ function DataTableFacetedFilter({
     onSelectedValuesChange(Array.from(next));
   }
 
-  return (
-    <Popover>
-      <PopoverTrigger
+  const menu = (
+    <DropdownMenu modal={false} onOpenChange={setOpen} open={open}>
+      <DropdownMenuTrigger
         render={
           <Button
             className="border-dashed"
@@ -120,14 +112,14 @@ function DataTableFacetedFilter({
                     </Badge>
                   ) : (
                     selectedOptions.map((option) => (
-                        <Badge
-                          className="rounded-sm px-1 font-normal"
-                          key={option.value}
-                          variant="secondary"
-                        >
-                          {option.label}
-                        </Badge>
-                      ))
+                      <Badge
+                        className="rounded-sm px-1 font-normal"
+                        key={option.value}
+                        variant="secondary"
+                      >
+                        {option.label}
+                      </Badge>
+                    ))
                   )}
                 </span>
               </>
@@ -135,79 +127,101 @@ function DataTableFacetedFilter({
           </Button>
         }
       />
-      <PopoverContent
+      <DropdownMenuContent
         align="start"
+        aria-label={`${title} filter`}
         className="w-[220px] p-0"
-        initialFocus={showSearch ? undefined : commandListRef}
       >
-        <span className="sr-only" id={includedDescriptionId}>
-          Included in filter
-        </span>
-        <span className="sr-only" id={notIncludedDescriptionId}>
-          Not included in filter
-        </span>
-        <Command>
-          {showSearch ? (
-            <CommandInput placeholder={searchPlaceholder ?? title} />
+        {showSearch ? (
+          <div className="relative p-1 pb-0">
+            <Menu.Input
+              aria-label={searchPlaceholder ?? `Search ${title.toLowerCase()}…`}
+              className="h-8 pl-8"
+              placeholder={
+                searchPlaceholder ?? `Search ${title.toLowerCase()}…`
+              }
+              render={<Input />}
+            />
+            <SearchIcon
+              aria-hidden="true"
+              className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground"
+            />
+          </div>
+        ) : null}
+        {showSearch ? (
+          <Menu.Empty className="py-6 text-center text-sm">
+            {emptyText}
+          </Menu.Empty>
+        ) : null}
+        <Menu.List
+          aria-label={`${title} options`}
+          className="max-h-72 scroll-py-1 overflow-y-auto p-1 data-empty:hidden"
+        >
+          {!showSearch && options.length === 0 && selected.size === 0 ? (
+            <DropdownMenuItem
+              className="justify-center py-6 text-center"
+              disabled
+            >
+              {emptyText}
+            </DropdownMenuItem>
           ) : null}
-          <CommandList label={`${title} options`} ref={commandListRef}>
-            <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => {
-                const isSelected = selected.has(option.value);
-                return (
-                  <CommandItem
-                    aria-describedby={
+          <Menu.Group>
+            {options.map((option) => {
+              const isSelected = selected.has(option.value);
+              return (
+                <Menu.CheckboxItem
+                  checked={isSelected}
+                  className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden data-highlighted:bg-muted data-highlighted:text-foreground"
+                  key={option.value}
+                  label={option.label}
+                  onCheckedChange={() => toggle(option.value)}
+                >
+                  <div
+                    aria-hidden="true"
+                    className={cn(
+                      "flex size-4 items-center justify-center rounded-sm border",
                       isSelected
-                        ? includedDescriptionId
-                        : notIncludedDescriptionId
-                    }
-                    key={option.value}
-                    onSelect={() => toggle(option.value)}
-                    value={option.label}
+                        ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
+                        : "border-primary opacity-50 [&_svg]:invisible"
+                    )}
+                    data-slot="faceted-filter-checkbox"
                   >
-                    <div
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded-sm border",
-                        isSelected
-                          ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
-                          : "border-primary opacity-50 [&_svg]:invisible"
-                      )}
-                      data-slot="faceted-filter-checkbox"
-                    >
-                      <Check
-                        className="size-3.5"
-                        data-slot="faceted-filter-checkbox-check"
-                      />
-                    </div>
-                    <span>{option.label}</span>
-                    {option.count !== undefined ? (
-                      <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                        {option.count}
-                      </span>
-                    ) : null}
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            {selected.size > 0 ? (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    className="justify-center text-center"
-                    onSelect={() => onSelectedValuesChange([])}
-                    value={CLEAR_ITEM_VALUE}
-                  >
-                    Clear filter
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            ) : null}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                    <Check
+                      className="size-3.5"
+                      data-slot="faceted-filter-checkbox-check"
+                    />
+                  </div>
+                  <span>{option.label}</span>
+                  {option.count !== undefined ? (
+                    <span className="font-mono text-muted-foreground text-xs tabular-nums">
+                      {option.count}
+                    </span>
+                  ) : null}
+                </Menu.CheckboxItem>
+              );
+            })}
+          </Menu.Group>
+          {selected.size > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              <Menu.Group>
+                <DropdownMenuItem
+                  className="justify-center text-center"
+                  onClick={() => onSelectedValuesChange([])}
+                >
+                  Clear filter
+                </DropdownMenuItem>
+              </Menu.Group>
+            </>
+          ) : null}
+        </Menu.List>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+  return showSearch ? (
+    <Menu.FilterProvider autoHighlight>{menu}</Menu.FilterProvider>
+  ) : (
+    menu
   );
 }
 

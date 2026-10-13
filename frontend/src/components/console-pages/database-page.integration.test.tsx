@@ -816,7 +816,9 @@ describe("backend database overview", () => {
     ).toBeTruthy();
 
     await user.click(within(drawer).getByRole("button", { name: "Type" }));
-    await user.click(screen.getByRole("option", { name: "Write queries" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+    );
     expect(
       within(drawer).queryByRole("button", {
         name: SELECT_EVENTS_QUERY_BUTTON_RE,
@@ -941,7 +943,9 @@ describe("backend database query insights drawer", () => {
     await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
     await user.click(screen.getByRole("option", { name: "25" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
-    await user.click(screen.getByRole("option", { name: "Write queries" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+    );
 
     expect(
       screen.getByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
@@ -975,7 +979,9 @@ describe("backend database query insights drawer", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
-    await user.click(screen.getByRole("option", { name: "Read queries" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Read queries" })
+    );
 
     expect(
       screen.getByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
@@ -1050,7 +1056,9 @@ describe("database query insights resilience", () => {
     ).toBeNull();
 
     await user.click(within(filterBar).getByRole("button", { name: "Type" }));
-    await user.click(screen.getByRole("option", { name: "Write queries" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+    );
 
     expect(
       screen.getByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
@@ -1067,7 +1075,9 @@ describe("database query insights resilience", () => {
       screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeTruthy();
     await user.click(within(filterBar).getByRole("button", { name: "Mean" }));
-    await user.click(screen.getByRole("option", { name: "Mean > 30 ms" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Mean > 30 ms" })
+    );
 
     expect(
       screen.getByRole("button", { name: SLOW_COUNT_QUERY_BUTTON_RE })

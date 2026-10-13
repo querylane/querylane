@@ -923,7 +923,7 @@ describe("backend instance activity", () => {
 
     await user.click(nextPage);
     await user.click(within(activity).getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("option", { name: "active" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "active" }));
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
@@ -1119,7 +1119,7 @@ describe("backend instance database list", () => {
 
     await user.clear(search);
     await user.click(screen.getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("option", { name: "System" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "System" }));
 
     expect(
       await screen.findByRole("button", {

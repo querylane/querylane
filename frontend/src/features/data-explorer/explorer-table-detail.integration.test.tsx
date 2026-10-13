@@ -789,7 +789,7 @@ describe("TableDetail constraints tab", () => {
     expect(screen.queryByText("customers_status_check")).toBeNull();
 
     await user.click(kindFilter);
-    await user.click(screen.getByRole("option", { name: "CHECK" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "CHECK" }));
 
     expect(getSearchEmptyState().textContent).toContain("No results found");
 
@@ -953,7 +953,9 @@ describe("TableDetail columns tab", () => {
     ).toHaveLength(16);
 
     await user.click(screen.getByRole("button", { name: "Nullability" }));
-    await user.click(screen.getByRole("option", { name: "Nullable" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Nullable" })
+    );
     await waitFor(() => {
       expect(screen.queryByText("Surrogate key")).toBeNull();
     });
@@ -1160,7 +1162,7 @@ describe("TableDetail triggers tab", () => {
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("option", { name: "Enabled" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Enabled" }));
     expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
@@ -1410,8 +1412,10 @@ describe("TableDetail policies tab pagination", () => {
       screen.getByRole("button", { name: "Next policies page" })
     );
     await user.click(screen.getByRole("button", { name: "Mode" }));
-    await user.click(screen.getByRole("option", { name: "Restrictive" }));
-    await user.click(screen.getByRole("option", { name: "Clear filter" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Restrictive" })
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Clear filter" }));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })
