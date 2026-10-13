@@ -78,6 +78,9 @@ const buttonPresentations = cva("", {
       "reference-cell": "p-0 font-mono text-xs",
       "access-summary-active":
         "gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/60",
+      "sql-plan-node":
+        "gap-2 whitespace-normal p-0 font-medium font-mono text-sm hover:bg-transparent",
+      "sql-plan-insight": "whitespace-normal p-0 text-xs",
       "sql-tab":
         "gap-1.5 rounded-none py-1.5 pr-1 pl-3 text-muted-foreground text-xs hover:bg-transparent hover:text-foreground focus-visible:ring-inset aria-selected:font-medium aria-selected:text-foreground",
       "sql-tab-close":

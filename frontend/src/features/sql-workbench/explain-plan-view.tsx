@@ -3,10 +3,20 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/querylane-ui/tabs";
+import { ExplainPlanAnalyzer } from "@/features/sql-workbench/explain-plan-analyzer";
 import type {
   ExplainPlan,
   PlanNode,
+} from "@/features/sql-workbench/explain-plan-model";
+import {
+  estimateMismatch,
+  nodeTitle,
 } from "@/features/sql-workbench/explain-plan-model";
 import {
   formatCount,
@@ -19,7 +29,6 @@ const WARM_SHARE = 0.2;
 const INDENT_PX = 18;
 const ROW_BASE_PADDING_PX = 16;
 const DETAILS_BASE_PADDING_PX = 48;
-const MISMATCH_RATIO = 10;
 const PERCENT = 100;
 const GRID_COLUMNS_CLASS = "grid-cols-[minmax(0,1fr)_7rem_7rem_9rem]";
 
@@ -36,48 +45,16 @@ function shareTone(share: number | undefined): string {
   return "bg-chart-3";
 }
 
-function nodeTitle(node: PlanNode): string {
-  let title = node.nodeType;
-  if (node.relationName) {
-    title += ` on ${node.relationName}`;
-  }
-  if (node.indexName) {
-    title += ` using ${node.indexName}`;
-  }
-  return title;
-}
-
-function estimateRatio(node: PlanNode): number | undefined {
-  if (node.planRows === undefined || node.actualRows === undefined) {
-    return;
-  }
-  const actual = node.actualRows * (node.actualLoops ?? 1);
-  if (node.planRows === 0 || actual === 0) {
-    return;
-  }
-  return actual / node.planRows;
-}
-
 function MismatchBadge({ node }: { node: PlanNode }) {
-  const ratio = estimateRatio(node);
-  if (
-    ratio === undefined ||
-    (ratio < MISMATCH_RATIO && ratio > 1 / MISMATCH_RATIO)
-  ) {
-    return null;
-  }
-  const label =
-    ratio >= 1
-      ? `${Math.round(ratio)}× more`
-      : `${Math.round(1 / ratio)}× fewer`;
-  return (
+  const label = estimateMismatch(node);
+  return label ? (
     <span
-      className="rounded-sm bg-chart-4/15 px-1.5 py-0.5 font-medium text-chart-4 text-xs"
-      title="Actual rows differ from the planner's estimate by more than 10×. Stale statistics are the usual cause; ANALYZE the table."
+      className="rounded-sm bg-chart-4/15 px-1.5 py-0.5 font-medium text-foreground text-xs"
+      title="Actual rows and estimates compared per loop. Inspect predicates and statistics."
     >
-      {label} than estimated
+      {label}
     </span>
-  );
+  ) : null;
 }
 
 function RowsCell({ node }: { node: PlanNode }) {
@@ -269,6 +246,80 @@ function formatRawPlan(rawPlan: string): string {
   }
 }
 
+function ParsedPlanView({
+  analyze,
+  plan,
+  rawPlan,
+}: {
+  analyze: boolean;
+  plan: ExplainPlan;
+  rawPlan: string;
+}) {
+  const [selectedId, setSelectedId] = useState<string>();
+  const hasTimings = analyze && plan.root.actualTotalMs !== undefined;
+  return (
+    <Tabs
+      className="flex min-h-0 flex-1 flex-col"
+      defaultValue="graph"
+      presentation="flush"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b px-4 py-2">
+        <PlanSummary analyze={analyze} plan={plan} />
+        <TabsList aria-label="Plan view" className="h-7">
+          <TabsTrigger
+            className="h-6"
+            presentation="sql-plan-mode"
+            value="graph"
+          >
+            Graph
+          </TabsTrigger>
+          <TabsTrigger
+            className="h-6"
+            presentation="sql-plan-mode"
+            value="timing"
+          >
+            Timing
+          </TabsTrigger>
+          <TabsTrigger
+            className="h-6"
+            presentation="sql-plan-mode"
+            value="tree"
+          >
+            Tree
+          </TabsTrigger>
+          <TabsTrigger className="h-6" presentation="sql-plan-mode" value="raw">
+            JSON
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent className="flex min-h-0 flex-1 flex-col" value="graph">
+        <ExplainPlanAnalyzer
+          mode="graph"
+          onSelect={setSelectedId}
+          plan={plan}
+          selectedId={selectedId ?? plan.root.id}
+        />
+      </TabsContent>
+      <TabsContent className="flex min-h-0 flex-1 flex-col" value="timing">
+        <ExplainPlanAnalyzer
+          mode="timing"
+          onSelect={setSelectedId}
+          plan={plan}
+          selectedId={selectedId ?? plan.root.id}
+        />
+      </TabsContent>
+      <TabsContent className="flex min-h-0 flex-1 flex-col" value="tree">
+        <PlanTree hasTimings={hasTimings} plan={plan} />
+      </TabsContent>
+      <TabsContent className="min-h-0 flex-1 overflow-auto" value="raw">
+        <pre className="px-4 py-3 font-mono text-xs leading-relaxed">
+          {formatRawPlan(rawPlan)}
+        </pre>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 function ExplainPlanView({
   analyze,
   plan,
@@ -278,49 +329,26 @@ function ExplainPlanView({
   plan: ExplainPlan | undefined;
   rawPlan: string;
 }) {
-  const [mode, setMode] = useState<"raw" | "tree">(plan ? "tree" : "raw");
-  const hasTimings = analyze && plan?.root.actualTotalMs !== undefined;
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-border border-b px-4 py-2">
-        {plan ? (
-          <PlanSummary analyze={analyze} plan={plan} />
-        ) : (
-          <p className="text-muted-foreground text-xs">
-            The plan could not be parsed into a tree; showing the raw output.
-          </p>
-        )}
-        <Tabs
-          onValueChange={(value) => setMode(value === "raw" ? "raw" : "tree")}
-          value={mode}
-        >
-          <TabsList className="h-7">
-            <TabsTrigger
-              className="h-6"
-              disabled={!plan}
-              presentation="sql-plan-mode"
-              value="tree"
-            >
-              Tree
-            </TabsTrigger>
-            <TabsTrigger
-              className="h-6"
-              presentation="sql-plan-mode"
-              value="raw"
-            >
-              JSON
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      {mode === "tree" && plan ? (
-        <PlanTree hasTimings={hasTimings} plan={plan} />
-      ) : (
+  if (!plan) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <p className="border-border border-b px-4 py-2 text-muted-foreground text-xs">
+          The plan could not be parsed into a tree; showing the raw output.
+        </p>
         <pre className="min-h-0 flex-1 overflow-auto px-4 py-3 font-mono text-xs leading-relaxed">
           {formatRawPlan(rawPlan)}
         </pre>
-      )}
-    </div>
+      </div>
+    );
+  }
+  // A new result resets selection and view, even when path-based node IDs repeat.
+  return (
+    <ParsedPlanView
+      analyze={analyze}
+      key={rawPlan}
+      plan={plan}
+      rawPlan={rawPlan}
+    />
   );
 }
 
