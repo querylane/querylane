@@ -93,6 +93,9 @@ const OBJECTS_TAB_RE = /^Objects/;
 const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
 const SCHEMA_MAP_FILTER_RE = /^Schema$/;
 const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
+const SCHEMA_MAP_CATALOG_OPTION_RE = /^catalog\b/;
+const MATERIALIZED_VIEWS_OPTION_RE = /^Materialized views\b/;
+const ANALYTICS_OWNER_OPTION_RE = /^analytics_owner\b/;
 const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/;
 
 const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
@@ -484,10 +487,14 @@ test("data explorer schema detail captures active object filters", async () => {
   );
 
   await page.getByRole("button", { name: KIND_FILTER_RE }).click();
-  await page.getByText("Materialized views").last().click();
+  await page
+    .getByRole("menuitemcheckbox", { name: MATERIALIZED_VIEWS_OPTION_RE })
+    .click();
   await page.getByRole("heading", { name: "sales" }).click();
   await page.getByRole("button", { name: OWNER_FILTER_RE }).click();
-  await page.getByText("analytics_owner").last().click();
+  await page
+    .getByRole("menuitemcheckbox", { name: ANALYTICS_OWNER_OPTION_RE })
+    .click();
   await page.getByRole("heading", { name: "sales" }).click();
 
   await expect.element(page.getByText("daily_rollups")).toBeVisible();
@@ -568,7 +575,9 @@ test("data explorer schema map shows relationships without a floating help overl
   );
 
   await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
-  await page.getByText("catalog").last().click();
+  await page
+    .getByRole("menuitemcheckbox", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
+    .click();
   expect(requestedResources(requests, "ListTableColumns")).toContain(
     tableResource("catalog", "ports")
   );
@@ -669,7 +678,9 @@ test("data explorer schema map uses a compact schema filter at narrow widths", a
     .not.toBeAttached();
 
   await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
-  await page.getByText("catalog").last().click();
+  await page
+    .getByRole("menuitemcheckbox", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
+    .click();
 
   await expect.element(page.getByText("ports")).toBeVisible();
   await expect.element(page.getByText("shipments")).not.toBeAttached();
@@ -920,7 +931,9 @@ test("data explorer table columns match the redesign inventory", async () => {
   await Promise.all(
     ["Primary key", "Foreign key", "Unique", "Index", "No key"].map((option) =>
       expect
-        .element(page.getByRole("option", { exact: true, name: option }))
+        .element(
+          page.getByRole("menuitemcheckbox", { exact: true, name: option })
+        )
         .toBeVisible()
     )
   );
@@ -928,15 +941,23 @@ test("data explorer table columns match the redesign inventory", async () => {
 
   await page.getByRole("button", { exact: true, name: "Generation" }).click();
   await expect
-    .element(page.getByRole("option", { exact: true, name: "Identity" }))
+    .element(
+      page.getByRole("menuitemcheckbox", { exact: true, name: "Identity" })
+    )
     .toBeVisible();
   await expect
-    .element(page.getByRole("option", { exact: true, name: "Generated" }))
+    .element(
+      page.getByRole("menuitemcheckbox", { exact: true, name: "Generated" })
+    )
     .toBeVisible();
   await expect
-    .element(page.getByRole("option", { exact: true, name: "Regular" }))
+    .element(
+      page.getByRole("menuitemcheckbox", { exact: true, name: "Regular" })
+    )
     .toBeVisible();
-  await page.getByRole("option", { exact: true, name: "Generated" }).click();
+  await page
+    .getByRole("menuitemcheckbox", { exact: true, name: "Generated" })
+    .click();
   await page
     .getByRole("button", { name: GENERATED_GENERATION_FILTER_RE })
     .click();
@@ -1410,7 +1431,7 @@ test("data explorer table triggers match redesign", async () => {
   await document.fonts.ready;
 
   await triggerStateFilter.click();
-  const disabledOption = page.getByRole("option", {
+  const disabledOption = page.getByRole("menuitemcheckbox", {
     exact: true,
     name: "Disabled",
   });

@@ -15,15 +15,14 @@ import {
 } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { useIsMobile } from "@/components/querylane-ui/use-mobile";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -462,27 +461,31 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet onOpenChange={setOpenMobile} open={openMobile} {...props}>
-        <SheetContent
-          className="bg-sidebar p-0 text-sidebar-foreground data-[side=left]:w-[min(var(--sidebar-width),calc(100vw-1rem))] data-[side=right]:w-[min(var(--sidebar-width),calc(100vw-1rem))] data-[side=left]:sm:max-w-none data-[side=right]:sm:max-w-none [&>button]:hidden"
+      <Drawer
+        onOpenChange={setOpenMobile}
+        open={openMobile}
+        swipeDirection={side}
+      >
+        <DrawerContent
+          className="w-[min(var(--sidebar-width),calc(100vw-1rem))] bg-sidebar p-0 text-sidebar-foreground sm:max-w-none"
           data-mobile="true"
           data-sidebar="sidebar"
           data-slot="sidebar"
           dir={dir}
-          side={side}
+          {...props}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as CSSProperties
           }
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
+          <div className="sr-only">
+            <DrawerTitle>Sidebar</DrawerTitle>
+            <DrawerDescription>Displays the mobile sidebar.</DrawerDescription>
+          </div>
           <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
+        </DrawerContent>
+      </Drawer>
     );
   }
 

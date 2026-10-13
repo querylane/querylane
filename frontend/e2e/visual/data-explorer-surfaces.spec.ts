@@ -56,13 +56,17 @@ test.describe("schema overview", () => {
 
     await test.step("filter by kind", async () => {
       await page.getByRole("button", { name: KIND_FILTER_RE }).click();
-      await page.getByRole("option", { name: "Materialized views" }).click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "Materialized views" })
+        .click();
       await heading.click();
     });
 
     await test.step("filter by owner", async () => {
       await page.getByRole("button", { name: OWNER_FILTER_RE }).click();
-      await page.getByRole("option", { name: "analytics_owner" }).click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "analytics_owner" })
+        .click();
       await heading.click();
     });
 
