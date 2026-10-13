@@ -1,7 +1,7 @@
 import { expect, test } from "../tests/base";
 
-const TIMING_CAVEAT = /not a chronological waterfall/;
-const TIMING_PROMPT = /Run Explain analyze to measure node timings/;
+const TIMING_CAVEAT = /Not a timeline/;
+const TIMING_PROMPT = /Run Explain analyze for timings/;
 const READABLE_CARD_WIDTH = 256;
 const NARROW_VIEWPORT_WIDTH = 390;
 const PARSE_ERROR = /could not be parsed/;
@@ -22,7 +22,14 @@ test("inspect query plan work, estimates, and raw details", async ({
       .getByText("120 hits · 30 reads")
   ).toBeVisible();
   await expect(page).toHaveScreenshot("graph-inspector.png");
+  await page.getByRole("button", { name: "About plan metrics" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Plan metrics" })
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot("metric-notes.png");
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Plan metrics" })).toBeHidden();
 
   await page.getByRole("tab", { name: "Timing", exact: true }).click();
   await expect(page.getByText(TIMING_CAVEAT)).toBeVisible();
