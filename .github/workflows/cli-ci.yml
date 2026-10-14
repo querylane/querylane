@@ -1,0 +1,29 @@
+name: CLI CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - backend/**
+      - frontend/**
+      - scripts/*cli*
+      - scripts/homebrew-*
+      - .goreleaser.yaml
+      - .github/workflows/*cli*
+      - .github/workflows/release.yml
+      - docs/**
+      - README.md
+      - Taskfile.yaml
+      - taskfiles/cli.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/_cli-build.yml

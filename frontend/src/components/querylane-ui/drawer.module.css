@@ -1,0 +1,11 @@
+/* Base UI supplies continuous swipe values; these are not design tokens. */
+@layer utilities {
+  .backdrop:not([data-starting-style]):not([data-ending-style]) {
+    opacity: calc(1 - var(--drawer-swipe-progress));
+  }
+
+  .swipeTransition[data-ending-style] {
+    --tw-duration: calc(var(--drawer-swipe-strength) * 200ms);
+    transition-duration: calc(var(--drawer-swipe-strength) * 200ms);
+  }
+}

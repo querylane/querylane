@@ -43,7 +43,7 @@ function ComboboxContent({
       >
         <ComboboxPrimitive.Popup
           className={cn(
-            "flex max-h-(--available-height) w-60 max-w-(--available-width) origin-(--transform-origin) flex-col rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 transition-opacity data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none",
+            "flex max-h-(--available-height) w-60 max-w-(--available-width) origin-(--transform-origin) flex-col rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none",
             className
           )}
           {...props}
@@ -77,7 +77,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden data-disabled:pointer-events-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:opacity-50",
         className
       )}
       {...props}
@@ -94,7 +94,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
       className={cn(
-        "min-h-0 max-h-72 scroll-py-1 overflow-y-auto p-1",
+        "max-h-72 min-h-0 scroll-py-1 overflow-y-auto p-1",
         className
       )}
       {...props}
@@ -109,7 +109,7 @@ function ComboboxEmpty({
 }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty {...props}>
-      {children == null ? null : (
+      {children === null || children === undefined ? null : (
         <div className={cn("py-6 text-center text-sm", className)}>
           {children}
         </div>
@@ -117,8 +117,6 @@ function ComboboxEmpty({
     </ComboboxPrimitive.Empty>
   );
 }
-
-const createComboboxItems = ComboboxPrimitive.createItems;
 
 export {
   Combobox,
@@ -128,5 +126,4 @@ export {
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-  createComboboxItems,
 };
