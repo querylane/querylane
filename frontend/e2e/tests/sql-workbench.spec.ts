@@ -4,6 +4,7 @@ import {
   ExecuteQueryResponseSchema,
   SQLService,
 } from "../../src/protogen/querylane/console/v1alpha1/sql_pb";
+import { EXPLAIN_ANALYZE_FIXTURE } from "../../src/test/fixtures/explain-plan-fixture";
 import { workbenchQueryResponses } from "../../src/test/fixtures/sql-workbench-fixtures";
 import {
   DATABASE_URL,
@@ -59,8 +60,9 @@ for (const routeName of ["workbench", "sql"]) {
   });
 }
 
-test("workbench recovers from a server error and renders the live explain tree", async ({
+test("workbench recovers from an error and inspects the live execution plan", async ({
   page,
+  makeAxeBuilder,
 }) => {
   await mockConsoleResources(page);
   await mockRpc(page, "SQLService/ValidateQuery", {});
@@ -86,20 +88,7 @@ test("workbench recovers from a server error and renders the live explain tree",
     }
   );
   await mockRpc(page, "SQLService/ExplainQuery", {
-    plan: JSON.stringify([
-      {
-        Plan: {
-          "Node Type": "Seq Scan",
-          "Relation Name": "shipments",
-          "Plan Rows": 2,
-          "Actual Rows": 2,
-          "Actual Loops": 1,
-          "Actual Total Time": 4,
-          "Total Cost": 10,
-        },
-        "Execution Time": 4,
-      },
-    ]),
+    plan: EXPLAIN_ANALYZE_FIXTURE,
   });
   const url = `${DATABASE_URL}/workbench`;
   await page.goto(url);
@@ -117,12 +106,43 @@ test("workbench recovers from a server error and renders the live explain tree",
   await expect(
     page.getByRole("tab", { name: "Tree", exact: true })
   ).toHaveAttribute("aria-selected", "true");
+  await page
+    .getByRole("button", { name: "Inspect Seq Scan on shipments", exact: true })
+    .click();
+  const inspector = page.getByRole("complementary", {
+    name: "Plan node details",
+  });
+  await expect(
+    inspector.getByText("100× more rows", { exact: true })
+  ).toBeVisible();
+  await expect(
+    inspector.getByText("(status = 'customs_hold'::text)", { exact: true })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Collapse Hash Join branch" }).click();
   await expect(
     page.getByRole("button", {
-      name: "Show details for Seq Scan on shipments",
+      name: "Inspect Seq Scan on shipments",
       exact: true,
     })
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Find hotspot" }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Inspect Seq Scan on shipments",
+      exact: true,
+    })
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("combobox", { name: "Plan metric" }).click();
+  await page
+    .getByRole("option", { name: "Shared buffers", exact: true })
+    .click();
+  await expect(
+    page.getByRole("columnheader", { name: "Shared blocks" })
   ).toBeVisible();
+  expect(
+    (await makeAxeBuilder().include('[aria-label="Query plan"]').analyze())
+      .violations
+  ).toEqual([]);
   await expect(page).toHaveURL(url);
-  await softScreenshot(page, "workbench-explain-tree");
+  await softScreenshot(page, "workbench-plan-inspector");
 });
