@@ -9,7 +9,7 @@ import {
   ExplainQueryResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
-import { SqlWorkbenchPage } from "./sql-workbench-page";
+import { SqlWorkbenchPage } from "./read-only-workbench-page";
 
 const RUN_BUTTON_NAME = /run/i;
 const COMPOSITE_INDEX_INSIGHT_RE = /composite index could remove/i;

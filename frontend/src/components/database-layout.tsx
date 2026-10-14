@@ -109,8 +109,7 @@ export function DatabaseLayout({
   // like the explorer does.
   const isExplorerRoute =
     page === "database.explorer" || page === "database.sql";
-  const isFullBleedRoute =
-    isExplorerRoute || page === "database.workbench";
+  const isFullBleedRoute = isExplorerRoute || page === "database.workbench";
   const mainPaddingClass = isFullBleedRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
   const mainOverflowClass = isFullBleedRoute
     ? "overflow-hidden"

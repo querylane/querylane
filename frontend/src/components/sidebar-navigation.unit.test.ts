@@ -27,6 +27,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseOverview: true,
         databaseSql: false,
+        databaseWorkbench: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -90,11 +91,8 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: false,
-<<<<<<< HEAD
         databaseSql: false,
-=======
         databaseWorkbench: false,
->>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
@@ -124,11 +122,8 @@ describe("sidebar navigation", () => {
         databaseExplorer: false,
         databaseExtensions: false,
         databaseOverview: true,
-<<<<<<< HEAD
         databaseSql: false,
-=======
         databaseWorkbench: false,
->>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -138,11 +133,8 @@ describe("sidebar navigation", () => {
         databaseExplorer: "/instances/local/databases/postgres/explorer",
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
-<<<<<<< HEAD
         databaseSql: "/instances/local/databases/postgres/sql",
-=======
         databaseWorkbench: "/instances/local/databases/postgres/workbench",
->>>>>>> 31e80938 (feat(frontend): add read-only sql workbench)
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
