@@ -1,7 +1,5 @@
 "use client";
 
-// Copyright 2026 Redpanda Data, Inc.
-
 import {
   ChevronDown,
   Copy,
@@ -11,7 +9,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { type KeyboardEvent, useId, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +77,9 @@ type WorkbenchMode = "editor" | "builder" | "english";
 type ResultTab = "results" | "explain";
 type ExplainView = "graph" | "timeline" | "table" | "text";
 type PlanInsightKind = "buffers" | "estimates" | "slowest";
+type WorkbenchRequest =
+  | { action: "explain"; statement: string }
+  | { action: "run"; statement: string };
 
 const PERCENT = 100;
 const HEALTHY_ESTIMATE_DELTA_PERCENT = 20;
@@ -275,13 +276,30 @@ function ModeTabs({
 }
 
 function SqlTextEditor({
+  isBusy,
+  onRun,
   statement,
   setStatement,
 }: {
+  isBusy: boolean;
+  onRun: () => void;
   statement: string;
   setStatement: (statement: string) => void;
 }) {
   const isReadOnly = isReadOnlyStatementCandidate(statement);
+
+  function handleEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === "Enter" &&
+      (event.metaKey || event.ctrlKey) &&
+      isReadOnly &&
+      !isBusy
+    ) {
+      event.preventDefault();
+      onRun();
+    }
+  }
+
   return (
     <section
       aria-label="SQL editor"
@@ -300,6 +318,7 @@ function SqlTextEditor({
           aria-label="SQL statement"
           className="min-h-[210px] resize-none border-0 bg-transparent p-5 font-mono text-base text-zinc-100 leading-8 shadow-none ring-0 placeholder:text-zinc-600 focus-visible:ring-0"
           onChange={(event) => setStatement(event.currentTarget.value)}
+          onKeyDown={handleEditorKeyDown}
           spellCheck={false}
           value={statement}
         />
@@ -416,7 +435,6 @@ function EditorToolbar({
   instanceId,
   isBusy,
   onExplain,
-  onFormat,
   onRun,
 }: {
   canRun: boolean;
@@ -424,7 +442,6 @@ function EditorToolbar({
   instanceId: string;
   isBusy: boolean;
   onExplain: () => void;
-  onFormat: () => void;
   onRun: () => void;
 }) {
   return (
@@ -447,11 +464,12 @@ function EditorToolbar({
         Explain
       </Button>
       <Button
+        aria-label="Format (coming soon)"
         className="h-11 rounded-xl bg-zinc-950 px-5 text-lg text-white hover:bg-zinc-900"
-        onClick={onFormat}
+        disabled={true}
         type="button"
       >
-        Format
+        Format (coming soon)
       </Button>
       <Button
         className="h-11 rounded-xl bg-zinc-950 px-5 text-lg text-white hover:bg-zinc-900"
@@ -1107,13 +1125,17 @@ function WorkbenchOutput({
 }
 
 function WorkbenchModePanel({
+  isBusy,
   mode,
   modeId,
+  onRun,
   setStatement,
   statement,
 }: {
+  isBusy: boolean;
   mode: WorkbenchMode;
   modeId: string;
+  onRun: () => void;
   setStatement: (statement: string) => void;
   statement: string;
 }) {
@@ -1168,7 +1190,12 @@ function WorkbenchModePanel({
           id={`${modeId}-editor-panel`}
           role="tabpanel"
         >
-          <SqlTextEditor setStatement={setStatement} statement={statement} />
+          <SqlTextEditor
+            isBusy={isBusy}
+            onRun={onRun}
+            setStatement={setStatement}
+            statement={statement}
+          />
         </div>
       );
     default:
@@ -1193,19 +1220,19 @@ export function SqlWorkbenchPage({
   const [explainResult, setExplainResult] =
     useState<ExplainQueryResponse | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [failedRequest, setFailedRequest] = useState<WorkbenchRequest | null>(
+    null
+  );
   const [isBusy, setIsBusy] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(true);
   const canRun = mode === "editor" && isReadOnlyStatementCandidate(statement);
   const explainSummary = parseExplainTextPlan(explainResult?.plan ?? "");
   const insightKinds = planInsightKinds(explainSummary);
 
-  async function runQuery() {
-    if (!canRun) {
-      return;
-    }
+  async function submitQuery(submittedStatement: string) {
     setIsBusy(true);
     setError(null);
-    const submittedStatement = statement;
+    setFailedRequest(null);
     try {
       const stream = executeWorkbenchQuery({
         batchSize: 250,
@@ -1218,37 +1245,68 @@ export function SqlWorkbenchPage({
       setResultTab("results");
     } catch (caught) {
       setError(caught);
+      setFailedRequest({ action: "run", statement: submittedStatement });
     } finally {
       setIsBusy(false);
     }
   }
 
-  async function explainQuery() {
-    if (!canRun) {
-      return;
-    }
+  async function submitExplain(submittedStatement: string) {
     setIsBusy(true);
     setError(null);
+    setFailedRequest(null);
     try {
       const response = await explainWorkbenchQuery({
         analyze: true,
         buffers: true,
         format: ExplainQueryRequest_Format.TEXT,
         parent,
-        statement,
+        statement: submittedStatement,
       });
       setExplainResult(response);
       setInsightsOpen(true);
       setResultTab("explain");
     } catch (caught) {
       setError(caught);
+      setFailedRequest({ action: "explain", statement: submittedStatement });
     } finally {
       setIsBusy(false);
     }
   }
 
-  function formatStatement() {
-    setStatement(statement.trim());
+  async function runQuery() {
+    if (!canRun || isBusy) {
+      return;
+    }
+    await submitQuery(statement);
+  }
+
+  async function explainQuery() {
+    if (!canRun || isBusy) {
+      return;
+    }
+    await submitExplain(statement);
+  }
+
+  async function retryFailedRequest() {
+    if (!failedRequest || isBusy) {
+      return;
+    }
+    switch (failedRequest.action) {
+      case "run":
+        await submitQuery(failedRequest.statement);
+        return;
+      case "explain":
+        await submitExplain(failedRequest.statement);
+        return;
+      default:
+        return assertNever(failedRequest);
+    }
+  }
+
+  function updateStatement(nextStatement: string) {
+    setStatement(nextStatement);
+    setExplainResult(null);
   }
 
   return (
@@ -1283,9 +1341,11 @@ export function SqlWorkbenchPage({
           <FileTabs />
 
           <WorkbenchModePanel
+            isBusy={isBusy}
             mode={mode}
             modeId={modeId}
-            setStatement={setStatement}
+            onRun={runQuery}
+            setStatement={updateStatement}
             statement={statement}
           />
 
@@ -1295,7 +1355,6 @@ export function SqlWorkbenchPage({
             instanceId={instanceId}
             isBusy={isBusy}
             onExplain={explainQuery}
-            onFormat={formatStatement}
             onRun={runQuery}
           />
 
@@ -1305,7 +1364,7 @@ export function SqlWorkbenchPage({
                 area: "sql-workbench",
                 surface: "route",
               })}
-              onRetry={resultTab === "explain" ? explainQuery : runQuery}
+              onRetry={retryFailedRequest}
             />
           ) : null}
 

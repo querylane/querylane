@@ -258,6 +258,85 @@ describe("SqlWorkbenchPage", () => {
     expect(await screen.findByText("ML-test")).toBeTruthy();
   });
 
+  test("runs the advertised command-enter shortcut", async () => {
+    apiMocks.executeWorkbenchQuery.mockReturnValue(queryResponseStream());
+    const user = userEvent.setup();
+
+    render(
+      <SqlWorkbenchPage databaseId="logistics" instanceId="prod-core-eu" />
+    );
+    await user.click(screen.getByRole("textbox", { name: "SQL statement" }));
+    await user.keyboard("{Meta>}{Enter}{/Meta}");
+
+    await waitFor(() => {
+      expect(apiMocks.executeWorkbenchQuery).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("disables the unfinished format control", () => {
+    render(
+      <SqlWorkbenchPage databaseId="logistics" instanceId="prod-core-eu" />
+    );
+
+    const formatButton = screen.getByRole("button", {
+      name: "Format (coming soon)",
+    });
+    expect(formatButton).toBeInstanceOf(HTMLButtonElement);
+    if (formatButton instanceof HTMLButtonElement) {
+      expect(formatButton.disabled).toBe(true);
+    }
+  });
+
+  test("retries the request that failed rather than the visible result tab", async () => {
+    apiMocks.explainWorkbenchQuery
+      .mockRejectedValueOnce(new Error("explain failed"))
+      .mockResolvedValueOnce(
+        create(ExplainQueryResponseSchema, {
+          latency: durationFromMs(1),
+          plan: "Planning Time: 0.10 ms\nExecution Time: 0.50 ms",
+        })
+      );
+    const user = userEvent.setup();
+
+    render(
+      <SqlWorkbenchPage databaseId="logistics" instanceId="prod-core-eu" />
+    );
+    await user.click(screen.getByRole("button", { name: "Explain" }));
+    await user.click(await screen.findByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(apiMocks.explainWorkbenchQuery).toHaveBeenCalledTimes(2);
+    });
+    expect(apiMocks.executeWorkbenchQuery).not.toHaveBeenCalled();
+  });
+
+  test("clears a stale explain when the statement changes", async () => {
+    apiMocks.explainWorkbenchQuery.mockResolvedValue(
+      create(ExplainQueryResponseSchema, {
+        latency: durationFromMs(1),
+        plan: "Planning Time: 0.10 ms\nExecution Time: 0.50 ms",
+      })
+    );
+    const user = userEvent.setup();
+
+    render(
+      <SqlWorkbenchPage databaseId="logistics" instanceId="prod-core-eu" />
+    );
+    const editor = screen.getByRole("textbox", { name: "SQL statement" });
+    expect(editor).toBeInstanceOf(HTMLTextAreaElement);
+    if (!(editor instanceof HTMLTextAreaElement)) {
+      throw new TypeError("SQL editor is not a textarea");
+    }
+    await user.click(screen.getByRole("button", { name: "Explain" }));
+    await screen.findByText("PostgreSQL returned no structured plan nodes");
+    await user.clear(editor);
+    await user.paste("SELECT 2");
+
+    expect(
+      screen.getByText("Explain a read-only query to inspect its plan")
+    ).toBeTruthy();
+  });
+
   test("keeps result attribution stable and surfaces truncation and notices", async () => {
     apiMocks.executeWorkbenchQuery.mockReturnValue(
       truncatedDuplicateColumnStream()

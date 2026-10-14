@@ -77,6 +77,25 @@ function firstSqlToken(statement: string): string {
   );
 }
 
+function stripLeadingBlockComment(statement: string): string {
+  let commentDepth = 1;
+  let index = 2;
+  while (index < statement.length && commentDepth > 0) {
+    if (statement.startsWith("/*", index)) {
+      commentDepth += 1;
+      index += 2;
+      continue;
+    }
+    if (statement.startsWith("*/", index)) {
+      commentDepth -= 1;
+      index += 2;
+      continue;
+    }
+    index += 1;
+  }
+  return commentDepth === 0 ? statement.slice(index).trimStart() : "";
+}
+
 function stripLeadingSqlTrivia(statement: string): string {
   let remaining = statement.trimStart();
   while (remaining.startsWith("--") || remaining.startsWith("/*")) {
@@ -86,9 +105,7 @@ function stripLeadingSqlTrivia(statement: string): string {
       continue;
     }
 
-    const commentEnd = remaining.indexOf("*/", 2);
-    remaining =
-      commentEnd < 0 ? "" : remaining.slice(commentEnd + 2).trimStart();
+    remaining = stripLeadingBlockComment(remaining);
   }
   return remaining;
 }
@@ -162,7 +179,7 @@ function formatCellValue(cell: TableCell | undefined): string {
     case "doubleValue":
       return String(kind.value);
     case "int64Value":
-      return kind.value.toLocaleString();
+      return kind.value.toString();
     case "jsonValue":
     case "numericValue":
     case "stringValue":

@@ -45,6 +45,9 @@ func TestValidateReadOnlyStatementAcceptsReadQueries(t *testing.T) {
 		"/* explainable */ SELECT ';' AS semicolon",
 		"SELECT $$not a ; delimiter$$ AS body",
 		"SELECT comment, share, start, merge FROM subscriptions ORDER BY start",
+		"SELECT delete, insert, update FROM audit_log",
+		"SELECT 1 AS into",
+		`SELECT E'it\'s; fine' AS message`,
 	}
 
 	for _, statement := range statements {
@@ -69,9 +72,11 @@ func TestValidateReadOnlyStatementRejectsNonReadQueries(t *testing.T) {
 		"",
 		"   ",
 		"SELECT 1; SELECT 2",
+		`SELECT E'it\'s; fine'; SELECT 2`,
 		"INSERT INTO customers(id) VALUES (1)",
 		"UPDATE customers SET name = 'x'",
 		"DELETE FROM customers",
+		"MERGE INTO customers USING updates ON false WHEN NOT MATCHED THEN INSERT DEFAULT VALUES",
 		"DROP TABLE customers",
 		"CREATE TABLE scratch(id int)",
 		"ALTER TABLE customers ADD COLUMN scratch text",
@@ -82,12 +87,9 @@ func TestValidateReadOnlyStatementRejectsNonReadQueries(t *testing.T) {
 		"DO $$ BEGIN RAISE NOTICE 'x'; END $$",
 		"BEGIN READ ONLY",
 		"COMMIT",
+		"ROLLBACK",
+		"START TRANSACTION READ ONLY",
 		"SET search_path = public",
-		"SELECT * INTO scratch_customers FROM customers",
-		"SELECT * FROM customers FOR SHARE",
-		"SELECT * FROM customers FOR KEY SHARE",
-		"SELECT * FROM customers FOR UPDATE",
-		"SELECT * FROM customers FOR NO KEY UPDATE",
 		"EXPLAIN SELECT 1",
 	}
 

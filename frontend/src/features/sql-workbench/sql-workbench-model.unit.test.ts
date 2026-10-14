@@ -5,10 +5,12 @@ import {
   type ExecuteQueryResponse,
   ExecuteQueryResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/sql_pb";
+import { TableCellSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
   buildWorkbenchParent,
   collectExecuteQueryStream,
+  formatCellValue,
   formatDurationMs,
   isReadOnlyStatementCandidate,
   parseExplainTextPlan,
@@ -79,6 +81,9 @@ describe("sql workbench model", () => {
     expect(isReadOnlyStatementCandidate("SELECT 'FOR UPDATE' AS clause")).toBe(
       true
     );
+    expect(
+      isReadOnlyStatementCandidate("/* outer /* inner */ DELETE */ SELECT 1")
+    ).toBe(true);
     expect(isReadOnlyStatementCandidate("(SELECT 1)")).toBe(true);
   });
 
@@ -165,6 +170,21 @@ describe("sql workbench model", () => {
     expect(formatDurationMs(durationFromMs(4.2))).toBe("4.20 ms");
     expect(formatDurationMs(durationFromMs(27.8))).toBe("27.8 ms");
     expect(formatDurationMs(durationFromMs(1250))).toBe("1,250 ms");
+  });
+
+  test("preserves exact integer cell values", () => {
+    expect(
+      formatCellValue(
+        create(TableCellSchema, {
+          value: {
+            kind: {
+              case: "int64Value",
+              value: 9_007_199_254_740_993n,
+            },
+          },
+        })
+      )
+    ).toBe("9007199254740993");
   });
 
   test("parses live text plans into truthful metrics and nodes", () => {

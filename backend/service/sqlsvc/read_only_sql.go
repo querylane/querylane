@@ -8,13 +8,6 @@ import (
 	"github.com/querylane/querylane/backend/engine"
 )
 
-var allowedReadOnlyStatementStarts = map[string]struct{}{
-	"SELECT": {},
-	"SHOW":   {},
-	"VALUES": {},
-	"WITH":   {},
-}
-
 var blockedReadOnlyStatementStarts = map[string]struct{}{
 	"ALTER":    {},
 	"ANALYZE":  {},
@@ -27,30 +20,26 @@ var blockedReadOnlyStatementStarts = map[string]struct{}{
 	"DROP":     {},
 	"EXPLAIN":  {},
 	"INSERT":   {},
+	"MERGE":    {},
+	"ROLLBACK": {},
 	"SET":      {},
+	"START":    {},
 	"TRUNCATE": {},
 	"UPDATE":   {},
 	"VACUUM":   {},
 }
 
-var forbiddenReadOnlyStatementKeywords = map[string]struct{}{
-	"DELETE": {},
-	"INSERT": {},
-	"INTO":   {},
-	"UPDATE": {},
-}
-
 // validateReadOnlyStatement is a fast application-level guardrail for the SQL
 // workbench. PostgreSQL still runs the statement inside a read-only
 // transaction; this preflight gives users an immediate, explicit error for
-// writes, transaction control, and multi-statement input.
+// obvious leading writes, transaction control, and multi-statement input.
 func validateReadOnlyStatement(statement string) error {
-	tokens, hasMultipleStatements, err := readSQLKeywords(statement)
+	firstKeyword, hasMultipleStatements, err := inspectSQLStatement(statement)
 	if err != nil {
 		return engine.NewInvalidQueryError("statement", err.Error())
 	}
 
-	if len(tokens) == 0 {
+	if firstKeyword == "" {
 		return engine.NewInvalidQueryError("statement", "enter a read-only SQL statement")
 	}
 
@@ -58,45 +47,23 @@ func validateReadOnlyStatement(statement string) error {
 		return engine.NewInvalidQueryError("statement", "only one read-only SQL statement is allowed")
 	}
 
-	first := tokens[0]
-	if _, blocked := blockedReadOnlyStatementStarts[first]; blocked {
+	if _, blocked := blockedReadOnlyStatementStarts[firstKeyword]; blocked {
 		return engine.NewInvalidQueryError(
 			"statement",
-			strings.ToLower(first)+" statements are not allowed in the read-only workbench",
+			strings.ToLower(firstKeyword)+" statements are not allowed in the read-only workbench",
 		)
 	}
 
-	if _, allowed := allowedReadOnlyStatementStarts[first]; !allowed {
-		// PostgreSQL is the authority for syntax and extension-provided commands.
-		// The engine still executes them inside a read-only transaction.
-		return nil
-	}
-
-	for index, token := range tokens {
-		if _, ok := forbiddenReadOnlyStatementKeywords[token]; ok {
-			return engine.NewInvalidQueryError(
-				"statement",
-				strings.ToLower(token)+" is not allowed in the read-only workbench",
-			)
-		}
-
-		isForShare := index > 0 && tokens[index-1] == "FOR"
-
-		isForKeyShare := index > 1 && tokens[index-2] == "FOR" && tokens[index-1] == "KEY"
-		if token == "SHARE" && (isForShare || isForKeyShare) {
-			return engine.NewInvalidQueryError(
-				"statement",
-				"for share is not allowed in the read-only workbench",
-			)
-		}
-	}
-
+	// PostgreSQL is the authority for syntax and for write-capable clauses
+	// nested inside otherwise read-looking statements. The engine executes the
+	// statement inside a read-only transaction, which rejects those cases
+	// without confusing non-reserved keywords with identifiers.
 	return nil
 }
 
-func readSQLKeywords(statement string) ([]string, bool, error) {
+func inspectSQLStatement(statement string) (string, bool, error) {
 	var (
-		tokens                []string
+		firstKeyword          string
 		sawTerminator         bool
 		sawMultipleStatements bool
 	)
@@ -114,21 +81,28 @@ func readSQLKeywords(statement string) ([]string, bool, error) {
 
 			index, ok = skipBlockComment(statement, index+2)
 			if !ok {
-				return nil, false, errors.New("unterminated block comment")
+				return "", false, errors.New("unterminated block comment")
+			}
+		case (char == 'e' || char == 'E') && index+1 < len(statement) && statement[index+1] == '\'':
+			var ok bool
+
+			index, ok = skipQuoted(statement, index+2, '\'', true)
+			if !ok {
+				return "", false, errors.New("unterminated escape string literal")
 			}
 		case char == '\'':
 			var ok bool
 
-			index, ok = skipSingleQuotedString(statement, index+1)
+			index, ok = skipQuoted(statement, index+1, '\'', false)
 			if !ok {
-				return nil, false, errors.New("unterminated string literal")
+				return "", false, errors.New("unterminated string literal")
 			}
 		case char == '"':
 			var ok bool
 
-			index, ok = skipDoubleQuotedIdentifier(statement, index+1)
+			index, ok = skipQuoted(statement, index+1, '"', false)
 			if !ok {
-				return nil, false, errors.New("unterminated quoted identifier")
+				return "", false, errors.New("unterminated quoted identifier")
 			}
 		case char == '$':
 			end, ok := skipDollarQuotedString(statement, index)
@@ -156,7 +130,9 @@ func readSQLKeywords(statement string) ([]string, bool, error) {
 				sawMultipleStatements = true
 			}
 
-			tokens = append(tokens, strings.ToUpper(statement[start:index]))
+			if firstKeyword == "" {
+				firstKeyword = strings.ToUpper(statement[start:index])
+			}
 		default:
 			if sawTerminator {
 				sawMultipleStatements = true
@@ -166,7 +142,7 @@ func readSQLKeywords(statement string) ([]string, bool, error) {
 		}
 	}
 
-	return tokens, sawMultipleStatements, nil
+	return firstKeyword, sawMultipleStatements, nil
 }
 
 func isSQLSpace(char byte) bool {
@@ -222,32 +198,19 @@ func skipBlockComment(statement string, index int) (int, bool) {
 	return index, false
 }
 
-func skipSingleQuotedString(statement string, index int) (int, bool) {
+func skipQuoted(statement string, index int, quote byte, backslashEscapes bool) (int, bool) {
 	for index < len(statement) {
-		if statement[index] != '\'' {
+		if backslashEscapes && statement[index] == '\\' {
+			index += min(2, len(statement)-index)
+			continue
+		}
+
+		if statement[index] != quote {
 			index++
 			continue
 		}
 
-		if index+1 < len(statement) && statement[index+1] == '\'' {
-			index += 2
-			continue
-		}
-
-		return index + 1, true
-	}
-
-	return index, false
-}
-
-func skipDoubleQuotedIdentifier(statement string, index int) (int, bool) {
-	for index < len(statement) {
-		if statement[index] != '"' {
-			index++
-			continue
-		}
-
-		if index+1 < len(statement) && statement[index+1] == '"' {
+		if index+1 < len(statement) && statement[index+1] == quote {
 			index += 2
 			continue
 		}
