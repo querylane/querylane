@@ -26,11 +26,9 @@ const DataExplorerPage = lazy(() =>
   }))
 );
 const SqlWorkbenchPage = lazy(() =>
-  import("@/features/sql-workbench/read-only-workbench-page").then(
-    (module) => ({
-      default: module.SqlWorkbenchPage,
-    })
-  )
+  import("@/features/sql-workbench/sql-workbench-page").then((module) => ({
+    default: module.SqlWorkbenchPage,
+  }))
 );
 const InstanceRolesPage = lazy(() =>
   import("@/components/console-pages/instance-roles-page").then((module) => ({

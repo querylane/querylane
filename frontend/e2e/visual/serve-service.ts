@@ -3,6 +3,7 @@ import {
   type DescService,
   fromJson,
   isMessage,
+  type JsonValue,
   toJson,
 } from "@bufbuild/protobuf";
 import { ConnectError, type ServiceImpl } from "@connectrpc/connect";
@@ -11,6 +12,25 @@ import {
   errorToJson,
 } from "@connectrpc/connect/protocol-connect";
 import type { Page } from "playwright/test";
+
+const CONNECT_ENVELOPE_HEADER_BYTES = 5;
+const END_STREAM_FLAG = 0b10;
+
+/** Encodes the same Connect JSON envelopes used by the browser transport. */
+function connectStreamBody(messages: JsonValue[], error?: ConnectError) {
+  const endStream = error ? { error: errorToJson(error, undefined) } : {};
+  const envelopes = [...messages, endStream].map((message, index) => {
+    const payload = Buffer.from(JSON.stringify(message));
+    const envelope = Buffer.alloc(
+      CONNECT_ENVELOPE_HEADER_BYTES + payload.length
+    );
+    envelope.writeUInt8(index === messages.length ? END_STREAM_FLAG : 0, 0);
+    envelope.writeUInt32BE(payload.length, 1);
+    payload.copy(envelope, CONNECT_ENVELOPE_HEADER_BYTES);
+    return envelope;
+  });
+  return Buffer.concat(envelopes);
+}
 
 type UnaryImpl = (request: unknown) => unknown;
 
@@ -72,3 +92,5 @@ export async function serveService<S extends DescService>(
     })
   );
 }
+
+export { connectStreamBody };

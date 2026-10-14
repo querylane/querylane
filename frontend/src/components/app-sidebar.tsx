@@ -750,7 +750,10 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   });
   const nextStepHint = getNextStepHint(scopeLevel);
   // The explorer and the SQL workbench swap the nav for an object browser.
-  const isDrillInMode = page === "database.explorer" || page === "database.sql";
+  const isDrillInMode =
+    page === "database.explorer" ||
+    page === "database.sql" ||
+    page === "database.workbench";
   return (
     <Sidebar className="overflow-hidden" collapsible="offcanvas">
       <SidebarBrandHeader />

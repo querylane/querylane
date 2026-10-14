@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SqlWorkbenchPage } from "@/features/sql-workbench/read-only-workbench-page";
+import { SqlWorkbenchPage } from "@/features/sql-workbench/sql-workbench-page";
 import {
   databaseRouteDataQueries,
   prefetchRouteData,

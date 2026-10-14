@@ -1,16 +1,10 @@
 import type { MessageInitShape } from "@bufbuild/protobuf";
-import { createClient } from "@connectrpc/connect";
 import {
   type UseQueryOptions as ConnectUseQueryOptions,
   useQuery as useConnectQuery,
 } from "@connectrpc/connect-query";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { longRunningTransport } from "@/lib/transport";
-import {
-  type ExecuteQueryRequestSchema,
-  type ExplainQueryRequestSchema,
-  SQLService,
-} from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import { explainQuery } from "@/protogen/querylane/console/v1alpha1/sql-SQLService_connectquery";
 
 function useExplainQuery(
@@ -30,17 +24,4 @@ function useExplainQuery(
   });
 }
 
-function executeWorkbenchQuery(
-  input: MessageInitShape<typeof ExecuteQueryRequestSchema>
-) {
-  // ExecuteQuery streams and can legitimately run until the backend's 60s cap.
-  return createClient(SQLService, longRunningTransport).executeQuery(input);
-}
-
-function explainWorkbenchQuery(
-  input: MessageInitShape<typeof ExplainQueryRequestSchema>
-) {
-  return createClient(SQLService, longRunningTransport).explainQuery(input);
-}
-
-export { executeWorkbenchQuery, explainWorkbenchQuery, useExplainQuery };
+export { useExplainQuery };

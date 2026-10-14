@@ -19,30 +19,21 @@ import {
   LONG_DATABASE_NAME,
 } from "../../src/test/fixtures/console-resource-fixtures";
 import { fulfillJson, mockReadyOnboarding, mockRpc } from "../tests/helpers";
-import { serveService } from "./serve-service";
+import { connectStreamBody, serveService } from "./serve-service";
 
 const INSTANCE_URL = `/instances/${CONSOLE_INSTANCE_ID}`;
 const ACTIVITY_URL = `${INSTANCE_URL}/activity`;
 const CONFIGURATION_URL = `${INSTANCE_URL}/configuration`;
 const DATABASE_URL = `${INSTANCE_URL}/databases/${CONSOLE_DATABASE_ID}`;
 const EXTENSIONS_URL = `${DATABASE_URL}/extensions`;
-const CONNECT_ENVELOPE_HEADER_BYTES = 5;
-const END_STREAM_FLAG = 0b10;
 
 /** A Connect server stream that ends immediately with no messages. */
 async function mockEmptySqlStream(page: Page) {
-  const endStream = Buffer.from("{}");
-  const envelope = Buffer.alloc(
-    CONNECT_ENVELOPE_HEADER_BYTES + endStream.length
-  );
-  envelope.writeUInt8(END_STREAM_FLAG, 0);
-  envelope.writeUInt32BE(endStream.length, 1);
-  endStream.copy(envelope, CONNECT_ENVELOPE_HEADER_BYTES);
   await page.route(
     `**/${SQLService.typeName}/${SQLService.method.executeQuery.name}`,
     (route) =>
       route.fulfill({
-        body: envelope,
+        body: connectStreamBody([]),
         headers: { "Content-Type": "application/connect+json" },
       })
   );
