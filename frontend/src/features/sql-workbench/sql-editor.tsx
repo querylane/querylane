@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  acceptCompletion,
   autocompletion,
   type CompletionContext,
   type CompletionSource,
@@ -389,6 +390,7 @@ function SqlEditor({
             ...searchKeymap,
             ...historyKeymap,
             ...completionKeymap,
+            { key: "Tab", run: acceptCompletion },
             indentWithTab,
           ]),
           sqlLanguage(catalogRef),
