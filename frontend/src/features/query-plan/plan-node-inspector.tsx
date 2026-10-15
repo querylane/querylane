@@ -32,6 +32,8 @@ const DESCRIPTIONS: Record<string, string> = {
   Materialize: "Stores input rows for reuse by the parent operation.",
 };
 
+const PERCENT = 100;
+
 function PlanNodeInspector({
   node,
   parallel,
@@ -42,65 +44,96 @@ function PlanNodeInspector({
   onViewJson: () => void;
 }) {
   const insights = planNodeInsights(node);
+  const predicates = node.details.filter((detail) =>
+    [
+      "Filter",
+      "Index Cond",
+      "Hash Cond",
+      "Join Filter",
+      "Sort Key",
+      "Merge Cond",
+      "Recheck Cond",
+    ].includes(detail.label)
+  );
+  const otherDetails = node.details.filter(
+    (detail) => !predicates.includes(detail)
+  );
   const metrics = [
-    {
-      label: "Actual rows / loop",
-      value: node.actualRows,
-      format: formatCount,
-    },
-    {
-      label: "Estimated rows / loop",
-      value: node.planRows,
-      format: formatCount,
-    },
-    { label: "Loops", value: node.actualLoops, format: formatCount },
     { label: "Time × loops", value: node.inclusiveMs, format: formatPlanMs },
-    { label: "Self time ≈", value: node.exclusiveMs, format: formatPlanMs },
+    { label: "Loops", value: node.actualLoops, format: formatCount },
     { label: "Estimated cost", value: node.totalCost, format: formatCount },
   ];
   return (
     <aside
       aria-label="Plan node details"
-      className="@4xl:w-72 shrink-0 @4xl:overflow-auto border-t @4xl:border-t-0 @4xl:border-l bg-muted/10"
+      className="@4xl:w-80 shrink-0 @4xl:overflow-auto border-t @4xl:border-t-0 @4xl:border-l bg-card"
     >
-      <div className="space-y-3 border-b p-4">
-        <div>
-          <p className="mb-1 text-muted-foreground text-xs">
-            Selected operation
+      <div className="border-b p-5">
+        <p className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
+          <span
+            aria-hidden="true"
+            className="size-1.5 rounded-full bg-chart-4"
+          />
+          Selected operation
+        </p>
+        <h3 className="font-semibold text-xl tracking-tight">
+          {node.nodeType}
+        </h3>
+        {node.relationName ? (
+          <p className="mt-1 break-all font-mono text-sm">
+            {node.relationName}
           </p>
-          <h3 className="font-semibold text-sm">{node.nodeType}</h3>
-          {node.relationName ? (
-            <p className="mt-1 break-all font-mono text-xs">
-              {node.relationName}
+        ) : null}
+        {node.indexName ? (
+          <p className="mt-1 break-all font-mono text-muted-foreground text-xs">
+            {node.indexName}
+          </p>
+        ) : null}
+        <div className="mt-5 flex items-end justify-between">
+          <div>
+            <p className="mb-1 text-muted-foreground text-xs">Self time ≈</p>
+            <p className="font-mono text-2xl tabular-nums tracking-tight">
+              {node.exclusiveMs === undefined
+                ? "—"
+                : formatPlanMs(node.exclusiveMs)}
             </p>
-          ) : null}
-          {node.indexName ? (
-            <p className="mt-1 break-all font-mono text-muted-foreground text-xs">
-              {node.indexName}
-            </p>
+          </div>
+          {node.actualLoops === 0 ? (
+            <p className="text-muted-foreground text-xs">Not executed</p>
           ) : null}
         </div>
         {DESCRIPTIONS[node.nodeType] ? (
-          <p className="text-muted-foreground text-xs leading-relaxed">
+          <p className="mt-3 text-muted-foreground text-xs leading-relaxed">
             {DESCRIPTIONS[node.nodeType]}
           </p>
         ) : null}
-        {node.actualLoops === 0 ? (
-          <p className="text-muted-foreground text-xs">Not executed</p>
-        ) : null}
-        {insights.map((insight) => (
-          <div
-            className="rounded-md border border-chart-4/30 bg-chart-4/5 p-2.5"
-            key={insight.label}
-          >
-            <p className="font-medium text-xs">{insight.label}</p>
-            <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-              {insight.detail}
-            </p>
-          </div>
-        ))}
       </div>
-      <dl className="space-y-2 border-b p-4 text-xs">
+      <RowComparison node={node} />
+      {insights.length > 0 ? (
+        <div className="space-y-3 border-b p-5">
+          {insights.map((insight) => (
+            <div className="border-chart-4 border-l-2 pl-3" key={insight.label}>
+              <p className="font-medium text-xs">{insight.label}</p>
+              <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+                {insight.detail}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {predicates.length > 0 ? (
+        <dl className="space-y-4 border-b p-5 text-xs">
+          {predicates.map((detail) => (
+            <div key={detail.label}>
+              <dt className="mb-2 font-medium">{detail.label}</dt>
+              <dd className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+                {detail.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      <dl className="space-y-2.5 border-b p-5 text-xs">
         {metrics.map((metric) => (
           <div className="flex justify-between gap-3" key={metric.label}>
             <dt className="text-muted-foreground">{metric.label}</dt>
@@ -111,12 +144,13 @@ function PlanNodeInspector({
         ))}
       </dl>
       {parallel ? (
-        <p className="border-b px-4 py-2 text-muted-foreground text-xs">
+        <p className="border-b px-5 py-3 text-muted-foreground text-xs">
           Parallel or async plan. Self time is unavailable; total time includes
           overlapping work.
         </p>
       ) : null}
-      <div className="px-4 pt-3">
+      <div className="flex items-center justify-between px-5 pt-4">
+        <p className="font-medium text-xs">Reported properties</p>
         <Button
           onClick={onViewJson}
           presentation="compact"
@@ -127,17 +161,59 @@ function PlanNodeInspector({
           View JSON
         </Button>
       </div>
-      <dl className="space-y-3 p-4 text-xs">
-        {node.details.map((detail) => (
+      <dl className="space-y-3 p-5 text-xs">
+        {otherDetails.map((detail) => (
           <div key={detail.label}>
             <dt className="mb-1 text-muted-foreground">{detail.label}</dt>
-            <dd className="whitespace-pre-wrap break-words font-mono [overflow-wrap:anywhere]">
+            <dd className="whitespace-pre-wrap break-words font-mono text-xs [overflow-wrap:anywhere]">
               {detail.value}
             </dd>
           </div>
         ))}
       </dl>
     </aside>
+  );
+}
+
+function RowComparison({ node }: { node: PlanNode }) {
+  const rowMaximum = Math.max(node.actualRows ?? 0, node.planRows ?? 0);
+  return (
+    <>
+      {" "}
+      {node.actualRows !== undefined || node.planRows !== undefined ? (
+        <div className="space-y-3 border-b p-5">
+          <p className="font-medium text-xs">Rows per loop</p>
+          {[
+            { label: "Actual", value: node.actualRows, color: "bg-chart-2" },
+            {
+              label: "Estimated",
+              value: node.planRows,
+              color: "bg-muted-foreground/40",
+            },
+          ].map((row) => (
+            <div key={row.label}>
+              <div className="mb-1.5 flex justify-between text-xs">
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-mono tabular-nums">
+                  {row.value === undefined ? "—" : formatCount(row.value)}
+                </span>
+              </div>
+              <div
+                aria-hidden="true"
+                className="h-1 overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className={`${row.color} h-full w-(--plan-share) rounded-full`}
+                  style={{
+                    "--plan-share": `${rowMaximum > 0 ? ((row.value ?? 0) / rowMaximum) * PERCENT : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 

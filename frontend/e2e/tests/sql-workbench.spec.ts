@@ -104,7 +104,7 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await page.getByRole("button", { name: "More ways to run" }).click();
   await page.getByRole("menuitem", { name: "Explain analyze" }).click();
   await expect(
-    page.getByRole("tab", { name: "Tree", exact: true })
+    page.getByRole("tab", { name: "Map", exact: true })
   ).toHaveAttribute("aria-selected", "true");
   await page
     .getByRole("button", { name: "Inspect Seq Scan on shipments", exact: true })
@@ -118,6 +118,7 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await expect(
     inspector.getByText("(status = 'customs_hold'::text)", { exact: true })
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Operators", exact: true }).click();
   await page.getByRole("button", { name: "Collapse Hash Join branch" }).click();
   await expect(
     page.getByRole("button", {
@@ -145,4 +146,67 @@ test("workbench recovers from an error and inspects the live execution plan", as
   ).toEqual([]);
   await expect(page).toHaveURL(url);
   await softScreenshot(page, "workbench-plan-inspector");
+});
+
+test("phone plan focus keeps the selected operation reachable and restores keyboard focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockConsoleResources(page);
+  await mockRpc(page, "SQLService/ValidateQuery", {});
+  await mockRpc(page, "SQLService/ExplainQuery", {
+    plan: EXPLAIN_ANALYZE_FIXTURE,
+  });
+  await page.goto(`${DATABASE_URL}/workbench`);
+  await page
+    .getByRole("textbox", { name: "SQL editor" })
+    .fill("SELECT * FROM shipping.shipments;");
+  await page.getByRole("button", { name: "More ways to run" }).click();
+  await page.getByRole("menuitem", { name: "Explain analyze" }).click();
+  await page.getByRole("button", { name: "Focus plan" }).click();
+  const map = page.getByRole("region", { name: "Plan map" });
+  const operation = page.getByRole("button", {
+    name: "Inspect Seq Scan on shipments",
+    exact: true,
+  });
+  await expect
+    .poll(async () => {
+      const bounds = await map.boundingBox();
+      const node = await operation.boundingBox();
+      return (
+        bounds &&
+        node &&
+        node.x >= bounds.x &&
+        node.x + node.width <= bounds.x + bounds.width
+      );
+    })
+    .toBe(true);
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  await expect
+    .poll(async () => {
+      const bounds = await map.boundingBox();
+      return map.getByRole("button").evaluateAll(
+        (elements, viewport) =>
+          elements.every((element) => {
+            const rect = element.getBoundingClientRect();
+            return (
+              viewport &&
+              rect.left >= viewport.x &&
+              rect.right <= viewport.x + viewport.width &&
+              rect.top >= viewport.y &&
+              rect.bottom <= viewport.y + viewport.height
+            );
+          }),
+        bounds
+      );
+    })
+    .toBe(true);
+  await operation.click();
+  await expect(
+    page
+      .getByRole("complementary", { name: "Plan node details" })
+      .getByRole("heading", { name: "Seq Scan" })
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Focus plan" })).toBeFocused();
 });

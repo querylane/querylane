@@ -1,13 +1,13 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronRight,
-  CircleAlert,
-  Crosshair,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, Crosshair } from "lucide-react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/querylane-ui/dialog";
 import {
   Select,
   SelectContent,
@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/querylane-ui/select";
-
 import {
   Tabs,
   TabsContent,
@@ -29,10 +28,11 @@ import {
   type PlanNode,
   parseExplainPlan,
   planMetricValue,
-  planNodeInsights,
   planNodeTitle,
 } from "@/features/query-plan/explain-plan-model";
+import { PlanMap } from "@/features/query-plan/plan-map";
 import { PlanNodeInspector } from "@/features/query-plan/plan-node-inspector";
+import { PlanOverview } from "@/features/query-plan/plan-overview";
 import {
   formatCount,
   formatPlanMs,
@@ -66,6 +66,7 @@ const METRICS = [
     hint: "Planner units, including children",
   },
 ] as const;
+const LARGE_PLAN_SIZE = 40;
 const LANE_WIDTH = 16;
 const ROW_HEIGHT = 44;
 const HOT_SHARE = 0.5;
@@ -111,7 +112,7 @@ function MetricBar({
   );
 }
 
-/** Dependency connectors share the same rows as the metrics; never a time axis. */
+/** Dependency rails share the metric rows; they do not encode timing. */
 function TopologyRail({
   continuations,
   expanded,
@@ -123,8 +124,20 @@ function TopologyRail({
 }) {
   const depth = continuations.length;
   const x = depth * LANE_WIDTH + LANE_WIDTH / 2;
-  const centerY = ROW_HEIGHT / 2;
-  const bend = LANE_WIDTH / 2;
+  const center = ROW_HEIGHT / 2;
+  const paths = continuations.flatMap((continues, index) =>
+    continues
+      ? [`M ${index * LANE_WIDTH + LANE_WIDTH / 2} 0 V ${ROW_HEIGHT}`]
+      : []
+  );
+  if (depth > 0) {
+    paths.push(
+      `M ${x - LANE_WIDTH} 0 V ${center - LANE_WIDTH / 2} Q ${x - LANE_WIDTH} ${center} ${x - LANE_WIDTH / 2} ${center} H ${x}`
+    );
+  }
+  if (expanded) {
+    paths.push(`M ${x} ${center} V ${ROW_HEIGHT}`);
+  }
   return (
     <svg
       aria-hidden="true"
@@ -132,31 +145,12 @@ function TopologyRail({
       height={ROW_HEIGHT}
       width={(depth + 1) * LANE_WIDTH}
     >
-      {continuations.map((continues, index) =>
-        continues ? (
-          <path
-            d={`M ${index * LANE_WIDTH + LANE_WIDTH / 2} 0 V ${ROW_HEIGHT}`}
-            key={`lane-${index.toString()}`}
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-        ) : null
-      )}
-      {depth > 0 ? (
-        <path
-          d={`M ${x - LANE_WIDTH} 0 V ${centerY - bend} Q ${x - LANE_WIDTH} ${centerY} ${x - LANE_WIDTH + bend} ${centerY} H ${x}`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-      ) : null}
-      {expanded ? (
-        <path
-          d={`M ${x} 22 V ${ROW_HEIGHT}`}
-          stroke="currentColor"
-          strokeWidth="1.5"
-        />
-      ) : null}
+      <path
+        d={paths.join(" ")}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
       <circle
         className={
           selected
@@ -164,7 +158,7 @@ function TopologyRail({
             : "fill-background stroke-muted-foreground"
         }
         cx={x}
-        cy="22"
+        cy={center}
         r={selected ? SELECTED_DOT_RADIUS : DOT_RADIUS}
         strokeWidth="1.5"
       />
@@ -183,85 +177,6 @@ interface PlanRowsProps {
   selectedId: string;
 }
 
-function PlanOperation({
-  node,
-  continuations,
-  expanded,
-  selected,
-  onSelect,
-  onToggle,
-}: {
-  node: PlanNode;
-  continuations: boolean[];
-  expanded: boolean;
-  selected: boolean;
-  onSelect: () => void;
-  onToggle: () => void;
-}) {
-  const insights = planNodeInsights(node);
-  const title = planNodeTitle(node);
-  return (
-    <td className="py-0 pr-2 pl-4">
-      <div className="flex min-w-64 items-center gap-1">
-        <TopologyRail
-          continuations={continuations}
-          expanded={expanded}
-          selected={selected}
-        />
-        {node.children.length > 0 ? (
-          <Button
-            aria-expanded={expanded}
-            aria-label={`${expanded ? "Collapse" : "Expand"} ${title} branch`}
-            className="shrink-0"
-            onClick={onToggle}
-            presentation="muted"
-            size="icon-xs"
-            type="button"
-            variant="ghost"
-          >
-            {expanded ? <ChevronDown /> : <ChevronRight />}
-          </Button>
-        ) : (
-          <span className="w-6 shrink-0" />
-        )}
-        <Button
-          aria-description={`Level ${continuations.length + 1}. ${insights.map((insight) => insight.label).join(". ")}`}
-          aria-label={`Inspect ${title}`}
-          aria-pressed={selected}
-          className="h-auto min-w-0 justify-start"
-          onClick={onSelect}
-          presentation="sql-plan-node"
-          type="button"
-          variant="ghost"
-        >
-          <span className="flex min-w-0 flex-col items-start text-left">
-            <span className="flex items-center gap-1.5 text-xs">
-              <span className="font-medium">{node.nodeType}</span>
-              {insights.length > 0 ? (
-                <CircleAlert
-                  aria-label={insights
-                    .map((insight) => insight.label)
-                    .join("; ")}
-                  className="size-3 text-chart-4"
-                />
-              ) : null}
-            </span>
-            {node.relationName ? (
-              <span
-                className="max-w-64 truncate font-mono text-muted-foreground text-xs"
-                title={title}
-              >
-                {node.relationName}
-                {node.indexName ? ` · ${node.indexName}` : ""}
-              </span>
-            ) : null}
-          </span>
-        </Button>
-      </div>
-    </td>
-  );
-}
-
 function PlanRows(props: PlanRowsProps) {
   const {
     node,
@@ -274,33 +189,72 @@ function PlanRows(props: PlanRowsProps) {
     onToggle,
   } = props;
   const expanded = !collapsed.has(node.id) && node.children.length > 0;
-  const selected = node.id === selectedId;
+  const title = planNodeTitle(node);
   return (
     <>
       <tr
-        className={cn("border-b hover:bg-muted/30", selected && "bg-muted/70")}
+        className={cn(
+          "border-b hover:bg-muted/30",
+          node.id === selectedId && "bg-muted/70"
+        )}
         data-plan-node={node.id}
       >
-        <PlanOperation
-          continuations={continuations}
-          expanded={expanded}
-          node={node}
-          onSelect={() => onSelect(node)}
-          onToggle={() => onToggle(node)}
-          selected={selected}
-        />
-        {[
-          { label: "rows", value: node.actualRows },
-          { label: "estimate", value: node.planRows },
-          { label: "loops", value: node.actualLoops },
-        ].map((cell) => (
-          <td
-            className="px-2 py-2 text-right font-mono text-muted-foreground text-xs tabular-nums"
-            key={cell.label}
-          >
-            {cell.value === undefined ? "—" : formatCount(cell.value)}
-          </td>
-        ))}
+        <td className="py-0 pr-2 pl-4">
+          <div className="flex min-w-64 items-center gap-1">
+            <TopologyRail
+              continuations={continuations}
+              expanded={expanded}
+              selected={node.id === selectedId}
+            />
+            {node.children.length > 0 ? (
+              <Button
+                aria-expanded={expanded}
+                aria-label={`${expanded ? "Collapse" : "Expand"} ${title} branch`}
+                className="shrink-0"
+                onClick={() => onToggle(node)}
+                presentation="muted"
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                {expanded ? <ChevronDown /> : <ChevronRight />}
+              </Button>
+            ) : (
+              <span className="w-6 shrink-0" />
+            )}
+            <Button
+              aria-label={`Inspect ${title}`}
+              aria-pressed={node.id === selectedId}
+              className="h-auto min-w-0 justify-start"
+              onClick={() => onSelect(node)}
+              presentation="sql-plan-node"
+              type="button"
+              variant="ghost"
+            >
+              <span className="flex min-w-0 flex-col items-start text-left">
+                <span className="font-medium text-xs">{node.nodeType}</span>
+                {node.relationName ? (
+                  <span
+                    className="max-w-64 truncate font-mono text-muted-foreground text-xs"
+                    title={title}
+                  >
+                    {node.relationName}
+                  </span>
+                ) : null}
+              </span>
+            </Button>
+          </div>
+        </td>
+        {[node.actualRows, node.planRows, node.actualLoops].map(
+          (value, index) => (
+            <td
+              className="px-2 py-2 text-right font-mono text-muted-foreground text-xs tabular-nums"
+              key={index.toString()}
+            >
+              {value === undefined ? "—" : formatCount(value)}
+            </td>
+          )
+        )}
         <td className="py-2 pr-4 pl-2">
           <MetricBar maximum={maximum} metric={metric} node={node} />
         </td>
@@ -402,42 +356,6 @@ function PlanMetricControls({
   );
 }
 
-function PlanSummary({
-  analyze,
-  plan,
-  nodes,
-}: {
-  analyze: boolean;
-  plan: ExplainPlan | undefined;
-  nodes: PlanNode[];
-}) {
-  if (!plan) {
-    return (
-      <p className="text-muted-foreground text-xs">
-        Unrecognized plan. Raw output preserved.
-      </p>
-    );
-  }
-  const parts = [`${nodes.length} nodes`];
-  if (plan.executionTimeMs !== undefined) {
-    parts.unshift(`Execution ${formatPlanMs(plan.executionTimeMs)}`);
-  }
-  if (plan.planningTimeMs !== undefined) {
-    parts.push(`Planning ${formatPlanMs(plan.planningTimeMs)}`);
-  }
-  const findings = nodes.reduce(
-    (sum, node) => sum + planNodeInsights(node).length,
-    0
-  );
-  if (findings > 0) {
-    parts.push(`${findings} findings`);
-  }
-  if (!analyze) {
-    parts.push("Estimates only");
-  }
-  return <p className="text-muted-foreground text-xs">{parts.join(" · ")}</p>;
-}
-
 function defaultPlanMetric(nodes: PlanNode[], analyze: boolean): PlanMetric {
   if (!analyze) {
     return "cost";
@@ -450,64 +368,67 @@ function defaultPlanMetric(nodes: PlanNode[], analyze: boolean): PlanMetric {
   }
   return "cost";
 }
+function largestMetricNode(nodes: PlanNode[], metric: PlanMetric) {
+  return nodes.reduce<PlanNode | undefined>(
+    (largest, node) =>
+      (planMetricValue(node, metric) ?? 0) >
+      (largest ? (planMetricValue(largest, metric) ?? 0) : 0)
+        ? node
+        : largest,
+    undefined
+  );
+}
 function PlanExplorer({
   analyze,
   plan,
   rawPlan,
 }: {
   analyze: boolean;
-  plan: ExplainPlan | undefined;
+  plan: ExplainPlan;
   rawPlan: string;
 }) {
-  const nodes = plan ? flattenPlan(plan.root) : [];
+  const nodes = flattenPlan(plan.root);
   const initialMetric = defaultPlanMetric(nodes, analyze);
-  const hasSelfTime = initialMetric === "self";
+  const initialHotspot =
+    initialMetric === "self"
+      ? largestMetricNode(nodes, initialMetric)
+      : undefined;
   const [metric, setMetric] = useState<PlanMetric>(initialMetric);
+  const hotspot = largestMetricNode(nodes, metric);
   const [selection, setSelection] = useState({
-    id: plan?.root.id,
+    id: initialHotspot?.id ?? plan.root.id,
     inspect: false,
   });
-  const selectedId = selection.id;
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const [mode, setMode] = useState(plan ? "tree" : "raw");
+  const [mode, setMode] = useState(
+    nodes.length > LARGE_PLAN_SIZE ? "tree" : "map"
+  );
+  const [focused, setFocused] = useState(false);
+  const focusButtonRef = useRef<HTMLButtonElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
   useEffect(
     function revealSelectedNode() {
-      if (mode !== "tree") {
-        return;
-      }
-      const layout = tableRef.current?.parentElement;
+      const layout = layoutRef.current;
       const stacked =
         layout && getComputedStyle(layout).flexDirection === "column";
-      // On narrow layouts, selecting a row brings its inspector into view.
-      const target =
-        selection.inspect && stacked
-          ? layout.querySelector("aside")
-          : tableRef.current?.querySelector(
-              `[data-plan-node="${selection.id}"]`
-            );
-      target?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (selection.inspect && stacked) {
+        layout.querySelector("aside")?.scrollIntoView({ block: "nearest" });
+      } else if (mode === "tree") {
+        tableRef.current
+          ?.querySelector(`[data-plan-node="${selection.id}"]`)
+          ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     },
     [selection, mode]
   );
-  const selected = nodes.find((node) => node.id === selectedId) ?? plan?.root;
+  const selected = nodes.find((node) => node.id === selection.id) ?? plan.root;
   const maximum = Math.max(
     0,
     ...nodes.map((node) => planMetricValue(node, metric) ?? 0)
   );
-  const hotspot = hasSelfTime
-    ? nodes.reduce<PlanNode | undefined>(
-        (current, node) =>
-          (node.exclusiveMs ?? 0) > (current?.exclusiveMs ?? 0)
-            ? node
-            : current,
-        undefined
-      )
-    : undefined;
-  const heading = METRICS.find((item) => item.value === metric)?.heading;
   function selectNode(node: PlanNode) {
     setSelection({ id: node.id, inspect: true });
-    // Selecting a hotspot reveals its ancestors, without discarding other folds.
     setCollapsed(
       new Set([...collapsed].filter((id) => !node.id.startsWith(`${id}.`)))
     );
@@ -518,39 +439,63 @@ function PlanExplorer({
       next.delete(node.id);
     } else {
       next.add(node.id);
-      if (selectedId?.startsWith(`${node.id}.`)) {
+      if (selection.id?.startsWith(`${node.id}.`)) {
         setSelection({ id: node.id, inspect: false });
       }
     }
     setCollapsed(next);
   }
-  return (
+  const content = (
     <Tabs
       aria-label="Query plan"
-      className="flex min-h-0 flex-1 flex-col"
+      className="@container flex min-h-0 flex-1 flex-col"
       onValueChange={setMode}
       presentation="flush"
       role="region"
       value={mode}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-2">
-        <PlanSummary analyze={analyze} nodes={nodes} plan={plan} />
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
         <TabsList aria-label="Plan display" className="h-7">
+          <TabsTrigger className="h-6" presentation="sql-plan-mode" value="map">
+            Map
+          </TabsTrigger>
           <TabsTrigger
             className="h-6"
-            disabled={!plan}
             presentation="sql-plan-mode"
             value="tree"
           >
-            Tree
+            Operators
           </TabsTrigger>
           <TabsTrigger className="h-6" presentation="sql-plan-mode" value="raw">
             JSON
           </TabsTrigger>
         </TabsList>
+        {focused ? (
+          <span className="mr-8 text-muted-foreground text-xs">
+            Plan analysis
+          </span>
+        ) : (
+          <Button
+            onClick={() => setFocused(true)}
+            presentation="compact"
+            ref={focusButtonRef}
+            size="xs"
+            type="button"
+            variant="ghost"
+          >
+            <span aria-hidden="true">↗</span>
+            Focus plan
+          </Button>
+        )}
       </div>
-      {plan ? (
-        <TabsContent className="flex min-h-0 flex-1 flex-col" value="tree">
+      {mode === "raw" ? null : (
+        <>
+          <PlanOverview
+            nodes={nodes}
+            onSelect={selectNode}
+            plan={plan}
+            selectedId={selected?.id ?? plan.root.id}
+          />
           <PlanMetricControls
             analyze={analyze}
             hotspot={hotspot}
@@ -559,69 +504,126 @@ function PlanExplorer({
             onMetric={setMetric}
             onSelect={selectNode}
           />
-          <div className="@container min-h-0 flex-1">
-            <div className="flex h-full @4xl:flex-row flex-col overflow-auto @4xl:overflow-hidden">
-              <div
-                className="min-h-48 min-w-0 flex-1 overflow-auto"
-                ref={tableRef}
-              >
-                <table
-                  aria-label="Execution plan"
-                  className="w-full min-w-2xl border-collapse text-xs"
-                >
-                  <thead className="sticky top-0 z-10 bg-background">
-                    <tr className="border-b text-left">
-                      {[
-                        "Operation",
-                        "Rows / loop",
-                        "Est. rows",
-                        "Loops",
-                        heading,
-                      ].map((label, index) => (
-                        <th
-                          className={cn(
-                            "h-9 whitespace-nowrap px-2 text-right font-medium last:pr-4",
-                            index === 0 && "w-full pl-4 text-left"
-                          )}
-                          key={label}
-                          scope="col"
-                        >
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <PlanRows
-                      collapsed={collapsed}
-                      continuations={[]}
-                      maximum={maximum}
-                      metric={metric}
-                      node={plan.root}
-                      onSelect={selectNode}
-                      onToggle={toggleNode}
-                      selectedId={selected?.id ?? plan.root.id}
-                    />
-                  </tbody>
-                </table>
-              </div>
-              {selected ? (
-                <PlanNodeInspector
-                  node={selected}
-                  onViewJson={() => setMode("raw")}
-                  parallel={Boolean(plan.root.parallel)}
-                />
-              ) : null}
-            </div>
-          </div>
-        </TabsContent>
-      ) : null}
-      <TabsContent className="min-h-0 flex-1 overflow-auto" value="raw">
+        </>
+      )}
+      <TabsContent className="flex min-h-0 flex-1 flex-col" value={mode}>
+        <PlanBody
+          layoutRef={layoutRef}
+          mode={mode}
+          onViewJson={() => setMode("raw")}
+          plan={plan}
+          rawPlan={rawPlan}
+          rows={{
+            collapsed,
+            continuations: [],
+            maximum,
+            metric,
+            node: plan.root,
+            onSelect: selectNode,
+            onToggle: toggleNode,
+            selectedId: selected.id,
+          }}
+          selected={selected}
+          selection={selection}
+          tableRef={tableRef}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+  return (
+    <Dialog onOpenChange={setFocused} open={focused}>
+      {!focused && content}
+      <DialogContent finalFocus={focusButtonRef} presentation="query-plan">
+        <DialogTitle className="sr-only">Query plan</DialogTitle>
+        {focused ? content : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PlanBody({
+  plan,
+  mode,
+  rawPlan,
+  selected,
+  selection,
+  rows,
+  onViewJson,
+  layoutRef,
+  tableRef,
+}: {
+  plan: ExplainPlan;
+  mode: string;
+  rawPlan: string;
+  selected: PlanNode;
+  selection: { id: string; inspect: boolean };
+  rows: PlanRowsProps;
+  onViewJson: () => void;
+  layoutRef: RefObject<HTMLDivElement | null>;
+  tableRef: RefObject<HTMLDivElement | null>;
+}) {
+  if (mode === "raw") {
+    return (
+      <div className="min-h-0 flex-1 overflow-auto">
         <pre className="px-4 py-3 font-mono text-xs leading-relaxed">
           {formatRawPlan(rawPlan)}
         </pre>
-      </TabsContent>
-    </Tabs>
+      </div>
+    );
+  }
+  const heading = METRICS.find((item) => item.value === rows.metric)?.heading;
+  return (
+    <div
+      className="flex min-h-0 flex-1 @4xl:flex-row flex-col overflow-auto @4xl:overflow-hidden"
+      ref={layoutRef}
+    >
+      {mode === "map" ? (
+        <PlanMap
+          metric={rows.metric}
+          onSelect={rows.onSelect}
+          root={plan.root}
+          selection={selection}
+        />
+      ) : (
+        <div className="min-h-48 min-w-0 flex-1 overflow-auto" ref={tableRef}>
+          <table
+            aria-label="Execution plan"
+            className="w-full min-w-2xl border-collapse text-xs"
+          >
+            <thead className="sticky top-0 z-10 bg-background">
+              <tr className="border-b text-left">
+                {[
+                  "Operation",
+                  "Rows / loop",
+                  "Est. rows",
+                  "Loops",
+                  heading,
+                ].map((label, index) => (
+                  <th
+                    className={cn(
+                      "h-9 whitespace-nowrap px-2 text-right font-medium last:pr-4",
+                      index === 0 && "w-full pl-4 text-left"
+                    )}
+                    key={label}
+                    scope="col"
+                  >
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <PlanRows {...rows} />
+            </tbody>
+          </table>
+        </div>
+      )}
+      <PlanNodeInspector
+        node={selected}
+        onViewJson={onViewJson}
+        parallel={Boolean(plan.root.parallel)}
+      />
+    </div>
   );
 }
 
@@ -633,6 +635,29 @@ function ExplainPlanView({
   rawPlan: string;
 }) {
   const plan = parseExplainPlan(rawPlan) ?? undefined;
+  if (!plan) {
+    return (
+      <Tabs
+        aria-label="Query plan"
+        className="flex min-h-0 flex-1 flex-col"
+        presentation="flush"
+        role="region"
+        value="raw"
+      >
+        <TabsList aria-label="Plan display">
+          <TabsTrigger value="raw">JSON</TabsTrigger>
+        </TabsList>
+        <TabsContent className="min-h-0 flex-1 overflow-auto" value="raw">
+          <p className="px-4 pt-3 text-muted-foreground text-xs">
+            Unrecognized plan. Raw output preserved.
+          </p>
+          <pre className="px-4 py-3 font-mono text-xs leading-relaxed">
+            {formatRawPlan(rawPlan)}
+          </pre>
+        </TabsContent>
+      </Tabs>
+    );
+  }
   // A new EXPLAIN result must never inherit a previous plan's selection or folds.
   return (
     <PlanExplorer

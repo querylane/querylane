@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 const buttonPresentations = cva("", {
   variants: {
     presentation: {
+      "plan-map-node":
+        "h-auto flex-col items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-lg border border-border bg-card p-0 text-left font-normal shadow-sm hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-2 aria-pressed:ring-chart-4/15",
+      "plan-work": "h-full min-w-0 shrink rounded-none p-0 hover:opacity-80",
       warning: "text-warning-600 hover:text-warning-700",
       quiet: "text-muted-foreground hover:text-foreground",
       "sidebar-action":
