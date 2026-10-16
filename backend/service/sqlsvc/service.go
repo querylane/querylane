@@ -26,6 +26,7 @@ const opValidateQuery = "validate_query"
 // planning or execution, so anything slower means the pool or server is
 // in trouble and the editor should just skip that check.
 const validateTimeout = 5 * time.Second
+
 // opExplainQuery labels the SQL explain operation in error metadata.
 const opExplainQuery = "explain_query"
 

@@ -33,6 +33,15 @@ const DESCRIPTIONS: Record<string, string> = {
 };
 
 const PERCENT = 100;
+const PREDICATE_LABELS = new Set([
+  "Filter",
+  "Index Cond",
+  "Hash Cond",
+  "Join Filter",
+  "Sort Key",
+  "Merge Cond",
+  "Recheck Cond",
+]);
 
 function PlanNodeInspector({
   node,
@@ -45,18 +54,10 @@ function PlanNodeInspector({
 }) {
   const insights = planNodeInsights(node);
   const predicates = node.details.filter((detail) =>
-    [
-      "Filter",
-      "Index Cond",
-      "Hash Cond",
-      "Join Filter",
-      "Sort Key",
-      "Merge Cond",
-      "Recheck Cond",
-    ].includes(detail.label)
+    PREDICATE_LABELS.has(detail.label)
   );
   const otherDetails = node.details.filter(
-    (detail) => !predicates.includes(detail)
+    (detail) => !PREDICATE_LABELS.has(detail.label)
   );
   const metrics = [
     { label: "Time × loops", value: node.inclusiveMs, format: formatPlanMs },

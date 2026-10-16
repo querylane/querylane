@@ -248,7 +248,7 @@ function PlanRows(props: PlanRowsProps) {
         {[node.actualRows, node.planRows, node.actualLoops].map(
           (value, index) => (
             <td
-              className="px-2 py-2 text-right font-mono text-muted-foreground text-xs tabular-nums"
+              className="p-2 text-right font-mono text-muted-foreground text-xs tabular-nums"
               key={index.toString()}
             >
               {value === undefined ? "—" : formatCount(value)}
@@ -301,7 +301,7 @@ function PlanMetricControls({
 }) {
   const active = METRICS.find((item) => item.value === metric);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <Select
           items={METRICS}
@@ -562,6 +562,7 @@ function PlanBody({
   layoutRef: RefObject<HTMLDivElement | null>;
   tableRef: RefObject<HTMLDivElement | null>;
 }) {
+  const { onSelect: handleSelect } = rows;
   if (mode === "raw") {
     return (
       <div className="min-h-0 flex-1 overflow-auto">
@@ -580,7 +581,7 @@ function PlanBody({
       {mode === "map" ? (
         <PlanMap
           metric={rows.metric}
-          onSelect={rows.onSelect}
+          onSelect={handleSelect}
           root={plan.root}
           selection={selection}
         />
