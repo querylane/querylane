@@ -19,6 +19,16 @@ import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
 import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { Button } from "@/components/querylane-ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/querylane-ui/combobox";
+import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import {
   Sidebar,
@@ -51,16 +61,6 @@ import {
   type NavSection,
   type SidebarPaths,
 } from "@/components/sidebar-paths";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-  createComboboxItems,
-} from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
