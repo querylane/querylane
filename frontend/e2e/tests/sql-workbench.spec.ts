@@ -148,7 +148,7 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await softScreenshot(page, "workbench-plan-inspector");
 });
 
-test("phone plan focus keeps the selected operation reachable and restores keyboard focus", async ({
+test("phone navigation dismisses the sidebar and plan focus restores keyboard focus", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -157,7 +157,13 @@ test("phone plan focus keeps the selected operation reachable and restores keybo
   await mockRpc(page, "SQLService/ExplainQuery", {
     plan: EXPLAIN_ANALYZE_FIXTURE,
   });
-  await page.goto(`${DATABASE_URL}/workbench`);
+  await page.goto(DATABASE_URL);
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
+  await page
+    .getByRole("link", { name: "SQL workbench", exact: true })
+    .press("Enter");
+  await expect(page).toHaveURL(`${DATABASE_URL}/workbench`);
+  await expect(page.getByRole("dialog", { name: "Sidebar" })).toBeHidden();
   await page
     .getByRole("textbox", { name: "SQL editor" })
     .fill("SELECT * FROM shipping.shipments;");

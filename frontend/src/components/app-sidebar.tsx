@@ -14,7 +14,7 @@ import {
   InfoIcon,
   Search,
 } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
 import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
@@ -725,7 +725,21 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
       search: loc.search,
     }),
   });
-  const { hoverRevealOpen, isMobile, state } = useSidebar();
+  const router = useRouter();
+  const { hoverRevealOpen, isMobile, setOpenMobile, state } = useSidebar();
+  useEffect(
+    function dismissMobileSidebarAfterNavigation() {
+      if (!isMobile) {
+        return;
+      }
+      return router.subscribe("onResolved", (event) => {
+        if (event.hrefChanged || event.pathChanged) {
+          setOpenMobile(false);
+        }
+      });
+    },
+    [isMobile, router, setOpenMobile]
+  );
   const { navigationIds, scopeLevel, viewLevel } = useDb();
   const ids: NavigationIds = navigationIds;
   const paths = buildSidebarPaths(ids);
