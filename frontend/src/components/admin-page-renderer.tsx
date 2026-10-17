@@ -144,6 +144,10 @@ function DatabaseAdminPageContent({
           searchRoute="/instances/$instanceId"
         />
       );
+    case "database.workbench":
+      return (
+        <SqlWorkbenchPage databaseId={databaseId} instanceId={instanceId} />
+      );
     case "database.explorer":
       return (
         <DataExplorerPage

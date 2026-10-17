@@ -9,6 +9,15 @@ Wrapper modules should export the whole matching component family so consumers i
 SQL highlighting is Querylane-owned, not a shadcn registry item. Its implementation
 and tests live here alongside the Bash highlighter.
 
+The sidebar combobox and navigation drawer also live here. They preserve the
+popup-contained search, asynchronous database selection, horizontal swipe and
+reduced-motion behavior. Import their complete families from
+`@/components/querylane-ui/combobox` and `@/components/querylane-ui/drawer`, not
+the registry's input-first combobox or snap-point drawer. Their existing consumer
+props and behavior are unchanged.
+The non-component `createComboboxItems` helper has a direct import from
+`@/components/querylane-ui/combobox-items` so component modules support Fast Refresh.
+
 ## Lint contracts
 
 Use finite `presentation` variants for Querylane appearance; keep consumer

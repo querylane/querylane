@@ -1,10 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { useEffect, useRef, useState } from "react";
 import {
-  type ExplainPlan,
-  parseExplainPlan,
-} from "@/features/sql-workbench/explain-plan-model";
-import {
   describeSqlExecutionError,
   SQL_WORKBENCH_ERROR_CONTEXT,
 } from "@/features/sql-workbench/sql-execution-error";
@@ -51,7 +47,6 @@ interface SqlExplain {
   error?: AppUiError | undefined;
   latencyMs?: number | undefined;
   notices: string[];
-  plan?: ExplainPlan | undefined;
   rawPlan?: string | undefined;
   startedAt: number;
   statement: string;
@@ -354,7 +349,6 @@ function useSqlExecution({
           ...base,
           latencyMs: durationToMs(response.latency),
           notices: response.notices,
-          plan: parseExplainPlan(response.plan) ?? undefined,
           rawPlan: response.plan,
           status: "success",
         },

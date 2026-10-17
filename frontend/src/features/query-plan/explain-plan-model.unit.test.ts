@@ -2,7 +2,7 @@ import { describe, expect, it } from "@rstest/core";
 import {
   flattenPlan,
   parseExplainPlan,
-} from "@/features/sql-workbench/explain-plan-model";
+} from "@/features/query-plan/explain-plan-model";
 
 const ANALYZE_PLAN = JSON.stringify([
   {
@@ -42,7 +42,7 @@ const ANALYZE_PLAN = JSON.stringify([
 ]);
 
 describe("parseExplainPlan", () => {
-  it("builds a tree with exclusive times and shares", () => {
+  it("builds a tree with exclusive times across repeated loops", () => {
     const plan = parseExplainPlan(ANALYZE_PLAN);
     expect(plan).not.toBeNull();
     expect(plan?.executionTimeMs).toBe(12.5);
@@ -56,8 +56,6 @@ describe("parseExplainPlan", () => {
     ]);
     // 10ms inclusive minus 6ms (seq scan) minus 2ms (index scan × 2 loops).
     expect(root?.exclusiveMs).toBeCloseTo(2);
-    expect(root?.share).toBeCloseTo(0.2);
-    expect(root?.children[0]?.share).toBeCloseTo(0.6);
     expect(root?.children[1]?.exclusiveMs).toBeCloseTo(2);
     expect(root?.children[1]?.indexName).toBe("orders_pkey");
   });
@@ -79,10 +77,56 @@ describe("parseExplainPlan", () => {
     expect(plan?.root).toMatchObject({
       exclusiveMs: undefined,
       nodeType: "Result",
-      share: undefined,
       totalCost: 0.01,
     });
     expect(plan?.executionTimeMs).toBeUndefined();
+  });
+
+  it("does not invent self time when worker times overlap", () => {
+    const plan = parseExplainPlan(
+      JSON.stringify([
+        {
+          Plan: {
+            "Node Type": "Gather",
+            "Actual Total Time": 10,
+            "Actual Loops": 1,
+            "Workers Planned": 2,
+            "Workers Launched": 2,
+            Plans: [
+              {
+                "Node Type": "Seq Scan",
+                "Parallel Aware": true,
+                "Actual Total Time": 6,
+                "Actual Loops": 3,
+              },
+            ],
+          },
+        },
+      ])
+    );
+    expect(plan?.root.exclusiveMs).toBeUndefined();
+    expect(plan?.root.children[0]?.exclusiveMs).toBeUndefined();
+    // Cumulative work may exceed the query's elapsed time. It is not a timeline.
+    expect(plan?.root.children[0]?.inclusiveMs).toBe(18);
+  });
+
+  it("does not attribute a child's missing timing to the parent", () => {
+    const plan = parseExplainPlan(
+      JSON.stringify([
+        {
+          Plan: {
+            "Node Type": "Sort",
+            "Actual Total Time": 10,
+            "Actual Loops": 1,
+            Plans: [
+              { "Node Type": "Seq Scan", "Actual Rows": 10, "Actual Loops": 1 },
+            ],
+          },
+        },
+      ])
+    );
+    expect(plan?.root.exclusiveMs).toBeUndefined();
+    expect(plan?.root.actualTotalMs).toBe(10);
   });
 
   it("returns null for text plans or malformed JSON", () => {

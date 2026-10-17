@@ -15,6 +15,7 @@ describe("sidebar navigation", () => {
     });
 
     expect(links["database.explorer"]).toBeUndefined();
+    expect(links["database.workbench"]).toBeUndefined();
   });
 
   test("provides a link for every database nav item", () => {
@@ -26,6 +27,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseOverview: true,
         databaseSql: false,
+        databaseWorkbench: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -71,6 +73,18 @@ describe("sidebar navigation", () => {
     });
   });
 
+  test("builds native link props for the SQL workbench", () => {
+    const links = buildNavLinkProps({
+      currentPage: "database.overview",
+      ids: { databaseId: "postgres", instanceId: "local" },
+    });
+
+    expect(links["database.workbench"]).toMatchObject({
+      params: { databaseId: "postgres", instanceId: "local" },
+      to: "/instances/$instanceId/databases/$databaseId/workbench",
+    });
+  });
+
   test("returns instance-only navigation until a database is selected", () => {
     const sections = getNavForScope({
       active: {
@@ -78,6 +92,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseOverview: false,
         databaseSql: false,
+        databaseWorkbench: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: true,
@@ -108,6 +123,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: false,
         databaseOverview: true,
         databaseSql: false,
+        databaseWorkbench: false,
         instanceActivity: false,
         instanceConfiguration: false,
         instanceOverview: false,
@@ -118,6 +134,7 @@ describe("sidebar navigation", () => {
         databaseExtensions: "/instances/local/databases/postgres/extensions",
         databaseOverview: "/instances/local/databases/postgres",
         databaseSql: "/instances/local/databases/postgres/sql",
+        databaseWorkbench: "/instances/local/databases/postgres/workbench",
         instanceActivity: "/instances/local/activity",
         instanceConfiguration: "/instances/local/configuration",
         instanceOverview: "/instances/local",
@@ -132,6 +149,7 @@ describe("sidebar navigation", () => {
     ]);
     expect(sections[1]?.items.map((item) => item.key)).toEqual([
       "database.overview",
+      "database.workbench",
       "database.extensions",
       "database.explorer",
       "database.sql",
