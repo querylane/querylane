@@ -55,16 +55,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Run Biome and shadcn lint
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run lint:changed
-      - name: Run React Doctor dead-code analysis
-        run: bun run doctor:dead-code
-      - name: Type check
-        run: bun run type:check
-      - name: Verify shadcn registry sync
-        run: bun run scripts/check-shadcn-registry-sync.ts
+      - parallel:
+          - name: Run Biome and shadcn lint
+            env:
+              QUALITY_BASE_REF: origin/${{ github.base_ref }}
+            run: bun run lint:changed
+          - name: Run React Doctor dead-code analysis
+            run: bun run doctor:dead-code
+          - name: Type check
+            run: bun run type:check
+          - name: Verify shadcn registry sync
+            run: bun run scripts/check-shadcn-registry-sync.ts
 
   unit:
     name: Frontend Unit
