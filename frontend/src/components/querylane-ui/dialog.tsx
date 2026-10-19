@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 const dialogContentPresentations = cva("", {
   variants: {
     presentation: {
+      "query-plan":
+        "flex h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-none flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-none",
       spacious: "gap-4",
       canvas: "gap-3 p-3 sm:p-4",
       compact: "p-4",

@@ -1027,6 +1027,51 @@ func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryPreservesTypedValue
 	}
 }
 
+func (s *PostgresEngineIntegrationTestSuite) TestExecuteQueryReadOnlyTransactionRejectsWrite() {
+	ctx := context.Background()
+
+	testDB := s.getTestDBConnection()
+	defer testDB.Close()
+
+	_, err := testDB.ExecContext(ctx, "CREATE TABLE read_only_guard_probe (id integer)")
+	s.Require().NoError(err)
+
+	statements := []string{
+		"INSERT INTO read_only_guard_probe (id) VALUES (1) RETURNING id",
+		"WITH inserted AS (INSERT INTO read_only_guard_probe (id) VALUES (2) RETURNING id) SELECT id FROM inserted",
+		"SELECT * INTO read_only_guard_copy FROM read_only_guard_probe",
+		"SELECT * FROM read_only_guard_probe FOR SHARE",
+		"SELECT * FROM read_only_guard_probe FOR KEY SHARE",
+		"SELECT * FROM read_only_guard_probe FOR UPDATE",
+		"SELECT * FROM read_only_guard_probe FOR NO KEY UPDATE",
+	}
+
+	for _, statement := range statements {
+		stream, executeErr := s.eng.ExecuteQuery(ctx, testDB, engine.ExecuteQueryParams{
+			Statement: statement,
+			Timeout:   time.Second,
+		})
+		if executeErr == nil {
+			for stream.Next() {
+			}
+
+			executeErr = stream.Err()
+			_ = stream.Close()
+		}
+
+		var classified *postgreserrors.Error
+		s.Require().ErrorAs(executeErr, &classified, statement)
+		s.Equal(postgreserrors.KindFailedPrecondition, classified.Classification().Kind, statement)
+		s.Equal("25006", classified.Classification().SQLState, statement)
+	}
+
+	var count int
+
+	err = testDB.QueryRowContext(ctx, "SELECT count(*) FROM read_only_guard_probe").Scan(&count)
+	s.Require().NoError(err)
+	s.Zero(count)
+}
+
 func (s *PostgresEngineIntegrationTestSuite) TestExplainQueryCapturesPostgresWarnings() {
 	ctx := context.Background()
 

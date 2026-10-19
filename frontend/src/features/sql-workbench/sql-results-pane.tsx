@@ -10,6 +10,7 @@ import {
   Table2,
   Waypoints,
 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { Tabs, TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
@@ -25,7 +26,6 @@ import {
   type ExportFormat,
   resultColumnKeys,
 } from "@/features/data-explorer/table-data/selection-formatters";
-import { ExplainPlanView } from "@/features/sql-workbench/explain-plan-view";
 import {
   describeCommandOutcome,
   gridEmptyState,
@@ -49,6 +49,12 @@ import type {
 import { downloadBlob } from "@/lib/download-blob";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
+
+const ExplainPlanView = lazy(() =>
+  import("@/features/query-plan/explain-plan-view").then((module) => ({
+    default: module.ExplainPlanView,
+  }))
+);
 
 function ResultsPlaceholder({
   description,
@@ -393,11 +399,20 @@ function PlanBody({ explain }: { explain: SqlExplain | undefined }) {
     );
   }
   return (
-    <ExplainPlanView
-      analyze={explain.analyze}
-      plan={explain.plan}
-      rawPlan={explain.rawPlan ?? ""}
-    />
+    <Suspense
+      fallback={
+        <ResultsPlaceholder
+          description="Loading the plan explorer."
+          icon={Loader2}
+          title="Loading plan"
+        />
+      }
+    >
+      <ExplainPlanView
+        analyze={explain.analyze}
+        rawPlan={explain.rawPlan ?? ""}
+      />
+    </Suspense>
   );
 }
 

@@ -14,13 +14,13 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/querylane-ui/button";
-import { useIsMobile } from "@/components/querylane-ui/use-mobile";
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/components/querylane-ui/drawer";
+import { useIsMobile } from "@/components/querylane-ui/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";

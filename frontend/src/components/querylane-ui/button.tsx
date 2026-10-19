@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 const buttonPresentations = cva("", {
   variants: {
     presentation: {
+      "plan-map-node":
+        "h-auto flex-col items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-lg border border-border bg-card p-0 text-left font-normal shadow-sm hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-2 aria-pressed:ring-chart-4/15",
+      "plan-work": "h-full min-w-0 shrink rounded-none p-0 hover:opacity-80",
       warning: "text-warning-600 hover:text-warning-700",
       quiet: "text-muted-foreground hover:text-foreground",
       "sidebar-action":
@@ -83,6 +86,7 @@ const buttonPresentations = cva("", {
       "sql-tab-close":
         "text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 group-data-[active=true]:opacity-100",
       "sql-list-row": "gap-1 rounded-md px-3 py-2",
+      "sql-plan-node": "py-1.5 pr-0 pl-0 font-normal hover:bg-transparent",
       // A filled button that leads a ButtonGroup: registry buttons carry a
       // transparent 1px border with a padding-box background, so at the
       // join the page shows through as a white line. Drop that edge.

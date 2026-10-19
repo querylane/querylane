@@ -108,7 +108,9 @@ export function DatabaseLayout({
   // fills the main area edge to edge, and hosts an object browser in the rail
   // like the explorer does.
   const isExplorerRoute =
-    page === "database.explorer" || page === "database.sql";
+    page === "database.explorer" ||
+    page === "database.sql" ||
+    page === "database.workbench";
   const isFullBleedRoute = isExplorerRoute;
   const mainPaddingClass = isFullBleedRoute ? "p-0" : "p-4 sm:p-6 lg:p-8";
   const mainOverflowClass = isFullBleedRoute

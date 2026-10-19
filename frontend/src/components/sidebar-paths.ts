@@ -28,6 +28,7 @@ function buildDatabasePaths(databaseBase?: string): SidebarPaths {
     databaseExtensions: `${databaseBase}/extensions`,
     databaseOverview: databaseBase,
     databaseSql: `${databaseBase}/sql`,
+    databaseWorkbench: `${databaseBase}/workbench`,
   };
 }
 
@@ -57,6 +58,7 @@ interface SidebarPaths {
   databaseExtensions?: string | undefined;
   databaseOverview?: string | undefined;
   databaseSql?: string | undefined;
+  databaseWorkbench?: string | undefined;
   instanceActivity?: string | undefined;
   instanceConfiguration?: string | undefined;
   instanceOverview?: string | undefined;
@@ -68,6 +70,7 @@ interface NavActiveState {
   databaseExtensions: boolean;
   databaseOverview: boolean;
   databaseSql: boolean;
+  databaseWorkbench: boolean;
   instanceActivity: boolean;
   instanceConfiguration: boolean;
   instanceOverview: boolean;
@@ -102,6 +105,7 @@ function buildNavActiveState({
     databaseExtensions: matchesPath(pathname, paths.databaseExtensions),
     databaseOverview: matchesPath(pathname, paths.databaseOverview),
     databaseSql: matchesPath(pathname, paths.databaseSql),
+    databaseWorkbench: matchesPath(pathname, paths.databaseWorkbench),
     instanceActivity: matchesPath(pathname, paths.instanceActivity),
     instanceConfiguration: matchesPath(pathname, paths.instanceConfiguration),
     instanceOverview: matchesPath(pathname, paths.instanceOverview),
