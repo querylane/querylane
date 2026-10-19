@@ -212,6 +212,7 @@ function contentAttributes(ariaLabel: string) {
   return EditorView.contentAttributes.of({
     "aria-label": ariaLabel,
     "aria-multiline": "true",
+    tabindex: "0",
     role: "textbox",
   });
 }

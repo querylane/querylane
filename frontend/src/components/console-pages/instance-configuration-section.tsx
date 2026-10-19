@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import {
@@ -38,6 +38,10 @@ import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
+import {
+  formErrorMessages,
+  labelRowErrors,
+} from "@/features/instance-label-errors";
 import { useProtoForm } from "@/hooks/use-proto-form";
 import {
   formatSslMode,
@@ -78,14 +82,14 @@ interface InstanceConfigurationFieldErrors {
 
 function focusInstanceConfigurationInvalidField(field: string) {
   waitForNextFrame().then(() => {
-    for (const element of document.querySelectorAll<HTMLElement>(
-      "[data-instance-config-field]"
-    )) {
-      if (element.dataset["instanceConfigField"] === field) {
-        element.focus();
-        return;
-      }
-    }
+    const fields = [
+      ...document.querySelectorAll<HTMLElement>("[data-instance-config-field]"),
+    ].filter((element) => element.dataset["instanceConfigField"] === field);
+    const target =
+      fields.find(
+        (element) => element.getAttribute("aria-invalid") === "true"
+      ) ?? fields[0];
+    target?.focus();
   });
 }
 
@@ -327,7 +331,7 @@ function InstanceConfigurationFields({
             >
               <SslModeSelectValue value={sslMode} />
             </SelectTrigger>
-            <SelectContent className="min-w-[22rem]">
+            <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
               <SslModeSelectItems />
             </SelectContent>
           </Select>
@@ -362,7 +366,7 @@ function InstanceConfigurationFields({
             >
               <SslNegotiationSelectValue value={sslNegotiation} />
             </SelectTrigger>
-            <SelectContent className="min-w-[22rem]">
+            <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
               <SslNegotiationSelectItems />
             </SelectContent>
           </Select>
@@ -406,6 +410,17 @@ function InstanceConfigurationSection({
     labelsToEntries(instance.labels)
   );
   const [labelsError, setLabelsError] = useState<string>();
+  const [labelFocusRequest, setLabelFocusRequest] = useState(0);
+  useEffect(
+    function focusRejectedLabelAfterCommit() {
+      if (labelFocusRequest > 0) {
+        focusInstanceConfigurationInvalidField("labels");
+      }
+    },
+    [labelFocusRequest]
+  );
+  const requestLabelFocus = () =>
+    setLabelFocusRequest((request) => request + 1);
   const credentialsUnreadable =
     instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
   const credentialKeyMissing =
@@ -431,7 +446,8 @@ function InstanceConfigurationSection({
       REQUIRED_ERROR_BY_FIELD.displayName
     ),
     host: localErrorMessage(errors.config?.host, REQUIRED_ERROR_BY_FIELD.host),
-    labels: labelsError ?? findFirstErrorMessage(errors.labels),
+    labels:
+      labelsError ?? (formErrorMessages(errors.labels).join("\n") || undefined),
     password: localErrorMessage(
       errors.config?.password,
       REQUIRED_ERROR_BY_FIELD.password
@@ -464,18 +480,24 @@ function InstanceConfigurationSection({
       shouldValidate: true,
     });
   };
+  const requestInvalidLabelFocus = () => {
+    if (form.getFieldState("labels").invalid) {
+      requestLabelFocus();
+    }
+  };
   const handleSaveClick = async () => {
     const hasBlankLabel = labels.some((label) => label.key.trim().length === 0);
     if (hasBlankLabel) {
       setLabelsError("Label keys cannot be empty.");
       onInvalidSave();
-      focusInstanceConfigurationInvalidField("labels");
+      requestLabelFocus();
       return;
     }
     normalizeInstanceProtoForm(form);
     const isValid = await form.trigger(undefined, { shouldFocus: true });
     if (!isValid) {
       onInvalidSave();
+      requestInvalidLabelFocus();
       return;
     }
     const update = createInstanceUpdate(form, instance);
@@ -486,6 +508,7 @@ function InstanceConfigurationSection({
     const error = await onSave(update.instance, update.updatePaths);
     if (error) {
       surfaceSaveError({ error, form, onInvalidSave });
+      requestInvalidLabelFocus();
     }
   };
 
@@ -533,6 +556,7 @@ function InstanceConfigurationSection({
         isConfigManaged={isConfigManaged}
         labels={labels}
         onChange={handleLabelsChange}
+        rowErrors={labelRowErrors(errors.labels, labels, labelsError)}
       />
 
       <InstanceConfigurationNotice formNotice={formNotice} />

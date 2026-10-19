@@ -38,7 +38,7 @@ import {
 
 type PillTone = "amber" | "blue" | "emerald" | "slate" | "violet";
 const PILL_TONE_CLASSES: Record<PillTone, string> = {
-  amber: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  amber: "bg-amber-500/15 text-amber-800 dark:text-amber-400",
   blue: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
   emerald: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   slate: "bg-muted text-muted-foreground",

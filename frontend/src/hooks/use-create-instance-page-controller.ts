@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { extractCreateInstanceFieldViolations } from "@/features/create-instance-field-violations";
+import { labelRowErrors } from "@/features/instance-label-errors";
 import {
   clearCreateInstanceProtoError,
   createCreateInstanceDefaultValues,
@@ -71,6 +72,10 @@ function withoutFieldError(
   field: CreateInstanceInvalidFieldName
 ) {
   const { [field]: _removed, ...remaining } = errors;
+  if (field === "labels") {
+    const { labelRows: _rows, ...withoutLabels } = remaining;
+    return withoutLabels;
+  }
   return remaining;
 }
 
@@ -182,6 +187,9 @@ export function useCreateInstancePageController(
     labels,
   });
   const formErrors = getCreateInstanceProtoErrors(form, supplementalErrors);
+  formErrors.labelRows =
+    supplementalErrors.labelRows ??
+    labelRowErrors(form.formState.errors.labels, labels);
   const workflowState = {
     ...initialWorkflow,
     formErrors,
@@ -210,6 +218,7 @@ export function useCreateInstancePageController(
   };
   const updateLabels = (nextLabels: CreateInstanceLabel[]) => {
     setLabels(nextLabels);
+    form.clearErrors("labels");
     form.setValue("labels", labelsToMap(nextLabels), {
       shouldDirty: true,
       shouldTouch: true,

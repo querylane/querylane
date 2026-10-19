@@ -1,5 +1,6 @@
 import { FileDescriptorSetSchema, ListValueSchema } from "@bufbuild/protobuf/wkt";
 import { describe, expect, it } from "@rstest/core";
+import { CreateInstanceSpecSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { protoPathToFormPath } from "./proto-error-path";
 
 describe("repeated server error paths", () => {
@@ -24,4 +25,15 @@ describe("repeated server error paths", () => {
       expect(protoPathToFormPath(FileDescriptorSetSchema, path)).toBeNull();
     }
   );
+});
+
+describe("map server error paths", () => {
+  it.each([
+    ['labels["team"]', "labels.team"],
+    ["labels.team", "labels.team"],
+    ['labels["team.example/owner"]', "labels.team.example/owner"],
+    ['labels["constructor"]', "labels.constructor"],
+  ])("maps %s without losing the label key", (path, expected) => {
+    expect(protoPathToFormPath(CreateInstanceSpecSchema, path)).toBe(expected);
+  });
 });

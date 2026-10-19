@@ -68,7 +68,9 @@ function recordFieldViolation<FieldName extends string>({
   const formField = mapField(violation.field);
   const description = violation.description || "Invalid value.";
   if (formField) {
-    fieldErrors[formField] ??= description;
+    fieldErrors[formField] = [fieldErrors[formField], description]
+      .filter(Boolean)
+      .join("\n");
     return;
   }
   generalErrors.push(

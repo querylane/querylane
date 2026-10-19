@@ -193,3 +193,31 @@ test("instance delete dialog and danger zone make destructive actions explicit",
     .toBeVisible();
   await expect.element(page.getByText("Delete instance").last()).toBeVisible();
 });
+
+test("invalid label values stay visible, prevent saving, and focus their row", async () => {
+  const onSave = rs.fn();
+  await renderInstanceConfigSurface(
+    <InstanceConfigurationSection
+      formNotice={null}
+      instance={createInstance()}
+      isConfigManaged={false}
+      onInvalidSave={rs.fn()}
+      onSave={onSave}
+      pending={false}
+    />
+  );
+  await page
+    .getByRole("textbox", { name: "Label value 2" })
+    .fill("x".repeat(256));
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect
+    .element(page.getByRole("textbox", { name: "Label key 2" }))
+    .toHaveAttribute("aria-invalid", "true");
+  await expect
+    .element(page.getByRole("textbox", { name: "Label key 1" }))
+    .toHaveAttribute("aria-invalid", "false");
+  await expect
+    .element(page.getByRole("textbox", { name: "Label key 2" }))
+    .toBeFocused();
+  expect(onSave).not.toHaveBeenCalled();
+});

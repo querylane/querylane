@@ -1,25 +1,30 @@
 "use client";
+import { Plus } from "lucide-react";
 
-import { Plus, X } from "lucide-react";
+import { useId } from "react";
 import {
   createLabelEntry,
   type InstanceLabelEntry,
 } from "@/components/console-pages/instance-config-model";
-import { FieldError } from "@/components/console-pages/instance-configuration-field-error";
+import { InstanceLabelRow } from "@/components/instance-label-row";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { unassignedLabelMessages } from "@/features/instance-label-errors";
 
 export function InstanceConfigurationLabels({
   error,
+  rowErrors = {},
   isConfigManaged,
   labels,
   onChange,
 }: {
   error?: string | undefined;
+  rowErrors?: Record<string, string[]> | undefined;
   isConfigManaged: boolean;
   labels: InstanceLabelEntry[];
   onChange: (labels: InstanceLabelEntry[]) => void;
 }) {
+  const errorId = useId();
+  const generalMessages = unassignedLabelMessages(error, rowErrors);
   return (
     <div className="mt-6 space-y-3 border-t pt-4">
       <div className="flex items-center justify-between">
@@ -47,64 +52,42 @@ export function InstanceConfigurationLabels({
       {labels.length > 0 ? (
         <div className="space-y-2">
           {labels.map((label, index) => (
-            <div className="flex gap-2" key={label.id}>
-              <Input
-                aria-invalid={Boolean(error && label.key.trim().length === 0)}
-                aria-label={`Label key ${index + 1}`}
-                data-instance-config-field={index === 0 ? "labels" : undefined}
-                disabled={isConfigManaged}
-                onChange={(event) => {
-                  const next = [...labels];
-                  const currentLabel = next[index];
-                  if (!currentLabel) {
-                    return;
-                  }
-                  next[index] = {
-                    ...currentLabel,
-                    key: event.target.value,
-                  };
-                  onChange(next);
-                }}
-                placeholder="Key"
-                value={label.key}
-              />
-              <Input
-                aria-label={`Label value ${index + 1}`}
-                disabled={isConfigManaged}
-                onChange={(event) => {
-                  const next = [...labels];
-                  const currentLabel = next[index];
-                  if (!currentLabel) {
-                    return;
-                  }
-                  next[index] = {
-                    ...currentLabel,
-                    value: event.target.value,
-                  };
-                  onChange(next);
-                }}
-                placeholder="Value"
-                value={label.value}
-              />
-              {isConfigManaged ? null : (
-                <Button
-                  aria-label="Remove label"
-                  onClick={() => onChange(labels.filter((_, i) => i !== index))}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <X className="size-4" />
-                  <span className="sr-only">Remove label</span>
-                </Button>
-              )}
-            </div>
+            <InstanceLabelRow
+              configurationField="labels"
+              disabled={isConfigManaged}
+              errorId={`${errorId}-${label.id}`}
+              index={index}
+              key={label.id}
+              label={label}
+              messages={rowErrors[label.id]}
+              onChange={(updated) =>
+                onChange(
+                  labels.map((entry) =>
+                    entry.id === label.id ? updated : entry
+                  )
+                )
+              }
+              onRemove={
+                isConfigManaged
+                  ? undefined
+                  : () =>
+                      onChange(labels.filter((entry) => entry.id !== label.id))
+              }
+            />
           ))}
         </div>
       ) : (
         <p className="text-muted-foreground text-xs">No labels configured.</p>
       )}
-      <FieldError error={error} />
+      {generalMessages.length > 0 ? (
+        <p
+          className="whitespace-pre-line text-destructive text-xs"
+          id={errorId}
+          role="alert"
+        >
+          {generalMessages.join("\n")}
+        </p>
+      ) : null}
     </div>
   );
 }

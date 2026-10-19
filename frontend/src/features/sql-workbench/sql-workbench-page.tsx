@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useSidebar } from "@/components/querylane-ui/sidebar";
+import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -317,7 +318,16 @@ function SqlWorkbench({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <Tabs
+      className="h-full min-h-0 min-w-0 flex-1"
+      onValueChange={(tabId) => {
+        if (typeof tabId === "string") {
+          store.setActiveTab(scope, tabId);
+        }
+      }}
+      presentation="flush"
+      value={activeTab.id}
+    >
       <ExplorerSidebarPortal>
         <SqlCatalogRail
           databaseId={databaseId}
@@ -334,70 +344,74 @@ function SqlWorkbench({
           execution.clear(tabId);
           store.closeTab(scope, tabId);
         }}
-        onSelect={(tabId) => store.setActiveTab(scope, tabId)}
         runningTabIds={runningTabIds}
         tabs={tabs}
       />
-      <SqlWorkbenchToolbar
-        canRun={activeTab.text.trim().length > 0}
-        historyCount={history.length}
-        isExplaining={isExplaining}
-        isRunning={isRunning}
-        onCancel={() => execution.cancel(activeTab.id)}
-        onCancelExplain={() => execution.cancelExplain(activeTab.id)}
-        onExplain={explain}
-        onFormat={formatCurrent}
-        onOpenHistory={() => setHistoryOpen(true)}
-        onRowLimitChange={setRowLimit}
-        onRun={runCurrent}
-        onRunAll={runAll}
-        onSave={() => setSaveOpen(true)}
-        rowLimit={rowLimit}
-        schemaSelect={
-          <SqlSchemaSelect
-            databaseId={databaseId}
-            instanceId={instanceId}
-            onChange={(next) =>
-              store.updateTabSchema(scope, activeTab.id, next)
-            }
-            value={activeTab.defaultSchema}
-          />
-        }
-        statementCount={statements.length}
-      />
-      <ResizablePanelGroup className="min-h-0 flex-1" orientation="vertical">
-        <ResizablePanel defaultSize="42" minSize="15">
-          <div className="flex h-full min-h-0 flex-col">
-            <SqlEditor
-              ariaLabel={`SQL editor, ${activeTab.title}`}
-              completionScope={completionScope}
-              defaultSchema={activeTab.defaultSchema}
-              key={activeTab.id}
-              onChange={(text) =>
-                store.updateTabText(scope, activeTab.id, text)
+      <TabsContent
+        className="flex min-h-0 flex-1 flex-col"
+        value={activeTab.id}
+      >
+        <SqlWorkbenchToolbar
+          canRun={activeTab.text.trim().length > 0}
+          historyCount={history.length}
+          isExplaining={isExplaining}
+          isRunning={isRunning}
+          onCancel={() => execution.cancel(activeTab.id)}
+          onCancelExplain={() => execution.cancelExplain(activeTab.id)}
+          onExplain={explain}
+          onFormat={formatCurrent}
+          onOpenHistory={() => setHistoryOpen(true)}
+          onRowLimitChange={setRowLimit}
+          onRun={runCurrent}
+          onRunAll={runAll}
+          onSave={() => setSaveOpen(true)}
+          rowLimit={rowLimit}
+          schemaSelect={
+            <SqlSchemaSelect
+              databaseId={databaseId}
+              instanceId={instanceId}
+              onChange={(next) =>
+                store.updateTabSchema(scope, activeTab.id, next)
               }
-              onFormat={formatCurrent}
-              onRunAll={runAll}
-              onRunCurrent={runCurrent}
-              placeholder={EDITOR_PLACEHOLDER}
-              ref={editorRef}
-              schema={schema}
-              validate={validate}
-              value={activeTab.text}
+              value={activeTab.defaultSchema}
             />
-          </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle={true} />
-        <ResizablePanel defaultSize="58" minSize="20">
-          <SqlResultsPane
-            activeTab={resultsTab}
-            execution={activeExecution}
-            explain={activeExplain}
-            onRetry={retryActiveExecution}
-            onTabChange={setResultsTab}
-          />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          }
+          statementCount={statements.length}
+        />
+        <ResizablePanelGroup className="min-h-0 flex-1" orientation="vertical">
+          <ResizablePanel defaultSize="42" minSize="15">
+            <div className="flex h-full min-h-0 flex-col">
+              <SqlEditor
+                ariaLabel={`SQL editor, ${activeTab.title}`}
+                completionScope={completionScope}
+                defaultSchema={activeTab.defaultSchema}
+                key={activeTab.id}
+                onChange={(text) =>
+                  store.updateTabText(scope, activeTab.id, text)
+                }
+                onFormat={formatCurrent}
+                onRunAll={runAll}
+                onRunCurrent={runCurrent}
+                placeholder={EDITOR_PLACEHOLDER}
+                ref={editorRef}
+                schema={schema}
+                validate={validate}
+                value={activeTab.text}
+              />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle={true} />
+          <ResizablePanel defaultSize="58" minSize="20">
+            <SqlResultsPane
+              activeTab={resultsTab}
+              execution={activeExecution}
+              explain={activeExplain}
+              onRetry={retryActiveExecution}
+              onTabChange={setResultsTab}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </TabsContent>
       <SqlHistorySheet
         history={history}
         onClearHistory={() => store.clearHistory(scope)}
@@ -420,7 +434,7 @@ function SqlWorkbench({
           statement={activeTab.text}
         />
       ) : null}
-    </div>
+    </Tabs>
   );
 }
 

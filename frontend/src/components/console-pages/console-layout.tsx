@@ -149,7 +149,7 @@ export function InstanceStatItem({
           ) : null}
         </div>
         {progress === undefined ? null : (
-          <Progress density="compact" value={progress} />
+          <Progress aria-label={label} density="compact" value={progress} />
         )}
       </div>
     </div>

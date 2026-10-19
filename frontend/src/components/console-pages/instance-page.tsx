@@ -424,8 +424,8 @@ function InstancePageHeader({
     <>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="min-w-0 text-balance break-words font-semibold text-2xl text-foreground tracking-tight">
+          <div className="flex min-w-0 max-w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="min-w-0 text-balance font-semibold text-2xl text-foreground tracking-tight [overflow-wrap:anywhere]">
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">

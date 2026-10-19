@@ -124,7 +124,7 @@ function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
   return (
     <div className="mt-2 ml-4 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
       <Badge variant="outline">waiting · pid {row.pid}</Badge>
-      <div className="min-w-0 flex-1 opacity-80">
+      <div className="min-w-0 flex-1">
         <SqlCodeBlock
           copyable={false}
           presentation="compact"

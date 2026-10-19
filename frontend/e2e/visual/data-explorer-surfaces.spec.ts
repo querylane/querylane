@@ -151,7 +151,9 @@ test.describe("schema map", () => {
     const edges = [
       "shipments.carrier_id references carriers.id",
       "containers.shipment_id references shipments.id",
-    ].map((label) => page.locator(`path[aria-label="${label}"]`));
+    ].map((label) =>
+      page.getByRole("img", { exact: true, name: label }).locator("path")
+    );
     await Promise.all(
       edges.flatMap((edge) => [
         expect(edge).toHaveCSS("animation-duration", "0.5s"),

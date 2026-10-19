@@ -52,6 +52,7 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
   } = props;
   return (
     <Tabs
+      className="min-w-0"
       onValueChange={(value) => {
         if (isSection(value)) {
           setSection(value);
@@ -59,28 +60,30 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
       }}
       value={section}
     >
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="grants">
-          Grants
-          {grantsReady && (grantObjects.length > 0 || grantsPartial) ? (
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {grantObjects.length}
-              {grantsPartial ? " Partial" : ""}
-            </span>
-          ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="members">
-          Membership
-          {belongsTo.length + memberRows.length > 0 ? (
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {belongsTo.length + memberRows.length}
-            </span>
-          ) : null}
-        </TabsTrigger>
-        <TabsTrigger value="access-map">Access map</TabsTrigger>
-        <TabsTrigger value="definition">Definition</TabsTrigger>
-      </TabsList>
+      <div className="min-w-0 overflow-x-auto">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="grants">
+            Grants
+            {grantsReady && (grantObjects.length > 0 || grantsPartial) ? (
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {grantObjects.length}
+                {grantsPartial ? " Partial" : ""}
+              </span>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="members">
+            Membership
+            {belongsTo.length + memberRows.length > 0 ? (
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {belongsTo.length + memberRows.length}
+              </span>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="access-map">Access map</TabsTrigger>
+          <TabsTrigger value="definition">Definition</TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent className="mt-3" value="overview">
         <RoleOverviewTab {...props} />

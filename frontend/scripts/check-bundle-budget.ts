@@ -44,7 +44,9 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // Measured core: 971.6 -> 1005.8 KiB; initial stays ~325 KiB (budget: 450).
 // 1015 (was 1010): approved +5 KiB for the lazy-loaded SQL plan explorer.
 // Measured core: 1013.6 KiB; initial: 334.4 KiB (+0.5, budget unchanged).
-const MAX_TOTAL_GZIP_KIB = 1015;
+// 1018 (was 1015): accessible SQL tabs and complete, row-linked label errors.
+// Measured core: 1013.8 -> 1016.6 KiB; initial remains 334.3 KiB.
+const MAX_TOTAL_GZIP_KIB = 1018;
 
 interface BundleBudgetAsset {
   brotli: number;

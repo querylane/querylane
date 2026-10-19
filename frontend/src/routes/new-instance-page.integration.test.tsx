@@ -119,6 +119,125 @@ afterEach(() => {
 });
 
 describe("create instance backend field violations", () => {
+  test("rejects malformed labels locally and focuses the invalid row", async () => {
+    const user = userEvent.setup();
+    const testConnection = rs.fn(async () => ({}));
+    renderCreateInstancePage({
+      createInstance: async () => ({}),
+      testInstanceConnection: testConnection,
+    });
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "Staging" },
+    });
+    fireEvent.change(screen.getByLabelText("Host"), {
+      target: { value: "db.example.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "secret" },
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Show advanced options" })
+    );
+    await user.click(screen.getByRole("button", { name: "Add label" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+      target: { value: "invalid key" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Label value 1" }), {
+      target: { value: "x".repeat(256) },
+    });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("alert")
+          .map((alert) => alert.textContent)
+          .join(" ")
+      ).toContain("255")
+    );
+    expect(
+      screen
+        .getAllByRole("alert")
+        .map((alert) => alert.textContent)
+        .join(" ")
+    ).toContain("regex pattern");
+    expect(testConnection).not.toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole("textbox", { name: "Label key 1" })
+        .getAttribute("aria-invalid")
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("textbox", { name: "Label value 1" })
+        .getAttribute("aria-invalid")
+    ).toBe("true");
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Label key 1" })
+    );
+  });
+
+  test.each(["team.example/owner", "constructor"])(
+    "keeps every server label violation associated with the %s row",
+    async (key) => {
+      const user = userEvent.setup();
+      renderCreateInstancePage({
+        createInstance: () =>
+          Promise.reject(
+            new ConnectError(
+              "invalid labels",
+              Code.InvalidArgument,
+              undefined,
+              [
+                {
+                  desc: BadRequestSchema,
+                  value: createProto(BadRequestSchema, {
+                    fieldViolations: [
+                      {
+                        field: `spec.labels[${JSON.stringify(key)}]`,
+                        description: "This label is reserved.",
+                      },
+                      {
+                        field: `spec.labels[${JSON.stringify(key)}]`,
+                        description: "Label value is not allowed here.",
+                      },
+                    ],
+                  }),
+                },
+              ]
+            )
+          ),
+      });
+      await fillAndTestConnection(user);
+      await user.click(
+        screen.getByRole("button", { name: "Show advanced options" })
+      );
+      await user.click(screen.getByRole("button", { name: "Add label" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+        target: { value: "env" },
+      });
+      await user.click(screen.getByRole("button", { name: "Add label" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "Label key 2" }), {
+        target: { value: key },
+      });
+      await user.click(screen.getByRole("button", { name: "Create instance" }));
+      await waitFor(() =>
+        expect(
+          screen.getByText("Label value is not allowed here.")
+        ).toBeTruthy()
+      );
+      expect(screen.getByText("This label is reserved.")).toBeTruthy();
+      const rejected = screen.getByRole("textbox", { name: "Label key 2" });
+      expect(rejected.getAttribute("aria-invalid")).toBe("true");
+      expect(
+        screen
+          .getByRole("textbox", { name: "Label key 1" })
+          .getAttribute("aria-invalid")
+      ).not.toBe("true");
+      expect(document.activeElement).toBe(rejected);
+      expect(rejected.getAttribute("aria-describedby")).toBeTruthy();
+    }
+  );
+
   test("maps BadRequest violations onto the matching form fields", async () => {
     const user = userEvent.setup();
     renderCreateInstancePage({
@@ -260,4 +379,45 @@ describe("create instance backend field violations", () => {
       screen.getByLabelText("Host").getAttribute("aria-invalid")
     ).toBeNull();
   });
+});
+
+test("valid prototype-like label keys cannot bypass value validation", async () => {
+  const user = userEvent.setup();
+  const testConnection = rs.fn(async () => ({}));
+  renderCreateInstancePage({
+    createInstance: async () => ({}),
+    testInstanceConnection: testConnection,
+  });
+  fireEvent.change(screen.getByLabelText("Display name"), {
+    target: { value: "Staging" },
+  });
+  fireEvent.change(screen.getByLabelText("Host"), {
+    target: { value: "db.example.test" },
+  });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "secret" },
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Show advanced options" })
+  );
+  await user.click(screen.getByRole("button", { name: "Add label" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+    target: { value: "constructor" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Label value 1" }), {
+    target: { value: "x".repeat(256) },
+  });
+  await user.click(screen.getByRole("button", { name: "Test connection" }));
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("alert")
+        .map((alert) => alert.textContent)
+        .join(" ")
+    ).toContain("255")
+  );
+  expect(testConnection).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: "Label key 1" })
+  );
 });

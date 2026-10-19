@@ -372,11 +372,12 @@ test("backend instance activity matches the live sessions redesign", async () =>
   if (!waitingSql) {
     throw new Error("Missing highlighted waiting-session SQL");
   }
-  const waitingSqlContainer = waitingSql.closest(".opacity-80");
-  if (!waitingSqlContainer) {
-    throw new Error("Missing muted waiting-session SQL container");
+  // Any ancestor opacity also fades highlighted text and breaks contrast.
+  let sqlAncestor: Element | null = waitingSql;
+  while (sqlAncestor) {
+    expect(getComputedStyle(sqlAncestor).opacity).toBe("1");
+    sqlAncestor = sqlAncestor.parentElement;
   }
-  expect(getComputedStyle(waitingSqlContainer).opacity).toBe("0.8");
   const tableSql = document.querySelector(
     'table code.language-sql[data-syntax-highlighter="shiki"]'
   );
