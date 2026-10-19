@@ -2,7 +2,7 @@
 
 import sql from "@shikijs/langs/sql";
 import githubDark from "@shikijs/themes/github-dark";
-import githubLight from "@shikijs/themes/github-light";
+import githubLight from "@shikijs/themes/github-light-high-contrast";
 import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
 import { createHighlighterCoreSync } from "shiki/core";
@@ -23,7 +23,7 @@ let sqlHighlighter: ReturnType<typeof createHighlighterCoreSync> | undefined;
 
 const SQL_THEMES = {
   dark: "github-dark",
-  light: "github-light",
+  light: "github-light-high-contrast",
 } as const;
 const MAX_CACHED_SQL_QUERIES = 500;
 const SQL_TOKEN_CACHE = new Map<string, ThemedTokenWithVariants[][]>();

@@ -12,6 +12,7 @@ import {
   humanizeValidationError,
   isGenericValidationMessage,
 } from "../../lib/protobuf-provider/humanize-validation-error.js";
+import { formErrorTarget, type FormErrorMessage } from "../../lib/protobuf-provider/map-error-target.js";
 import { createDescriptorAwareStandardSchema } from "../../lib/protobuf-provider/validation-schema.js";
 
 export interface ProtoResolverOptions<Desc extends DescMessage = DescMessage> {
@@ -49,26 +50,31 @@ export function createProtoResolver<Desc extends DescMessage>(
       };
     }
 
-    const rawErrors: Record<string, { message: string; isGeneric: boolean }> = {};
+    const rawErrors: Record<string, { message: string; isGeneric: boolean; messages: FormErrorMessage[] }> = {};
     for (const issue of validationResult.issues) {
       if (issue.path.length === 0) {
         continue;
       }
-      const path = issue.path.join(".");
+      const { path, criterion } = formErrorTarget(desc, issue.path);
       const generic = isGenericValidationMessage(issue.message);
       const existing = rawErrors[path];
       if (!existing) {
-        rawErrors[path] = { isGeneric: generic, message: issue.message };
-      } else if (existing.isGeneric && !generic) {
-        rawErrors[path] = { isGeneric: false, message: issue.message };
+        rawErrors[path] = { isGeneric: generic, message: issue.message, messages: [{ message: issue.message, criterion }] };
+      } else {
+        existing.messages.push({ message: issue.message, criterion });
+        if (existing.isGeneric && !generic) {
+          existing.isGeneric = false;
+          existing.message = issue.message;
+        }
       }
     }
 
-    const flatErrors: Record<string, { message: string; type: string }> = {};
+    const flatErrors: Record<string, { message: string; type: string; types: Record<string, string> }> = {};
     for (const [path, entry] of Object.entries(rawErrors)) {
       flatErrors[path] = {
         message: humanizeValidationError(entry.message, options.formatMessage),
         type: "validation",
+        types: Object.fromEntries(entry.messages.map(({ message, criterion }, index) => [`${criterion ?? ""}${index}`, humanizeValidationError(message, options.formatMessage)])),
       };
     }
 

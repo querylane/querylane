@@ -7,7 +7,7 @@ const roleTone = cva("", {
       group: "bg-muted text-muted-foreground",
       login: "bg-primary/10 text-primary",
       repl: "bg-permission-500/15 text-permission-700 dark:text-permission-400",
-      super: "bg-warning-500/15 text-warning-700 dark:text-warning-400",
+      super: "bg-warning-500/15 text-warning-800 dark:text-warning-400",
     },
   },
 });

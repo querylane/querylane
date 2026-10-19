@@ -905,6 +905,12 @@ function normalizeIssuePath(
         continue;
       }
 
+      if (!Array.isArray(values[matchedField.localName]) && (typeof mapKey === "string" || typeof mapKey === "number")) {
+        normalizedPath.push(mapKey);
+        index += 1;
+        currentDesc = matchedField.message;
+        continue;
+      }
       return normalizedPath;
     }
 

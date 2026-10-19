@@ -1,5 +1,5 @@
 import { DangerZoneSection } from "@/components/danger-zone-section";
-import { InlineCode } from "@/components/ui/inline-code";
+import { InlineCode } from "@/components/querylane-ui/inline-code";
 
 export function InstanceDangerZoneSection({
   deleteDisabledReason = null,

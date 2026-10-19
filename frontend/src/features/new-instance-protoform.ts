@@ -1,5 +1,8 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import type { FieldError } from "react-hook-form";
+import {
+  formErrorMessages,
+  labelRowErrors,
+} from "@/features/instance-label-errors";
 import type {
   CreateInstanceFormState,
   CreateInstanceLabel,
@@ -171,33 +174,33 @@ function clearCreateInstanceProtoError(
   }
 }
 
-function errorMessage(error: FieldError | undefined): string | undefined {
-  return typeof error?.message === "string" ? error.message : undefined;
+function errorMessage(error: unknown): string | undefined {
+  return formErrorMessages(error).join("\n") || undefined;
 }
+
+const PROTO_FIELDS = [
+  ["database", "config.database"],
+  ["displayName", "displayName"],
+  ["host", "config.host"],
+  ["password", "config.password"],
+  ["port", "config.port"],
+  ["sslMode", "config.sslMode"],
+  ["sslNegotiation", "config.sslNegotiation"],
+  ["username", "config.username"],
+  ["labels", "labels"],
+] as const;
 
 function getCreateInstanceProtoErrors(
   form: CreateInstanceProtoForm,
   supplementalErrors: CreateInstanceFormErrors
 ): CreateInstanceFormErrors {
-  const { errors } = form.formState;
   const protoErrors: CreateInstanceFormErrors = {};
-  const include = (
-    field: CreateInstanceInvalidFieldName,
-    error: FieldError | undefined
-  ) => {
-    const message = errorMessage(error);
+  for (const [field, path] of PROTO_FIELDS) {
+    const message = errorMessage(form.getFieldState(path).error);
     if (message) {
       protoErrors[field] = message;
     }
-  };
-  include("database", errors.config?.database);
-  include("displayName", errors.displayName);
-  include("host", errors.config?.host);
-  include("password", errors.config?.password);
-  include("port", errors.config?.port);
-  include("sslMode", errors.config?.sslMode);
-  include("sslNegotiation", errors.config?.sslNegotiation);
-  include("username", errors.config?.username);
+  }
   return { ...protoErrors, ...supplementalErrors };
 }
 
@@ -227,26 +230,12 @@ async function validateCreateInstanceProtoForm(
   await form.trigger();
 
   const friendlyErrors = validateCreateInstanceForm(formState).errors;
-  const errors: CreateInstanceFormErrors = { ...friendlyErrors };
-  const fieldErrors = form.formState.errors;
-  const include = (
-    field: CreateInstanceInvalidFieldName,
-    error: FieldError | undefined
-  ) => {
-    const message = friendlyErrors[field] ?? errorMessage(error);
-    if (!errors[field] && error && message) {
-      errors[field] = message;
-    }
-  };
-  include("displayName", fieldErrors.displayName);
-  include("host", fieldErrors.config?.host);
-  include("port", fieldErrors.config?.port);
-  include("database", fieldErrors.config?.database);
-  include("username", fieldErrors.config?.username);
-  include("password", fieldErrors.config?.password);
-  include("sslMode", fieldErrors.config?.sslMode);
-  include("sslNegotiation", fieldErrors.config?.sslNegotiation);
-
+  const errors = getCreateInstanceProtoErrors(form, friendlyErrors);
+  errors.labelRows = labelRowErrors(
+    form.getFieldState("labels").error,
+    formState.labels,
+    friendlyErrors.labels
+  );
   return {
     errors,
     firstInvalidField: FOCUS_ORDER.find((field) => errors[field]) ?? null,

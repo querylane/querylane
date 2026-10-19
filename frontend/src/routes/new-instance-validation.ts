@@ -28,7 +28,7 @@ type CreateInstanceFieldName = Exclude<
 type CreateInstanceInvalidFieldName = CreateInstanceFieldName | "labels";
 type CreateInstanceFormErrors = Partial<
   Record<CreateInstanceInvalidFieldName, string>
->;
+> & { labelRows?: Record<string, string[]> };
 interface CreateInstanceValidationResult {
   errors: CreateInstanceFormErrors;
   firstInvalidField: CreateInstanceInvalidFieldName | null;

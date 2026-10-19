@@ -742,7 +742,7 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
   await page.getByRole("button", { name: "shipping.shipments" }).click();
 
   const relationshipPath = (label: string) => {
-    const path = document.querySelector(`path[aria-label="${label}"]`);
+    const path = document.querySelector(`svg[aria-label="${label}"] path`);
     if (!(path instanceof SVGPathElement)) {
       throw new Error(`Expected the ${label} relationship to render.`);
     }

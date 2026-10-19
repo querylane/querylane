@@ -388,7 +388,11 @@ function DatabaseSelect({
       }}
       value={value}
     >
-      <SelectTrigger size="sm">
+      <SelectTrigger
+        aria-label="Grants database"
+        className="max-w-full"
+        size="sm"
+      >
         <Database className="size-3.5 text-muted-foreground" />
         <SelectValue placeholder="Select database" />
       </SelectTrigger>
@@ -534,10 +538,10 @@ function GrantsTopBar({
   showBadge: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1">{left}</div>
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 basis-full sm:flex-1 sm:basis-0">{left}</div>
       {databases.length > 0 ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
           {showBadge && !grantsPartial ? (
             <HeadlineBadge kind={kind} objects={objects} />
           ) : null}

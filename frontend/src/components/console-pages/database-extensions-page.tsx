@@ -71,7 +71,9 @@ function StatusCell({ extension }: { extension: PresentedExtension }) {
       <span
         className={cn(
           "text-xs",
-          installed ? "font-medium text-success" : "text-muted-foreground"
+          installed
+            ? "font-medium text-positive-700 dark:text-positive-300"
+            : "text-muted-foreground"
         )}
       >
         {extension.statusLabel}
@@ -233,7 +235,7 @@ function DrawerStatusHero({ extension }: { extension: PresentedExtension }) {
       .join(" · ");
     return (
       <div className="rounded-lg border border-success/30 bg-success/5 p-3">
-        <p className="flex items-center gap-2 font-medium text-sm text-success">
+        <p className="flex items-center gap-2 font-medium text-positive-700 text-sm dark:text-positive-300">
           <span aria-hidden="true" className="size-2 rounded-full bg-success" />
           Installed · {extension.installedVersion || extension.versionLabel}
         </p>

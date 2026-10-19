@@ -597,23 +597,28 @@ function SchemaMapCanvas({
           const isDimmed = selectedTable !== null && !isConnected;
 
           return (
-            <path
+            <svg
               aria-label={`${edge.fromLabel} references ${edge.toLabel}`}
-              className={cn(
-                TONE_CLASSES[edge.tone].edge,
-                selectedTable === null && "opacity-50",
-                isConnected && cn(styles["connected-edge"], "opacity-95"),
-                isDimmed && "opacity-10"
-              )}
-              d={edge.d}
-              fill="none"
+              className="overflow-visible"
               key={edge.id}
-              strokeDasharray={isConnected ? "7 5" : undefined}
-              strokeLinecap="round"
-              strokeWidth={
-                isConnected ? SELECTED_EDGE_STROKE_WIDTH : EDGE_STROKE_WIDTH
-              }
-            />
+              role="img"
+            >
+              <path
+                className={cn(
+                  TONE_CLASSES[edge.tone].edge,
+                  selectedTable === null && "opacity-50",
+                  isConnected && cn(styles["connected-edge"], "opacity-95"),
+                  isDimmed && "opacity-10"
+                )}
+                d={edge.d}
+                fill="none"
+                strokeDasharray={isConnected ? "7 5" : undefined}
+                strokeLinecap="round"
+                strokeWidth={
+                  isConnected ? SELECTED_EDGE_STROKE_WIDTH : EDGE_STROKE_WIDTH
+                }
+              />
+            </svg>
           );
         })}
         {model.viewNodes.map((node) => (

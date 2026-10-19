@@ -24,6 +24,7 @@ import {
   type ProtoFormOptions,
   protoToFormValues,
 } from "../../lib/protobuf-provider/hook-runtime.js";
+import { formErrorTarget, type FormErrorMessage } from "../../lib/protobuf-provider/map-error-target.js";
 import { humanizeServerFieldError } from "../../lib/protobuf-provider/humanize-validation-error.js";
 
 import { protoPathToFormPath } from "./proto-error-path.js";
@@ -253,7 +254,7 @@ export function useProtoForm<Desc extends DescMessage>(
     }
     const unmapped: { field: string; description: string }[] = [];
     let handled = false;
-    const fieldMessages = new Map<string, string[]>();
+    const fieldMessages = new Map<string, FormErrorMessage[]>();
     for (const violation of extractFieldViolations(error)) {
       const bare = stripPrefix(violation.field, pathPrefixes);
       const formPath = protoPathToFormPath(schema, bare);
@@ -261,18 +262,21 @@ export function useProtoForm<Desc extends DescMessage>(
         unmapped.push(violation);
         continue;
       }
-      fieldMessages.set(formPath, [
-        ...(fieldMessages.get(formPath) ?? []),
-        humanizeServerFieldError(violation.description),
+      const mapField = schema.fields.find((field) => field.fieldKind === "map" && formPath.startsWith(`${field.localName}.`));
+      const segments = mapField ? [mapField.localName, formPath.slice(mapField.localName.length + 1)] : [formPath];
+      const { path, criterion } = formErrorTarget(schema, segments);
+      fieldMessages.set(path, [
+        ...(fieldMessages.get(path) ?? []),
+        { message: humanizeServerFieldError(violation.description), criterion },
       ]);
     }
     for (const [path, messages] of fieldMessages) {
       form.setError(
         path as FieldPath<ProtoFormShape<Desc>>,
         {
-          message: messages[0] ?? "",
+          message: messages[0]?.message ?? "",
           type: "server",
-          types: Object.fromEntries(messages.map((message, index) => [String(index), message])),
+          types: Object.fromEntries(messages.map(({ message, criterion }, index) => [`${criterion ?? ""}${index}`, message])),
         },
         handled ? undefined : { shouldFocus: true }
       );

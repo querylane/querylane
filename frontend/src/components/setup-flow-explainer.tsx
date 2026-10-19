@@ -65,7 +65,7 @@ function getToneClasses(tone: SetupFlowExplainerTone) {
     body: "text-white/58",
     grid: "rounded-2xl",
     inactiveCard: "border-white/10 bg-white/3",
-    inactiveKicker: "text-white/44",
+    inactiveKicker: "text-white/50",
     title: "font-semibold text-base text-white",
   };
 }

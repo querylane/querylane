@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
+import { InlineCode } from "@/components/querylane-ui/inline-code";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { InlineCode } from "@/components/ui/inline-code";
 import { Input } from "@/components/ui/input";
 
 export function InstanceDeleteDialog({
@@ -43,7 +43,7 @@ export function InstanceDeleteDialog({
       }}
       open={open}
     >
-      <AlertDialogContent>
+      <AlertDialogContent className="min-w-0 [overflow-wrap:anywhere] [&>*]:min-w-0">
         <AlertDialogHeader>
           <AlertDialogTitle>Delete instance?</AlertDialogTitle>
           <AlertDialogDescription>

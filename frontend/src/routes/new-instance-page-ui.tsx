@@ -1,5 +1,6 @@
 import { ArrowLeft, Loader2, Plus, Unplug } from "lucide-react";
 import { useId } from "react";
+import { InstanceLabelRow } from "@/components/instance-label-row";
 import {
   Accordion,
   AccordionContent,
@@ -13,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { unassignedLabelMessages } from "@/features/instance-label-errors";
 import {
   type CreateInstanceFormState,
   type CreateInstanceLabel,
@@ -27,13 +29,17 @@ import type {
 
 function LabelsEditor({
   error,
+  rowErrors = {},
   labels,
   onChange,
 }: {
   error?: string | undefined;
+  rowErrors?: Record<string, string[]> | undefined;
   labels: CreateInstanceLabel[];
   onChange: (labels: CreateInstanceLabel[]) => void;
 }) {
+  const errorId = useId();
+  const generalMessages = unassignedLabelMessages(error, rowErrors);
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -51,41 +57,23 @@ function LabelsEditor({
       {labels.length > 0 ? (
         <div className="space-y-2">
           {labels.map((label, index) => (
-            <div className="flex gap-2" key={label.id}>
-              <Input
-                aria-invalid={
-                  error && label.key.trim().length === 0 ? true : undefined
-                }
-                aria-label={`Label key ${index + 1}`}
-                data-label-key-input=""
-                onChange={(event) => {
-                  const next = [...labels];
-                  next[index] = { ...label, key: event.target.value };
-                  onChange(next);
-                }}
-                placeholder="Key"
-                value={label.key}
-              />
-              <Input
-                aria-label={`Label value ${index + 1}`}
-                onChange={(event) => {
-                  const next = [...labels];
-                  next[index] = { ...label, value: event.target.value };
-                  onChange(next);
-                }}
-                placeholder="Value"
-                value={label.value}
-              />
-              <Button
-                aria-label="Remove label"
-                onClick={() => onChange(labels.filter((_, i) => i !== index))}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <span className="sr-only">Remove</span>×
-              </Button>
-            </div>
+            <InstanceLabelRow
+              errorId={`${errorId}-${label.id}`}
+              index={index}
+              key={label.id}
+              label={label}
+              messages={rowErrors[label.id]}
+              onChange={(updated) =>
+                onChange(
+                  labels.map((entry) =>
+                    entry.id === label.id ? updated : entry
+                  )
+                )
+              }
+              onRemove={() =>
+                onChange(labels.filter((entry) => entry.id !== label.id))
+              }
+            />
           ))}
         </div>
       ) : (
@@ -93,9 +81,13 @@ function LabelsEditor({
           No labels. Labels help organize and filter instances.
         </p>
       )}
-      {error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
+      {generalMessages.length > 0 ? (
+        <p
+          className="whitespace-pre-line text-destructive text-sm"
+          id={errorId}
+          role="alert"
+        >
+          {generalMessages.join("\n")}
         </p>
       ) : null}
     </div>
@@ -192,6 +184,7 @@ export function CreateInstanceAdvancedSection({
             error={formErrors.labels}
             labels={formState.labels}
             onChange={setLabels}
+            rowErrors={formErrors.labelRows}
           />
         </AccordionContent>
       </AccordionItem>
@@ -251,7 +244,7 @@ export function CreateInstanceActions({
     </Button>
   );
   return (
-    <div className="flex items-center justify-end gap-2 border-t pt-4">
+    <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
       <Button
         disabled={isTesting || isPending}
         onClick={handleTestConnection}

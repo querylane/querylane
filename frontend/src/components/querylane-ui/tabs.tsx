@@ -61,6 +61,7 @@ const tabsListPresentations = cva("", {
     presentation: {
       flush: "gap-0 p-0",
       "sql-results": "bg-transparent p-0",
+      "sql-workbench": "h-full justify-start rounded-none bg-transparent p-0",
       metrics:
         "divide-x divide-y divide-border rounded-none border-border border-b bg-transparent p-0 sm:divide-y-0",
     },
@@ -86,6 +87,8 @@ const tabsTriggerPresentations = cva("", {
     presentation: {
       inspector: "px-3",
       truncated: "truncate",
+      "sql-workbench":
+        "h-auto max-w-56 flex-none gap-1.5 rounded-none border-0 border-border border-r px-3 py-2 text-xs data-active:bg-background group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:bg-background",
       "sql-compact": "gap-1.5 px-2.5 text-xs",
       "sql-plan-mode": "px-2 text-xs",
       metric:

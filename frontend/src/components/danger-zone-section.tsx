@@ -46,7 +46,7 @@ function DangerZoneSection({
               className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-background/80 p-4 sm:flex-row sm:items-center sm:justify-between"
               key={action.actionLabel}
             >
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
                 <p className="font-medium text-sm">{action.title}</p>
                 <p className="text-muted-foreground text-sm">
                   {action.description}

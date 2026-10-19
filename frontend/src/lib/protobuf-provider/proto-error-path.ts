@@ -4,6 +4,24 @@ export function protoPathToFormPath(schema: DescMessage, serverPath: string): st
   if (!serverPath) {
     return null;
   }
+  for (const field of schema.fields) {
+    if (field.fieldKind !== "map") { continue; }
+    const dotted = `${field.name}.`;
+    const bracketed = `${field.name}[`;
+    if (serverPath.startsWith(dotted)) {
+      const key = serverPath.slice(dotted.length);
+      return key ? `${field.localName}.${key}` : null;
+    }
+    if (serverPath.startsWith(bracketed) && serverPath.endsWith("]")) {
+      const encoded = serverPath.slice(bracketed.length, -1);
+      try {
+        const key: unknown = JSON.parse(encoded);
+        return typeof key === "string" && key ? `${field.localName}.${key}` : null;
+      } catch {
+        return null;
+      }
+    }
+  }
   const path = walk(schema, serverPath.replace(LIST_INDEX_PATTERN, ".$1").split("."));
   return path ? path.join(".") : null;
 }
