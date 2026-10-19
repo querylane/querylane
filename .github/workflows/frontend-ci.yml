@@ -41,19 +41,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: *action_setup_node
-        with:
-          node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - uses: *action_setup_node
+            with:
+              node-version: *node_version
+          - uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - parallel:
           - name: Run Biome and shadcn lint
@@ -80,19 +81,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: *action_setup_node
-        with:
-          node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - uses: *action_setup_node
+            with:
+              node-version: *node_version
+          - uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run unit tests
         env:
@@ -120,19 +122,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: *action_setup_node
-        with:
-          node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - uses: *action_setup_node
+            with:
+              node-version: *node_version
+          - uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run integration tests
         env:
@@ -163,19 +166,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: *action_setup_node
-        with:
-          node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - uses: *action_setup_node
+            with:
+              node-version: *node_version
+          - uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Restore Playwright Chromium cache
         id: playwright-cache
@@ -225,15 +229,16 @@ jobs:
           persist-credentials: false
       # Installed through npm, as in scripts/playwright-container.sh: the
       # Playwright image ships Node but not the unzip that setup-bun relies on.
-      - name: Install Bun
-        run: npm install --global bun@${{ env.BUN_VERSION }}
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - name: Install Bun
+            run: npm install --global bun@${{ env.BUN_VERSION }}
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: Check Playwright image matches the installed version
         shell: bash
@@ -280,19 +285,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: *action_setup_node
-        with:
-          node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
-      - name: Restore Bun package cache
-        uses: *action_cache
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      - parallel:
+          - uses: *action_setup_node
+            with:
+              node-version: *node_version
+          - uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
+          - name: Restore Bun package cache
+            uses: *action_cache
+            with:
+              path: ~/.bun/install/cache
+              key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+              restore-keys: |
+                ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Restore Rsbuild/Rspack persistent cache
         uses: *action_cache
@@ -301,6 +307,14 @@ jobs:
           key: ${{ runner.os }}-rsbuild-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
           restore-keys: |
             ${{ runner.os }}-rsbuild-
+      # Analysis reads source; both builds write dist and must stay sequential.
+      - name: Run React Doctor on changed files
+        id: react-doctor
+        background: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run scripts/run-react-doctor-ci.ts
       - name: Build frontend
         env:
           PUBLIC_SENTRY_ENVIRONMENT: production
@@ -308,8 +322,5 @@ jobs:
         run: bun run build
       - name: Verify emitted bundle contracts
         run: bun run build:profile
-      - name: Run React Doctor on changed files
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run scripts/run-react-doctor-ci.ts
+      - name: Wait for React Doctor
+        wait: react-doctor

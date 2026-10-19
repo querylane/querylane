@@ -39,8 +39,11 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - name: Install tparse
-        run: go install github.com/mfridman/tparse@v0.18.0
+      - parallel:
+          - name: Install tparse
+            run: go install github.com/mfridman/tparse@v0.18.0
+          - name: Verify development reflection build
+            run: go test -short -tags querylane_dev ./cmd/server
       - name: Run unit tests
         shell: bash
         run: |
@@ -50,8 +53,6 @@ jobs:
           set -o pipefail
           tparse -format markdown -file unit-test-output.json > "$GITHUB_STEP_SUMMARY"
           exit "$TEST_EXIT_CODE"
-      - name: Verify development reflection build
-        run: go test -short -tags querylane_dev ./cmd/server
 
   integration-tests:
     name: Integration Tests

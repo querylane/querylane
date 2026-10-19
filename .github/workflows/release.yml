@@ -34,15 +34,16 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Setup Bun
-        uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
+      - parallel:
+          - name: Setup Bun
+            uses: *action_setup_bun
+            with:
+              bun-version: *bun_version
 
-      - name: Setup Node.js
-        uses: *action_setup_node
-        with:
-          node-version: *node_version
+          - name: Setup Node.js
+            uses: *action_setup_node
+            with:
+              node-version: *node_version
 
       - name: Install frontend dependencies
         working-directory: frontend
