@@ -49,9 +49,11 @@ jobs:
           frontend=false
           while IFS= read -r -d '' path; do
             case "$path" in
-              frontend/*|Dockerfile|.github/workflows/frontend-ci.yml|biome.jsonc|package.json|bun.lock|AGENTS.md)
+              frontend/*|.github/workflows/frontend-ci.yml)
                 frontend=true
                 ;;
+              */*) ;;
+              *) frontend=true ;;
             esac
           done < "$paths"
           printf 'frontend=%s\n' "$frontend" >> "$GITHUB_OUTPUT"
