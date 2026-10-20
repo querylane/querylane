@@ -15,7 +15,7 @@ bun run test:e2e
 
 `quality:gate` runs full lint, full React Doctor, both compilers, the production build and bundle budgets, unit tests, and integration tests. CI also checks draft PRs. Changed-only commands remain local feedback tools, not the final gate.
 
-When the local Linux container is unavailable, dispatch `frontend-ci.yml` on the PR branch to capture **missing** Linux visual baselines. That run uploads candidates; it never commits them or accepts existing mismatches. Review candidates before committing, then require the normal PR visual run to pass. Ordinary PR runs never update snapshots.
+Generate visual baselines only in the matching Linux Playwright image, review changes, then require the normal PR visual run to pass. Ordinary PR runs never update snapshots.
 
 ```text
 Owned files -> Biome + typed Oxlint + shadcn + suppression guard
