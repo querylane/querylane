@@ -93,3 +93,11 @@ These tools must not process untrusted archives, proxy configuration, or project
 The core/SQL bundle caps include the measured cost of boundary validation and the compatible editor refresh. Initial payload and largest-async limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
 
 Compiler regressions exercise both real binaries: valid CSS variables pass, invalid CSS properties fail, and unchecked indexing/exact optional violations fail. Guard tests exercise actual filesystem bypasses. Rule-inventory tests prove a newly introduced rule cannot silently pass the review gate.
+
+## Required CI check
+
+`Frontend Quality Gate` always reports on PRs to main, including drafts. Change detection uses the full NUL-delimited Git diff, not GitHub's path-filter file limit. UI or shared quality-policy changes require every frontend job (including every visual shard) to succeed. Non-UI changes skip those jobs but must still pass change detection and the aggregate gate. Missing, cancelled, failed, or malformed results cannot pass.
+
+The gate is safe to require repository-wide **after this workflow reaches main**. Requiring the new name while it exists only in this draft would strand unrelated PRs running the old workflow. Keep the existing zero-approval policy; do not invent human reviewers. Enforce resolved conversations, no administrator bypass, no force pushes, and no branch deletion with repository rules. A draft is not approval or merge authorization.
+
+GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit and its Buf-registry coverage limitation above remain explicit; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).
