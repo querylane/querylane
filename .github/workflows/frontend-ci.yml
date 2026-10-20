@@ -1,6 +1,8 @@
 name: frontend-ci
 
 on:
+  # Manual runs capture missing Linux baselines as review artifacts only.
+  workflow_dispatch:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -30,6 +32,7 @@ permissions:
 jobs:
   static:
     name: Frontend Static
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -67,6 +70,7 @@ jobs:
 
   unit:
     name: Frontend Unit
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -106,6 +110,7 @@ jobs:
 
   integration:
     name: Frontend Integration
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -145,6 +150,7 @@ jobs:
 
   browser:
     name: Frontend Browser
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -239,7 +245,22 @@ jobs:
             *) echo "::error::PLAYWRIGHT_IMAGE ($PLAYWRIGHT_IMAGE) does not match playwright ${installed}"; exit 1 ;;
           esac
       - name: Run visual regression tests
-        run: bun run test:visual --shard=${{ matrix.shard }}/3
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            bun run test:visual --shard=${{ matrix.shard }}/3 --update-snapshots=missing
+          else
+            bun run test:visual --shard=${{ matrix.shard }}/3
+          fi
+      - name: Upload missing baseline candidates for review
+        if: github.event_name == 'workflow_dispatch' && !cancelled()
+        uses: *action_upload_artifact
+        with:
+          name: visual-baseline-candidates-${{ matrix.shard }}
+          path: frontend/e2e/visual/__screenshots__
+          retention-days: 3
+          if-no-files-found: error
       - name: Upload Playwright visual report
         if: failure()
         uses: *action_upload_artifact
@@ -254,6 +275,7 @@ jobs:
 
   build:
     name: Frontend Build
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 6
     permissions:
