@@ -231,6 +231,7 @@ function nextActiveTabAfterClose({
  * the page is hidden so closing the tab mid-typing keeps the draft.
  */
 function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
+  let recoveryWriteBlocked = false;
   let pending:
     | { name: string; value: StorageValue<PersistedSqlWorkbench> }
     | undefined;
@@ -238,6 +239,11 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
 
   function flush() {
     clearTimeout(timer);
+    if (recoveryWriteBlocked) {
+      pending = undefined;
+      reportInMemorySqlWork();
+      return;
+    }
     if (pending) {
       localStorage.setItem(pending.name, JSON.stringify(pending.value));
       pending = undefined;
@@ -251,16 +257,20 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
     getItem: (name) => {
       const raw = localStorage.getItem(name);
       if (raw === null) {
+        recoveryWriteBlocked = false;
         return null;
       }
       try {
         const parsed: unknown = JSON.parse(raw);
         const { state, version } = storedWorkbenchSchema.parse(parsed);
+        recoveryWriteBlocked = false;
         return version === undefined ? { state } : { state, version };
       } catch (error) {
         // A mounted workbench creates a fresh workspace automatically. Keep the
         // rejected bytes separately before that first write can replace them.
+        recoveryWriteBlocked = true;
         localStorage.setItem(`${name}.recovery`, raw);
+        recoveryWriteBlocked = false;
         throw error;
       }
     },
@@ -268,13 +278,27 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
       pending = undefined;
       clearTimeout(timer);
       localStorage.removeItem(name);
+      recoveryWriteBlocked = false;
     },
     setItem: (name, value) => {
+      if (recoveryWriteBlocked) {
+        reportInMemorySqlWork();
+        return;
+      }
       pending = { name, value };
       clearTimeout(timer);
       timer = setTimeout(flush, PERSIST_DELAY_MS);
     },
   };
+}
+
+function reportInMemorySqlWork() {
+  toast.error("SQL changes are only stored in memory", {
+    id: "sql-workbench-recovery-blocked",
+    duration: Number.POSITIVE_INFINITY,
+    description:
+      "Keep this tab open and copy your SQL elsewhere. Browser storage could not keep a recovery copy.",
+  });
 }
 
 const useSqlWorkbenchStore = create<SqlWorkbenchState>()(

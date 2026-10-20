@@ -16,6 +16,44 @@ import { mockRpc } from "./helpers";
 
 const RUN_BUTTON_NAME_RE = /^Run/u;
 
+test("storage quota keeps rejected SQL work intact and warns that new drafts are in memory", async ({
+  page,
+}) => {
+  const raw = JSON.stringify({ version: 0, state: { workspaces: "broken" } });
+  await mockConsoleResources(page);
+  await page.addInitScript((value) => {
+    const writers = new Map<Storage, Storage["setItem"]>([
+      [localStorage, localStorage.setItem.bind(localStorage)],
+      [sessionStorage, sessionStorage.setItem.bind(sessionStorage)],
+    ]);
+    function writeWithRecoveryQuota(this: Storage, name: string, text: string) {
+      if (name.endsWith(".recovery")) {
+        throw new DOMException("Storage quota exceeded", "QuotaExceededError");
+      }
+      const write = writers.get(this);
+      if (!write) {
+        throw new Error("Unexpected storage instance");
+      }
+      write(name, text);
+    }
+    Storage.prototype.setItem = writeWithRecoveryQuota;
+    localStorage.setItem("querylane.sql-workbench.v1", value);
+  }, raw);
+  await page.goto(`${DATABASE_URL}/workbench`);
+  await expect(
+    page.getByText("SQL changes are only stored in memory", { exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "SQL editor" })
+    .fill("SELECT 'keep this draft';");
+  const stored = await page.evaluate(() => {
+    globalThis.dispatchEvent(new Event("pagehide"));
+    return localStorage.getItem("querylane.sql-workbench.v1");
+  });
+  expect(stored).toBe(raw);
+  await softScreenshot(page, "sql-workbench-storage-quota");
+});
+
 test("invalid saved SQL work stays recoverable after creating a new draft", async ({
   page,
 }) => {

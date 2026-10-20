@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "@rstest/core";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import {
   MAX_HISTORY_ENTRIES,
   scopeKey,
@@ -140,6 +140,33 @@ describe("saved queries", () => {
 });
 
 describe("persisted workbench validation", () => {
+  test("does not overwrite rejected work if its recovery copy exceeds storage quota", async () => {
+    const key = "querylane.sql-workbench.v1";
+    const raw = JSON.stringify({ version: 0, state: { workspaces: "broken" } });
+    localStorage.setItem(key, raw);
+    const write = localStorage.setItem.bind(localStorage);
+    const storageWrite = rs
+      .spyOn(localStorage, "setItem")
+      .mockImplementation((name, value) => {
+        if (name.endsWith(".recovery")) {
+          throw new DOMException(
+            "Storage quota exceeded",
+            "QuotaExceededError"
+          );
+        }
+        write(name, value);
+      });
+    try {
+      await useSqlWorkbenchStore.persist.rehydrate();
+      store().ensureWorkspace(SCOPE);
+      globalThis.dispatchEvent(new Event("pagehide"));
+      expect(localStorage.getItem(key)).toBe(raw);
+    } finally {
+      storageWrite.mockRestore();
+      localStorage.clear();
+      await useSqlWorkbenchStore.persist.rehydrate();
+    }
+  });
   test("rejects malformed stored data without replacing drafts or deleting recovery bytes", async () => {
     const tabId = store().addTab(SCOPE);
     store().updateTabText(SCOPE, tabId, "SELECT 'keep this draft'");
