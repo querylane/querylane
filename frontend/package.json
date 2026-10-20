@@ -16,7 +16,7 @@
     "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
     "doctor:audit": "bun run doctor",
     "doctor:changed": "react-doctor . -y --scope changed --base ${QUALITY_BASE_REF:-origin/main} --blocking warning --no-respect-inline-disables --supply-chain --no-score",
-    "doctor:ci": "bun run doctor:changed",
+    "doctor:ci": "bun run doctor:full",
     "doctor:dead-code": "react-doctor . -y --scope full --no-lint --blocking warning --no-respect-inline-disables --no-score",
     "doctor:full": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
     "fix": "bun run lint:fix",
