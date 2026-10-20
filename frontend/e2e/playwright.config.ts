@@ -134,7 +134,7 @@ export default defineConfig({
     webServer: {
       command: serverCommand,
       cwd: path.resolve(import.meta.dirname, ".."),
-      reuseExistingServer: !e2eEnv.CI,
+      reuseExistingServer: false,
       stderr: e2eEnv.CI ? "ignore" : "pipe",
       stdout: e2eEnv.CI ? "ignore" : "pipe",
       timeout: WEB_SERVER_TIMEOUT_MS,

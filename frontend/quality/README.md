@@ -15,7 +15,7 @@ bun run test:e2e
 
 `quality:gate` runs full lint, full React Doctor, both compilers, the production build and bundle budgets, unit tests, and integration tests. CI also checks draft PRs. Changed-only commands remain local feedback tools, not the final gate.
 
-Generate visual baselines only in the matching Linux Playwright image, review changes, then require the normal PR visual run to pass. Ordinary PR runs never update snapshots.
+Generate visual baselines only in the matching Linux Playwright image, review changes, then require the normal PR visual run to pass. Ordinary PR runs never update snapshots. E2E pixel assertions also use the canonical Linux image: `bash scripts/playwright-container.sh bun run test:e2e:ci`. Native macOS/Windows font rendering is not a substitute. Local Playwright refuses to reuse an existing server; set a free `PLAYWRIGHT_PORT` for parallel workspaces instead of testing an unidentified preview.
 
 ```text
 Owned files -> Biome + typed Oxlint + shadcn + suppression guard
