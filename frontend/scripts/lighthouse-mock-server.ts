@@ -1,10 +1,16 @@
 #!/usr/bin/env bun
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { createServer, type IncomingHttpHeaders } from "node:http";
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { join, normalize, resolve, sep } from "node:path";
 import { env } from "node:process";
 import { brotliCompressSync, gzipSync } from "node:zlib";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const DEFAULT_PORT = 4173;
 const FRONTEND_ROOT = join(import.meta.dirname, "..");
@@ -15,7 +21,7 @@ const ONE_YEAR_CACHE_SECONDS = 31_536_000;
 const IMMUTABLE_STATIC_CACHE_CONTROL = `public, max-age=${ONE_YEAR_CACHE_SECONDS}, immutable`;
 const NO_CACHE_CONTROL = "no-cache";
 const JSON_HEADERS = { "Content-Type": "application/json; charset=utf-8" };
-const LEADING_SLASH_PATTERN = /^[/\\]+/;
+const LEADING_SLASH_PATTERN = /^[/\\]+/u;
 const COMPRESSIBLE_CONTENT_TYPE_PREFIXES = [
   "application/json",
   "image/svg+xml",
@@ -277,12 +283,12 @@ function findLighthouseMockBody(url: string): string | undefined {
     .split("/")
     .filter(Boolean)
     .slice(-MOCK_RPC_PATH_SEGMENT_COUNT);
-  if (!(servicePath && methodName)) {
+  if (!(isNonEmptyString(servicePath) && isNonEmptyString(methodName))) {
     return;
   }
 
   const serviceName = servicePath.split(".").at(-1);
-  if (!serviceName) {
+  if (!isNonEmptyString(serviceName)) {
     return;
   }
 
@@ -470,7 +476,7 @@ function createStaticResponse(
 
   const { pathname } = new URL(request.url);
   const filePath = resolveDistFilePath(distDir, pathname);
-  if (filePath && existsSync(filePath)) {
+  if (isNonEmptyString(filePath) && existsSync(filePath)) {
     return createStaticFileResponse({
       cachePathname: pathname,
       filePath,
@@ -508,11 +514,11 @@ function handleLighthouseRequest(
     return staticResponse;
   }
 
-  return new Response(
-    JSON.stringify({
+  return Response.json(
+    {
       code: "not_found",
       message: "No Lighthouse mock matched.",
-    }),
+    },
     { headers: JSON_HEADERS, status: HTTP_NOT_FOUND }
   );
 }
@@ -540,7 +546,7 @@ function primeStaticResponseCache(distDir = DEFAULT_DIST_DIR) {
 function readPort() {
   const { PORT: runtimePort } = env;
   const rawPort = runtimePort?.trim();
-  if (!rawPort) {
+  if (!isNonEmptyString(rawPort)) {
     return DEFAULT_PORT;
   }
 
@@ -568,37 +574,50 @@ function startLighthouseMockServer() {
   const port = readPort();
   const hostname = "127.0.0.1";
   primeStaticResponseCache();
-  const server = createServer(async (incomingRequest, outgoingResponse) => {
-    try {
-      incomingRequest.resume();
-      const host = incomingRequest.headers.host ?? `${hostname}:${port}`;
-      const request = new Request(
-        `http://${host}${incomingRequest.url ?? "/"}`,
-        {
-          headers: headersFromIncoming(incomingRequest.headers),
-          method: incomingRequest.method ?? "GET",
-        }
-      );
-
-      const response = handleLighthouseRequest(request);
-      const body = await response.arrayBuffer();
-      outgoingResponse.writeHead(
-        response.status,
-        Object.fromEntries(response.headers.entries())
-      );
-      outgoingResponse.end(Buffer.from(body));
-    } catch (error: unknown) {
+  const server = createServer((incomingRequest, outgoingResponse) => {
+    sendLighthouseResponse(incomingRequest, outgoingResponse, {
+      hostname,
+      port,
+    }).catch((error: unknown) => {
       outgoingResponse.writeHead(HTTP_INTERNAL_SERVER_ERROR, {
         "Content-Type": "text/plain",
       });
       outgoingResponse.end(error instanceof Error ? error.message : "Error");
-    }
+    });
   });
 
   server.listen(port, hostname, () => {
     console.log(`Lighthouse mock server ready on http://${hostname}:${port}`);
   });
   return server;
+}
+
+async function sendLighthouseResponse(
+  incomingRequest: IncomingMessage,
+  outgoingResponse: ServerResponse,
+  { hostname, port }: { hostname: string; port: number }
+) {
+  try {
+    incomingRequest.resume();
+    const host = incomingRequest.headers.host ?? `${hostname}:${port}`;
+    const request = new Request(`http://${host}${incomingRequest.url ?? "/"}`, {
+      headers: headersFromIncoming(incomingRequest.headers),
+      method: incomingRequest.method ?? "GET",
+    });
+
+    const response = handleLighthouseRequest(request);
+    const body = await response.arrayBuffer();
+    outgoingResponse.writeHead(
+      response.status,
+      Object.fromEntries(response.headers.entries())
+    );
+    outgoingResponse.end(Buffer.from(body));
+  } catch (error: unknown) {
+    outgoingResponse.writeHead(HTTP_INTERNAL_SERVER_ERROR, {
+      "Content-Type": "text/plain",
+    });
+    outgoingResponse.end(error instanceof Error ? error.message : "Error");
+  }
 }
 
 if (import.meta.main) {

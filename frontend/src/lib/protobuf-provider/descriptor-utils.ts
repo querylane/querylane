@@ -30,10 +30,3 @@ export function is64BitScalar(scalar: ScalarType | undefined): boolean {
     scalar === ScalarType.SFIXED64
   );
 }
-
-export function cloneField(field: DescField, overrides: Partial<DescField>): DescField {
-  return {
-    ...field,
-    ...overrides,
-  } as DescField;
-}

@@ -35,7 +35,7 @@ function EmptyStatePanel({
   const hasStructuredContent = title !== undefined || description !== undefined;
   const TitleComponent = headingLevel;
   const renderedTitle = (() => {
-    if (!title) {
+    if (!Boolean(title)) {
       return null;
     }
     if (headingLevel === "div") {
@@ -67,11 +67,11 @@ function EmptyStatePanel({
               </span>
             ) : null}
             {renderedTitle}
-            {description ? (
+            {Boolean(description) ? (
               <EmptyDescription>{description}</EmptyDescription>
             ) : null}
           </EmptyHeader>
-          {children ? (
+          {Boolean(children) ? (
             <EmptyContent width={contentWidth}>{children}</EmptyContent>
           ) : null}
         </>

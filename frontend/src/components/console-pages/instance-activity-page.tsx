@@ -45,11 +45,13 @@ import {
 } from "@/components/ui/data-table-filter-toolbar";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
+import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
 } from "@/lib/url-search-state";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type { ConnectionActivityHealth } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
@@ -359,7 +361,9 @@ function SessionPeerCard({
         </span>
         <Button
           className="ml-auto"
-          onClick={() => onSelect(row.pid)}
+          onClick={() => {
+            onSelect(row.pid);
+          }}
           size="xs"
           variant="outline"
         >
@@ -385,8 +389,8 @@ function SessionWaitEvent({ row }: { row: ActivitySessionRow }) {
   return (
     <div className="border-border rounded-lg border p-3">
       <div className="font-mono text-sm">{row.wait}</div>
-      {row.waitExplanation ? (
-        <p className="text-muted-foreground mt-1 text-xs">
+      {isNonEmptyString(row.waitExplanation) ? (
+        <p className="mt-1 text-muted-foreground text-xs">
           {row.waitExplanation}
         </p>
       ) : null}
@@ -693,9 +697,9 @@ function ActivityPageHeader({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Activity</h2>
-        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
-          {lastRefreshedLabel ? (
+        <h2 className="font-semibold text-2xl tracking-tight">Activity</h2>
+        <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+          {isNonEmptyString(lastRefreshedLabel) ? (
             <span className="hidden sm:inline">{lastRefreshedLabel}</span>
           ) : null}
           <Button
@@ -808,7 +812,7 @@ function InstanceActivityPage({
   ] satisfies DataTableFilterFacet[];
 
   function handleClearAll() {
-    setSearch("");
+    handleAsyncAction(() => setSearch(""))();
     setStateFilter([]);
     setAppFilter([]);
     setDatabaseFilter([]);
@@ -852,7 +856,7 @@ function InstanceActivityPage({
             dataSlot="activity-filter-bar"
             facets={facets}
             onClearAll={handleClearAll}
-            onSearchChange={setSearch}
+            onSearchChange={handleAsyncAction(setSearch)}
             searchPlaceholder="Search query, user, app…"
             searchValue={search}
           />
@@ -861,7 +865,9 @@ function InstanceActivityPage({
             data={rows}
             emptyResourceName="sessions"
             initialSorting={[{ desc: true, id: "duration" }]}
-            onRowClick={(row) => setSelectedPid(row.pid)}
+            onRowClick={(row) => {
+              setSelectedPid(row.pid);
+            }}
             tableKey="instance-activity-sessions"
           />
         </section>

@@ -8,6 +8,7 @@ import {
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const DESCRIPTIONS: Record<string, string> = {
   Aggregate: "Combines input rows into aggregate results.",
@@ -81,13 +82,13 @@ function PlanNodeInspector({
         <h3 className="text-xl font-semibold tracking-tight">
           {node.nodeType}
         </h3>
-        {node.relationName ? (
-          <p className="mt-1 font-mono text-sm break-all">
+        {isNonEmptyString(node.relationName) ? (
+          <p className="mt-1 break-all font-mono text-sm">
             {node.relationName}
           </p>
         ) : null}
-        {node.indexName ? (
-          <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
+        {isNonEmptyString(node.indexName) ? (
+          <p className="mt-1 break-all font-mono text-muted-foreground text-xs">
             {node.indexName}
           </p>
         ) : null}
@@ -104,8 +105,9 @@ function PlanNodeInspector({
             <p className="text-muted-foreground text-xs">Not executed</p>
           ) : null}
         </div>
-        {DESCRIPTIONS[node.nodeType] ? (
-          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+        {DESCRIPTIONS[node.nodeType] !== undefined &&
+        DESCRIPTIONS[node.nodeType] !== "" ? (
+          <p className="mt-3 text-muted-foreground text-xs leading-relaxed">
             {DESCRIPTIONS[node.nodeType]}
           </p>
         ) : null}

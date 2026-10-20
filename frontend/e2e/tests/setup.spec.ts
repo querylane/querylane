@@ -5,9 +5,9 @@ import {
   mockOnboardingUnavailableScenario,
 } from "./querylane-scenarios";
 
-const CONFIGURE_VIA_UI_RE = /Configure via UI/;
-const CONFIGURE_YAML_MANUALLY_RE = /Configure YAML manually/;
-const NEW_INSTANCE_URL_RE = /\/new-instance$/;
+const CONFIGURE_VIA_UI_RE = /Configure via UI/u;
+const CONFIGURE_YAML_MANUALLY_RE = /Configure YAML manually/u;
+const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
 
 test("onboarding entrypoint renders setup choices from mocked RPC state", {
   tag: ["@smoke", "@feat:onboarding", "@flow:create"],

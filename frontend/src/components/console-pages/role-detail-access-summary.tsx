@@ -1,4 +1,5 @@
 "use client";
+
 import { ChevronRight, Database, ShieldOff } from "lucide-react";
 import type { ComponentType } from "react";
 import { SectionCard } from "@/components/console-pages/console-layout";
@@ -7,6 +8,7 @@ import { DatabaseSelect } from "@/components/console-pages/role-grants-tab";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface AccessSourceRow {
   active: boolean;
@@ -51,7 +53,7 @@ function AccessSummaryRow({
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
-              "text-sm font-medium",
+              "font-medium text-sm",
               !row.active && "text-muted-foreground"
             )}
           >
@@ -75,7 +77,7 @@ function AccessSummaryRow({
         {row.status}
       </Badge>
       {jump ? (
-        <ChevronRight className="text-muted-foreground/40 group-hover:text-foreground size-4 shrink-0 transition-colors" />
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
       ) : null}
     </>
   );
@@ -92,7 +94,9 @@ function AccessSummaryRow({
     return (
       <Button
         className="group flex h-auto w-full cursor-pointer items-center justify-start text-left"
-        onClick={() => onJump(jump.section)}
+        onClick={() => {
+          onJump(jump.section);
+        }}
         presentation={
           row.active ? "access-summary-active" : "access-summary-inactive"
         }
@@ -122,7 +126,7 @@ function ScopeGroup({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-muted-foreground flex items-center gap-1 px-1 font-medium tracking-wide text-(length:--text-label-sm) uppercase">
+      <div className="text-(length:--text-label-sm) flex items-center gap-1 px-1 font-medium text-muted-foreground uppercase tracking-wide">
         {label}
       </div>
       {rows.map((row) => (
@@ -147,7 +151,10 @@ function AccessSummary({
   selectedDatabaseId,
 }: {
   databaseName: string | undefined;
-  databases: { id: string; name: string }[];
+  databases: {
+    id: string;
+    name: string;
+  }[];
   onJump: (section: Section) => void;
   onSelectDatabase: (value: string) => void;
   rlsNote: string | null;
@@ -174,14 +181,14 @@ function AccessSummary({
         <ScopeGroup label="Cluster-wide" onJump={onJump} rows={clusterRows} />
         <ScopeGroup
           label={
-            databaseName ? (
+            isNonEmptyString(databaseName) ? (
               <>
                 In
                 <Database
                   aria-hidden="true"
-                  className="text-muted-foreground size-3 shrink-0"
+                  className="size-3 shrink-0 text-muted-foreground"
                 />
-                <span className="text-foreground font-mono normal-case">
+                <span className="font-mono text-foreground normal-case">
                   {databaseName}
                 </span>
               </>
@@ -193,8 +200,8 @@ function AccessSummary({
           rows={databaseRows}
         />
       </div>
-      {rlsNote ? (
-        <p className="text-muted-foreground mt-3 flex items-start gap-1.5 text-xs">
+      {isNonEmptyString(rlsNote) ? (
+        <p className="mt-3 flex items-start gap-1.5 text-muted-foreground text-xs">
           <ShieldOff className="mt-0.5 size-3 shrink-0" />
           <span>{rlsNote}</span>
         </p>

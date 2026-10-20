@@ -45,14 +45,15 @@ function findLastSuccessfulReadRows(
   currentQueryKey: readonly unknown[]
 ): ReadRowsResponse | undefined {
   let latest: { data: ReadRowsResponse; updatedAt: number } | undefined;
-  const requestIdentity = JSON.stringify(currentQueryKey, (key, value) =>
-    key === "pageToken" ? undefined : value
+  const requestIdentity = JSON.stringify(
+    currentQueryKey,
+    (key, value: unknown): unknown => (key === "pageToken" ? undefined : value)
   );
 
   for (const query of queryClient.getQueryCache().findAll()) {
     if (
       query.state.status !== "success" ||
-      JSON.stringify(query.queryKey, (key, value) =>
+      JSON.stringify(query.queryKey, (key, value: unknown): unknown =>
         key === "pageToken" ? undefined : value
       ) !== requestIdentity ||
       !isMessage(query.state.data, ReadRowsResponseSchema)
@@ -81,7 +82,7 @@ function useReadRowsQuery(
     ...RESOURCE_QUERY_OPTIONS.tableRows,
     enabled: baseEnabled && request.name !== "",
   };
-  if (options?.keepPreviousData) {
+  if (options?.keepPreviousData === true) {
     connectOptions.placeholderData = (previous, previousQuery) =>
       queryKeyContainsTableName(previousQuery?.queryKey, request.name)
         ? previous

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   canRetrySqlExecution,
   describeSqlExecutionError,
@@ -48,7 +48,7 @@ function buildPostgresError(
 }
 
 describe("describeSqlExecutionError", () => {
-  it("rewrites the read-only transaction rejection into workbench copy", () => {
+  test("rewrites the read-only transaction rejection into workbench copy", () => {
     const error = describeSqlExecutionError(
       buildPostgresError({
         conditionName: "read_only_sql_transaction",
@@ -60,7 +60,7 @@ describe("describeSqlExecutionError", () => {
     expect(error.retryGuidance).not.toBeNull();
   });
 
-  it("leads with the server message, detail and hint when the backend sent them", () => {
+  test("leads with the server message, detail and hint when the backend sent them", () => {
     const error = describeSqlExecutionError(
       buildPostgresError({
         conditionName: "undefined_column",
@@ -76,7 +76,7 @@ describe("describeSqlExecutionError", () => {
     expect(error.retryGuidance).toContain("placed_at");
   });
 
-  it("leaves postgres errors without client fields untouched", () => {
+  test("leaves postgres errors without client fields untouched", () => {
     const input = buildPostgresError({
       conditionName: "undefined_table",
       sqlstate: "42P01",
@@ -84,14 +84,14 @@ describe("describeSqlExecutionError", () => {
     expect(describeSqlExecutionError(input)).toBe(input);
   });
 
-  it("leaves non-postgres errors untouched", () => {
+  test("leaves non-postgres errors untouched", () => {
     const input = buildPostgresError(null);
     expect(describeSqlExecutionError(input)).toBe(input);
   });
 });
 
 describe("canRetrySqlExecution", () => {
-  it("hides retry for statement errors that need an edit first", () => {
+  test("hides retry for statement errors that need an edit first", () => {
     const error = {
       ...buildPostgresError({ sqlstate: "42703" }),
       manualRetryable: true,
@@ -99,7 +99,7 @@ describe("canRetrySqlExecution", () => {
     expect(canRetrySqlExecution(error)).toBe(false);
   });
 
-  it("keeps retry for transient failures", () => {
+  test("keeps retry for transient failures", () => {
     const error = {
       ...buildPostgresError({
         retryGuidance:

@@ -49,6 +49,7 @@ import type {
 import { downloadBlob } from "@/lib/download-blob";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const ExplainPlanView = lazy(() =>
   import("@/features/query-plan/explain-plan-view").then((module) => ({
@@ -67,9 +68,9 @@ function ResultsPlaceholder({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center">
-      <Icon aria-hidden="true" className="text-muted-foreground/60 size-6" />
-      <p className="text-sm font-medium">{title}</p>
-      <p className="text-muted-foreground max-w-md text-sm">{description}</p>
+      <Icon aria-hidden="true" className="size-6 text-muted-foreground/60" />
+      <p className="font-medium text-sm">{title}</p>
+      <p className="max-w-md text-muted-foreground text-sm">{description}</p>
     </div>
   );
 }
@@ -78,12 +79,16 @@ function elapsedMs(execution: SqlExecution): number {
   if (execution.stats) {
     return execution.stats.latencyMs;
   }
-  return execution.finishedAt ? execution.finishedAt - execution.startedAt : 0;
+  return typeof execution.finishedAt === "number" &&
+    execution.finishedAt !== 0 &&
+    !Number.isNaN(execution.finishedAt)
+    ? execution.finishedAt - execution.startedAt
+    : 0;
 }
 
 function RunningStatus({ execution }: { execution: SqlExecution }) {
   return (
-    <span className="text-muted-foreground flex items-center gap-2">
+    <span className="flex items-center gap-2 text-muted-foreground">
       <Loader2
         aria-hidden="true"
         className="size-3.5 motion-safe:animate-spin"
@@ -105,15 +110,17 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {isCommand ? (
-        <span className="font-mono font-medium">{commandTag || "Done"}</span>
+        <span className="font-medium font-mono">
+          {(commandTag ?? "") || "Done"}
+        </span>
       ) : (
         <span className="font-medium">{formatRowCount(rowCount)}</span>
       )}
       <span className="text-muted-foreground">
         {formatDurationMs(elapsedMs(execution))}
       </span>
-      {execution.stats?.truncated ? (
-        <span className="text-chart-4 flex items-center gap-1">
+      {execution.stats?.truncated === true ? (
+        <span className="flex items-center gap-1 text-chart-4">
           <AlertTriangle aria-hidden="true" className="size-3.5" />
           Stopped at the {formatCount(execution.rowLimit)} row limit
         </span>
@@ -124,7 +131,7 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
 
 function CancelledStatus({ execution }: { execution: SqlExecution }) {
   return (
-    <span className="text-muted-foreground flex items-center gap-1.5">
+    <span className="flex items-center gap-1.5 text-muted-foreground">
       <Ban aria-hidden="true" className="size-3.5" />
       Cancelled after {formatDurationMs(elapsedMs(execution))}
       {execution.rows.length > 0
@@ -144,11 +151,12 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
       return <CancelledStatus execution={execution} />;
     case "error":
       return (
-        <span className="text-destructive flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 text-destructive">
           <AlertTriangle aria-hidden="true" className="size-3.5" />
           {execution.error?.title ?? "Query failed"}
         </span>
       );
+    case "idle":
     default:
       return null;
   }
@@ -193,13 +201,25 @@ function ExportMenu({ execution }: { execution: SqlExecution }) {
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => exportExecution(execution, "csv")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "csv");
+          }}
+        >
           CSV
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => exportExecution(execution, "json")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "json");
+          }}
+        >
           JSON
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => exportExecution(execution, "sql")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "sql");
+          }}
+        >
           SQL inserts
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -217,15 +237,15 @@ function CommandResult({ execution }: { execution: SqlExecution }) {
       className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center"
       data-slot="sql-command-result"
     >
-      <CircleCheck aria-hidden="true" className="text-success size-6" />
-      {outcome.tag ? (
-        <code className="bg-muted rounded-md px-2 py-0.5 font-mono text-sm font-medium">
+      <CircleCheck aria-hidden="true" className="size-6 text-success" />
+      {isNonEmptyString(outcome.tag) ? (
+        <code className="rounded-md bg-muted px-2 py-0.5 font-medium font-mono text-sm">
           {outcome.tag}
         </code>
       ) : (
-        <p className="text-sm font-medium">{outcome.title}</p>
+        <p className="font-medium text-sm">{outcome.title}</p>
       )}
-      <p className="text-muted-foreground max-w-md text-sm">
+      <p className="max-w-md text-muted-foreground text-sm">
         {outcome.description}
       </p>
     </div>
@@ -316,7 +336,10 @@ function ResultsBody({
   );
 }
 
-function keyedNotices(notices: string[]): Array<{ key: string; text: string }> {
+function keyedNotices(notices: string[]): {
+  key: string;
+  text: string;
+}[] {
   const seen = new Map<string, number>();
   return notices.map((text) => {
     const occurrence = seen.get(text) ?? 0;
@@ -421,7 +444,7 @@ function CountPill({ count }: { count: number }) {
     return null;
   }
   return (
-    <span className="bg-muted rounded-full px-1.5 font-mono text-xs tabular-nums">
+    <span className="rounded-full bg-muted px-1.5 font-mono text-xs tabular-nums">
       {count}
     </span>
   );
@@ -448,11 +471,13 @@ function SqlResultsPane({
       // h-full: the resizable panel's content box is a plain block, so without
       // an explicit height this section grows to the grid's full row height.
       // That defeats virtualization and scrolls the tab strip and header away.
-      className="bg-background flex h-full min-h-0 flex-1 flex-col"
+      className="flex h-full min-h-0 flex-1 flex-col bg-background"
     >
-      <div className="border-border flex min-h-10 flex-wrap items-center justify-between gap-2 border-b px-2">
+      <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-border border-b px-2">
         <Tabs
-          onValueChange={(value) => onTabChange(parseResultsTab(value))}
+          onValueChange={(value) => {
+            onTabChange(parseResultsTab(value));
+          }}
           value={activeTab}
         >
           <TabsList className="h-8" presentation="sql-results" variant="line">

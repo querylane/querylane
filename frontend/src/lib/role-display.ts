@@ -94,7 +94,7 @@ function countPasswordExpiry(
   let soon = 0;
   for (const role of roles) {
     const { attributes } = role;
-    if (!(attributes?.canLogin && attributes.validUntil)) {
+    if (!(attributes?.canLogin === true && attributes.validUntil)) {
       continue;
     }
     const { state } = passwordExpiryStatus(attributes.validUntil, now);
@@ -109,7 +109,9 @@ function countPasswordExpiry(
 
 // Builds the WITH-option clause tokens for CREATE ROLE from the role attributes.
 function roleAttributeOptions(attributes: Role["attributes"]): string[] {
-  const options: string[] = [attributes?.canLogin ? "LOGIN" : "NOLOGIN"];
+  const options: string[] = [
+    attributes?.canLogin === true ? "LOGIN" : "NOLOGIN",
+  ];
   const flags: [boolean, string][] = [
     [Boolean(attributes?.isSuperuser), "SUPERUSER"],
     [Boolean(attributes?.canCreateDatabase), "CREATEDB"],
@@ -122,7 +124,9 @@ function roleAttributeOptions(attributes: Role["attributes"]): string[] {
       options.push(keyword);
     }
   }
-  options.push(attributes?.inheritsByDefault ? "INHERIT" : "NOINHERIT");
+  options.push(
+    attributes?.inheritsByDefault === true ? "INHERIT" : "NOINHERIT"
+  );
   if (attributes && attributes.connectionLimit >= 0) {
     options.push(`CONNECTION LIMIT ${attributes.connectionLimit}`);
   }
@@ -143,8 +147,10 @@ function membershipGrantStatements(
     if (membership.adminOption) {
       grantOptions.push("ADMIN OPTION");
     }
-    grantOptions.push(`INHERIT ${membership.inheritOption ? "TRUE" : "FALSE"}`);
-    grantOptions.push(`SET ${membership.setOption ? "TRUE" : "FALSE"}`);
+    grantOptions.push(
+      `INHERIT ${membership.inheritOption ? "TRUE" : "FALSE"}`,
+      `SET ${membership.setOption ? "TRUE" : "FALSE"}`
+    );
     return `GRANT ${quoteIdentifier(membership.roleName)} TO ${name} WITH ${grantOptions.join(", ")};`;
   });
 }
@@ -285,7 +291,7 @@ function categorizeRole(role: Role): RoleCategory {
   if (role.isSystemRole) {
     return "system";
   }
-  if (role.attributes?.canLogin) {
+  if (role.attributes?.canLogin === true) {
     return "login";
   }
   return "group";
@@ -347,13 +353,13 @@ export function deriveRoleKind(role: Role): RoleKind {
     return "builtin";
   }
   const { attributes } = role;
-  if (attributes?.isSuperuser) {
+  if (attributes?.isSuperuser === true) {
     return "super";
   }
-  if (attributes?.canReplicate && attributes.canLogin) {
+  if (attributes?.canReplicate === true && attributes.canLogin) {
     return "repl";
   }
-  if (!attributes?.canLogin) {
+  if (!(attributes?.canLogin === true)) {
     return "group";
   }
   return "login";
@@ -429,14 +435,14 @@ export function roleRiskNotice(
   role: Role
 ): { description: string; title: string } | null {
   const { attributes } = role;
-  if (attributes?.isSuperuser) {
+  if (attributes?.isSuperuser === true) {
     return {
       description:
         "This role is a superuser — it bypasses every permission check and can do anything on this server.",
       title: "Full administrative access",
     };
   }
-  if (attributes?.bypassesRls) {
+  if (attributes?.bypassesRls === true) {
     return {
       description:
         "This role ignores row-level security policies, so it can read and write rows that policies would normally hide.",

@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { formatBytes } from "@/lib/console-resources";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type {
   TableCell,
   TableResultColumn,
@@ -28,22 +29,23 @@ interface FormattedCell {
 const NULL_DISPLAY = "NULL";
 const TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss";
 const MAX_FRACTION_DIGITS = 6;
-const DATE_PART_PATTERN = /^(\d{4}-\d{2}-\d{2})(?:$|[T ])/;
+const DATE_PART_PATTERN = /^(?<capture1>\d{4}-\d{2}-\d{2})(?:$|[T ])/u;
 const RFC3339_PARTS_PATTERN =
-  /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:\s*(Z|[+-]\d{2}(?::?\d{2})?))?$/i;
+  /^(?<capture1>\d{4}-\d{2}-\d{2})[T ](?<capture2>\d{2}:\d{2}:\d{2})(?:\.\d+)?(?:\s*(?<capture3>Z|[+-]\d{2}(?::?\d{2})?))?$/iu;
 const TIME_PARTS_PATTERN =
-  /^(\d{2}:\d{2}:\d{2}(?:\.\d+)?)(?:\s*(Z|[+-]\d{2}(?::?\d{2})?))?$/i;
-const TIMEZONE_OFFSET_PATTERN = /^([+-])(\d{2})(?::?(\d{2}))?$/;
+  /^(?<capture1>\d{2}:\d{2}:\d{2}(?:\.\d+)?)(?:\s*(?<capture2>Z|[+-]\d{2}(?::?\d{2})?))?$/iu;
+const TIMEZONE_OFFSET_PATTERN =
+  /^(?<capture1>[+-])(?<capture2>\d{2})(?::?(?<capture3>\d{2}))?$/u;
 
 function formatTimezoneLabel(offset: string | undefined): string | undefined {
-  if (!offset) {
+  if (!isNonEmptyString(offset)) {
     return;
   }
   const normalized = offset.toUpperCase();
   if (normalized === "Z") {
     return "UTC";
   }
-  const match = normalized.match(TIMEZONE_OFFSET_PATTERN);
+  const match = TIMEZONE_OFFSET_PATTERN.exec(normalized);
   if (!match) {
     return;
   }
@@ -62,8 +64,12 @@ function formatTimestamp(raw: string): {
   if (!raw) {
     return { display: "" };
   }
-  const parts = raw.match(RFC3339_PARTS_PATTERN);
-  if (parts?.[1] && parts[2]) {
+  const parts = RFC3339_PARTS_PATTERN.exec(raw);
+  if (
+    isNonEmptyString(parts?.[1]) &&
+    typeof parts[2] === "string" &&
+    parts[2].length > 0
+  ) {
     const timezoneLabel = formatTimezoneLabel(parts[3]);
     return {
       display: `${parts[1]} ${parts[2]}`,
@@ -81,8 +87,8 @@ function formatTime(raw: string): {
   display: string;
   timezoneLabel?: string | undefined;
 } {
-  const parts = raw.match(TIME_PARTS_PATTERN);
-  if (!parts?.[1]) {
+  const parts = TIME_PARTS_PATTERN.exec(raw);
+  if (!isNonEmptyString(parts?.[1])) {
     return { display: raw };
   }
   return {
@@ -144,7 +150,7 @@ function formatBytesCell(cell: TableCell, value: unknown): FormattedCell {
   const bytes = fullSize > 0n ? Number(fullSize) : length;
   return createFormattedCell({
     display: `‹${formatBytes(bytes)}›`,
-    isTruncated: cell.truncated === true,
+    isTruncated: cell.truncated,
     kind: "bytes",
   });
 }
@@ -154,17 +160,17 @@ function formatTimestampCell(
   rawValue: unknown,
   truncated: boolean
 ): FormattedCell {
-  const raw = String(rawValue ?? "");
+  const raw = typeof rawValue === "string" ? rawValue : "";
   let temporal = formatTimestamp(raw);
   if (column.dataType === DataType.DATE) {
-    temporal = { display: raw.match(DATE_PART_PATTERN)?.[1] ?? raw };
+    temporal = { display: DATE_PART_PATTERN.exec(raw)?.[1] ?? raw };
   } else if (column.dataType === DataType.TIME) {
     temporal = formatTime(raw);
   }
   const timezoneLabel = columnHasTimezone(column.rawType)
     ? temporal.timezoneLabel
     : undefined;
-  const display = timezoneLabel
+  const display = isNonEmptyString(timezoneLabel)
     ? `${temporal.display} ${timezoneLabel}`
     : temporal.display;
   return createFormattedCell({
@@ -184,7 +190,7 @@ function formatStringCell(
     return null;
   }
   return createFormattedCell({
-    display: String(rawValue ?? ""),
+    display: typeof rawValue === "string" ? rawValue : "",
     isTruncated: truncated,
     kind: "array",
   });
@@ -204,7 +210,7 @@ function formatExtendedKnownValueCell({
   switch (caseName) {
     case "jsonValue":
       return createFormattedCell({
-        display: String(value ?? ""),
+        display: typeof value === "string" ? value : "",
         isTruncated: truncated,
         kind: "json",
       });
@@ -251,7 +257,7 @@ function formatKnownValueCell(
   }
 
   const { value } = kind;
-  const truncated = cell.truncated === true;
+  const { truncated } = cell;
 
   switch (kind.case) {
     case "boolValue":
@@ -264,10 +270,14 @@ function formatKnownValueCell(
       return formatIntegerValue(value);
     case "numericValue":
       return createFormattedCell({
-        display: String(value ?? ""),
+        display: typeof value === "string" ? value : "",
         isTruncated: truncated,
         kind: "number",
       });
+    case undefined:
+    case "jsonValue":
+    case "stringValue":
+    case "timestampValue":
     default:
       return formatExtendedKnownValueCell({
         caseName: kind.case ?? "",
@@ -292,7 +302,7 @@ function formatTableCell(
     formatKnownValueCell(cell, column) ??
     createFormattedCell({
       display: String(cell.value?.kind.value ?? ""),
-      isTruncated: cell.truncated === true,
+      isTruncated: cell.truncated,
       kind: "text",
     })
   );

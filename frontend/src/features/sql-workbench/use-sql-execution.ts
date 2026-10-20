@@ -122,6 +122,7 @@ function patchForResponse(
         },
       });
     }
+    case undefined:
     default:
       return null;
   }
@@ -173,7 +174,7 @@ function useSqlExecution({
     {}
   );
   const [explains, setExplains] = useState<Record<string, SqlExplain>>({});
-  const controllers = useRef(new Map<string, AbortController>());
+  const controllersRef = useRef(new Map<string, AbortController>());
   const settledRef = useRef(onSettled);
   const parent = buildDatabaseName(instanceId, databaseId);
 
@@ -182,7 +183,7 @@ function useSqlExecution({
   });
 
   useEffect(function abortInFlightOnUnmount() {
-    const active = controllers.current;
+    const active = controllersRef.current;
     return () => {
       for (const controller of active.values()) {
         controller.abort();
@@ -199,11 +200,11 @@ function useSqlExecution({
   }
 
   function cancel(tabId: string) {
-    controllers.current.get(tabId)?.abort();
+    controllersRef.current.get(tabId)?.abort();
   }
 
   function cancelExplain(tabId: string) {
-    controllers.current.get(explainKey(tabId))?.abort();
+    controllersRef.current.get(explainKey(tabId))?.abort();
   }
 
   async function consumeStream({
@@ -278,7 +279,7 @@ function useSqlExecution({
   ): Promise<ExecutionStatus> {
     cancel(tabId);
     const controller = new AbortController();
-    controllers.current.set(tabId, controller);
+    controllersRef.current.set(tabId, controller);
     const startedAt = Date.now();
     const context = { startedAt, statement };
     setExecutions((current) => ({
@@ -305,8 +306,8 @@ function useSqlExecution({
         status: "error",
       });
     } finally {
-      if (controllers.current.get(tabId) === controller) {
-        controllers.current.delete(tabId);
+      if (controllersRef.current.get(tabId) === controller) {
+        controllersRef.current.delete(tabId);
       }
     }
   }
@@ -318,7 +319,7 @@ function useSqlExecution({
   ): Promise<void> {
     cancelExplain(tabId);
     const controller = new AbortController();
-    controllers.current.set(explainKey(tabId), controller);
+    controllersRef.current.set(explainKey(tabId), controller);
     const startedAt = Date.now();
     const base = {
       analyze: options.analyze,
@@ -371,8 +372,8 @@ function useSqlExecution({
             },
       }));
     } finally {
-      if (controllers.current.get(explainKey(tabId)) === controller) {
-        controllers.current.delete(explainKey(tabId));
+      if (controllersRef.current.get(explainKey(tabId)) === controller) {
+        controllersRef.current.delete(explainKey(tabId));
       }
     }
   }

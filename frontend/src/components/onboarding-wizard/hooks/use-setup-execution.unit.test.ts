@@ -1,6 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { beforeEach, describe, expect, it, rs } from "@rstest/core";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
+import { waitFor } from "@testing-library/react";
 import * as reactActual from "react" with { rstest: "importActual" };
 import {
   resolveSetupFailureAction,
@@ -14,12 +15,19 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 const { cleanupCallbacks, useEffectEventMock, useEffectMock, useRefMock } =
-  rs.hoisted(() => ({
-    cleanupCallbacks: [] as Array<() => void>,
-    useEffectEventMock: rs.fn((callback: unknown) => callback),
-    useEffectMock: rs.fn(),
-    useRefMock: rs.fn(),
-  }));
+  rs.hoisted(
+    (): {
+      cleanupCallbacks: (() => void)[];
+      useEffectEventMock: ReturnType<typeof rs.fn>;
+      useEffectMock: ReturnType<typeof rs.fn>;
+      useRefMock: ReturnType<typeof rs.fn>;
+    } => ({
+      cleanupCallbacks: [] as (() => void)[],
+      useEffectEventMock: rs.fn((callback: unknown) => callback),
+      useEffectMock: rs.fn(),
+      useRefMock: rs.fn(),
+    })
+  );
 
 rs.mock("react", () => ({
   ...reactActual,
@@ -39,14 +47,13 @@ function arrangeReactHooks() {
   useRefMock.mockImplementation((initialValue: unknown) => ({
     current: initialValue,
   }));
-  useEffectMock.mockImplementation(
-    (callback: () => undefined | (() => void)) => {
-      const cleanup = callback();
-      if (typeof cleanup === "function") {
-        cleanupCallbacks.push(cleanup);
-      }
+  useEffectMock.mockImplementation((effect: () => undefined | (() => void)) => {
+    const cleanup = effect();
+    if (typeof cleanup === "function") {
+      cleanupCallbacks.push(cleanup);
     }
-  );
+    return undefined;
+  });
 }
 
 function createSetupOptions(
@@ -68,7 +75,7 @@ function createSetupOptions(
 }
 
 describe("resolveSetupFailureAction", () => {
-  it("returns fallback setup failure message for unknown errors", () => {
+  test("returns fallback setup failure message for unknown errors", () => {
     const result = resolveSetupFailureAction({
       error: { reason: "unknown" },
       failedEvent: null,
@@ -90,7 +97,7 @@ describe("useSetupExecution", () => {
     arrangeReactHooks();
   });
 
-  it("does not run setup before an explicit run is requested", () => {
+  test("does not run setup before an explicit run is requested", () => {
     const options = createSetupOptions({ setupRunToken: 0 });
 
     useSetupExecution(options);
@@ -98,7 +105,7 @@ describe("useSetupExecution", () => {
     expect(options.runSetupMutation).not.toHaveBeenCalled();
   });
 
-  it("runs embedded setup with submitted config and calls success", async () => {
+  test("runs embedded setup with submitted config and calls success", async () => {
     const options = createSetupOptions({
       submittedEmbeddedConfig: createProto(EmbeddedSetupConfigSchema, {
         mode: "ephemeral",
@@ -111,18 +118,27 @@ describe("useSetupExecution", () => {
     expect(result.setupRunning).toBe(true);
     expect(options.runSetupMutation).toHaveBeenCalledWith({
       request: expect.objectContaining({
-        setup: expect.objectContaining({ case: "embeddedConfig" }),
-      }),
-      signal: expect.any(AbortSignal),
+        setup: expect.objectContaining({ case: "embeddedConfig" }) as unknown,
+      }) as unknown,
+      signal: expect.any(AbortSignal) as unknown,
     });
-    expect(options.onSuccess).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(options.onSuccess).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("aborts in-flight setup through returned action and cleanup", async () => {
+  test("aborts in-flight setup through returned action and cleanup", async () => {
     const options = createSetupOptions({
       runSetupMutation: rs.fn(
-        ({ signal }) =>
+        ({
+          signal,
+        }: Parameters<
+          Parameters<typeof useSetupExecution>[0]["runSetupMutation"]
+        >[0]) =>
           new Promise<void>((_resolve, reject) => {
+            if (!signal) {
+              throw new Error("Expected cancellation signal");
+            }
             signal.addEventListener("abort", () => {
               reject(new Error("request aborted"));
             });
@@ -149,7 +165,7 @@ describe("useSetupExecution", () => {
     expect(options.setStreamFailure).not.toHaveBeenCalled();
   });
 
-  it("routes invalid setup errors back to configure validation", async () => {
+  test("routes invalid setup errors back to configure validation", async () => {
     const options = createSetupOptions({
       runSetupMutation: rs.fn(() =>
         Promise.reject(
@@ -161,13 +177,15 @@ describe("useSetupExecution", () => {
     useSetupExecution(options);
     await flushPromises();
 
-    expect(options.setConfigureValidationError).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "host is required" })
-    );
+    await waitFor(() => {
+      expect(options.setConfigureValidationError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "host is required" })
+      );
+    });
     expect(options.setStreamFailure).not.toHaveBeenCalled();
   });
 
-  it("treats already-configured setup responses as successful", async () => {
+  test("treats already-configured setup responses as successful", async () => {
     const options = createSetupOptions({
       runSetupMutation: rs.fn(() =>
         Promise.reject(
@@ -179,12 +197,14 @@ describe("useSetupExecution", () => {
     useSetupExecution(options);
     await flushPromises();
 
-    expect(options.onSuccess).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(options.onSuccess).toHaveBeenCalledTimes(1);
+    });
     expect(options.setConfigureValidationError).not.toHaveBeenCalled();
     expect(options.setStreamFailure).not.toHaveBeenCalled();
   });
 
-  it("routes stream failures to the error summary", async () => {
+  test("routes stream failures to the error summary", async () => {
     const failedEvent = createProto(SetupProgressEventSchema, {
       displayName: "Migrate",
       error: "migration failed",
@@ -199,8 +219,10 @@ describe("useSetupExecution", () => {
     useSetupExecution(options);
     await flushPromises();
 
-    expect(options.setStreamFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "migration failed" })
-    );
+    await waitFor(() => {
+      expect(options.setStreamFailure).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "migration failed" })
+      );
+    });
   });
 });

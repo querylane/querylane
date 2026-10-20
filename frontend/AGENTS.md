@@ -16,8 +16,8 @@ Use this source code when you need to understand how a package works internally 
 To fetch source code for a package or repository you need to understand, run:
 
 ```bash
-npx opensrc <package>           # npm package, for example: npx opensrc zod
-npx opensrc <owner>/<repo>      # GitHub repository, for example: npx opensrc vercel/ai
+bunx opensrc <package>           # npm package, for example: bunx opensrc zod
+bunx opensrc <owner>/<repo>      # GitHub repository, for example: bunx opensrc vercel/ai
 ```
 
 <!-- opensrc:end -->
@@ -25,8 +25,11 @@ npx opensrc <owner>/<repo>      # GitHub repository, for example: npx opensrc ve
 ## Toolchain
 
 - Use `bun` as package manager (not npm/npx)
-- Use TypeScript 7's native `tsc` for type checking
-- Do not install eslint or prettier (this project uses Biome)
+- Use `bun run type:check`: native `tsrs`, then the pinned TypeScript 7.1 nightly cross-check.
+- Use Biome/Ultracite, type-aware Oxlint/shadcn, and full React Doctor scans. Keep warnings fatal.
+- Read `quality/README.md` when changing rules, coverage, or tool versions. Fix findings; do not add directives, per-file waivers, nested quality configs, generated-looking authored files, or ignored source paths.
+- Run `bun run quality:gate` before delivery, plus browser/E2E checks for behavior changes.
+- Do not install ESLint or Prettier alongside these tools.
 - Do not use `rm -rf` except for: node_modules, dist, .next, build, .cache, .turbo, coverage
 - Do not use `git push --force` (use `--force-with-lease`)
 - Do not use `git reset --hard`

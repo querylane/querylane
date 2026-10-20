@@ -1,6 +1,5 @@
 import { Code } from "@connectrpc/connect";
 import { useEffect, useEffectEvent, useRef } from "react";
-
 import { SETUP_FAILURE_FALLBACK_MESSAGE } from "@/components/onboarding-wizard/constants";
 import { shouldAutoRunSetup } from "@/components/onboarding-wizard/mappers";
 import type {
@@ -15,11 +14,13 @@ import {
 } from "@/lib/setup-requests";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { PostgresConfig } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import type {
   EmbeddedSetupConfig,
   SetupProgressEvent,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import { SetupStep } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 interface SetupExecutionOptions {
   getFailedEvent: () => SetupProgressEvent | null;
@@ -61,8 +62,11 @@ function resolveSetupFailureAction({
   const connectError = toConnectError(error);
   const failureContext = {
     area: "onboarding-setup",
-    stepDisplayName: failedEvent?.displayName || undefined,
-    stepId: failedEvent?.stepId || undefined,
+    stepDisplayName: (failedEvent?.displayName ?? "") || undefined,
+    stepId:
+      failedEvent?.stepId === SetupStep.UNSPECIFIED
+        ? undefined
+        : failedEvent?.stepId,
   } as const;
   const fallbackError =
     error instanceof Error ? error : new Error(SETUP_FAILURE_FALLBACK_MESSAGE);
@@ -84,7 +88,9 @@ function resolveSetupFailureAction({
   return {
     action: "error_summary",
     streamError: normalizeAppUiError(
-      failedEvent?.error ? new Error(failedEvent.error) : fallbackError,
+      isNonEmptyString(failedEvent?.error)
+        ? new Error(failedEvent.error)
+        : fallbackError,
       {
         ...failureContext,
         source: failedEvent ? "setup_stream" : "setup",
@@ -179,7 +185,7 @@ function useSetupExecution({
     setStreamFailure(resolution.streamError);
   });
 
-  // allow-useEffect: keep setup inputs current without restarting execution
+  // keep setup inputs current without restarting execution
   useEffect(function syncSetupExecutionOptions() {
     setupRequestOptionsRef.current = {
       phase,
@@ -190,7 +196,7 @@ function useSetupExecution({
     };
   });
 
-  // allow-useEffect: execute each explicitly requested setup run
+  // execute each explicitly requested setup run
   useEffect(
     function executeSetupRun() {
       const currentOptions = setupRequestOptionsRef.current;
@@ -210,16 +216,15 @@ function useSetupExecution({
         selectedMethod: currentOptions.selectedMethod,
         submittedEmbeddedConfig: currentOptions.submittedEmbeddedConfig,
         submittedPostgresConfig: currentOptions.submittedPostgresConfig,
-      }).then(
-        () => {
+      })
+        .then(() => {
           handleSetupSuccess();
-        },
-        (error) => {
+        })
+        .catch((error: unknown) => {
           if (!controller.signal.aborted) {
             handleSetupFailure(error);
           }
-        }
-      );
+        });
 
       return () => {
         controller.abort();

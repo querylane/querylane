@@ -23,7 +23,8 @@ const CANONICAL_SCREENSHOT_PLATFORM = "linux";
 const LOCAL_VISUAL_MISMATCH_THRESHOLD = 0.05;
 const isCanonicalScreenshotPlatform =
   platform === CANONICAL_SCREENSHOT_PLATFORM;
-const UPDATE_SNAPSHOTS_ARGUMENT_PATTERN = /^(-u|--update-snapshots)(=|$)/;
+const UPDATE_SNAPSHOTS_ARGUMENT_PATTERN =
+  /^(?<capture1>-u|--update-snapshots)(?<capture2>=|$)/u;
 const LOCAL_WORKERS = 2;
 // GitHub-hosted ubuntu-latest runners have 4 vCPUs; Playwright defaults to half.
 const CI_WORKERS = 4;
@@ -34,11 +35,10 @@ const PLAYWRIGHT_BASE_URL_KEY = "baseURL";
 const useExternalServer = Boolean(
   e2eEnv.BASE_URL ?? e2eEnv.PLAYWRIGHT_BASE_URL
 );
+// Adds the visual harness entry. Production bundle budgets run separately.
 const serverCommand = e2eEnv.QUERYLANE_E2E_SKIP_BUILD
   ? `bun run preview --host 127.0.0.1 --port ${PORT}`
-  : // Adds the test-only visual harness entry. Bundle budgets are enforced on
-    // the production build by the Frontend Build job, not on this one.
-    `QUERYLANE_VISUAL_HARNESS=1 bunx rsbuild build && bun run preview --host 127.0.0.1 --port ${PORT}`;
+  : `QUERYLANE_VISUAL_HARNESS=1 bunx rsbuild build && bun run preview --host 127.0.0.1 --port ${PORT}`;
 
 if (
   !isCanonicalScreenshotPlatform &&
@@ -66,7 +66,7 @@ export default defineConfig({
   },
   forbidOnly: e2eEnv.CI,
   fullyParallel: true,
-  outputDir: "./test-results",
+  outputDir: "../test-results/e2e",
   projects: [
     {
       name: "chromium",

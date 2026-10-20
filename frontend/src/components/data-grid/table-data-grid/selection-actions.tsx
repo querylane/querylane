@@ -15,7 +15,10 @@ interface SelectionActionsProps {
   onExport: (format: ExportFormat) => void;
 }
 
-const FORMAT_ITEMS: Array<{ format: ExportFormat; label: string }> = [
+const FORMAT_ITEMS: {
+  format: ExportFormat;
+  label: string;
+}[] = [
   { format: "csv", label: "CSV" },
   // jsonb/bytea/timestamp values are emitted as quoted strings without
   // type casts, so the INSERT statements won't round-trip for those types.
@@ -83,7 +86,9 @@ function FormatDropdown({
           (item) => (
             <DropdownMenuItem
               key={item.format}
-              onClick={() => onSelect(item.format)}
+              onClick={() => {
+                onSelect(item.format);
+              }}
             >
               {item.label}
             </DropdownMenuItem>

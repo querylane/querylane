@@ -279,6 +279,8 @@ function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
           {formatted.display}
         </span>
       );
+    case "null":
+    case "text":
     default:
       return (
         <pre

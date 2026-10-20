@@ -14,7 +14,34 @@ import { connectStreamBody } from "../visual/serve-service";
 import { expect, softScreenshot, test } from "./base";
 import { mockRpc } from "./helpers";
 
-const RUN_BUTTON_NAME_RE = /^Run/;
+const RUN_BUTTON_NAME_RE = /^Run/u;
+
+test("invalid saved SQL work stays recoverable after creating a new draft", async ({
+  page,
+}) => {
+  const raw = JSON.stringify({
+    version: 0,
+    state: { workspaces: "broken", history: {}, savedQueries: {} },
+  });
+  await mockConsoleResources(page);
+  await page.addInitScript((value) => {
+    localStorage.setItem("querylane.sql-workbench.v1", value);
+  }, raw);
+  await page.goto(`${DATABASE_URL}/workbench`);
+  await expect(
+    page.getByText("Saved SQL work could not be loaded", { exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "SQL editor" })
+    .fill("SELECT 'new draft';");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("querylane.sql-workbench.v1.recovery")
+      )
+    )
+    .toBe(raw);
+});
 
 for (const routeName of ["workbench", "sql"]) {
   test(`${routeName} keeps its URL and runs queries in the current workbench`, async ({
@@ -140,10 +167,10 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await expect(
     page.getByRole("columnheader", { name: "Shared blocks" })
   ).toBeVisible();
-  expect(
-    (await makeAxeBuilder().include('[aria-label="Query plan"]').analyze())
-      .violations
-  ).toEqual([]);
+  const awaitedResult1 = await makeAxeBuilder()
+    .include('[aria-label="Query plan"]')
+    .analyze();
+  expect(awaitedResult1.violations).toEqual([]);
   await expect(page).toHaveURL(url);
   await softScreenshot(page, "workbench-plan-inspector");
 });
@@ -191,12 +218,12 @@ test("phone navigation dismisses the sidebar and plan focus restores keyboard fo
   await expect
     .poll(async () => {
       const bounds = await map.boundingBox();
-      return map.getByRole("button").evaluateAll(
+      return await map.getByRole("button").evaluateAll(
         (elements, viewport) =>
           elements.every((element) => {
             const rect = element.getBoundingClientRect();
             return (
-              viewport &&
+              viewport !== null &&
               rect.left >= viewport.x &&
               rect.right <= viewport.x + viewport.width &&
               rect.top >= viewport.y &&

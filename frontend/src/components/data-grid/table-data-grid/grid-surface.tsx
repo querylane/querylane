@@ -7,6 +7,7 @@ import {
 } from "@/components/querylane-ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 export function GridSurface({
   busy,
@@ -58,7 +59,7 @@ export function GridSurface({
                 <span className="block">
                   Re-evaluating the visible data set.
                 </span>
-                {refreshStatusLabel ? (
+                {isNonEmptyString(refreshStatusLabel) ? (
                   <span className="block">{refreshStatusLabel}</span>
                 ) : null}
               </CardDescription>

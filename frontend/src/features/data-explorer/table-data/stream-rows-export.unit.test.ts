@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { createRouterTransport } from "@connectrpc/connect";
 import { describe, expect, rs, test } from "@rstest/core";
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CellValueMode,
   ReadRowsRequestSchema,
@@ -25,9 +26,9 @@ import {
 } from "./stream-rows-export";
 
 const RESOURCE = "instances/i/databases/d/schemas/public/tables/events";
-const EVENTS_CSV_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.csv$/;
-const EVENTS_JSON_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.json$/;
-const EVENTS_SQL_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.sql$/;
+const EVENTS_CSV_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.csv$/u;
+const EVENTS_JSON_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.json$/u;
+const EVENTS_SQL_FILENAME_PATTERN = /^events_\d{4}-\d{2}-\d{2}\.sql$/u;
 
 const EXPORT_FORMAT_SAVE_PICKER_CASES = [
   {
@@ -44,6 +45,7 @@ const EXPORT_FORMAT_SAVE_PICKER_CASES = [
     exportFormat: "json",
     extension: ".json",
     filenamePattern: EVENTS_JSON_FILENAME_PATTERN,
+    payloadMimeType: "application/json",
   },
   {
     acceptMimeType: "application/sql",
@@ -51,15 +53,16 @@ const EXPORT_FORMAT_SAVE_PICKER_CASES = [
     exportFormat: "sql",
     extension: ".sql",
     filenamePattern: EVENTS_SQL_FILENAME_PATTERN,
+    payloadMimeType: "application/sql",
   },
-] satisfies Array<{
+] satisfies {
   acceptMimeType: string;
   expectedContents: string;
   exportFormat: ExportFormat;
   extension: string;
   filenamePattern: RegExp;
-  payloadMimeType?: string;
-}>;
+  payloadMimeType: string;
+}[];
 
 function streamOf<T>(...items: T[]): AsyncIterable<T> {
   return {
@@ -90,10 +93,10 @@ function cell(value: string) {
 
 interface SaveFilePickerOptions {
   suggestedName: string;
-  types: Array<{
+  types: {
     accept: Record<string, string[]>;
     description: string;
-  }>;
+  }[];
 }
 
 describe("buildStreamRowsExportRequest", () => {
@@ -172,7 +175,7 @@ describe("buildStreamRowsExportPayload", () => {
     expect(result.truncated).toBe(true);
     expect(result.rowCount).toBe(1n);
     expect(result.savedToFile).toBe(false);
-    expect(result.payload.contents.join("")).toBe(
+    expect(await new Blob([...result.payload.contents]).text()).toBe(
       "id,email\n1,one@example.com\n"
     );
     expect(onProgress).toHaveBeenCalledWith({
@@ -230,7 +233,7 @@ describe("buildStreamRowsExportPayload", () => {
 
     expect(result.savedToFile).toBe(true);
     expect(result.payload.contents).toEqual([]);
-    expect(writes.join("")).toBe("id,email\n1,one@example.com\n");
+    expect(await new Blob(writes).text()).toBe("id,email\n1,one@example.com\n");
     expect(
       fileSink.write.mock.calls.some(([chunks]) => chunks.length === 0)
     ).toBe(false);
@@ -288,19 +291,21 @@ describe("exportStreamRows", () => {
           writes.push(chunk);
         }),
       };
-      const showSaveFilePicker = rs.fn((options: SaveFilePickerOptions) => {
-        const acceptTypes = options.types.flatMap((type) =>
-          Object.keys(type.accept)
-        );
-        const invalidType = acceptTypes.find((type) => type.includes(";"));
-        if (invalidType) {
-          throw new TypeError(`Invalid type: ${invalidType}`);
+      const showSaveFilePicker = rs.fn(
+        async (options: SaveFilePickerOptions) => {
+          const acceptTypes = options.types.flatMap((type) =>
+            Object.keys(type.accept)
+          );
+          const invalidType = acceptTypes.find((type) => type.includes(";"));
+          if (isNonEmptyString(invalidType)) {
+            throw new TypeError(`Invalid type: ${invalidType}`);
+          }
+          return {
+            createWritable: () => Promise.resolve(writable),
+          };
         }
-        return Promise.resolve({
-          createWritable: () => Promise.resolve(writable),
-        });
-      });
-      Object.defineProperty(window, "showSaveFilePicker", {
+      );
+      Object.defineProperty(globalThis.window, "showSaveFilePicker", {
         configurable: true,
         value: showSaveFilePicker,
       });
@@ -335,7 +340,7 @@ describe("exportStreamRows", () => {
 
         expect(showSaveFilePicker).toHaveBeenCalledWith(
           expect.objectContaining({
-            suggestedName: expect.stringMatching(filenamePattern),
+            suggestedName: expect.stringMatching(filenamePattern) as unknown,
             types: [
               {
                 accept: { [acceptMimeType]: [extension] },
@@ -345,12 +350,10 @@ describe("exportStreamRows", () => {
           })
         );
         expect(result.savedToFile).toBe(true);
-        if (payloadMimeType) {
-          expect(result.payload.mimeType).toBe(payloadMimeType);
-        }
-        expect(writes.join("")).toBe(expectedContents);
+        expect(result.payload.mimeType).toBe(payloadMimeType);
+        expect(await new Blob(writes).text()).toBe(expectedContents);
       } finally {
-        Reflect.deleteProperty(window, "showSaveFilePicker");
+        Reflect.deleteProperty(globalThis.window, "showSaveFilePicker");
       }
     }
   );

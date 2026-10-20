@@ -99,7 +99,9 @@ function PartitionsToolbar({
           aria-label="Search partitions…"
           className="h-8"
           name="partition-filter"
-          onChange={(event) => onSearchChange(event.target.value)}
+          onChange={(event) => {
+            onSearchChange(event.target.value);
+          }}
           placeholder="Search partitions…"
           presentation="search-body"
           value={search}

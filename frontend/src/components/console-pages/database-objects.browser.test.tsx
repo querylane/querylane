@@ -8,17 +8,17 @@ import {
 } from "@/visual-harness/database-objects-scenarios";
 
 function cardColumnGaps() {
-  const heading = Array.from(document.querySelectorAll("h1, h2, h3")).find(
+  const heading = [...document.querySelectorAll("h1, h2, h3")].find(
     (element) => element.textContent === "Database objects"
   );
   const section = heading?.closest("section");
   if (!(section instanceof HTMLElement)) {
-    throw new Error("Expected database objects section");
+    throw new TypeError("Expected database objects section");
   }
 
-  const cards = Array.from(
-    section.querySelectorAll<HTMLElement>('[data-slot="card"]')
-  ).map((card) => card.getBoundingClientRect());
+  const cards = [
+    ...section.querySelectorAll<HTMLElement>('[data-slot="card"]'),
+  ].map((card) => card.getBoundingClientRect());
   const columns = Map.groupBy(cards, (card) => Math.round(card.left));
   const gaps: number[] = [];
 

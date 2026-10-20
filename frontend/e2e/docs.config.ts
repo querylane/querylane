@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig, devices } from "playwright/test";
+import { isNonEmptyString } from "../src/lib/value-guards";
 import { e2eEnv } from "./env";
 
 const BASE_URL_KEY = "baseURL";
@@ -7,7 +8,7 @@ const baseUrl = e2eEnv.DOCS_BASE_URL ?? "http://127.0.0.1:4184";
 
 export default defineConfig({
   testDir: "./docs",
-  outputDir: "./test-results/docs",
+  outputDir: "../test-results/docs",
   reporter: "list",
   retries: 0,
   workers: 1,
@@ -39,7 +40,7 @@ export default defineConfig({
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
   ],
-  ...(!e2eEnv.DOCS_BASE_URL && {
+  ...(!isNonEmptyString(e2eEnv.DOCS_BASE_URL) && {
     webServer: {
       command: "HOST=127.0.0.1 PORT=4184 node dist/server/entry.mjs",
       cwd: path.resolve(import.meta.dirname, "../.."),

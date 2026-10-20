@@ -42,11 +42,16 @@ export type ProtoformMessageFormatter = (
   fallback: string
 ) => string;
 
-export function formatProtoformMessage(
-  formatter: ProtoformMessageFormatter | undefined,
-  code: ProtoformMessageCode,
-  params: ProtoformMessageParams,
-  fallback: string
-): string {
+export function formatProtoformMessage({
+  formatter,
+  code,
+  params,
+  fallback,
+}: {
+  formatter: ProtoformMessageFormatter | undefined;
+  code: ProtoformMessageCode;
+  params: ProtoformMessageParams;
+  fallback: string;
+}): string {
   return formatter?.(code, params, fallback) ?? fallback;
 }

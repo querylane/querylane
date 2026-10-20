@@ -15,7 +15,10 @@ import {
 function role(
   roleName: string,
   attrs = {},
-  memberOf: { role: string; roleName: string }[] = []
+  memberOf: {
+    role: string;
+    roleName: string;
+  }[] = []
 ) {
   return create(RoleSchema, {
     attributes: create(RoleAttributesSchema, attrs),

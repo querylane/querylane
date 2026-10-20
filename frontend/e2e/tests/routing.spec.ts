@@ -11,19 +11,19 @@ import {
   sampleInstance,
 } from "./helpers";
 
-const NEW_INSTANCE_URL_RE = /\/new-instance$/;
-const PRODUCTION_INSTANCE_URL_RE = /\/instances\/production\/?$/;
-const REPORTING_INSTANCE_URL_RE = /\/instances\/reporting\/?$/;
-const APPDB_DATABASE_URL_RE = /\/instances\/production\/databases\/appdb\/?$/;
+const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
+const PRODUCTION_INSTANCE_URL_RE = /\/instances\/production\/?$/u;
+const REPORTING_INSTANCE_URL_RE = /\/instances\/reporting\/?$/u;
+const APPDB_DATABASE_URL_RE = /\/instances\/production\/databases\/appdb\/?$/u;
 const APPDB_EXPLORER_URL_RE =
-  /\/instances\/production\/databases\/appdb\/explorer/;
-const CATEGORY_SEARCH_RE = /[?&]category=/;
-const NAME_SEARCH_RE = /[?&]name=/;
-const ORDERS_NAME_SEARCH_RE = /[?&]name=orders\b/;
-const PUBLIC_ORDERS_HEADING_RE = /public\.orders/;
-const PUBLIC_SCHEMA_SEARCH_RE = /[?&]schema=public\b/;
-const STALE_DATABASE_CONTEXT_URL_RE = /databases\/appdb|explorer/;
-const TABLES_CATEGORY_SEARCH_RE = /[?&]category=tables\b/;
+  /\/instances\/production\/databases\/appdb\/explorer/u;
+const CATEGORY_SEARCH_RE = /[?&]category=/u;
+const NAME_SEARCH_RE = /[?&]name=/u;
+const ORDERS_NAME_SEARCH_RE = /[?&]name=orders\b/u;
+const PUBLIC_ORDERS_HEADING_RE = /public\.orders/u;
+const PUBLIC_SCHEMA_SEARCH_RE = /[?&]schema=public\b/u;
+const STALE_DATABASE_CONTEXT_URL_RE = /databases\/appdb|explorer/u;
+const TABLES_CATEGORY_SEARCH_RE = /[?&]category=tables\b/u;
 
 const reportingInstance = {
   ...sampleInstance,

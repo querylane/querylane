@@ -27,14 +27,20 @@ import { createTestRouterTransport } from "@/test/router-transport";
 import { ThemeProvider } from "@/theme-provider";
 import { HarnessProviders } from "@/visual-harness/harness-providers";
 
-const INSTANCE_SELECTOR_NAME = /^Instance:/;
+const INSTANCE_SELECTOR_NAME = /^Instance:/u;
 const navigateMock = rs.fn(async () => undefined);
 const navigateToDatabaseMock = rs.fn();
-const adminHeaderMockState = rs.hoisted(() => ({
-  instances: undefined as unknown,
-  isInstanceRolesRoute: false,
-  selectedInstance: undefined as unknown,
-}));
+const adminHeaderMockState = rs.hoisted(
+  (): {
+    instances: unknown;
+    isInstanceRolesRoute: boolean;
+    selectedInstance: unknown;
+  } => ({
+    instances: undefined as unknown,
+    isInstanceRolesRoute: false,
+    selectedInstance: undefined as unknown,
+  })
+);
 
 function MockRouterLink({
   children,
@@ -72,10 +78,8 @@ function MockCatchBoundary({ children }: { children: ReactNode }) {
 }
 
 rs.mock("@tanstack/react-router", () => ({
-  ...Object.fromEntries([
-    ["CatchBoundary", MockCatchBoundary],
-    ["Link", MockRouterLink],
-  ]),
+  CatchBoundary: MockCatchBoundary,
+  Link: MockRouterLink,
   useLocation: ({
     select,
   }: {
@@ -197,7 +201,7 @@ beforeEach(() => {
 });
 
 function leafElementWithText(root: ParentNode, text: string) {
-  return Array.from(root.querySelectorAll<HTMLElement>("*")).find(
+  return [...root.querySelectorAll<HTMLElement>("*")].find(
     (element) => element.textContent === text && element.childElementCount === 0
   );
 }
@@ -207,9 +211,9 @@ function renderWithConsole(ui: ReactNode, { configManaged = true } = {}) {
     ...ADMIN_SHELL_FIXTURE,
     configManaged,
   });
-  const transport = createTestRouterTransport((router) =>
-    routeConsoleResources(router, fixture)
-  );
+  const transport = createTestRouterTransport((router) => {
+    routeConsoleResources(router, fixture);
+  });
   return render(
     <HarnessProviders transport={transport}>{ui}</HarnessProviders>
   );
@@ -309,7 +313,9 @@ test("sidebar database combobox exposes the selection and switches with Enter", 
   await expect.element(trigger).toBeVisible();
   await trigger.click();
   await expect
-    .element(page.getByRole("option", { name: new RegExp(LONG_DATABASE_NAME) }))
+    .element(
+      page.getByRole("option", { name: new RegExp(LONG_DATABASE_NAME, "u") })
+    )
     .toHaveAttribute("aria-selected", "true");
   const input = page.getByRole("combobox", { name: "Search databases…" });
   await input.fill("missing database");
@@ -372,16 +378,16 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
     .element(reconfigureButton)
     .not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
-  const banner = Array.from(document.querySelectorAll("output")).find((item) =>
+  const banner = [...document.querySelectorAll("output")].find((item) =>
     item.textContent.includes("Meta database unavailable")
   )?.parentElement;
   const sidebar = document.querySelector('[data-slot="sidebar-container"]');
 
   if (!(banner instanceof HTMLDivElement)) {
-    throw new Error("Expected degraded banner element to be mounted");
+    throw new TypeError("Expected degraded banner element to be mounted");
   }
   if (!(sidebar instanceof HTMLDivElement)) {
-    throw new Error("Expected desktop sidebar container to be mounted");
+    throw new TypeError("Expected desktop sidebar container to be mounted");
   }
 
   const bannerRect = banner.getBoundingClientRect();

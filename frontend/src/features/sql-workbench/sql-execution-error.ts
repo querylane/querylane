@@ -1,4 +1,5 @@
 import type { AppUiError } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { PostgreSqlErrorRetryGuidance } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
 /** PostgreSQL rejects writes inside the workbench's read-only transaction. */
@@ -20,7 +21,7 @@ const SQL_WORKBENCH_ERROR_CONTEXT = {
 function withServerMessage(error: AppUiError): AppUiError {
   const fields = error.postgres?.serverFields;
   const message = fields?.["message"];
-  if (!message) {
+  if (fields === undefined || !isNonEmptyString(message)) {
     return error;
   }
   const sqlstate = error.postgres?.sqlstate;
@@ -29,7 +30,9 @@ function withServerMessage(error: AppUiError): AppUiError {
     retryGuidance: fields["hint"] ?? error.retryGuidance,
     summary:
       fields["detail"] ??
-      (sqlstate ? `PostgreSQL error ${sqlstate}` : error.summary),
+      (isNonEmptyString(sqlstate)
+        ? `PostgreSQL error ${sqlstate}`
+        : error.summary),
     title: message,
   };
 }

@@ -84,17 +84,17 @@ function countRowsWithTruncatedCells(
 }
 
 const FILENAME_DATE_FORMAT = "yyyy-MM-dd";
-const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/g;
-const SQL_NUMERIC_PATTERN = /^-?\d+(?:\.\d+)?$/;
-const CSV_FORMULA_PREFIX_PATTERN = /^[=+\-@\t\r]/;
-const CSV_QUOTE_REQUIRED_PATTERN = /[",\n\r]/;
-const CSV_QUOTE_PATTERN = /"/g;
-const SQL_QUOTE_PATTERN = /'/g;
-const SQL_IDENTIFIER_QUOTE_PATTERN = /"/g;
+const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/gu;
+const SQL_NUMERIC_PATTERN = /^-?\d+(?:\.\d+)?$/u;
+const CSV_FORMULA_PREFIX_PATTERN = /^[=+\-@\t\r]/u;
+const CSV_QUOTE_REQUIRED_PATTERN = /[",\n\r]/u;
+const CSV_QUOTE_PATTERN = /"/gu;
+const SQL_QUOTE_PATTERN = /'/gu;
+const SQL_IDENTIFIER_QUOTE_PATTERN = /"/gu;
 
 function buildFilename(table: string, ext: string): string {
   const date = format(new Date(), FILENAME_DATE_FORMAT);
-  const safeTable = table.replace(SAFE_FILENAME_PATTERN, "_") || "table";
+  const safeTable = table.replaceAll(SAFE_FILENAME_PATTERN, "_") || "table";
   return `${safeTable}_${date}.${ext}`;
 }
 
@@ -116,6 +116,7 @@ function getExportFileDetails(
         filename: buildFilename(table, "sql"),
         mimeType: "application/sql",
       };
+    case "csv":
     default:
       return {
         extensions: [".csv"],
@@ -131,7 +132,7 @@ function escapeCsv(value: string, neutralizeFormula = true): string {
       ? `'${value}`
       : value;
   if (safeValue === "" || CSV_QUOTE_REQUIRED_PATTERN.test(safeValue)) {
-    return `"${safeValue.replace(CSV_QUOTE_PATTERN, '""')}"`;
+    return `"${safeValue.replaceAll(CSV_QUOTE_PATTERN, '""')}"`;
   }
   return safeValue;
 }
@@ -164,7 +165,7 @@ function rawCellValue(cell: TableCell | undefined): RawCellValue {
   }
   switch (kind.case) {
     case "boolValue":
-      return { kind: "bool", value: kind.value === true };
+      return { kind: "bool", value: kind.value };
     case "bytesValue":
       return { kind: "text", text: bytesToPostgresHex(kind.value) };
     case "doubleValue":
@@ -173,17 +174,18 @@ function rawCellValue(cell: TableCell | undefined): RawCellValue {
     case "int64Value":
       return { kind: "number", text: kind.value.toString() };
     case "numericValue":
-      return { kind: "number", text: String(kind.value ?? "") };
+      return { kind: "number", text: kind.value ?? "" };
     case "jsonValue":
-      return { kind: "text", text: String(kind.value ?? "") };
+      return { kind: "text", text: kind.value ?? "" };
     case "timestampValue":
       // Keep the server-provided string: offset and sub-second precision
       // must survive the round trip.
-      return { kind: "text", text: String(kind.value ?? "") };
+      return { kind: "text", text: kind.value ?? "" };
     case "stringValue":
       return { kind: "text", text: kind.value };
+    case undefined:
     default:
-      return { kind: "text", text: String(kind.value ?? "") };
+      return { kind: "text", text: kind.value ?? "" };
   }
 }
 
@@ -193,6 +195,8 @@ function rawCellText(value: RawCellValue): string {
       return "";
     case "bool":
       return value.value ? "true" : "false";
+    case "number":
+    case "text":
     default:
       return value.text;
   }
@@ -272,7 +276,7 @@ function formatRowsAsJson(
 }
 
 function quoteSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(SQL_IDENTIFIER_QUOTE_PATTERN, '""')}"`;
+  return `"${identifier.replaceAll(SQL_IDENTIFIER_QUOTE_PATTERN, '""')}"`;
 }
 
 function formatSqlLiteral(cell: TableCell | undefined): string {
@@ -288,7 +292,7 @@ function formatSqlLiteral(cell: TableCell | undefined): string {
   }
   // Exponent and special float forms ("1e+30", "NaN") plus every text kind
   // are quoted; PostgreSQL accepts them as typed literals.
-  return `'${raw.text.replace(SQL_QUOTE_PATTERN, "''")}'`;
+  return `'${raw.text.replaceAll(SQL_QUOTE_PATTERN, "''")}'`;
 }
 
 function formatSqlValueRow(row: SelectedRow, keys: readonly string[]): string {
@@ -343,8 +347,7 @@ function appendCsvRows(
   keys: readonly string[]
 ): number {
   for (const row of rows) {
-    chunks.push(formatCsvRow(row, keys));
-    chunks.push("\n");
+    chunks.push(formatCsvRow(row, keys), "\n");
   }
   return rows.length;
 }
@@ -364,8 +367,8 @@ function appendJsonRows({
 }): number {
   let appended = 0;
   for (const row of rows) {
-    chunks.push(initialRowCount + appended === 0 ? "\n" : ",\n");
     chunks.push(
+      initialRowCount + appended === 0 ? "\n" : ",\n",
       indentJsonChunk(
         JSON.stringify(formatJsonRecord(row, columns, keys), null, 2)
       )
@@ -435,9 +438,9 @@ function createChunkedExportBuilder(
 
   if (normalizedFormat === "csv") {
     chunks.push(
-      columns.map((column) => escapeCsv(column.columnName)).join(",")
+      columns.map((column) => escapeCsv(column.columnName)).join(","),
+      "\n"
     );
-    chunks.push("\n");
   }
 
   if (normalizedFormat === "json") {

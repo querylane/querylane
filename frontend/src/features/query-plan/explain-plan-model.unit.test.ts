@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   flattenPlan,
   parseExplainPlan,
@@ -42,7 +42,7 @@ const ANALYZE_PLAN = JSON.stringify([
 ]);
 
 describe("parseExplainPlan", () => {
-  it("builds a tree with exclusive times across repeated loops", () => {
+  test("builds a tree with exclusive times across repeated loops", () => {
     const plan = parseExplainPlan(ANALYZE_PLAN);
     expect(plan).not.toBeNull();
     expect(plan?.executionTimeMs).toBe(12.5);
@@ -60,7 +60,7 @@ describe("parseExplainPlan", () => {
     expect(root?.children[1]?.indexName).toBe("orders_pkey");
   });
 
-  it("keeps extra fields as details and omits the ones shown inline", () => {
+  test("keeps extra fields as details and omits the ones shown inline", () => {
     const plan = parseExplainPlan(ANALYZE_PLAN);
     const seqScan = plan?.root.children[0];
     expect(seqScan?.details).toEqual([
@@ -68,7 +68,7 @@ describe("parseExplainPlan", () => {
     ]);
   });
 
-  it("handles a plain EXPLAIN without actual timings", () => {
+  test("handles a plain EXPLAIN without actual timings", () => {
     const plan = parseExplainPlan(
       JSON.stringify([
         { Plan: { "Node Type": "Result", "Plan Rows": 1, "Total Cost": 0.01 } },
@@ -82,7 +82,7 @@ describe("parseExplainPlan", () => {
     expect(plan?.executionTimeMs).toBeUndefined();
   });
 
-  it("does not invent self time when worker times overlap", () => {
+  test("does not invent self time when worker times overlap", () => {
     const plan = parseExplainPlan(
       JSON.stringify([
         {
@@ -110,7 +110,7 @@ describe("parseExplainPlan", () => {
     expect(plan?.root.children[0]?.inclusiveMs).toBe(18);
   });
 
-  it("does not attribute a child's missing timing to the parent", () => {
+  test("does not attribute a child's missing timing to the parent", () => {
     const plan = parseExplainPlan(
       JSON.stringify([
         {
@@ -129,7 +129,7 @@ describe("parseExplainPlan", () => {
     expect(plan?.root.actualTotalMs).toBe(10);
   });
 
-  it("returns null for text plans or malformed JSON", () => {
+  test("returns null for text plans or malformed JSON", () => {
     expect(parseExplainPlan("Seq Scan on users")).toBeNull();
     expect(parseExplainPlan("[]")).toBeNull();
     expect(parseExplainPlan('{"nope":1}')).toBeNull();
@@ -137,7 +137,7 @@ describe("parseExplainPlan", () => {
 });
 
 describe("flattenPlan", () => {
-  it("lists nodes depth-first", () => {
+  test("lists nodes depth-first", () => {
     const plan = parseExplainPlan(ANALYZE_PLAN);
     if (!plan) {
       throw new Error("expected a plan");

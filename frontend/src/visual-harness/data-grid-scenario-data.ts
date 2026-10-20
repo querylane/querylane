@@ -113,10 +113,10 @@ const DIALOG_GUARD_TAGS_CELL = gridCell({
   value: "{demo,querylane,product,tag-1}",
 });
 
-const CELL_GALLERY_EXAMPLES: Array<{
+const CELL_GALLERY_EXAMPLES: {
   cell: TableCell;
   column: TableResultColumn;
-}> = [
+}[] = [
   {
     cell: create(TableCellSchema, {
       truncated: true,

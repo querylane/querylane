@@ -1,5 +1,6 @@
 import { resolveImplicitAdminPageFromPathname } from "@/lib/admin-page";
 import { parseRouteIdsFromPathname } from "@/lib/route-ids";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * Page-location tail appended to the connection selectors in the header
@@ -26,14 +27,14 @@ export type BreadcrumbTail =
 
 export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
   const { instanceId } = parseRouteIdsFromPathname(pathname);
-  if (!instanceId) {
+  if (!isNonEmptyString(instanceId)) {
     return { kind: "none" };
   }
 
   // The instance-scoped admin panel is not an AdminPageId page (it shows
   // app-global backend state), so it never resolves from the page mapping.
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[2] === "admin" && !segments[3]) {
+  if (segments[2] === "admin" && !isNonEmptyString(segments[3])) {
     return { kind: "page", label: "Admin" };
   }
 
@@ -56,7 +57,7 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
       const roleSegments = pathname.split("/").filter(Boolean);
       const roleSegment =
         roleSegments[2] === "roles" ? roleSegments[3] : undefined;
-      if (roleSegment) {
+      if (isNonEmptyString(roleSegment)) {
         return {
           instanceId,
           kind: "role",
@@ -65,6 +66,8 @@ export function resolveBreadcrumbTail(pathname: string): BreadcrumbTail {
       }
       return { kind: "page", label: "Roles" };
     }
+    case undefined:
+    case "instance.activity":
     default:
       return { kind: "none" };
   }

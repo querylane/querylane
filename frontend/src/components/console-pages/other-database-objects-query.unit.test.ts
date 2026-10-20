@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it, rs } from "@rstest/core";
+import { describe, expect, rs, test } from "@rstest/core";
 import {
   fetchOtherDatabaseObjectsSummary,
   fetchOtherObjectsBrowsePage,
@@ -34,7 +34,7 @@ function routineRow(name: string, extra: Record<string, string> = {}) {
 }
 
 describe("other database objects query", () => {
-  it("converts streamed table values and rows", () => {
+  test("converts streamed table values and rows", () => {
     expect(tableValueToText(stringValue("route"))).toBe("route");
     expect(
       tableValueToText(
@@ -64,7 +64,7 @@ describe("other database objects query", () => {
     });
   });
 
-  it("maps rows to objects and normalizes unknown statuses", () => {
+  test("maps rows to objects and normalizes unknown statuses", () => {
     expect(queryRowToObject(routineRow("shipping.route_eta()"))).toMatchObject({
       category: "routines",
       name: "shipping.route_eta()",
@@ -77,7 +77,7 @@ describe("other database objects query", () => {
     ).toBe("warning");
   });
 
-  it("builds a per-category summary with exact totals from window counts", async () => {
+  test("builds a per-category summary with exact totals from window counts", async () => {
     const execute = rs.fn(({ statement }: { statement: string }) => {
       if (statement.includes("has_cron_job_table")) {
         return Promise.resolve([{ has_cron_job_table: "false" }]);
@@ -116,7 +116,7 @@ describe("other database objects query", () => {
     );
   });
 
-  it("pages a category and reports whether more rows exist", async () => {
+  test("pages a category and reports whether more rows exist", async () => {
     const manyRows = Array.from({ length: 101 }, (_, index) =>
       routineRow(`a.f_${String(index).padStart(3, "0")}()`)
     );
@@ -138,7 +138,7 @@ describe("other database objects query", () => {
     expect(statements[0]).toContain("ILIKE");
   });
 
-  it("skips the cron category entirely when pg_cron is absent", async () => {
+  test("skips the cron category entirely when pg_cron is absent", async () => {
     const execute = rs.fn(() =>
       Promise.resolve([{ has_cron_job_table: "false" }])
     );
@@ -155,7 +155,7 @@ describe("other database objects query", () => {
 });
 
 describe("other database objects SQL builders", () => {
-  it("only adds search and cursor clauses when provided", () => {
+  test("only adds search and cursor clauses when provided", () => {
     const plain = buildOtherObjectsBrowseStatement({ category: "sequences" });
     expect(plain).not.toContain("WHERE name");
     expect(plain).toContain("LIMIT 101");

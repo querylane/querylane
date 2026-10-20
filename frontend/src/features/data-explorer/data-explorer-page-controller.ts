@@ -150,7 +150,13 @@ function useDataExplorerPageController({
 
   useEffect(
     function replaceStaleSchemaSearch() {
-      if (!(schemaSearchNeedsReset && activeSchemaName)) {
+      if (
+        !(
+          schemaSearchNeedsReset &&
+          typeof activeSchemaName === "string" &&
+          activeSchemaName.length > 0
+        )
+      ) {
         return;
       }
       handleNavigationResult(
@@ -265,8 +271,8 @@ function useDataExplorerPageController({
     rawTables,
     rawViews,
     schemaOverview: {
-      hasMoreTables: Boolean(overviewState.tablesQuery.hasNextPage),
-      hasMoreViews: Boolean(overviewState.viewsQuery.hasNextPage),
+      hasMoreTables: overviewState.tablesQuery.hasNextPage,
+      hasMoreViews: overviewState.viewsQuery.hasNextPage,
       rawTables: overviewState.rawTables,
       rawViews: overviewState.rawViews,
       tables: overviewState.tables,
@@ -289,7 +295,7 @@ function useDataExplorerPageController({
     schemaSelectionError: selectedSchemaError,
     schemas,
     schemasPagination: {
-      hasNextPage: Boolean(schemasQuery.hasNextPage),
+      hasNextPage: schemasQuery.hasNextPage,
       isFetchingNextPage: schemasQuery.isFetchingNextPage,
     },
     schemasSyncNotice: catalogSyncNotice(
@@ -309,7 +315,7 @@ function useDataExplorerPageController({
     tableListSort,
     tablesError: tablesQuery.error,
     tablesPagination: {
-      hasNextPage: Boolean(tablesQuery.hasNextPage),
+      hasNextPage: tablesQuery.hasNextPage,
       isFetchingNextPage: tablesQuery.isFetchingNextPage,
       isLoading: tablesQuery.isLoading,
     },
@@ -319,7 +325,7 @@ function useDataExplorerPageController({
     tableTab: search.tab,
     viewsError: viewsQuery.error,
     viewsPagination: {
-      hasNextPage: Boolean(viewsQuery.hasNextPage),
+      hasNextPage: viewsQuery.hasNextPage,
       isFetchingNextPage: viewsQuery.isFetchingNextPage,
       isLoading: viewsQuery.isLoading,
     },

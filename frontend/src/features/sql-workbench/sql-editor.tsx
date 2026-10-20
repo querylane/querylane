@@ -39,7 +39,13 @@ import {
   placeholder as placeholderExtension,
   rectangularSelection,
 } from "@codemirror/view";
-import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { padInsertion } from "@/features/sql-workbench/sql-catalog-model";
 import {
   type CompletionClause,
@@ -96,8 +102,8 @@ interface CompletionCatalog {
 }
 
 const RELATION_LOOKBEHIND_CHARS = 200;
-const WORD_BEFORE_PATTERN = /[\w$]*/;
-const WORD_PATTERN = /^[\w$]*$/;
+const WORD_BEFORE_PATTERN = /[\w$]*/u;
+const WORD_PATTERN = /^[\w$]*$/u;
 const EMPTY_SCOPE: CompletionScope = {
   columnsByRelation: new Map(),
   defaultSchema: DEFAULT_SCHEMA,
@@ -199,8 +205,6 @@ function catalogSource(catalogRef: {
   };
 }
 
-type EditorCompartments = ReturnType<typeof createCompartments>;
-
 function createCompartments() {
   return {
     attributes: new Compartment(),
@@ -259,13 +263,7 @@ function SqlEditor({
     namespace: schema,
     scope: completionScope ?? EMPTY_SCOPE,
   });
-  // Created once per mount. A `useRef(createCompartments())` initialiser
-  // would allocate the compartments on every render and discard them.
-  const compartmentsRef = useRef<EditorCompartments | null>(null);
-  if (compartmentsRef.current === null) {
-    compartmentsRef.current = createCompartments();
-  }
-  const compartments = compartmentsRef.current;
+  const [compartments] = useState(createCompartments);
   // The view is created once per mount; props that can change afterwards are
   // applied through compartments so the document and its undo history survive
   // (a tab rename must not reset the SQL).

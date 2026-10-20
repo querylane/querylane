@@ -19,6 +19,7 @@ import {
   type TableFilterLogic,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 const DEFAULT_FILTER_LOGIC: TableFilterLogic = "and";
@@ -82,7 +83,7 @@ function FilterPopover({
     updateState({
       draftLogic: selectedLogic,
       draftRules:
-        rules.length > 0 || !firstColumn
+        rules.length > 0 || !isNonEmptyString(firstColumn)
           ? rules
           : [createFilterRule(firstColumn)],
       open: true,
@@ -98,7 +99,7 @@ function FilterPopover({
   }
 
   function updateAt(index: number, patch: Partial<TableFilterRule>) {
-    const next = draftRules.slice();
+    const next = [...draftRules];
     const current = next[index];
     if (!current) {
       return;
@@ -108,14 +109,14 @@ function FilterPopover({
   }
 
   function removeAt(index: number) {
-    const next = draftRules.slice();
+    const next = [...draftRules];
     next.splice(index, 1);
     updateState({ draftRules: next });
   }
 
   function addRule() {
     const firstColumn = columns[0]?.columnName;
-    if (!firstColumn) {
+    if (!isNonEmptyString(firstColumn)) {
       return;
     }
     updateState({
@@ -127,7 +128,9 @@ function FilterPopover({
     const firstColumn = columns[0]?.columnName;
     updateState({
       draftLogic: DEFAULT_FILTER_LOGIC,
-      draftRules: firstColumn ? [createFilterRule(firstColumn)] : [],
+      draftRules: isNonEmptyString(firstColumn)
+        ? [createFilterRule(firstColumn)]
+        : [],
     });
     onChange([], DEFAULT_FILTER_LOGIC);
   }

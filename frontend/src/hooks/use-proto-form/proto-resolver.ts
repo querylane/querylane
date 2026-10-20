@@ -1,9 +1,10 @@
-import type { DescMessage, MessageShape, MessageValidType } from "@bufbuild/protobuf";
+import type { DescMessage, MessageShape } from "@bufbuild/protobuf";
 import type { FieldMask } from "@bufbuild/protobuf/wkt";
 import { toNestErrors, validateFieldsNatively } from "@hookform/resolvers";
 import type { Resolver } from "react-hook-form";
-import type { FormValues } from "../../lib/core/index.js";
+import type { FormValues } from "@/lib/core/field-model";
 import {
+  type NormalizedProtoIssue,
   PROTO_FORM_ROOT_ERROR_KEY,
   type ProtoFormOptions,
   validateFormValuesAgainstProtoSchema,
@@ -12,36 +13,113 @@ import {
   humanizeValidationError,
   isGenericValidationMessage,
 } from "../../lib/protobuf-provider/humanize-validation-error.js";
-import { formErrorTarget, type FormErrorMessage } from "../../lib/protobuf-provider/map-error-target.js";
+import {
+  type FormErrorMessage,
+  formErrorTarget,
+} from "../../lib/protobuf-provider/map-error-target.js";
 import { createDescriptorAwareStandardSchema } from "../../lib/protobuf-provider/validation-schema.js";
 
-export interface ProtoResolverOptions<Desc extends DescMessage = DescMessage> {
-  getSourceMessage?: () => MessageShape<Desc> | undefined;
-  getValidationMask?: (values: FormValues) => FieldMask | undefined;
+function formatFieldIssues(
+  desc: DescMessage,
+  issues: readonly NormalizedProtoIssue[],
+  options: ProtoFormOptions
+) {
+  const rawErrors: Record<
+    string,
+    { message: string; isGeneric: boolean; messages: FormErrorMessage[] }
+  > = {};
+  for (const issue of issues) {
+    if (issue.path.length === 0) {
+      continue;
+    }
+    const { path, criterion } = formErrorTarget(desc, issue.path);
+    const generic = isGenericValidationMessage(issue.message);
+    const existing = rawErrors[path];
+    if (existing) {
+      existing.messages.push({ message: issue.message, criterion });
+      if (existing.isGeneric && !generic) {
+        existing.isGeneric = false;
+        existing.message = issue.message;
+      }
+    } else {
+      rawErrors[path] = {
+        isGeneric: generic,
+        message: issue.message,
+        messages: [{ message: issue.message, criterion }],
+      };
+    }
+  }
+
+  return humanizeFieldIssues(rawErrors, options);
 }
 
-export function createProtoResolver<Desc extends DescMessage>(
-  desc: Desc,
-  options: ProtoFormOptions = {},
-  source?: MessageShape<Desc>,
-  protoResolverOptions: ProtoResolverOptions<Desc> = {}
-): Resolver<FormValues, unknown, MessageValidType<Desc>> {
+function humanizeFieldIssues(
+  rawErrors: Record<
+    string,
+    { message: string; isGeneric: boolean; messages: FormErrorMessage[] }
+  >,
+  options: ProtoFormOptions
+) {
+  const flatErrors: Record<
+    string,
+    { message: string; type: string; types: Record<string, string> }
+  > = {};
+  for (const [path, entry] of Object.entries(rawErrors)) {
+    flatErrors[path] = {
+      message: humanizeValidationError(entry.message, options.formatMessage),
+      type: "validation",
+      types: Object.fromEntries(
+        entry.messages.map(({ message, criterion }, index) => [
+          `${criterion ?? ""}${index}`,
+          humanizeValidationError(message, options.formatMessage),
+        ])
+      ),
+    };
+  }
+  return flatErrors;
+}
+
+function rootIssueMessages(
+  issues: readonly NormalizedProtoIssue[],
+  options: ProtoFormOptions
+): string[] {
+  return issues.flatMap((issue) =>
+    issue.path.length === 0
+      ? [humanizeValidationError(issue.message, options.formatMessage)]
+      : []
+  );
+}
+
+export function createProtoResolver<
+  Desc extends DescMessage,
+  Values extends FormValues = FormValues,
+>({
+  desc,
+  options = {},
+  source,
+  validationMask,
+}: {
+  desc: Desc;
+  options?: ProtoFormOptions;
+  source?: MessageShape<Desc> | undefined;
+  validationMask?: FieldMask | undefined;
+}): Resolver<Values, unknown, MessageShape<Desc>> {
   const standardSchema = createDescriptorAwareStandardSchema(desc, options);
 
   return async (values, _context, resolverOptions) => {
-    const validationResult = await validateFormValuesAgainstProtoSchema(
+    const validationResult = await validateFormValuesAgainstProtoSchema({
       desc,
       values,
-      standardSchema,
+      schema: standardSchema,
       options,
-      protoResolverOptions.getSourceMessage ? protoResolverOptions.getSourceMessage() : source,
-      {
-        validationMask: protoResolverOptions.getValidationMask?.(values),
-      }
-    );
+      source,
+      context: {
+        validationMask,
+      },
+    });
 
     if (!validationResult.issues) {
-      if (resolverOptions.shouldUseNativeValidation) {
+      if (resolverOptions.shouldUseNativeValidation === true) {
         validateFieldsNatively({}, resolverOptions);
       }
       return {
@@ -50,41 +128,14 @@ export function createProtoResolver<Desc extends DescMessage>(
       };
     }
 
-    const rawErrors: Record<string, { message: string; isGeneric: boolean; messages: FormErrorMessage[] }> = {};
-    for (const issue of validationResult.issues) {
-      if (issue.path.length === 0) {
-        continue;
-      }
-      const { path, criterion } = formErrorTarget(desc, issue.path);
-      const generic = isGenericValidationMessage(issue.message);
-      const existing = rawErrors[path];
-      if (!existing) {
-        rawErrors[path] = { isGeneric: generic, message: issue.message, messages: [{ message: issue.message, criterion }] };
-      } else {
-        existing.messages.push({ message: issue.message, criterion });
-        if (existing.isGeneric && !generic) {
-          existing.isGeneric = false;
-          existing.message = issue.message;
-        }
-      }
-    }
-
-    const flatErrors: Record<string, { message: string; type: string; types: Record<string, string> }> = {};
-    for (const [path, entry] of Object.entries(rawErrors)) {
-      flatErrors[path] = {
-        message: humanizeValidationError(entry.message, options.formatMessage),
-        type: "validation",
-        types: Object.fromEntries(entry.messages.map(({ message, criterion }, index) => [`${criterion ?? ""}${index}`, humanizeValidationError(message, options.formatMessage)])),
-      };
-    }
+    const flatErrors = formatFieldIssues(
+      desc,
+      validationResult.issues,
+      options
+    );
 
     const nestedErrors = toNestErrors(flatErrors, resolverOptions);
-    const rootMessages: string[] = [];
-    for (const issue of validationResult.issues) {
-      if (issue.path.length === 0) {
-        rootMessages.push(humanizeValidationError(issue.message, options.formatMessage));
-      }
-    }
+    const rootMessages = rootIssueMessages(validationResult.issues, options);
 
     const [rootMessage] = rootMessages;
     if (rootMessage !== undefined && rootMessage !== "") {

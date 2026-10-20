@@ -25,7 +25,9 @@ export function ThemeModeMenu({
           <Button
             aria-label={label}
             className="size-8"
-            onClick={() => setTheme(nextTheme)}
+            onClick={() => {
+              setTheme(nextTheme);
+            }}
             size="icon"
             type="button"
             variant="ghost"

@@ -1,6 +1,6 @@
 const DEFAULT_POSTGRES_PORT = 5432;
 const MAX_POSTGRES_PORT = 65_535;
-const LEADING_SLASH = /^\//;
+const LEADING_SLASH = /^\//u;
 const SUPPORTED_QUERY_PARAMETERS = new Set([
   "ssl",
   "sslmode",
@@ -80,7 +80,7 @@ function getUnsupportedParameters(searchParams: URLSearchParams) {
         (parameter) => !SUPPORTED_QUERY_PARAMETERS.has(parameter)
       )
     ),
-  ].sort();
+  ].toSorted();
 }
 
 function hasAmbiguousSslParameters(searchParams: URLSearchParams) {

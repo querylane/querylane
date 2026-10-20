@@ -1,15 +1,16 @@
 import type { OtherDatabaseObject } from "@/components/console-pages/database-object-categories";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
-const ROUTINE_SIGNATURE_RE = /^([^(]+)(\(.*\))$/;
-const QUALIFIED_NAME_RE = /^([^.]+)\.(.+)$/;
+const ROUTINE_SIGNATURE_RE = /^(?<capture1>[^(]+)(?<capture2>\(.*\))$/u;
+const QUALIFIED_NAME_RE = /^(?<capture1>[^.]+)\.(?<capture2>.+)$/u;
 
 // ————————————————————————————————————————————————————————————————
 // Row rendering
 
 /** Splits "schema.rest" for the muted-schema-prefix treatment. */
 function splitQualifiedName(name: string): { rest: string; schema: string } {
-  const match = name.match(QUALIFIED_NAME_RE);
+  const match = QUALIFIED_NAME_RE.exec(name);
   if (!match) {
     return { rest: name, schema: "" };
   }
@@ -52,7 +53,7 @@ function UppercaseTag({ children }: { children: React.ReactNode }) {
 }
 
 function RoutineRow({ object }: { object: OtherDatabaseObject }) {
-  const signature = object.name.match(ROUTINE_SIGNATURE_RE);
+  const signature = ROUTINE_SIGNATURE_RE.exec(object.name);
   const qualifiedName = signature?.[1] ?? object.name;
   const args = signature?.[2] ?? "";
   const summaryParts = object.summary.split(" · ").filter(Boolean);
@@ -63,7 +64,7 @@ function RoutineRow({ object }: { object: OtherDatabaseObject }) {
     <ObjectRowShell tag={<UppercaseTag>{meta.join(" · ")}</UppercaseTag>}>
       <ObjectName name={qualifiedName} />
       <span className="text-muted-foreground">{args}</span>
-      {returnType ? (
+      {isNonEmptyString(returnType) ? (
         <span className="text-muted-foreground"> → {returnType}</span>
       ) : null}
     </ObjectRowShell>
@@ -122,6 +123,11 @@ function ObjectRow({ object }: { object: OtherDatabaseObject }) {
       return <SequenceRow object={object} />;
     case "cronJobs":
       return <CronRow object={object} />;
+    case "collations":
+    case "eventTriggers":
+    case "fdwServers":
+    case "replication":
+    case "types":
     default:
       return <SummaryRow object={object} />;
   }

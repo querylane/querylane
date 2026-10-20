@@ -17,6 +17,7 @@ import {
 } from "@/lib/console-resources";
 import { paginateAll, paginateUpTo } from "@/lib/paginate-all";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type Database,
   DatabaseService,
@@ -110,7 +111,7 @@ async function mapWithConcurrency<T, Result>(
 
   async function worker(): Promise<void> {
     const entry = entries.next();
-    if (entry.done) {
+    if (entry.done === true) {
       return;
     }
 
@@ -171,9 +172,9 @@ async function fetchAllRoles(
   const client = createClient(RoleService, transport);
   const result = await paginateUpTo(
     ROLE_SUMMARY_ROW_CAP,
-    (pageToken) =>
-      client.listRoles({
-        ...(input ?? {}),
+    async (pageToken) =>
+      await client.listRoles({
+        ...input,
         pageToken: pageToken ?? "",
       }),
     (response) => response.roles
@@ -432,7 +433,7 @@ export function roleGrantsForDatabaseQueryInput({
 }) {
   return {
     database: buildDatabaseName(instanceId, databaseId),
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc, privilege asc",
     pageSize: 1000,
     parent: buildRoleName(instanceId, roleId),
@@ -462,7 +463,7 @@ export function roleOwnedObjectsForDatabaseQueryInput({
 }) {
   return {
     database: buildDatabaseName(instanceId, databaseId),
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc",
     pageSize: 1000,
     parent: buildRoleName(instanceId, roleId),
@@ -517,7 +518,7 @@ export function publicGrantsForDatabaseQueryInput({
   instanceId: string;
 }) {
   return {
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "schema_name asc, object_name asc, privilege asc",
     pageSize: 1000,
     parent: buildDatabaseName(instanceId, databaseId),

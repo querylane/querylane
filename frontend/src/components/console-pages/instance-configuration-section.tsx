@@ -42,7 +42,8 @@ import {
   formErrorMessages,
   labelRowErrors,
 } from "@/features/instance-label-errors";
-import { useProtoForm } from "@/hooks/use-proto-form";
+import type { UseProtoFormReturn } from "@/hooks/use-proto-form/use-proto-form";
+import { useProtoForm } from "@/hooks/use-proto-form/use-proto-form";
 import {
   formatSslMode,
   formatSslNegotiation,
@@ -50,7 +51,9 @@ import {
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
 import { isDirectSslNegotiationMode } from "@/lib/ssl-modes";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import {
   Instance_CredentialState,
@@ -81,16 +84,20 @@ interface InstanceConfigurationFieldErrors {
 }
 
 function focusInstanceConfigurationInvalidField(field: string) {
-  waitForNextFrame().then(() => {
-    const fields = [
-      ...document.querySelectorAll<HTMLElement>("[data-instance-config-field]"),
-    ].filter((element) => element.dataset["instanceConfigField"] === field);
-    const target =
-      fields.find(
-        (element) => element.getAttribute("aria-invalid") === "true"
-      ) ?? fields[0];
-    target?.focus();
-  });
+  handleAsyncAction(() =>
+    waitForNextFrame().then(() => {
+      const fields = [
+        ...document.querySelectorAll<HTMLElement>(
+          "[data-instance-config-field]"
+        ),
+      ].filter((element) => element.dataset["instanceConfigField"] === field);
+      const target =
+        fields.find(
+          (element) => element.getAttribute("aria-invalid") === "true"
+        ) ?? fields[0];
+      target?.focus();
+    })
+  )();
 }
 
 function getInstanceSaveDisabledReason({
@@ -141,7 +148,9 @@ function InstanceCredentialAlert({
       {credentialKeyMissing ? null : (
         <AlertAction className="static col-start-2 mt-2 justify-self-start sm:absolute sm:mt-0">
           <Button
-            onClick={() => focusInstanceConfigurationInvalidField("password")}
+            onClick={() => {
+              focusInstanceConfigurationInvalidField("password");
+            }}
             size="sm"
             variant="outline"
           >
@@ -157,7 +166,13 @@ function localErrorMessage(
   error: unknown,
   fallback: string
 ): string | undefined {
-  if (!error) {
+  if (
+    error === null ||
+    error === undefined ||
+    error === false ||
+    error === "" ||
+    error === 0
+  ) {
     return;
   }
   if (typeof error === "object" && "type" in error && error.type === "server") {
@@ -313,7 +328,7 @@ function InstanceConfigurationFields({
           <Select
             disabled={isConfigManaged}
             onValueChange={(value) => {
-              if (value) {
+              if (isNonEmptyString(value)) {
                 form.setValue("config.sslMode", toSslMode(value), {
                   shouldDirty: true,
                   shouldTouch: true,
@@ -344,7 +359,7 @@ function InstanceConfigurationFields({
           <Select
             disabled={isConfigManaged}
             onValueChange={(value) => {
-              if (value) {
+              if (isNonEmptyString(value)) {
                 form.setValue(
                   "config.sslNegotiation",
                   toSslNegotiation(value),
@@ -377,65 +392,10 @@ function InstanceConfigurationFields({
   );
 }
 
-function InstanceConfigurationSection({
-  formNotice,
-  instance,
-  isConfigManaged,
-  onInvalidSave,
-  onSave,
-  pending,
-}: {
-  formNotice: { message: string; variant: "error" | "success" } | null;
-  instance: InstanceRecord;
-  isConfigManaged: boolean;
-  onInvalidSave: (message?: string) => void;
-  onSave: (
-    editedInstance: ReturnType<typeof createInstanceFormDefaults>,
-    updatePaths: string[]
-  ) => Promise<unknown | undefined> | unknown | undefined;
-  pending: boolean;
-}) {
-  const credentialGuidanceId = useId();
-  const formDefaults = createInstanceFormDefaults(instance);
-  const form = useProtoForm(InstanceSchema, {
-    defaultValues: formDefaults,
-    mode: "onChange",
-    serverPathPrefix: "instance",
-    validationScope: "modified-fields",
-  });
-  const values = useWatch({ control: form.control });
-  // allow: proto-form-parallel-state protobuf maps cannot represent a blank
-  // key while the user is composing a new row; valid rows are synced below.
-  const [labels, setLabels] = useState<InstanceLabelEntry[]>(() =>
-    labelsToEntries(instance.labels)
-  );
-  const [labelsError, setLabelsError] = useState<string>();
-  const [labelFocusRequest, setLabelFocusRequest] = useState(0);
-  useEffect(
-    function focusRejectedLabelAfterCommit() {
-      if (labelFocusRequest > 0) {
-        focusInstanceConfigurationInvalidField("labels");
-      }
-    },
-    [labelFocusRequest]
-  );
-  const requestLabelFocus = () =>
-    setLabelFocusRequest((request) => request + 1);
-  const credentialsUnreadable =
-    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
-  const credentialKeyMissing =
-    instance.credentialState === Instance_CredentialState.KEY_MISSING;
-  const needsReplacementPassword =
-    instance.credentialState === Instance_CredentialState.UNREADABLE &&
-    !values.config?.password;
-  const saveDisabledReason = getInstanceSaveDisabledReason({
-    credentialKeyMissing,
-    hasUnsavedChanges:
-      createInstanceUpdate(form, instance).updatePaths.length > 0,
-    needsReplacementPassword,
-    pending,
-  });
-  const { errors } = form.formState;
+function configurationFieldErrors(
+  errors: UseProtoFormReturn<typeof InstanceSchema>["formState"]["errors"],
+  labelsError: string | undefined
+) {
   const fieldErrors = {
     database: localErrorMessage(
       errors.config?.database,
@@ -463,6 +423,71 @@ function InstanceConfigurationSection({
       REQUIRED_ERROR_BY_FIELD.username
     ),
   };
+  return fieldErrors;
+}
+
+function InstanceConfigurationSection({
+  formNotice,
+  instance,
+  isConfigManaged,
+  onInvalidSave,
+  onSave,
+  pending,
+}: {
+  formNotice: { message: string; variant: "error" | "success" } | null;
+  instance: InstanceRecord;
+  isConfigManaged: boolean;
+  onInvalidSave: (message?: string) => void;
+  onSave: (
+    editedInstance: ReturnType<typeof createInstanceFormDefaults>,
+    updatePaths: string[]
+  ) => unknown;
+  pending: boolean;
+}) {
+  const credentialGuidanceId = useId();
+  const formDefaults = createInstanceFormDefaults(instance);
+  const form = useProtoForm(InstanceSchema, {
+    defaultValues: formDefaults,
+    mode: "onChange",
+    serverPathPrefix: "instance",
+    validationScope: "modified-fields",
+  });
+  const values = useWatch({ control: form.control });
+  // protobuf maps cannot represent a blank
+  // key while the user is composing a new row; valid rows are synced below.
+  const [labels, setLabels] = useState<InstanceLabelEntry[]>(() =>
+    labelsToEntries(instance.labels)
+  );
+  const [labelsError, setLabelsError] = useState<string>();
+  const [labelFocusRequest, setLabelFocusRequest] = useState(0);
+  useEffect(
+    function focusRejectedLabelAfterCommit() {
+      if (labelFocusRequest > 0) {
+        focusInstanceConfigurationInvalidField("labels");
+      }
+    },
+    [labelFocusRequest]
+  );
+  const requestLabelFocus = () => {
+    setLabelFocusRequest((request) => request + 1);
+  };
+  const credentialsUnreadable =
+    instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
+  const credentialKeyMissing =
+    instance.credentialState === Instance_CredentialState.KEY_MISSING;
+  const needsReplacementPassword =
+    instance.credentialState === Instance_CredentialState.UNREADABLE &&
+    !isNonEmptyString(values.config?.password);
+  const saveDisabledReason = getInstanceSaveDisabledReason({
+    credentialKeyMissing,
+    hasUnsavedChanges:
+      createInstanceUpdate(form, instance).updatePaths.length > 0,
+    needsReplacementPassword,
+    pending,
+  });
+  const { errors } = form.formState;
+  const fieldErrors = configurationFieldErrors(errors, labelsError);
+
   const sslMode = formatSslMode(values.config?.sslMode ?? 0);
   const sslNegotiation = formatSslNegotiation(
     values.config?.sslNegotiation ?? 0
@@ -506,7 +531,7 @@ function InstanceConfigurationSection({
     }
     form.clearServerErrorContext();
     const error = await onSave(update.instance, update.updatePaths);
-    if (error) {
+    if (Boolean(error)) {
       surfaceSaveError({ error, form, onInvalidSave });
       requestInvalidLabelFocus();
     }
@@ -519,7 +544,7 @@ function InstanceConfigurationSection({
           <DisabledReasonButton
             disabled={pending}
             disabledReason={saveDisabledReason}
-            onClick={handleSaveClick}
+            onClick={handleAsyncAction(handleSaveClick)}
             size="sm"
           >
             <Save className="size-4" />

@@ -49,6 +49,7 @@ import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
+import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
@@ -95,7 +96,9 @@ function LedgerRow({
   return (
     <TableRow
       className="cursor-pointer"
-      onClick={() => onSelect(extension.key)}
+      onClick={() => {
+        onSelect(extension.key);
+      }}
       presentation={installed ? "extension-installed" : "extension-available"}
     >
       <TableCell>
@@ -157,7 +160,10 @@ function LedgerToolbar({
   status,
 }: {
   category: string;
-  categoryOptions: { label: string; value: string }[];
+  categoryOptions: {
+    label: string;
+    value: string;
+  }[];
   extensions: PresentedExtension[];
   filteredCount: number;
   onCategoryChange: (category: string) => void;
@@ -175,16 +181,24 @@ function LedgerToolbar({
         <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
         <Input
           aria-label="Search extensions…"
-          onChange={(event) => onSearchChange(event.target.value)}
+          onChange={(event) => {
+            onSearchChange(event.target.value);
+          }}
           placeholder="Search extensions…"
           presentation="search"
           value={search}
         />
       </div>
       <Tabs
-        onValueChange={(value) =>
-          onStatusChange(value as ExtensionStatusFilter)
-        }
+        onValueChange={(value: string) => {
+          if (
+            value === "All" ||
+            value === "installed" ||
+            value === "available"
+          ) {
+            onStatusChange(value);
+          }
+        }}
         value={status}
       >
         <TabsList>
@@ -201,7 +215,9 @@ function LedgerToolbar({
       </Tabs>
       {categoryOptions.length > 0 ? (
         <Select
-          onValueChange={(value) => onCategoryChange(value ?? "All")}
+          onValueChange={(value: string | null) => {
+            onCategoryChange(value ?? "All");
+          }}
           value={category}
         >
           <SelectTrigger aria-label="Category" className="w-44">
@@ -430,7 +446,7 @@ function ExtensionsLedger({
         extensions={extensions}
         filteredCount={filtered.length}
         onCategoryChange={setCategory}
-        onSearchChange={setSearch}
+        onSearchChange={handleAsyncAction(setSearch)}
         onStatusChange={setStatus}
         search={search}
         status={status}
@@ -461,11 +477,11 @@ function ExtensionsLedger({
                   extension={extension}
                   isSelected={extension.key === selectedKey}
                   key={extension.key}
-                  onSelect={(key) =>
+                  onSelect={(key) => {
                     setSelectedKey((currentKey) =>
                       currentKey === key ? null : key
-                    )
-                  }
+                    );
+                  }}
                 />
               ))}
             </TableBody>
@@ -474,7 +490,9 @@ function ExtensionsLedger({
       )}
       <ExtensionDrawer
         extension={selected}
-        onClose={() => setSelectedKey(null)}
+        onClose={() => {
+          setSelectedKey(null);
+        }}
       />
     </div>
   );

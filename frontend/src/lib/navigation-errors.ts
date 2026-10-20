@@ -26,9 +26,11 @@ function isNavigationCancellationError(error: unknown) {
   );
 }
 
+const DEFAULT_CONTEXT: NavigationErrorContext = { area: "navigation" };
+
 function handleNavigationError(
   error: unknown,
-  context: NavigationErrorContext = { area: "navigation" }
+  context: NavigationErrorContext = DEFAULT_CONTEXT
 ) {
   const payload = {
     area: context.area,
@@ -44,11 +46,11 @@ function handleNavigationError(
 
 function handleNavigationResult(
   result: NavigationResult,
-  context: NavigationErrorContext = { area: "navigation" }
+  context: NavigationErrorContext = DEFAULT_CONTEXT
 ) {
-  Promise.resolve(result).catch((error: unknown) =>
-    handleNavigationError(error, context)
-  );
+  Promise.resolve(result).catch((error: unknown) => {
+    handleNavigationError(error, context);
+  });
 }
 
 export {

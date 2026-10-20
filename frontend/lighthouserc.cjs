@@ -1,5 +1,6 @@
 "use strict";
 const { env } = require("node:process");
+
 const runtimeEnv = new Map(Object.entries(env));
 const LIGHTHOUSE_PORT = 4173;
 const PERF_DEMO_PATH = [
@@ -22,7 +23,7 @@ const MIN_LIGHTHOUSE_RUNS = 1;
 
 function readLighthouseRuns() {
   const rawRuns = runtimeEnv.get("LIGHTHOUSE_RUNS")?.trim();
-  if (!rawRuns) {
+  if (!(typeof rawRuns === "string" && rawRuns.length > 0)) {
     return DEFAULT_LIGHTHOUSE_RUNS;
   }
 
@@ -46,6 +47,7 @@ function readUploadConfig() {
   };
 }
 
+/** @param {{ minScore?: number, maxNumericValue?: number }} options Assertion threshold. */
 const required = (options) => [
   "error",
   { aggregationMethod: "median-run", ...options },

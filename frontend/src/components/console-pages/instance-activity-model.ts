@@ -86,7 +86,7 @@ interface ActivityBlockingChain {
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const LONG_TRANSACTION_WARNING_SECONDS = 300;
-const EMPTY_FILTER_VALUE: null = null;
+const EMPTY_FILTER_VALUE = null satisfies null;
 
 function safeCount(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
@@ -382,7 +382,9 @@ function presentActivitySessionRows(
 }
 
 function uniqueSorted(values: Iterable<string>): string[] {
-  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  return [...new Set(values)].toSorted((left, right) =>
+    left.localeCompare(right)
+  );
 }
 
 function presentActivityFilterOptions(

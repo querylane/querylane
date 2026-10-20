@@ -550,8 +550,8 @@ type ConsoleRpc = "checkInstanceActivity" | "listInstances";
  * the first load (say, to fail the next refresh).
  */
 interface ConsoleResourceFixture {
-  /** `null` reports the activity check as a permission partial error. */
-  activity: ActivityInit | null; // allow: proto-null fixture knob, not a proto field
+  /** Fixture knob, not a proto field; `null` reports a permission partial error. */
+  activity: ActivityInit | null;
   catalog: CatalogFixture;
   configManaged: boolean;
   database: DatabaseInit;
@@ -613,7 +613,7 @@ function leafId(resourceName: string) {
 }
 
 const NEVER = new Promise<never>(() => {
-  // Intentionally stays pending to exercise loading and cancellation.
+  // Intentionally never settles: models a request that remains in flight.
 });
 
 function metaDatabaseUnavailableError() {

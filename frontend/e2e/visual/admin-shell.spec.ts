@@ -10,7 +10,7 @@ import { expectActiveElement } from "./focus";
 // Component behavior is covered in admin-shell.browser.test.tsx; the
 // viewport-dependent layouts live only here.
 
-const INSTANCE_SELECTOR_NAME = /^Instance:/;
+const INSTANCE_SELECTOR_NAME = /^Instance:/u;
 const DESKTOP_VIEWPORT = { height: 800, width: 1280 };
 const DRAWER_WIDTH = 288;
 
@@ -133,7 +133,8 @@ for (const { name, width } of [
       await trigger.click();
       const drawer = page.getByRole("dialog");
       await expect(drawer).toBeVisible();
-      expect((await drawer.boundingBox())?.width).toBe(DRAWER_WIDTH);
+      const awaitedResult1 = await drawer.boundingBox();
+      expect(awaitedResult1?.width).toBe(DRAWER_WIDTH);
       await expect(drawer).toHaveScreenshot(
         `admin-navigation-open-${width}.png`
       );

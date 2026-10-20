@@ -4,7 +4,7 @@ import type {
   ResourceCollectionSuppressedReason,
 } from "@/lib/db-resource-mappers";
 
-function buildResourceCollectionQueryState<Item>({
+function buildResourceCollectionQueryState({
   enabled,
   error,
   isFetching,
@@ -16,7 +16,7 @@ function buildResourceCollectionQueryState<Item>({
   error: unknown;
   isFetching: boolean;
   isPending: boolean;
-  items: Item[];
+  items: readonly unknown[];
   suppressedReason?: ResourceCollectionSuppressedReason | null;
 }): ResourceCollectionQueryState {
   if (!enabled) {

@@ -59,7 +59,7 @@ const INDEX_METHOD_ICONS: Record<string, LucideIcon> = {
   spgist: Network,
 };
 
-const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/;
+const SIMPLE_SQL_IDENTIFIER_PATTERN = /^[a-z_][a-z0-9_]*$/u;
 const COMPACT_ONE_DECIMAL_THRESHOLD = 100;
 const ONE_DECIMAL_SCALE = 10;
 const CACHE_PERCENT_TENTHS_SCALE = 1000n;

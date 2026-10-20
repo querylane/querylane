@@ -30,6 +30,7 @@ export function formatConstraintType(type: ConstraintType): string {
       return "Check";
     case ConstraintType.EXCLUSION:
       return "Exclusion";
+    case ConstraintType.UNSPECIFIED:
     default:
       return "Unknown";
   }
@@ -51,6 +52,7 @@ export function formatPolicyCommand(command: PolicyCommand): string {
       return "SELECT";
     case PolicyCommand.UPDATE:
       return "UPDATE";
+    case PolicyCommand.UNSPECIFIED:
     default:
       return "UNKNOWN";
   }
@@ -68,6 +70,7 @@ export function formatReferentialAction(action: ReferentialAction): string {
       return "SET DEFAULT";
     case ReferentialAction.SET_NULL:
       return "SET NULL";
+    case ReferentialAction.UNSPECIFIED:
     default:
       return "—";
   }
@@ -83,6 +86,7 @@ export function formatTableType(tableType: Table_TableType): string {
       return "Partitioned";
     case Table_TableType.TEMPORARY:
       return "Temporary";
+    case Table_TableType.UNSPECIFIED:
     default:
       return "Unknown";
   }
@@ -94,6 +98,7 @@ export function formatViewType(viewType: View_ViewType): string {
       return "Materialized";
     case View_ViewType.STANDARD:
       return "Standard";
+    case View_ViewType.UNSPECIFIED:
     default:
       return "Unknown";
   }
@@ -113,6 +118,8 @@ export function formatSslMode(
       return "verify-ca";
     case PostgresConfig_SslMode.VERIFY_FULL:
       return "verify-full";
+    case PostgresConfig_SslMode.UNSPECIFIED:
+    case PostgresConfig_SslMode.PREFER:
     default:
       return "prefer";
   }
@@ -175,6 +182,7 @@ export function formatReplicationRole(
       return "Primary";
     case ServerInfo_ReplicationRole.REPLICA:
       return "Replica";
+    case ServerInfo_ReplicationRole.UNSPECIFIED:
     default:
       return "Unknown";
   }

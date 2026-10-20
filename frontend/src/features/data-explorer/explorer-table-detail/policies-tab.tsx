@@ -33,10 +33,11 @@ import {
 } from "@/lib/pagination";
 import { formatPolicyCommand } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
-import type { TablePolicy } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PolicyCommand,
   type PolicyMode,
+  type TablePolicy,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const PREVIEW_POLICY_COMMANDS: PolicyCommand[] = [
@@ -150,13 +151,13 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
     role: activeRole,
   });
   function handleRoleChange(value: string | null) {
-    if (value) {
+    if (isNonEmptyString(value)) {
       setSelectedRole(value);
     }
   }
   function handleCommandChange(value: string | null) {
-    if (value) {
-      setSelectedCommand(Number(value) as PolicyCommand);
+    if (isNonEmptyString(value)) {
+      setSelectedCommand(Number(value));
     }
   }
 

@@ -27,18 +27,22 @@ SELECT 'active' AS status;`;
     expect(code).not.toBeNull();
     expect(code?.textContent).toBe(sql);
 
-    const tokenSpans = Array.from(
-      container.querySelectorAll("[data-shiki-token]")
-    );
+    const tokenSpans = [...container.querySelectorAll("[data-shiki-token]")];
     expect(tokenSpans.length).toBeGreaterThan(8);
     expect(
-      tokenSpans.some((token) =>
-        token.getAttribute("style")?.includes("--querylane-sql-token-light")
+      tokenSpans.some(
+        (token) =>
+          token
+            .getAttribute("style")
+            ?.includes("--querylane-sql-token-light") === true
       )
     ).toBe(true);
     expect(
-      tokenSpans.some((token) =>
-        token.getAttribute("style")?.includes("--querylane-sql-token-dark")
+      tokenSpans.some(
+        (token) =>
+          token
+            .getAttribute("style")
+            ?.includes("--querylane-sql-token-dark") === true
       )
     ).toBe(true);
   });

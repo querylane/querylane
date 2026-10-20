@@ -2,9 +2,9 @@ import { stat } from "node:fs/promises";
 import { expect, test } from "playwright/test";
 import { installBrowserVoice } from "./voice";
 
-const LISTEN = /^Listen to this page/;
-const EPUB = /\.epub$/;
-const INSTANCE_NAME = /^name string/;
+const LISTEN = /^Listen to this page/u;
+const EPUB = /\.epub$/u;
+const INSTANCE_NAME = /^name string/u;
 
 test("listen, pause, resume, stop, and leave a page", async ({ page }) => {
   await installBrowserVoice(page);
@@ -44,8 +44,10 @@ test("export the current page as EPUB and invoke PDF printing", async ({
   page,
 }, testInfo) => {
   await page.goto("/get-started");
+  await expect(page.getByText("Export", { exact: true })).toBeVisible({
+    visible: testInfo.project.name !== "docs-mobile",
+  });
   if (testInfo.project.name === "docs-mobile") {
-    await expect(page.getByText("Export", { exact: true })).toBeHidden();
     await page.setViewportSize({ width: 1440, height: 900 });
   }
   await page.getByText("Export", { exact: true }).click();
@@ -63,10 +65,12 @@ test("export the current page as EPUB and invoke PDF printing", async ({
   if (!path) {
     throw new Error("EPUB did not save");
   }
-  expect((await stat(path)).size).toBeGreaterThan(1500);
+  const awaitedResult1 = await stat(path);
+  expect(awaitedResult1.size).toBeGreaterThan(1500);
   await page.evaluate(() => {
-    window.print = () =>
+    globalThis.window.print = () => {
       document.documentElement.setAttribute("data-printed", "true");
+    };
   });
   await page
     .getByRole("button", { name: "Export to PDF", exact: true })
@@ -100,7 +104,8 @@ test("all 18 request samples follow edits without losing RPC presentation", asyn
     .getByRole("tablist", { name: "Request", exact: true })
     .getByRole("tab");
   await expect(tabs).toHaveCount(18);
-  await (await tabs.all()).reduce(async (previous, tab) => {
+  const awaitedResult2 = await tabs.all();
+  await awaitedResult2.reduce(async (previous, tab) => {
     await previous;
     await tab.click();
     const panel = page

@@ -41,6 +41,8 @@ export const installBrowserVoice = async (page: Page) => {
       value: null,
       writable: true,
     });
-    Object.defineProperty(window, "speechSynthesis", { value: synthesis });
+    Object.defineProperty(globalThis.window, "speechSynthesis", {
+      value: synthesis,
+    });
   });
 };

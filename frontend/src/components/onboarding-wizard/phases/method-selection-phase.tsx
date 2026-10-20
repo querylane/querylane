@@ -19,6 +19,7 @@ import { Button } from "@/components/querylane-ui/button";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { SetupMethod } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
@@ -80,7 +81,9 @@ function MethodOption({
       className="group flex h-auto w-full min-w-0 items-start overflow-hidden text-left"
       data-selected={isSelected}
       data-setup-method-card={method}
-      onClick={() => onSelect(method)}
+      onClick={() => {
+        onSelect(method);
+      }}
       onKeyDown={onKeyDown}
       presentation="onboarding-method"
       role="radio"
@@ -102,7 +105,7 @@ function MethodOption({
           <span className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] wrap-break-word text-white md:text-base">
             {getMethodLabel(method)}
           </span>
-          {content.badge ? (
+          {isNonEmptyString(content.badge) ? (
             <Badge
               className="max-w-full shrink-0"
               presentation="onboarding"

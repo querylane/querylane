@@ -54,6 +54,8 @@ import {
   type StructureMapTable,
   type StructureMapView,
 } from "@/features/database-visualization/structure-map-model";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const FlowCanvas = lazy(() =>
   import("@/features/database-visualization/flow-canvas").then((module) => ({
@@ -179,14 +181,14 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center" presentation="canvas">
-        <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-4" />
         </div>
         <div>
-          <p className="text-muted-foreground text-xs tracking-wider uppercase">
+          <p className="text-muted-foreground text-xs uppercase tracking-wider">
             {label}
           </p>
-          <p className="text-lg font-semibold tabular-nums">{value}</p>
+          <p className="font-semibold text-lg tabular-nums">{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -203,10 +205,18 @@ function databaseMapTargetNodeId(
   if (!targetResource) {
     return null;
   }
-  if (targetResource.category === "tables" && targetResource.name) {
+  if (
+    targetResource.category === "tables" &&
+    typeof targetResource.name === "string" &&
+    targetResource.name.length > 0
+  ) {
     return `table:${targetResource.schemaName}.${targetResource.name}`;
   }
-  if (targetResource.category === "views" && targetResource.name) {
+  if (
+    targetResource.category === "views" &&
+    typeof targetResource.name === "string" &&
+    targetResource.name.length > 0
+  ) {
     return `view:${targetResource.schemaName}.${targetResource.name}`;
   }
   return `schema:${targetResource.schemaName}`;
@@ -311,7 +321,7 @@ function DatabaseMapCanvasActions({
         Switch to {direction === "LR" ? "vertical" : "horizontal"}
       </Button>
       <div
-        className="bg-muted/40 inline-flex items-center gap-0.5 rounded-md p-0.5"
+        className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
         data-slot="button-group"
       >
         <Button
@@ -342,7 +352,7 @@ function DatabaseMapCanvasActions({
               {hiddenNodeKindCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="bg-muted text-muted-foreground rounded-full px-1.5 font-mono text-(length:--text-micro)"
+                  className="text-(length:--text-micro) rounded-full bg-muted px-1.5 font-mono text-muted-foreground"
                 >
                   {hiddenNodeKindCount}
                 </span>
@@ -463,7 +473,8 @@ function focusedMapResources({
       isResourceFocusEnabled &&
       detailScope === "selected-schema" &&
       targetResource?.category &&
-      targetResource.name
+      typeof targetResource.name === "string" &&
+      targetResource.name.length > 0
     )
   ) {
     return { focusedResourceLabel: null, tables, views };
@@ -529,16 +540,17 @@ function DatabaseStructureMap({
   const hasTargetResourceFocus = Boolean(
     targetResource?.category && targetResource.name
   );
-  const isResourceFocusEnabled = Boolean(
+  const isResourceFocusEnabled =
     hasTargetResourceFocus &&
-      targetNodeId &&
-      resourceFocusDisabledForTarget !== targetNodeId
-  );
+    isNonEmptyString(targetNodeId) &&
+    resourceFocusDisabledForTarget !== targetNodeId;
   const effectiveDetailScope = isResourceFocusEnabled
     ? "selected-schema"
     : detailScope;
   const selectedNodeId =
-    isResourceFocusEnabled && targetNodeId
+    isResourceFocusEnabled &&
+    typeof targetNodeId === "string" &&
+    targetNodeId.length > 0
       ? targetNodeId
       : databaseSelectedNodeId;
   const data = useStructureMapData({
@@ -581,12 +593,18 @@ function DatabaseStructureMap({
       isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onShowAllNodeKinds={showAllNodeKinds}
       onShowCurrentSchema={showCurrentSchema}
       onShowFullMap={showFullMap}
-      onToggleDirection={() => setDirection(direction === "LR" ? "TB" : "LR")}
+      onToggleDirection={() => {
+        setDirection(direction === "LR" ? "TB" : "LR");
+      }}
       onToggleNodeKind={setVisibleNodeKind}
       visibleNodeKinds={visibleNodeKinds}
     />
@@ -600,12 +618,18 @@ function DatabaseStructureMap({
       isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onShowAllNodeKinds={showAllNodeKinds}
       onShowCurrentSchema={showCurrentSchema}
       onShowFullMap={showFullMap}
-      onToggleDirection={() => setDirection(direction === "LR" ? "TB" : "LR")}
+      onToggleDirection={() => {
+        setDirection(direction === "LR" ? "TB" : "LR");
+      }}
       onToggleNodeKind={setVisibleNodeKind}
       visibleNodeKinds={visibleNodeKinds}
     />
@@ -640,30 +664,32 @@ function DatabaseStructureMap({
       return;
     }
     onOpenResource?.();
-    navigate({
-      params: { databaseId, instanceId },
-      search: (previous) => ({
-        ...previous,
-        category: navigation.category,
-        filter: undefined,
-        name: navigation.name,
-        schema: navigation.schema,
-        sort: undefined,
-        tab: undefined,
-      }),
-      to: "/instances/$instanceId/databases/$databaseId/explorer",
-    });
+    handleAsyncAction(() =>
+      navigate({
+        params: { databaseId, instanceId },
+        search: (previous) => ({
+          ...previous,
+          category: navigation.category,
+          filter: undefined,
+          name: navigation.name,
+          schema: navigation.schema,
+          sort: undefined,
+          tab: undefined,
+        }),
+        to: "/instances/$instanceId/databases/$databaseId/explorer",
+      })
+    )();
   }
 
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-semibold text-2xl tracking-tight">
             Database map
           </h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            {focusedResourceLabel
+          <p className="mt-1 max-w-2xl text-muted-foreground text-sm">
+            {isNonEmptyString(focusedResourceLabel)
               ? `Focused on ${focusedResourceLabel}. Load the full map to see every schema object for ${databaseLabel}.`
               : `Visualizes schemas, tables, columns, keys, indexes, triggers, policies, and foreign key relationships for ${databaseLabel}.`}
           </p>
@@ -694,14 +720,14 @@ function DatabaseStructureMap({
         />
       </div>
 
-      {data.error ? (
+      {Boolean(data.error) ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Map data failed to load</AlertTitle>
           <AlertDescription>{errorMessage(data.error)}</AlertDescription>
         </Alert>
       ) : null}
-      {data.truncatedReason ? (
+      {isNonEmptyString(data.truncatedReason) ? (
         <Alert>
           <AlertCircle className="size-4" />
           <AlertTitle>Partial map</AlertTitle>
@@ -722,7 +748,7 @@ function DatabaseStructureMap({
 
       <Dialog onOpenChange={setIsMapExpanded} open={isMapExpanded}>
         <DialogContent
-          className="!flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:!max-w-[calc(100vw-2rem)]"
+          className="!flex !max-w-[calc(100vw-1rem)] sm:!max-w-[calc(100vw-2rem)] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]"
           presentation="canvas"
         >
           <DialogHeader className="shrink-0" presentation="closeable">

@@ -6,7 +6,6 @@ import {
 } from "@/components/ui/data-table";
 import {
   TABLE_KEY_KIND_LABELS,
-  type TableKeyKind,
   type TableKeyRow,
 } from "@/features/data-explorer/explorer-table-detail/keys-model";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
@@ -121,7 +120,7 @@ function KeysTab({
               label: "Kind",
               options: uniqueSortedOptions(rows.map((row) => row.kind)).map(
                 (option) => ({
-                  label: TABLE_KEY_KIND_LABELS[option.value as TableKeyKind],
+                  label: TABLE_KEY_KIND_LABELS[option.value],
                   value: option.value,
                 })
               ),

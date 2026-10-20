@@ -209,23 +209,23 @@ test("data explorer table grid uses width immediately beside object browser", as
   expect(unusedRightSpace).toBeLessThanOrEqual(64);
 
   const filterInput = sidebar.querySelector("[data-slot='input']");
-  const schemaNode = Array.from(sidebar.querySelectorAll("button")).find(
-    (button) => button.textContent?.includes("analytics")
+  const schemaNode = [...sidebar.querySelectorAll("button")].find((button) =>
+    button.textContent?.includes("analytics")
   );
   if (
     !(filterInput instanceof HTMLElement && schemaNode instanceof HTMLElement)
   ) {
-    throw new Error("Expected schema tree node and filter input.");
+    throw new TypeError("Expected schema tree node and filter input.");
   }
   // The active schema renders as an expanded tree node with its objects
   // nested underneath.
   expect(schemaNode.getAttribute("aria-expanded")).toBe("true");
 
-  const tableButton = Array.from(sidebar.querySelectorAll("button")).find(
-    (button) => button.textContent?.includes("page_views")
+  const tableButton = [...sidebar.querySelectorAll("button")].find((button) =>
+    button.textContent?.includes("page_views")
   );
   const tableName = tableButton?.querySelector(".min-w-0.flex-1");
-  const sizeLabel = Array.from(sidebar.querySelectorAll("span")).find(
+  const sizeLabel = [...sidebar.querySelectorAll("span")].find(
     (element) => element.textContent?.trim() === "64 KB"
   );
   if (
@@ -235,7 +235,7 @@ test("data explorer table grid uses width immediately beside object browser", as
       sizeLabel instanceof HTMLElement
     )
   ) {
-    throw new Error("Expected table resource row, name, and size label.");
+    throw new TypeError("Expected table resource row, name, and size label.");
   }
   const tableNameRect = tableName.getBoundingClientRect();
   const sizeLabelRect = sizeLabel.getBoundingClientRect();
@@ -294,7 +294,7 @@ test("data explorer schema objects fill the pane at wide widths", async () => {
   });
   const content = details.firstElementChild?.firstElementChild;
   if (!(content instanceof HTMLElement)) {
-    throw new Error("Expected the Data Explorer detail content.");
+    throw new TypeError("Expected the Data Explorer detail content.");
   }
 
   // Full-bleed layout: the detail content spans the whole pane instead of

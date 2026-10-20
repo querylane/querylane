@@ -24,6 +24,7 @@ import type {
   SqlHistoryEntry,
 } from "@/features/sql-workbench/sql-workbench-store";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type HistorySheetTab = "history" | "saved";
 
@@ -40,6 +41,7 @@ function statusTone(status: SqlHistoryEntry["status"]): string {
       return "text-success";
     case "error":
       return "text-destructive";
+    case "cancelled":
     default:
       return "text-muted-foreground";
   }
@@ -66,8 +68,10 @@ function HistoryRow({
   return (
     <li>
       <Button
-        className="h-auto w-full flex-col items-start text-left whitespace-normal"
-        onClick={() => onOpen(entry.statement)}
+        className="h-auto w-full flex-col items-start whitespace-normal text-left"
+        onClick={() => {
+          onOpen(entry.statement);
+        }}
         presentation="sql-list-row"
         type="button"
         variant="ghost"
@@ -75,15 +79,15 @@ function HistoryRow({
         <span className="line-clamp-2 w-full font-mono text-xs leading-relaxed">
           {summarizeStatement(entry.statement, PREVIEW_LENGTH)}
         </span>
-        <span className="text-muted-foreground flex w-full flex-wrap items-center gap-x-2 text-xs">
+        <span className="flex w-full flex-wrap items-center gap-x-2 text-muted-foreground text-xs">
           <span className={cn("font-medium", statusTone(entry.status))}>
             {STATUS_LABEL[entry.status]}
           </span>
           {historyMeta(entry).map((part) => (
             <span key={part}>{part}</span>
           ))}
-          {entry.errorSummary ? (
-            <span className="text-destructive/80 line-clamp-1 w-full">
+          {isNonEmptyString(entry.errorSummary) ? (
+            <span className="line-clamp-1 w-full text-destructive/80">
               {entry.errorSummary}
             </span>
           ) : null}
@@ -105,23 +109,27 @@ function SavedRow({
   return (
     <li className="group flex items-start gap-1">
       <Button
-        className="h-auto min-w-0 flex-1 flex-col items-start text-left whitespace-normal"
-        onClick={() => onOpen(query.id)}
+        className="h-auto min-w-0 flex-1 flex-col items-start whitespace-normal text-left"
+        onClick={() => {
+          onOpen(query.id);
+        }}
         presentation="sql-list-row"
         type="button"
         variant="ghost"
       >
-        <span className="w-full truncate text-sm font-medium">
+        <span className="w-full truncate font-medium text-sm">
           {query.name}
         </span>
-        <span className="text-muted-foreground line-clamp-2 w-full font-mono text-xs leading-relaxed">
+        <span className="line-clamp-2 w-full font-mono text-muted-foreground text-xs leading-relaxed">
           {summarizeStatement(query.statement, PREVIEW_LENGTH)}
         </span>
       </Button>
       <Button
         aria-label={`Delete saved query ${query.name}`}
         className="mt-1"
-        onClick={() => onDelete(query.id)}
+        onClick={() => {
+          onDelete(query.id);
+        }}
         presentation="sql-row-delete"
         size="icon-xs"
         type="button"
@@ -135,7 +143,7 @@ function SavedRow({
 
 function EmptyListMessage({ children }: { children: string }) {
   return (
-    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+    <p className="px-3 py-6 text-center text-muted-foreground text-sm">
       {children}
     </p>
   );
@@ -233,9 +241,9 @@ function SheetTabs({
 }) {
   return (
     <Tabs
-      onValueChange={(value) =>
-        onChange(value === "saved" ? "saved" : "history")
-      }
+      onValueChange={(value) => {
+        onChange(value === "saved" ? "saved" : "history");
+      }}
       value={tab}
     >
       <TabsList className="h-8">
@@ -294,7 +302,7 @@ function SqlHistorySheet({
             browser.
           </SheetDescription>
         </SheetHeader>
-        <div className="border-border flex items-center gap-2 border-b px-4 py-2">
+        <div className="flex items-center gap-2 border-border border-b px-4 py-2">
           <SheetTabs
             historyCount={history.length}
             onChange={setTab}
@@ -304,7 +312,9 @@ function SqlHistorySheet({
           <Input
             aria-label="Filter queries"
             className="h-8 flex-1"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
             placeholder="Filter…"
             presentation="compact"
             value={search}

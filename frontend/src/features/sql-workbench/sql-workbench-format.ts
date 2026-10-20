@@ -46,9 +46,9 @@ function summarizeStatement(
   maxLength = DEFAULT_SUMMARY_LENGTH
 ): string {
   const collapsed = statement
-    .replace(/--[^\n]*/g, " ")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/\s+/g, " ")
+    .replaceAll(/--[^\n]*/gu, " ")
+    .replaceAll(/\/\*[\s\S]*?\*\//gu, " ")
+    .replaceAll(/\s+/gu, " ")
     .trim();
   return collapsed.length > maxLength
     ? `${collapsed.slice(0, maxLength - 1)}…`

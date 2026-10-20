@@ -79,7 +79,7 @@ describe("buildAccessMapModel", () => {
           badges: ["PUBLIC", "SCHEMA"],
           lines: ["USAGE", "CREATE with grant option"],
           title: "public",
-        }),
+        }) as unknown,
       })
     );
     expect(model.edges).toEqual(

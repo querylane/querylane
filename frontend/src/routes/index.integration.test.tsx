@@ -13,14 +13,23 @@ import type { PostgresInstance } from "@/lib/db-resource-mappers";
 import { Route } from "@/routes/index";
 import { ThemeProvider } from "@/theme-provider";
 
-const state = rs.hoisted(() => ({
-  configFilePath: "",
-  instancesError: null as Error | null,
-  instances: [] as PostgresInstance[],
-  navigate: rs.fn(async () => undefined),
-  search: {} as { instanceId?: string | undefined },
-  showDegradedBanner: false,
-}));
+const state = rs.hoisted(
+  (): {
+    configFilePath: string;
+    instancesError: Error | null;
+    instances: PostgresInstance[];
+    navigate: ReturnType<typeof rs.fn>;
+    search: { instanceId?: string | undefined };
+    showDegradedBanner: boolean;
+  } => ({
+    configFilePath: "",
+    instancesError: null as Error | null,
+    instances: [] as PostgresInstance[],
+    navigate: rs.fn(async () => undefined),
+    search: {} as { instanceId?: string | undefined },
+    showDegradedBanner: false,
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   createFileRoute:
@@ -146,7 +155,9 @@ describe("home instance redirect", () => {
       screen.getByRole("button", { name: "Reconfigure internal storage" })
     );
 
-    screen.getByRole("heading", { name: "Reconfigure internal storage" });
-    screen.getByText("/tmp/querylane/config.yaml");
+    expect(
+      screen.getByRole("heading", { name: "Reconfigure internal storage" })
+    ).toBeTruthy();
+    expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
   });
 });

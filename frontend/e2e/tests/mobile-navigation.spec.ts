@@ -18,7 +18,8 @@ test("mobile navigation dismisses by swiping and restores keyboard focus", async
   if (!bounds) {
     throw new Error("Expected mobile navigation drawer bounds");
   }
-  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+  const awaitedResult1 = await makeAxeBuilder().analyze();
+  expect(awaitedResult1.violations).toEqual([]);
 
   await test.step("swipe the navigation header closed", async () => {
     await page.mouse.move(bounds.x + bounds.width - 30, bounds.y + 12);

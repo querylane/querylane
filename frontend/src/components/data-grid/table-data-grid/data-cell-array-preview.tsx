@@ -121,7 +121,9 @@ function ArrayPreviewDialog({
         <ArrayItemsContent keyedItems={keyedItems} parsed={parsed} raw={raw} />
         <div className="flex shrink-0 justify-end">
           <Button
-            onClick={() => writeClipboard(raw)}
+            onClick={() => {
+              writeClipboard(raw);
+            }}
             size="sm"
             type="button"
             variant="outline"
@@ -183,7 +185,9 @@ function ArrayPreview({
           event.stopPropagation();
           openDialog();
         }}
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
         presentation="preview-toolbar"
         size="xs"
         type="button"

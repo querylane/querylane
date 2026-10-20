@@ -1,5 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as routerActual from "@tanstack/react-router" with {
   rstest: "importActual",
@@ -36,7 +43,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  window.sessionStorage.clear();
+  globalThis.window.sessionStorage.clear();
   useSetupStore.setState({
     onboardingState: null,
     showDegradedBanner: false,
@@ -44,7 +51,7 @@ afterEach(() => {
 });
 
 describe("route error view", () => {
-  it("starts one automatic reload for orphaned chunks", () => {
+  test("starts one automatic reload for orphaned chunks", () => {
     const reloadPage = rs.fn();
 
     renderRouteErrorView(
@@ -55,19 +62,23 @@ describe("route error view", () => {
       />
     );
 
-    screen.getByRole("heading", { name: "Querylane was updated" });
-    screen.getByText(
-      "Refreshing now so the latest app files load. If the page does not refresh, use the button below."
-    );
+    expect(
+      screen.getByRole("heading", { name: "Querylane was updated" })
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Refreshing now so the latest app files load. If the page does not refresh, use the button below."
+      )
+    ).toBeTruthy();
     expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
-  it("uses the app update recovery page after automatic chunk reload was already attempted", () => {
+  test("uses the app update recovery page after automatic chunk reload was already attempted", () => {
     const reloadPage = rs.fn();
 
     reserveChunkLoadReloadAttempt({
       error: CHUNK_LOAD_ERROR,
-      storage: window.sessionStorage,
+      storage: globalThis.window.sessionStorage,
     });
 
     renderRouteErrorView(
@@ -78,15 +89,19 @@ describe("route error view", () => {
       />
     );
 
-    screen.getByRole("heading", { name: "Querylane was updated" });
-    screen.getByText(
-      "Automatic refresh paused to avoid a reload loop. Use the button below to try again."
-    );
+    expect(
+      screen.getByRole("heading", { name: "Querylane was updated" })
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Automatic refresh paused to avoid a reload loop. Use the button below to try again."
+      )
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(reloadPage).not.toHaveBeenCalled();
   });
 
-  it("retries regular route errors by resetting the boundary and invalidating the router", async () => {
+  test("retries regular route errors by resetting the boundary and invalidating the router", async () => {
     const user = userEvent.setup();
     const reset = rs.fn();
 
@@ -96,11 +111,13 @@ describe("route error view", () => {
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    await waitFor(() => expect(routerMock.invalidate).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(routerMock.invalidate).toHaveBeenCalledTimes(1);
+    });
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
-  it("offers internal storage recovery from a degraded route error", async () => {
+  test("offers internal storage recovery from a degraded route error", async () => {
     const user = userEvent.setup();
     useSetupStore.setState({
       onboardingState: create(GetOnboardingStateResponseSchema, {
@@ -121,7 +138,9 @@ describe("route error view", () => {
       screen.getByRole("button", { name: "Reconfigure internal storage" })
     );
 
-    screen.getByRole("heading", { name: "Reconfigure internal storage" });
-    screen.getByText("/tmp/querylane/config.yaml");
+    expect(
+      screen.getByRole("heading", { name: "Reconfigure internal storage" })
+    ).toBeTruthy();
+    expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
   });
 });

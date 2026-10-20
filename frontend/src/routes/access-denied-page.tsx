@@ -67,11 +67,11 @@ export function AccessDeniedRoutePage() {
                   navigate({
                     replace: true,
                     to: "/",
-                  }).catch((navigationError: unknown) =>
+                  }).catch((navigationError: unknown) => {
                     handleNavigationError(navigationError, {
                       area: "access-denied.home",
-                    })
-                  );
+                    });
+                  });
                 }}
                 size="sm"
                 variant="secondary"
@@ -80,8 +80,8 @@ export function AccessDeniedRoutePage() {
               </Button>
             }
             error={error}
-            onRetry={() =>
-              waitForNextFrame()
+            onRetry={async () => {
+              await waitForNextFrame()
                 .then(() => {
                   clearBlockingError();
                   return navigate({
@@ -89,12 +89,12 @@ export function AccessDeniedRoutePage() {
                     replace: true,
                   });
                 })
-                .catch((navigationError: unknown) =>
+                .catch((navigationError: unknown) => {
                   handleNavigationError(navigationError, {
                     area: "access-denied.retry",
-                  })
-                )
-            }
+                  });
+                });
+            }}
             retryLabel="Retry"
             variant="page"
           />

@@ -58,7 +58,7 @@ afterEach(async () => {
   localStorage.removeItem("querylane-table-column-layouts");
 });
 
-const PAGE_LABEL_RE = /Page \d+/;
+const PAGE_LABEL_RE = /Page \d+/u;
 const EXPANDED_GRID_CLASS =
   "h-[620px] w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground";
 const SELECTED_CELLS = '[data-cell-range-selected="true"]';
@@ -73,7 +73,7 @@ function browserColorChannels(color: string) {
   }
   context.fillStyle = color;
   context.fillRect(0, 0, 1, 1);
-  return Array.from(context.getImageData(0, 0, 1, 1).data);
+  return [...context.getImageData(0, 0, 1, 1).data];
 }
 
 function colorContrastRatio(first: string, second: string) {
@@ -140,7 +140,7 @@ function gridCellContaining(
 ) {
   const gridCell = within(container).getByText(text).closest(".rdg-cell");
   if (!(gridCell instanceof HTMLElement)) {
-    throw new Error(`Expected "${text}" inside a grid cell.`);
+    throw new TypeError(`Expected "${text}" inside a grid cell.`);
   }
   return gridCell;
 }
@@ -467,7 +467,9 @@ test("column headers reorder while layout controls stay compact", async () => {
     new DragEvent("dragstart", { bubbles: true, dataTransfer })
   );
   await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
+    requestAnimationFrame(() => {
+      resolve();
+    });
   });
   customerHeader.dispatchEvent(
     new DragEvent("dragover", { bubbles: true, dataTransfer })
@@ -517,7 +519,7 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
     .getByRole("checkbox", { name: "Select All" })
     .closest('[data-slot="grid-checkbox"]');
   if (!(selectAllBox instanceof HTMLElement)) {
-    throw new Error("Expected the select-all input inside its styled box.");
+    throw new TypeError("Expected the select-all input inside its styled box.");
   }
   const selectAllBoxStyle = getComputedStyle(selectAllBox);
   expect(selectAllBoxStyle.inlineSize).toBe("16px");
@@ -570,14 +572,18 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
   await rs.waitFor(() => {
     expect(selectedCellCount()).toBe(2);
   });
-  const selectedCells = Array.from(
-    document.querySelectorAll<HTMLElement>(SELECTED_CELLS)
-  );
+  const selectedCells = [
+    ...document.querySelectorAll<HTMLElement>(SELECTED_CELLS),
+  ];
   expect(selectedCells[0]?.getAttribute("data-cell-range-left")).toBe("true");
   expect(selectedCells[1]?.getAttribute("data-cell-range-right")).toBe("true");
-  expect(
-    getComputedStyle(selectedCells[0] as HTMLElement).backgroundColor
-  ).not.toBe("rgba(0, 0, 0, 0)");
+  const [firstSelectedCell] = selectedCells;
+  if (!firstSelectedCell) {
+    throw new Error("Expected a selected cell");
+  }
+  expect(getComputedStyle(firstSelectedCell).backgroundColor).not.toBe(
+    "rgba(0, 0, 0, 0)"
+  );
 
   const activeCell = document.querySelector<HTMLElement>(
     '[data-cell-range-active="true"]'
@@ -637,7 +643,7 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
       clientY: start.y,
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointermove", {
       bubbles: true,
       clientX: end.x,
@@ -646,7 +652,7 @@ test("keyboard navigation extends and clears a multi-cell selection", async () =
       pointerType: "mouse",
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointerup", {
       bubbles: true,
       pointerId: 5,
@@ -701,7 +707,7 @@ test("touch pointer drag selects a cell range", async () => {
       pointerType: "touch",
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointerup", {
       bubbles: true,
       pointerId: 6,
@@ -723,7 +729,7 @@ test("touch pointer drag selects a cell range", async () => {
       pointerType: "touch",
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointermove", {
       bubbles: true,
       clientX: end.x,
@@ -732,7 +738,7 @@ test("touch pointer drag selects a cell range", async () => {
       pointerType: "touch",
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointerup", {
       bubbles: true,
       pointerId: 7,
@@ -778,7 +784,7 @@ test("dragging near a grid edge auto-scrolls the cell selection", async () => {
       clientY: start.y,
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointermove", {
       bubbles: true,
       clientX: gridBox.right - 2,
@@ -795,7 +801,7 @@ test("dragging near a grid edge auto-scrolls the cell selection", async () => {
     expect(selectedCellCount()).toBeGreaterThan(1);
   });
 
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointerup", {
       bubbles: true,
       pointerId: 11,
@@ -840,7 +846,7 @@ test("dragging near the bottom edge auto-scrolls through rows", async () => {
       clientY: start.y,
     })
   );
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointermove", {
       bubbles: true,
       clientX: start.x,
@@ -855,7 +861,7 @@ test("dragging near the bottom edge auto-scrolls through rows", async () => {
     expect(selectedCellCount()).toBeGreaterThan(1);
   });
 
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new PointerEvent("pointerup", {
       bubbles: true,
       pointerId: 12,
@@ -943,7 +949,7 @@ test("foreign key reference waits for first-load data before opening", async () 
     if (request.name === CUSTOMERS_TABLE_NAME) {
       await customersGate;
     }
-    return readRows(request, context);
+    return await readRows(request, context);
   };
 
   await renderOrdersGrid(EXPANDED_GRID_CLASS, services);
@@ -965,7 +971,7 @@ test("foreign key reference waits for first-load data before opening", async () 
 
   // Reopening shows the cached row even while a hover refetch never answers.
   customersGate = new Promise<void>(() => {
-    // Intentionally stays pending to exercise loading and cancellation.
+    // Intentionally never settles: models a request that remains in flight.
   });
   await trigger.click();
   await expect
@@ -1095,9 +1101,11 @@ test("row detail drawer wraps dense catalog fields without visual collisions", a
     .toBeDetached();
   await expect.element(page.getByText("Empty string")).toBeVisible();
 
-  const valueBoxes = Array.from(
-    document.querySelectorAll<HTMLElement>('[data-slot="record-field-value"]')
-  );
+  const valueBoxes = [
+    ...document.querySelectorAll<HTMLElement>(
+      '[data-slot="record-field-value"]'
+    ),
+  ];
   expect(valueBoxes).toHaveLength(5);
   const widths = valueBoxes.map((box) => box.getBoundingClientRect().width);
   expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
@@ -1128,7 +1136,7 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
     .getBoundingClientRect();
   expect(addFilterBox.width).toBeLessThanOrEqual(140);
 
-  const rows = Array.from(popover.querySelectorAll("li"));
+  const rows = [...popover.querySelectorAll("li")];
   expect(rows).toHaveLength(2);
   const rowBoxes = rows.map((row) => {
     const triggers = row.querySelectorAll<HTMLElement>(
@@ -1314,7 +1322,7 @@ test("sort popover keeps every row control aligned", async () => {
   await expect.element(page.getByText("Sort by")).toBeVisible();
 
   const popover = getPopoverBox().element;
-  const rows = Array.from(popover.querySelectorAll("li"));
+  const rows = [...popover.querySelectorAll("li")];
   expect(rows).toHaveLength(5);
   const rowBoxes = rows.map((row) => {
     const triggers = row.querySelectorAll<HTMLElement>(

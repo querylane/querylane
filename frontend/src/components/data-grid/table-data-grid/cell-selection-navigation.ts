@@ -173,7 +173,7 @@ function stopCellKeyboardEvent(event: CellKeyboardEvent) {
 }
 
 function clearNativeTextSelection() {
-  window.getSelection()?.removeAllRanges();
+  globalThis.window.getSelection()?.removeAllRanges();
 }
 
 function clearCellSelectionWithKeyboard(

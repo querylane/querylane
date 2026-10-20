@@ -91,11 +91,13 @@ import { handleNavigationError } from "@/lib/navigation-errors";
 import { formatReplicationRole } from "@/lib/protobuf-enums";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
 } from "@/lib/url-search-state";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
   ConnectionActivityHealth,
@@ -198,7 +200,11 @@ function getInstanceDeleteDestination({
   deleteDisabledReason: string | null;
   instanceCount: number;
 }): "/" | "/new-instance" {
-  if (!credentialsUnreadable || deleteDisabledReason || instanceCount > 1) {
+  if (
+    !credentialsUnreadable ||
+    isNonEmptyString(deleteDisabledReason) ||
+    instanceCount > 1
+  ) {
     return "/";
   }
 
@@ -206,7 +212,7 @@ function getInstanceDeleteDestination({
 }
 
 function runDeleteNavigationFollowUp(promise: Promise<unknown>) {
-  promise.catch((error) => {
+  promise.catch((error: unknown) => {
     handleNavigationError(error, {
       area: "console.instance.delete.navigate-home",
     });
@@ -258,7 +264,7 @@ function getMetricNotice(
 
 interface InstancePageHeaderDatabasesState {
   count: number;
-  error?: unknown | undefined;
+  error?: unknown;
   isPending: boolean;
   isUnavailable: boolean;
 }
@@ -424,8 +430,8 @@ function InstancePageHeader({
     <>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-          <div className="flex max-w-full min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="text-foreground min-w-0 text-2xl font-semibold tracking-tight text-balance [overflow-wrap:anywhere]">
+          <div className="flex min-w-0 max-w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="min-w-0 text-balance font-semibold text-2xl text-foreground tracking-tight [overflow-wrap:anywhere]">
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -436,8 +442,8 @@ function InstancePageHeader({
               />
             </div>
           </div>
-          <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
-            {lastRefreshedLabel ? (
+          <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+            {isNonEmptyString(lastRefreshedLabel) ? (
               <span className="hidden sm:inline">{lastRefreshedLabel}</span>
             ) : null}
             <Button
@@ -458,8 +464,8 @@ function InstancePageHeader({
             </Button>
           </div>
         </div>
-        <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-(length:--text-caption)">
-          {instance.config?.host ? (
+        <div className="text-(length:--text-caption) flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+          {isNonEmptyString(instance.config?.host) ? (
             <>
               <CopyableHost
                 host={instance.config.host}
@@ -468,7 +474,7 @@ function InstancePageHeader({
               <span className="text-border">|</span>
             </>
           ) : null}
-          {serverInfo?.versionShort ? (
+          {isNonEmptyString(serverInfo?.versionShort) ? (
             <>
               <span>
                 PostgreSQL{" "}
@@ -488,7 +494,7 @@ function InstancePageHeader({
             </span>
           ) : null}
         </div>
-        {serverInfoNotice ? (
+        {isNonEmptyString(serverInfoNotice) ? (
           <Alert>
             <TriangleAlert aria-hidden="true" />
             <AlertTitle>Server info unavailable</AlertTitle>
@@ -542,12 +548,12 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
         <div className="flex items-center gap-2">
           <Database
             aria-hidden="true"
-            className="text-muted-foreground/50 size-3.5 shrink-0"
+            className="size-3.5 shrink-0 text-muted-foreground/50"
           />
-          <span className="text-sm font-medium">{db.name}</span>
+          <span className="font-medium text-sm">{db.name}</span>
           <ChevronRight
             aria-hidden="true"
-            className="text-muted-foreground/0 group-hover:text-muted-foreground ml-0.5 size-3 transition-colors"
+            className="ml-0.5 size-3 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
           />
         </div>
       );
@@ -609,14 +615,14 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
     <div className="flex items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-foreground text-base font-semibold">Databases</h2>
+          <h2 className="font-semibold text-base text-foreground">Databases</h2>
           {count === null ? null : (
             <span className="text-muted-foreground text-xs tabular-nums">
               {count}
             </span>
           )}
         </div>
-        <p className="text-muted-foreground -mt-0.5 text-(length:--text-caption)">
+        <p className="text-(length:--text-caption) -mt-0.5 text-muted-foreground">
           Databases returned by the backend for this instance.
         </p>
       </div>
@@ -653,7 +659,7 @@ function InstanceOverviewSection({
   });
 
   function handleClearAll() {
-    setDbFilter("");
+    handleAsyncAction(() => setDbFilter(""))();
     setEncodingFilters([]);
     setKindFilters([]);
     setOwnerFilters([]);
@@ -712,12 +718,12 @@ function InstanceOverviewSection({
         emptyResourceName="databases"
         filterColumn="name"
         filterValue={dbFilter}
-        onFilterChange={setDbFilter}
-        onRowClick={(database) =>
+        onFilterChange={handleAsyncAction(setDbFilter)}
+        onRowClick={(database) => {
           navigateToDatabase(database, {
             overridePage: "database.overview",
-          })
-        }
+          });
+        }}
         tableKey="instance-databases"
       />
     );
@@ -734,7 +740,7 @@ function InstanceOverviewSection({
           dataSlot="instance-database-filter-bar"
           facets={databaseFacetFilters}
           onClearAll={handleClearAll}
-          onSearchChange={setDbFilter}
+          onSearchChange={handleAsyncAction(setDbFilter)}
           searchPlaceholder="Search databases…"
           searchValue={dbFilter}
         />
@@ -907,7 +913,7 @@ async function saveInstanceConfiguration(
     setFormNotice: Dispatch<SetStateAction<FormNotice>>;
     updateInstanceMutation: ReturnType<typeof useUpdateInstanceMutation>;
   }
-): Promise<unknown | undefined> {
+): Promise<unknown> {
   if (!instance || isConfigManaged) {
     return;
   }
@@ -927,7 +933,7 @@ async function saveInstanceConfiguration(
     // redacted password returns to blank and dirty state clears.
     setConfigFormResetKey((key) => key + 1);
     if (isConnected) {
-      overviewQuery.refetch();
+      handleAsyncAction(() => overviewQuery.refetch())();
     }
   } catch (error) {
     return error;
@@ -957,7 +963,7 @@ async function deleteInstanceFromPage({
   if (!instance || isConfigManaged) {
     return;
   }
-  if (deleteDisabledReason) {
+  if (isNonEmptyString(deleteDisabledReason)) {
     setIsDeleteDialogOpen(false);
     setFormNotice({
       message: deleteDisabledReason,
@@ -1023,7 +1029,11 @@ function getConnectedOverview({
 }
 
 function getInstalledExtensionCount(
-  extensions: readonly { installed: boolean }[] | undefined
+  extensions:
+    | readonly {
+        installed: boolean;
+      }[]
+    | undefined
 ) {
   return extensions?.filter((extension) => extension.installed).length;
 }
@@ -1068,8 +1078,12 @@ function BackendInstancePage({
       refetchOnWindowFocus: false,
     }
   );
-  const instance = instanceQuery.data?.instance;
-  const serverInfo = instanceQuery.data?.serverInfo;
+  const instanceData = instanceQuery.data ?? {
+    instance: undefined,
+    serverInfo: undefined,
+    partialErrors: undefined,
+  };
+  const { instance, serverInfo } = instanceData;
   const instanceName = buildInstanceName(instanceId);
   const credentialsUnreadable =
     instance !== undefined &&
@@ -1084,11 +1098,11 @@ function BackendInstancePage({
         params: { instanceId },
         replace: true,
         to: "/instances/$instanceId/configuration",
-      }).catch((error: unknown) =>
+      }).catch((error: unknown) => {
         handleNavigationError(error, {
           area: "console.instance.credentials-recovery",
-        })
-      );
+        });
+      });
     },
     [credentialsUnreadable, instanceId, navigate, section]
   );
@@ -1110,7 +1124,7 @@ function BackendInstancePage({
     isConnected,
     section,
   });
-  // TODO: persist the selected metrics range to the URL so it survives reloads.
+  // Metrics range is local to this mounted instance page.
   const [metricsRangeHours, setMetricsRangeHours] = useState(
     DEFAULT_METRIC_RANGE.hours
   );
@@ -1279,40 +1293,24 @@ function BackendInstancePage({
             isInstanceMutationPending,
             isRefreshing,
             lastRefreshedAt: instanceQuery.dataUpdatedAt,
-            liveData: {
-              activity: activityQuery.data?.activity,
-              activityPartialErrors: activityQuery.data?.partialErrors,
-              activityPending: activityQuery.isPending,
-              activityRefreshing:
-                activityQuery.isFetching && !activityQuery.isPending,
-              activityUpdatedAt: activityQuery.dataUpdatedAt,
-              connectionsMax: overview?.connections?.maxConnections,
-              handleRangeChange: setMetricsRangeHours,
-              health: healthQuery.data?.health,
-              healthPartialErrors: healthQuery.data?.partialErrors,
-              healthPending: healthQuery.isPending,
-              metricsError: metricsQuery.isError,
-              metricsPending: metricsQuery.isPending,
-              metricsRange: metricRangeByHours(metricsRangeHours),
-              metricsRefreshing: metricsQuery.isPlaceholderData,
-              metricsResponse: metricsQuery.data,
-              // While a range switch still shows the OLD window as placeholder
-              // data, suppress the overlay: shifting the old range's points by
-              // the new range's window length would draw it at wrong times.
-              previousMetricsResponse: getSettledMetricsResponse({
-                data: previousMetricsQuery.data,
-                isPlaceholderData: previousMetricsQuery.isPlaceholderData,
-              }),
-            },
+            liveData: buildInstanceLiveData({
+              activityQuery,
+              healthQuery,
+              metricsQuery,
+              previousMetricsQuery,
+              overview,
+              metricsRangeHours,
+              setMetricsRangeHours,
+            }),
             navigateToDatabase,
-            onDelete: handleDelete,
+            onDelete: handleAsyncAction(handleDelete),
             onInvalidSave: handleInvalidSave,
             onOpenDeleteDialogChange: setIsDeleteDialogOpen,
             onRefresh: handleRefresh,
             onSave: handleSave,
             overview,
             partialErrors: getVisiblePartialErrors(isConnected, [
-              ...(instanceQuery.data?.partialErrors ?? []),
+              ...(instanceData.partialErrors ?? []),
               ...(overviewQuery.data?.partialErrors ?? []),
             ]),
             queryState: queryStates.databases,
@@ -1323,6 +1321,49 @@ function BackendInstancePage({
         : null}
     </ResourcePageState>
   );
+}
+
+function buildInstanceLiveData({
+  activityQuery,
+  healthQuery,
+  metricsQuery,
+  previousMetricsQuery,
+  overview,
+  metricsRangeHours,
+  setMetricsRangeHours,
+}: {
+  activityQuery: ReturnType<typeof useCheckInstanceActivityQuery>;
+  healthQuery: ReturnType<typeof useCheckInstanceHealthQuery>;
+  metricsQuery: ReturnType<typeof useInstanceMetricsQuery>;
+  previousMetricsQuery: ReturnType<typeof useInstancePreviousMetricsQuery>;
+  overview: Parameters<typeof renderLoadedInstancePageContent>[0]["overview"];
+  metricsRangeHours: number;
+  setMetricsRangeHours: (hours: number) => void;
+}) {
+  return {
+    activity: activityQuery.data?.activity,
+    activityPartialErrors: activityQuery.data?.partialErrors,
+    activityPending: activityQuery.isPending,
+    activityRefreshing: activityQuery.isFetching && !activityQuery.isPending,
+    activityUpdatedAt: activityQuery.dataUpdatedAt,
+    connectionsMax: overview?.connections?.maxConnections,
+    handleRangeChange: setMetricsRangeHours,
+    health: healthQuery.data?.health,
+    healthPartialErrors: healthQuery.data?.partialErrors,
+    healthPending: healthQuery.isPending,
+    metricsError: metricsQuery.isError,
+    metricsPending: metricsQuery.isPending,
+    metricsRange: metricRangeByHours(metricsRangeHours),
+    metricsRefreshing: metricsQuery.isPlaceholderData,
+    metricsResponse: metricsQuery.data,
+    // While a range switch still shows the OLD window as placeholder
+    // data, suppress the overlay: shifting the old range's points by
+    // the new range's window length would draw it at wrong times.
+    previousMetricsResponse: getSettledMetricsResponse({
+      data: previousMetricsQuery.data,
+      isPlaceholderData: previousMetricsQuery.isPlaceholderData,
+    }),
+  };
 }
 
 function renderLoadedInstancePageContent({
@@ -1416,7 +1457,9 @@ function renderLoadedInstancePageContent({
           <InstanceDangerZoneSection
             deleteDisabledReason={deleteDisabledReason}
             instanceDisplayName={instance.displayName}
-            onDelete={() => onOpenDeleteDialogChange(true)}
+            onDelete={() => {
+              onOpenDeleteDialogChange(true);
+            }}
             pending={isInstanceMutationPending}
           />
         )}
@@ -1456,7 +1499,7 @@ function renderLoadedInstancePageContent({
   return (
     <>
       <div className="flex flex-col gap-8">
-        {dependencyError ? (
+        {Boolean(dependencyError) ? (
           <div className="space-y-2">
             <AppInlineError
               error={normalizeAppUiError(dependencyError, {

@@ -274,7 +274,7 @@ function roleFixtureDatabase(id: string) {
 }
 
 const NEVER = new Promise<never>(() => {
-  // Intentionally stays pending to exercise loading and cancellation.
+  // Intentionally never settles: models a request that remains in flight.
 });
 
 /**
@@ -282,9 +282,9 @@ const NEVER = new Promise<never>(() => {
  * `createTestRouterTransport` in rstest or `serveService` in Playwright.
  */
 function roleFixtureServices(fixture: RoleFixture) {
-  const truncated = new Set(fixture.truncated ?? []);
-  const pending = new Set(fixture.pending ?? []);
-  const failing = new Set(fixture.failing ?? []);
+  const truncated = new Set(fixture.truncated);
+  const pending = new Set(fixture.pending);
+  const failing = new Set(fixture.failing);
 
   function answer<T>(
     rpc: RoleAccessRpc,

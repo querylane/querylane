@@ -8,7 +8,10 @@ import { ConstraintType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface ColumnRow {
   column: Column;
-  fks: Array<{ column: string; table: string }>;
+  fks: {
+    column: string;
+    table: string;
+  }[];
   isIndexed: boolean;
 }
 
@@ -24,6 +27,40 @@ function parseReferencedTable(referencedTable: string): string {
   }
 }
 
+function foreignKeysByColumn(constraints: TableConstraint[]) {
+  const fksByColumn = new Map<
+    string,
+    {
+      column: string;
+      table: string;
+    }[]
+  >();
+  for (const constraint of constraints) {
+    if (constraint.type !== ConstraintType.FOREIGN_KEY) {
+      continue;
+    }
+    const referencedTable = parseReferencedTable(constraint.referencedTable);
+    // Composite foreign keys pair column_names[i] with
+    // referenced_column_names[i]; every pair gets its own label.
+    for (const [pairIndex, localColumn] of constraint.columnNames.entries()) {
+      const referencedColumn = constraint.referencedColumnNames[pairIndex];
+      if (
+        !(
+          localColumn &&
+          typeof referencedColumn === "string" &&
+          referencedColumn.length > 0
+        )
+      ) {
+        continue;
+      }
+      const existing = fksByColumn.get(localColumn) ?? [];
+      existing.push({ column: referencedColumn, table: referencedTable });
+      fksByColumn.set(localColumn, existing);
+    }
+  }
+  return fksByColumn;
+}
+
 function deriveColumnRows(
   columns: Column[],
   constraints: TableConstraint[],
@@ -35,30 +72,7 @@ function deriveColumnRows(
       indexedColumns.add(columnName);
     }
   }
-  const fksByColumn = new Map<
-    string,
-    Array<{
-      column: string;
-      table: string;
-    }>
-  >();
-  for (const constraint of constraints) {
-    if (constraint.type !== ConstraintType.FOREIGN_KEY) {
-      continue;
-    }
-    const referencedTable = parseReferencedTable(constraint.referencedTable);
-    // Composite foreign keys pair column_names[i] with
-    // referenced_column_names[i]; every pair gets its own label.
-    constraint.columnNames.forEach((localColumn, pairIndex) => {
-      const referencedColumn = constraint.referencedColumnNames[pairIndex];
-      if (!(localColumn && referencedColumn)) {
-        return;
-      }
-      const existing = fksByColumn.get(localColumn) ?? [];
-      existing.push({ column: referencedColumn, table: referencedTable });
-      fksByColumn.set(localColumn, existing);
-    });
-  }
+  const fksByColumn = foreignKeysByColumn(constraints);
   return columns.map((column) => ({
     column,
     fks: fksByColumn.get(column.columnName) ?? [],

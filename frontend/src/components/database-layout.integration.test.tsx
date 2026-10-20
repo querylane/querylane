@@ -1,5 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DatabaseLayout } from "@/components/database-layout";
@@ -11,7 +18,7 @@ const routerState = rs.hoisted(() => ({
   pathname: "/instances/prod",
 }));
 const PRESERVES_SETTINGS_RE =
-  /creates a backup and preserves your other settings/i;
+  /creates a backup and preserves your other settings/iu;
 
 rs.mock("@tanstack/react-router", () => {
   function MockCatchBoundary({ children }: { children: React.ReactNode }) {
@@ -89,7 +96,7 @@ describe("database layout route transitions", () => {
     rs.useRealTimers();
   });
 
-  it("renders the instance shell while the target route stays in instance scope", async () => {
+  test("renders the instance shell while the target route stays in instance scope", async () => {
     render(
       <DatabaseLayout>
         <div>Instance content</div>
@@ -100,7 +107,7 @@ describe("database layout route transitions", () => {
     expect(screen.getByText("Instance content")).toBeTruthy();
   });
 
-  it("keeps the previous instance shell while the target route leaves instance scope", async () => {
+  test("keeps the previous instance shell while the target route leaves instance scope", async () => {
     routerState.pathname = "/new-instance";
 
     render(
@@ -114,7 +121,7 @@ describe("database layout route transitions", () => {
     expect(screen.queryByRole("heading", { name: "Loading" })).toBeNull();
   });
 
-  it("mounts route progress inside the content inset", () => {
+  test("mounts route progress inside the content inset", () => {
     rs.useFakeTimers();
     routerState.isLoading = true;
 
@@ -136,7 +143,7 @@ describe("database layout route transitions", () => {
     expect(progressbar.className).toContain("top-0");
   });
 
-  it("links degraded mode to internal storage recovery instructions", async () => {
+  test("links degraded mode to internal storage recovery instructions", async () => {
     const user = userEvent.setup();
     useSetupStore.setState({
       onboardingState: create(GetOnboardingStateResponseSchema, {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "@rstest/core";
+import { afterEach, beforeEach, describe, expect, test } from "@rstest/core";
 import { Window } from "happy-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -85,35 +85,17 @@ function installDom() {
 }
 
 function installMatchMedia(window: Window): MatchMediaController {
+  const mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)");
   let matches = false;
-  const listeners = new Set<(event: MediaQueryListEvent) => void>();
-  const media = "(prefers-color-scheme: dark)";
-  const mediaQueryList = {
-    addEventListener: (_type: "change", listener: EventListener) => {
-      listeners.add(listener as (event: MediaQueryListEvent) => void);
-    },
-    get matches() {
-      return matches;
-    },
-    media,
-    onchange: null,
-    removeEventListener: (_type: "change", listener: EventListener) => {
-      listeners.delete(listener as (event: MediaQueryListEvent) => void);
-    },
-  } as MediaQueryList;
-
+  Object.defineProperty(mediaQueryList, "matches", { get: () => matches });
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: () => mediaQueryList,
   });
-
   return {
     setDarkMode: (nextMatches: boolean) => {
       matches = nextMatches;
-      const event = { matches, media } as MediaQueryListEvent;
-      for (const listener of listeners) {
-        listener(event);
-      }
+      mediaQueryList.dispatchEvent(new window.Event("change"));
     },
   };
 }
@@ -125,13 +107,28 @@ function ThemeProbe() {
     <div>
       <output data-testid="theme">{theme}</output>
       <output data-testid="resolved-theme">{resolvedTheme}</output>
-      <Button onClick={() => setTheme("light")} type="button">
+      <Button
+        onClick={() => {
+          setTheme("light");
+        }}
+        type="button"
+      >
         Light
       </Button>
-      <Button onClick={() => setTheme("dark")} type="button">
+      <Button
+        onClick={() => {
+          setTheme("dark");
+        }}
+        type="button"
+      >
         Dark
       </Button>
-      <Button onClick={() => setTheme("system")} type="button">
+      <Button
+        onClick={() => {
+          setTheme("system");
+        }}
+        type="button"
+      >
         System
       </Button>
     </div>
@@ -145,7 +142,7 @@ async function renderThemeProvider(defaultTheme: Theme = "system") {
 
   root = createRoot(container);
 
-  await act(() => {
+  await act(async () => {
     root?.render(
       <ThemeProvider defaultTheme={defaultTheme}>
         <ThemeProbe />
@@ -155,7 +152,7 @@ async function renderThemeProvider(defaultTheme: Theme = "system") {
 }
 
 async function clickButton(label: string) {
-  const button = Array.from(document.querySelectorAll("button")).find(
+  const button = [...document.querySelectorAll("button")].find(
     (candidate) => candidate.textContent === label
   );
 
@@ -163,7 +160,7 @@ async function clickButton(label: string) {
     throw new Error(`Button not found: ${label}`);
   }
 
-  await act(() => {
+  await act(async () => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 }
@@ -189,7 +186,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   if (root) {
-    await act(() => {
+    await act(async () => {
       root?.unmount();
     });
   }
@@ -201,7 +198,7 @@ afterEach(async () => {
 });
 
 describe("theme provider", () => {
-  it("hydrates from the persisted theme and applies it to the document", async () => {
+  test("hydrates from the persisted theme and applies it to the document", async () => {
     localStorage.setItem(STORAGE_KEY, "dark");
 
     await renderThemeProvider();
@@ -216,7 +213,7 @@ describe("theme provider", () => {
     });
   });
 
-  it("keeps system mode selected while following OS color scheme changes", async () => {
+  test("keeps system mode selected while following OS color scheme changes", async () => {
     await renderThemeProvider();
 
     expect(text("theme")).toBe("system");
@@ -227,7 +224,7 @@ describe("theme provider", () => {
       resolvedTheme: "light",
     });
 
-    await act(() => {
+    await act(async () => {
       matchMediaController?.setDarkMode(true);
     });
 
@@ -252,13 +249,13 @@ describe("theme provider", () => {
 });
 
 describe("theme provider edge cases", () => {
-  it("throws when useTheme is used outside provider", () => {
+  test("throws when useTheme is used outside provider", () => {
     expect(() => renderToStaticMarkup(<ThemeProbe />)).toThrow(
       "useTheme must be used within a ThemeProvider"
     );
   });
 
-  it("renders with default theme without browser globals", () => {
+  test("renders with default theme without browser globals", () => {
     restoreDomGlobals();
 
     try {

@@ -1,4 +1,5 @@
 {
+  "extends": "./tsconfig.strict.json",
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
@@ -7,7 +8,7 @@
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
     "jsx": "react-jsx",
-    "types": ["@rsbuild/core/types"],
+    "types": ["@rsbuild/core/types", "node"],
     "paths": {
       "@/components/ui/*": [
         "./node_modules/.tmp/tsconfig.ui/components/ui/*",
@@ -19,40 +20,26 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
     "noEmit": true,
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-    "strict": true,
-    "allowJs": false,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
-    "alwaysStrict": true,
+    "allowJs": true,
     "erasableSyntaxOnly": false,
-    "exactOptionalPropertyTypes": true,
-    "forceConsistentCasingInFileNames": true,
-    "noCheck": false,
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "strictBindCallApply": true,
-    "strictBuiltinIteratorReturn": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "useUnknownInCatchVariables": true,
-    "skipLibCheck": true
+    "checkJs": true
   },
-  "include": ["src", "test/setup-globals.ts"],
+  "include": [
+    "src",
+    "test/setup-globals.ts",
+    "*.ts",
+    "*.mts",
+    "*.cts",
+    "*.js",
+    "*.mjs",
+    "*.cjs",
+    "e2e",
+    "scripts",
+    "public/**/*.js"
+  ],
   "references": [
     {
       "path": "./tsconfig.declarations.json"

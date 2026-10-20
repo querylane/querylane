@@ -159,12 +159,14 @@ function NavigationTargetGroup({
         <CommandItem
           className={COMMAND_ITEM_CLASS_NAME}
           key={target.page}
-          onSelect={() => onSelect(target.page)}
+          onSelect={() => {
+            onSelect(target.page);
+          }}
           value={target.label}
         >
-          <ChevronRight className="text-muted-foreground size-3.5" />
+          <ChevronRight className="size-3.5 text-muted-foreground" />
           <span className="text-(length:--text-caption)">{target.label}</span>
-          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
             {target.summary}
           </span>
         </CommandItem>
@@ -200,14 +202,16 @@ function DatabaseObjectGroup({
           <CommandItem
             className={COMMAND_ITEM_CLASS_NAME}
             key={object.name ?? label}
-            onSelect={() => onSelect(object)}
+            onSelect={() => {
+              onSelect(object);
+            }}
             value={label}
           >
-            <ChevronRight className="text-muted-foreground size-3.5" />
-            <span className="font-mono text-(length:--text-caption)">
+            <ChevronRight className="size-3.5 text-muted-foreground" />
+            <span className="text-(length:--text-caption) font-mono">
               {label}
             </span>
-            <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+            <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
               {databaseObjectRowCount(object)}
             </span>
           </CommandItem>
@@ -233,14 +237,16 @@ function RoleCommandGroup({
         <CommandItem
           className={COMMAND_ITEM_CLASS_NAME}
           key={role.name}
-          onSelect={() => onSelect(role)}
+          onSelect={() => {
+            onSelect(role);
+          }}
           value={role.roleName}
         >
-          <ChevronRight className="text-muted-foreground size-3.5" />
-          <span className="font-mono text-(length:--text-caption)">
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+          <span className="text-(length:--text-caption) font-mono">
             {role.roleName}
           </span>
-          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
             {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
           </span>
         </CommandItem>
@@ -262,13 +268,13 @@ function PaletteQueryStatus({
 }) {
   if (isPending) {
     return (
-      <output className="text-muted-foreground block px-4 py-3 text-xs">
+      <output className="block px-4 py-3 text-muted-foreground text-xs">
         {loadingMessage}
       </output>
     );
   }
-  if (error) {
-    return <p className="text-destructive px-4 py-3 text-xs">{errorMessage}</p>;
+  if (Boolean(error)) {
+    return <p className="px-4 py-3 text-destructive text-xs">{errorMessage}</p>;
   }
   return null;
 }
@@ -343,7 +349,7 @@ function AdminCommandPaletteContent({
   });
   const roleFilter = buildRoleFilter({ query: serverQuery });
   const rolesQuery = useListRolesQuery(
-    instanceId && roleFilter
+    instanceId && typeof roleFilter === "string" && roleFilter.length > 0
       ? {
           ...rolesForInstanceQueryInput(instanceId),
           filter: roleFilter,
@@ -418,7 +424,7 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="[&_[data-slot=input-group]]:border-border! rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
+      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
       label="Search tables, screens, roles, or saved queries"
       shouldFilter={false}
     >
@@ -431,7 +437,7 @@ function AdminCommandPaletteContent({
           placeholder="Jump to a table, screen, role, or saved query…"
           value={query}
         />
-        <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md px-2 py-1 font-mono text-xs">
+        <kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md bg-muted px-2 py-1 font-mono text-muted-foreground text-xs">
           esc
         </kbd>
       </div>
@@ -477,19 +483,21 @@ const CommandPaletteContext = createContext<CommandPaletteController | null>(
 function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
-  useKeyboardShortcut("palette.open", () =>
-    setOpen((currentOpen) => !currentOpen)
-  );
+  useKeyboardShortcut("palette.open", () => {
+    setOpen((currentOpen) => !currentOpen);
+  });
 
   const controller: CommandPaletteController = {
-    openPalette: () => setOpen(true),
+    openPalette: () => {
+      setOpen(true);
+    },
   };
 
   return (
     <CommandPaletteContext.Provider value={controller}>
       {children}
       <CommandDialog
-        className="border-border top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border p-0 shadow-lg sm:max-w-[600px]"
+        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border border-border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
         onOpenChange={setOpen}
         open={open}

@@ -38,6 +38,7 @@ import {
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const METRICS = [
   {
@@ -97,7 +98,7 @@ function MetricBar({
     <div className="flex items-center justify-end gap-3 font-mono text-xs tabular-nums">
       <span
         aria-hidden="true"
-        className="bg-muted h-2 w-20 overflow-hidden rounded-sm"
+        className="h-2 w-20 overflow-hidden rounded-sm bg-muted"
       >
         <span
           className={cn(
@@ -141,7 +142,7 @@ function TopologyRail({
   return (
     <svg
       aria-hidden="true"
-      className="text-border shrink-0 overflow-visible"
+      className="shrink-0 overflow-visible text-border"
       height={ROW_HEIGHT}
       width={(depth + 1) * LANE_WIDTH}
     >
@@ -194,7 +195,7 @@ function PlanRows(props: PlanRowsProps) {
     <>
       <tr
         className={cn(
-          "hover:bg-muted/30 border-b",
+          "border-b hover:bg-muted/30",
           node.id === selectedId && "bg-muted/70"
         )}
         data-plan-node={node.id}
@@ -211,7 +212,9 @@ function PlanRows(props: PlanRowsProps) {
                 aria-expanded={expanded}
                 aria-label={`${expanded ? "Collapse" : "Expand"} ${title} branch`}
                 className="shrink-0"
-                onClick={() => onToggle(node)}
+                onClick={() => {
+                  onToggle(node);
+                }}
                 presentation="muted"
                 size="icon-xs"
                 type="button"
@@ -226,16 +229,18 @@ function PlanRows(props: PlanRowsProps) {
               aria-label={`Inspect ${title}`}
               aria-pressed={node.id === selectedId}
               className="h-auto min-w-0 justify-start"
-              onClick={() => onSelect(node)}
+              onClick={() => {
+                onSelect(node);
+              }}
               presentation="sql-plan-node"
               type="button"
               variant="ghost"
             >
               <span className="flex min-w-0 flex-col items-start text-left">
-                <span className="text-xs font-medium">{node.nodeType}</span>
-                {node.relationName ? (
+                <span className="font-medium text-xs">{node.nodeType}</span>
+                {isNonEmptyString(node.relationName) ? (
                   <span
-                    className="text-muted-foreground max-w-64 truncate font-mono text-xs"
+                    className="max-w-64 truncate font-mono text-muted-foreground text-xs"
                     title={title}
                   >
                     {node.relationName}
@@ -248,7 +253,7 @@ function PlanRows(props: PlanRowsProps) {
         {[node.actualRows, node.planRows, node.actualLoops].map(
           (value, index) => (
             <td
-              className="text-muted-foreground p-2 text-right font-mono text-xs tabular-nums"
+              className="p-2 text-right font-mono text-muted-foreground text-xs tabular-nums"
               key={index.toString()}
             >
               {value === undefined ? "—" : formatCount(value)}
@@ -301,7 +306,7 @@ function PlanMetricControls({
 }) {
   const active = METRICS.find((item) => item.value === metric);
   return (
-    <div className="bg-muted/20 flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <Select
           items={METRICS}
@@ -342,7 +347,9 @@ function PlanMetricControls({
       </div>
       {hotspot ? (
         <Button
-          onClick={() => onSelect(hotspot)}
+          onClick={() => {
+            onSelect(hotspot);
+          }}
           presentation="muted"
           size="xs"
           type="button"
@@ -412,7 +419,7 @@ function PlanExplorer({
       const layout = layoutRef.current;
       const stacked =
         layout && getComputedStyle(layout).flexDirection === "column";
-      if (selection.inspect && stacked) {
+      if (selection.inspect && stacked === true) {
         layout.querySelector("aside")?.scrollIntoView({ block: "nearest" });
       } else if (mode === "tree") {
         tableRef.current
@@ -471,12 +478,14 @@ function PlanExplorer({
           </TabsTrigger>
         </TabsList>
         {focused ? (
-          <span className="text-muted-foreground mr-8 text-xs">
+          <span className="mr-8 text-muted-foreground text-xs">
             Plan analysis
           </span>
         ) : (
           <Button
-            onClick={() => setFocused(true)}
+            onClick={() => {
+              setFocused(true);
+            }}
             presentation="compact"
             ref={focusButtonRef}
             size="xs"
@@ -510,7 +519,9 @@ function PlanExplorer({
         <PlanBody
           layoutRef={layoutRef}
           mode={mode}
-          onViewJson={() => setMode("raw")}
+          onViewJson={() => {
+            setMode("raw");
+          }}
           plan={plan}
           rawPlan={rawPlan}
           rows={{
@@ -575,7 +586,7 @@ function PlanBody({
   const heading = METRICS.find((item) => item.value === rows.metric)?.heading;
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-auto @4xl:flex-row @4xl:overflow-hidden"
+      className="flex min-h-0 flex-1 @4xl:flex-row flex-col overflow-auto @4xl:overflow-hidden"
       ref={layoutRef}
     >
       {mode === "map" ? (
@@ -591,7 +602,7 @@ function PlanBody({
             aria-label="Execution plan"
             className="w-full min-w-2xl border-collapse text-xs"
           >
-            <thead className="bg-background sticky top-0 z-10">
+            <thead className="sticky top-0 z-10 bg-background">
               <tr className="border-b text-left">
                 {[
                   "Operation",
@@ -602,7 +613,7 @@ function PlanBody({
                 ].map((label, index) => (
                   <th
                     className={cn(
-                      "h-9 px-2 text-right font-medium whitespace-nowrap last:pr-4",
+                      "h-9 whitespace-nowrap px-2 text-right font-medium last:pr-4",
                       index === 0 && "w-full pl-4 text-left"
                     )}
                     key={label}
@@ -649,7 +660,7 @@ function ExplainPlanView({
           <TabsTrigger value="raw">JSON</TabsTrigger>
         </TabsList>
         <TabsContent className="min-h-0 flex-1 overflow-auto" value="raw">
-          <p className="text-muted-foreground px-4 pt-3 text-xs">
+          <p className="px-4 pt-3 text-muted-foreground text-xs">
             Unrecognized plan. Raw output preserved.
           </p>
           <pre className="px-4 py-3 font-mono text-xs leading-relaxed">

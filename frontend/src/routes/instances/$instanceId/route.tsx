@@ -5,7 +5,6 @@ import {
   retainSearchParams,
   useMatches,
 } from "@tanstack/react-router";
-
 import { AdminPageRenderer } from "@/components/admin-page-renderer";
 import { DatabaseLayout } from "@/components/database-layout";
 import { NotFoundState } from "@/components/not-found-state";
@@ -18,12 +17,13 @@ import {
 } from "@/lib/admin-page";
 import { resolveScopeLevel } from "@/lib/admin-scope-level";
 import { parseRouteIdsFromPathname, useCurrentRouteIds } from "@/lib/route-ids";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { InstanceLayoutErrorComponent } from "@/routes/instances/$instanceId/instance-layout-error";
 
 function InstanceLayoutRoute() {
   const search = Route.useSearch();
   const routeIds = useCurrentRouteIds();
-  const requestedPage = search.page
+  const requestedPage = isNonEmptyString(search.page)
     ? resolveRequestedAdminPageForScope(
         search.page,
         resolveScopeLevel(routeIds)

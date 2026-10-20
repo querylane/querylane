@@ -36,9 +36,9 @@ export function SetupRoutePage() {
       navigate({
         replace: true,
         search: (previous) => ({ ...previous, method: urlMethod }),
-      }).catch((error: unknown) =>
-        handleNavigationError(error, { area: "setup.method-sync" })
-      );
+      }).catch((error: unknown) => {
+        handleNavigationError(error, { area: "setup.method-sync" });
+      });
     },
     [navigate, search.method, wizardMethod, wizardPhase]
   );
@@ -56,22 +56,28 @@ export function SetupRoutePage() {
     function handleSetupNavigation() {
       if (
         status !== "ready" ||
-        !(instancesState.hasResolved || instancesState.error) ||
+        !(instancesState.hasResolved || Boolean(instancesState.error)) ||
         !isModeLoaded
       ) {
         return;
       }
       clearBlockingError();
-      if (!instancesState.error && instances.length === 0 && !isConfigManaged) {
+      if (
+        !Boolean(instancesState.error) &&
+        instances.length === 0 &&
+        !isConfigManaged
+      ) {
         navigate({ replace: true, to: "/new-instance" }).catch(
-          (error: unknown) =>
-            handleNavigationError(error, { area: "setup.new-instance" })
+          (error: unknown) => {
+            handleNavigationError(error, { area: "setup.new-instance" });
+          }
         );
         return;
       }
       navigate({ href: search.returnTo ?? "/", replace: true }).catch(
-        (error: unknown) =>
-          handleNavigationError(error, { area: "setup.return" })
+        (error: unknown) => {
+          handleNavigationError(error, { area: "setup.return" });
+        }
       );
     },
     [
@@ -90,7 +96,7 @@ export function SetupRoutePage() {
   if (
     status === "ready" &&
     !instancesState.hasResolved &&
-    !instancesState.error
+    !Boolean(instancesState.error)
   ) {
     return (
       <BrandedLoadingState

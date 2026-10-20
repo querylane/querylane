@@ -31,7 +31,7 @@ function formatTitle(test: TestCase): string {
   const fileName = basename(test.location.file);
   return test
     .titlePath()
-    .filter((part) => part && part !== fileName)
+    .filter((part) => Boolean(part && part !== fileName))
     .join(" › ");
 }
 
@@ -63,7 +63,10 @@ function truncate(value: string): string {
 
 class LlmReporter implements Reporter {
   private readonly completed: CompletedTest[] = [];
-  private readonly failed: Array<{ output: string; title: string }> = [];
+  private readonly failed: {
+    output: string;
+    title: string;
+  }[] = [];
 
   onTestEnd(test: TestCase, result: TestResult) {
     const completed = {
@@ -91,7 +94,7 @@ class LlmReporter implements Reporter {
       (test) => test.status !== "passed" && test.status !== "skipped"
     );
     const slowest = [...this.completed]
-      .sort((left, right) => right.duration - left.duration)
+      .toSorted((left, right) => right.duration - left.duration)
       .slice(0, SLOW_TEST_LIMIT);
 
     writeLine();

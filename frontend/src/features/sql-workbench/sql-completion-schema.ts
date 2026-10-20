@@ -5,6 +5,7 @@ import {
   relationKey,
   type SqlRelation,
 } from "@/features/sql-workbench/sql-relation";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * Builds the CodeMirror SQL completion namespace from Querylane's catalog.
@@ -41,11 +42,11 @@ const MEMBER_ACCESS = ["."];
 const RELATION_KEYWORDS = ["from", "join", "update", "into", "only"].join("|");
 const RELATION_POSITION_PATTERN = new RegExp(
   `\\b(?:${RELATION_KEYWORDS})\\s+[\\w$".]*$`,
-  "i"
+  "iu"
 );
 const RELATION_REFERENCE_PATTERN = new RegExp(
   `\\b(?:${RELATION_KEYWORDS})\\s+("[^"]+"|[A-Za-z_][\\w$]*)(?:\\s*\\.\\s*("[^"]+"|[A-Za-z_][\\w$]*))?`,
-  "gi"
+  "giu"
 );
 const RESERVED_AFTER_KEYWORD = new Set([
   "lateral",
@@ -77,7 +78,7 @@ function resolveQualified(
   schema: string,
   name: string
 ): ReferencedRelation | null {
-  return index.get(schema)?.has(name) ? { name, schema } : null;
+  return index.get(schema)?.has(name) === true ? { name, schema } : null;
 }
 
 function resolveUnqualified(
@@ -85,7 +86,7 @@ function resolveUnqualified(
   name: string,
   defaultSchema: string
 ): ReferencedRelation | null {
-  if (index.get(defaultSchema)?.has(name)) {
+  if (index.get(defaultSchema)?.has(name) === true) {
     return { name, schema: defaultSchema };
   }
   for (const [schema, names] of index) {
@@ -103,7 +104,7 @@ function resolveReference(
 ): ReferencedRelation | null {
   const [, first = "", second] = match;
   const firstName = unquoteIdentifier(first);
-  if (second) {
+  if (isNonEmptyString(second)) {
     return resolveQualified(index, firstName, unquoteIdentifier(second));
   }
   if (RESERVED_AFTER_KEYWORD.has(firstName)) {
@@ -185,7 +186,7 @@ function buildCompletionNamespace({
 }: {
   columns: ReadonlyMap<string, readonly CompletionColumn[]>;
   relations: readonly SqlRelation[];
-}): SQLNamespace {
+}) {
   const namespace: Record<
     string,
     { children: Record<string, SQLNamespace>; self: Completion }
@@ -212,7 +213,7 @@ function buildCompletionNamespace({
       self: relationCompletion(relation),
     };
   }
-  return namespace;
+  return namespace satisfies SQLNamespace;
 }
 
 export type { CompletionColumn, ReferencedRelation };

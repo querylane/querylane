@@ -123,7 +123,9 @@ describe("dedupePrivileges", () => {
 describe("grantorSummary", () => {
   test("renders a missing single entry as empty text", () => {
     // Sparse array: length 1 with a hole — exercises the defensive fallback.
-    expect(grantorSummary(new Array<string>(1))).toEqual({
+    const sparse: string[] = [];
+    sparse.length = 1;
+    expect(grantorSummary(sparse)).toEqual({
       text: "",
       title: undefined,
     });

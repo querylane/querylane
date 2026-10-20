@@ -28,7 +28,7 @@ function clampRowNumber(rowNumber: number, rowCount: number) {
 }
 
 function keepDigitsOnly(event: ChangeEvent<HTMLInputElement>) {
-  const digitsOnly = event.currentTarget.value.replaceAll(/\D/g, "");
+  const digitsOnly = event.currentTarget.value.replaceAll(/\D/gu, "");
   if (event.currentTarget.value !== digitsOnly) {
     event.currentTarget.value = digitsOnly;
   }
@@ -105,7 +105,9 @@ function RowNumberNavigator({
         disabled={rowCount <= 1}
         inputMode="numeric"
         key={currentRowNumber}
-        onBlur={(event) => commitDraftRowNumber(event.currentTarget)}
+        onBlur={(event) => {
+          commitDraftRowNumber(event.currentTarget);
+        }}
         onChange={keepDigitsOnly}
         onKeyDown={handleRowNumberKeyDown}
         pattern="[0-9]*"

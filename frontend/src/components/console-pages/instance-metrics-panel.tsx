@@ -85,14 +85,14 @@ function PanelHeader({
   onRangeChange: (rangeHours: number) => void;
 }) {
   return (
-    <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2.5">
-      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+    <div className="flex items-center justify-between gap-2 border-border border-b px-4 py-2.5">
+      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         Metrics
       </span>
       {/* A clock icon frames the segmented picker as a trailing time window
           (the Grafana/Datadog convention); the comparison control lives on the
           chart itself, next to the line it toggles, not up here. */}
-      <div className="text-muted-foreground flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
         <Clock aria-hidden="true" className="size-3.5" />
         <ChartRangePicker
           onRangeChange={onRangeChange}
@@ -124,10 +124,10 @@ function TabTrigger({
       presentation="metric"
       value={tab.key}
     >
-      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {tab.label}
       </span>
-      <span className="text-foreground font-mono text-xl font-bold tracking-tight tabular-nums">
+      <span className="font-bold font-mono text-foreground text-xl tabular-nums tracking-tight">
         {formatted}
       </span>
       {trend ? (
@@ -171,16 +171,16 @@ function CollectingStat({
 
   return (
     <div className="flex flex-col items-start gap-1.5 px-4 py-3 text-left">
-      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {tab.label}
       </span>
-      <span className="text-foreground font-mono text-xl font-bold tracking-tight tabular-nums">
+      <span className="font-bold font-mono text-foreground text-xl tabular-nums tracking-tight">
         {formatted}
       </span>
-      <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+      <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
         <span
           aria-hidden="true"
-          className="bg-success size-1.5 animate-pulse rounded-full motion-reduce:animate-none"
+          className="size-1.5 animate-pulse rounded-full bg-success motion-reduce:animate-none"
         />
         collecting
       </span>
@@ -372,7 +372,14 @@ function connectionsThresholds(
   series: Map<number, MetricSeries>,
   connectionsLimit: number | undefined
 ): ChartThreshold[] | undefined {
-  if (!connectionsLimit || connectionsLimit <= 0) {
+  if (
+    !(
+      typeof connectionsLimit === "number" &&
+      connectionsLimit !== 0 &&
+      !Number.isNaN(connectionsLimit)
+    ) ||
+    connectionsLimit <= 0
+  ) {
     return;
   }
 
@@ -409,17 +416,15 @@ export function InstanceMetricsPanel({
 }: InstanceMetricsPanelProps) {
   const series = seriesByMetric(response);
   const previousSeries = seriesByMetric(previousResponse);
-  const tabThresholds = new Map<string, ChartThreshold[] | undefined>();
-  tabThresholds.set(
-    "connections",
-    connectionsThresholds(series, connectionsLimit)
-  );
+  const tabThresholds = new Map<string, ChartThreshold[] | undefined>([
+    ["connections", connectionsThresholds(series, connectionsLimit)],
+  ]);
 
   if (isPending && !response) {
     return (
       <Card presentation="bordered">
         <CardContent>
-          <div className="bg-muted/40 h-96 w-full animate-pulse rounded-lg motion-reduce:animate-none" />
+          <div className="h-96 w-full animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
         </CardContent>
       </Card>
     );
@@ -450,7 +455,7 @@ export function InstanceMetricsPanel({
     return (
       <Card presentation="bordered-flush">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
-        <div className="divide-border border-border grid w-full grid-cols-2 divide-x divide-y border-b sm:grid-cols-4 sm:divide-y-0">
+        <div className="grid w-full grid-cols-2 divide-y divide-border border-border border-b sm:grid-cols-4 sm:divide-y-0">
           {METRIC_TABS.map((tab) => (
             <CollectingStat key={tab.key} series={series} tab={tab} />
           ))}

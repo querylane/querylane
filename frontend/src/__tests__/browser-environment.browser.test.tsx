@@ -4,7 +4,7 @@ import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 
 const expectedTheme =
-  import.meta.env.PUBLIC_TEST_BROWSER_THEME === "dark" ? "dark" : "light";
+  import.meta.env["PUBLIC_TEST_BROWSER_THEME"] === "dark" ? "dark" : "light";
 
 test("browser test setup applies the configured theme and reduced motion", () => {
   const root = document.documentElement;
@@ -16,11 +16,12 @@ test("browser test setup applies the configured theme and reduced motion", () =>
   expect(root.dataset["testMotion"]).toBe("reduced");
   expect(root.style.colorScheme).toBe(expectedTheme);
   expect(
-    window.matchMedia(`(prefers-color-scheme: ${expectedTheme})`).matches
+    globalThis.window.matchMedia(`(prefers-color-scheme: ${expectedTheme})`)
+      .matches
   ).toBe(true);
-  expect(window.matchMedia("(prefers-reduced-motion: reduce)").matches).toBe(
-    true
-  );
+  expect(
+    globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ).toBe(true);
 });
 
 test("browser test environment loads app styles and deterministic visual-test CSS", async () => {

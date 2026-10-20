@@ -3,7 +3,7 @@
 (() => {
   let theme;
   try {
-    theme = window.localStorage.getItem("querylane-ui-theme");
+    theme = globalThis.window.localStorage.getItem("querylane-ui-theme");
   } catch {
     // Storage can be unavailable in restricted browsing contexts.
     theme = "system";
@@ -11,8 +11,8 @@
 
   if (theme !== "light" && theme !== "dark") {
     theme =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
+      typeof globalThis.window.matchMedia === "function" &&
+      globalThis.window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
   }

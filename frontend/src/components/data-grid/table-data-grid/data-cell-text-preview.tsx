@@ -22,7 +22,7 @@ function TextPreview({
 }: TextPreviewProps) {
   const { onOpenChange, open, openDialog } = useDataValueDialogState();
   const preview = truncateForAttribute(
-    raw.replaceAll(/\s+/g, " "),
+    raw.replaceAll(/\s+/gu, " "),
     TEXT_PREVIEW_MAX_LENGTH
   );
   const title = truncateForAttribute(raw, TEXT_TITLE_MAX_LENGTH);
@@ -43,7 +43,9 @@ function TextPreview({
           event.stopPropagation();
           openDialog();
         }}
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
         presentation="preview-toolbar"
         size="xs"
         type="button"

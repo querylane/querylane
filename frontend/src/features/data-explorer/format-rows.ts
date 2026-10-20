@@ -2,7 +2,7 @@ const ROWS_THRESHOLD_THOUSAND = 1000;
 const ROWS_THRESHOLD_MILLION = 1_000_000;
 const ROWS_THRESHOLD_BILLION = 1_000_000_000;
 const ROWS_THRESHOLD_TEN = 10;
-const TRAILING_ZERO_DECIMAL = /\.0$/;
+const TRAILING_ZERO_DECIMAL = /\.0$/u;
 
 export function formatRows(value: number): string {
   if (value < ROWS_THRESHOLD_THOUSAND) {

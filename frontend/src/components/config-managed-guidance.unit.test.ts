@@ -1,8 +1,8 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { buildConfigManagedInstanceSnippet } from "@/components/config-managed-guidance";
 
 describe("config-managed guidance", () => {
-  it("builds a copyable instance YAML snippet with the active config path", () => {
+  test("builds a copyable instance YAML snippet with the active config path", () => {
     const snippet = buildConfigManagedInstanceSnippet(
       "/etc/querylane/config.yaml"
     );

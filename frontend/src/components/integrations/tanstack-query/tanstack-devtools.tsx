@@ -12,7 +12,7 @@ const MOUNT_STORAGE_KEY = "querylane-devtools-mounted";
 
 function readPersistedMount() {
   try {
-    return window.sessionStorage.getItem(MOUNT_STORAGE_KEY) === "1";
+    return globalThis.window.sessionStorage.getItem(MOUNT_STORAGE_KEY) === "1";
   } catch {
     return false;
   }
@@ -20,7 +20,7 @@ function readPersistedMount() {
 
 function persistMount() {
   try {
-    window.sessionStorage.setItem(MOUNT_STORAGE_KEY, "1");
+    globalThis.window.sessionStorage.setItem(MOUNT_STORAGE_KEY, "1");
   } catch {
     // Storage being unavailable only loses reload persistence.
   }

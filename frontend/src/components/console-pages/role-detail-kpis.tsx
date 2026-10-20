@@ -42,7 +42,7 @@ function OrdinaryRoleKpis({
       <KpiCard
         label="Can log in"
         sub={connLimitSub}
-        value={attributes?.canLogin ? "Yes" : "No"}
+        value={attributes?.canLogin === true ? "Yes" : "No"}
       />
       <KpiCard
         label="Direct grants"

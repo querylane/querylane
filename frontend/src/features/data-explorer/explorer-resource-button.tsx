@@ -10,14 +10,23 @@ import type {
 } from "@/features/data-explorer/data-explorer-types";
 import { MaterializedViewIcon } from "@/features/data-explorer/object-icons";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
-function resolveResourceIcon(
-  item: ResourceItem,
-  categoryIcon: ComponentType<SVGProps<SVGSVGElement>>
-): ComponentType<SVGProps<SVGSVGElement>> {
-  return item.objectType === "materialized"
-    ? MaterializedViewIcon
-    : categoryIcon;
+const RESOURCE_ICON_CLASS =
+  "@max-[14rem]/object-browser:hidden size-4 shrink-0";
+
+function ResourceIcon({
+  item,
+  categoryIcon: CategoryIcon,
+}: {
+  item: ResourceItem;
+  categoryIcon: ComponentType<SVGProps<SVGSVGElement>>;
+}) {
+  return item.objectType === "materialized" ? (
+    <MaterializedViewIcon className={RESOURCE_ICON_CLASS} />
+  ) : (
+    <CategoryIcon className={RESOURCE_ICON_CLASS} />
+  );
 }
 
 function ResourceMetadata({
@@ -27,7 +36,7 @@ function ResourceMetadata({
   isItemSelected: boolean;
   item: ResourceItem;
 }) {
-  if (!(item.badge || item.sizeLabel)) {
+  if (!(item.badge || isNonEmptyString(item.sizeLabel))) {
     return null;
   }
   return (
@@ -35,7 +44,7 @@ function ResourceMetadata({
       {item.badge ? (
         <span
           className={cn(
-            "shrink-0 rounded border px-1.5 py-px font-mono tracking-wider text-(length:--text-micro) uppercase",
+            "text-(length:--text-micro) shrink-0 rounded border px-1.5 py-px font-mono uppercase tracking-wider",
             item.badge.tone === "amber" &&
               "border-warning-400/40 bg-warning-500/10 text-warning-700 dark:text-warning-400",
             item.badge.tone === "blue" &&
@@ -49,10 +58,10 @@ function ResourceMetadata({
           {item.badge.label}
         </span>
       ) : null}
-      {item.sizeLabel ? (
+      {isNonEmptyString(item.sizeLabel) ? (
         <span
           className={cn(
-            "w-16 text-right font-mono text-(length:--text-label-sm) tabular-nums @max-[15rem]/object-browser:hidden",
+            "text-(length:--text-label-sm) @max-[15rem]/object-browser:hidden w-16 text-right font-mono tabular-nums",
             isItemSelected ? "text-foreground/80" : "text-muted-foreground"
           )}
         >
@@ -82,17 +91,18 @@ export function ExplorerResourceButton({
     selection.kind === "resource" &&
     selection.category === category &&
     selection.name === item.name;
-  const ResolvedIcon = resolveResourceIcon(item, Icon);
   return (
     <Button
       className="h-[26px] w-full justify-start"
       data-selected={isItemSelected}
-      onClick={() => onSelectResource(category, item.name)}
+      onClick={() => {
+        onSelectResource(category, item.name);
+      }}
       presentation="resource-row"
       title={item.name}
       variant="ghost"
     >
-      <ResolvedIcon className="text-muted-foreground size-4 shrink-0 @max-[14rem]/object-browser:hidden" />
+      <ResourceIcon categoryIcon={Icon} item={item} />
       <span className="min-w-0 flex-1 truncate text-left">
         {highlightMatch(item.name, query)}
       </span>

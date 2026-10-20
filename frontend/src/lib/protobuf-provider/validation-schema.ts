@@ -6,40 +6,58 @@ import {
   type MessageValidType,
 } from "@bufbuild/protobuf";
 import { usedTypes } from "@bufbuild/protobuf/reflect";
-import { createValidator, RuntimeError, type ValidatorOptions, type Violation } from "@bufbuild/protovalidate";
-import type { StandardSchemaV1 } from "../core/index.js";
+import {
+  createValidator,
+  type ValidatorOptions,
+  type Violation,
+} from "@bufbuild/protovalidate";
+import type { StandardSchemaV1 } from "@/lib/core/standard-schema";
 import type { ProtoformMessageFormatter } from "../core/messages.js";
 import { humanizeValidationError } from "./humanize-validation-error.js";
 
-function violationToIssue(violation: Violation, formatter?: ProtoformMessageFormatter): StandardSchemaV1.Issue {
+function appendViolationSegment(
+  path: PropertyKey[],
+  segment: Violation["field"][number]
+) {
+  switch (segment.kind) {
+    case "field":
+      if (segment.oneof) {
+        path.push(segment.oneof.localName, "value");
+      } else {
+        path.push(segment.localName);
+      }
+      break;
+    case "oneof":
+      path.push(segment.localName);
+      break;
+    case "list_sub":
+      path.push(segment.index);
+      break;
+    case "map_sub":
+      path.push(
+        typeof segment.key === "string" || typeof segment.key === "number"
+          ? segment.key
+          : String(segment.key)
+      );
+      break;
+    case "extension":
+      path.push(`[${segment.typeName}]`);
+      break;
+    default:
+      throw new TypeError(
+        `Unsupported violation path segment: ${String(segment satisfies never)}`
+      );
+  }
+}
+
+function violationToIssue(
+  violation: Violation,
+  formatter?: ProtoformMessageFormatter
+): StandardSchemaV1.Issue {
   const path: PropertyKey[] = [];
 
   for (const segment of violation.field) {
-    switch (segment.kind) {
-      case "field":
-        if (segment.oneof) {
-          path.push(segment.oneof.localName, "value");
-        } else {
-          path.push(segment.localName);
-        }
-        break;
-      case "oneof":
-        path.push(segment.localName);
-        break;
-      case "list_sub":
-        path.push(segment.index);
-        break;
-      case "map_sub":
-        path.push(
-          typeof segment.key === "string" || typeof segment.key === "number" ? segment.key : String(segment.key)
-        );
-        break;
-      case "extension":
-        path.push(`[${segment.typeName}]`);
-        break;
-      default:
-        throw new TypeError(`Unsupported violation path segment: ${String(segment satisfies never)}`);
-    }
+    appendViolationSegment(path, segment);
   }
 
   const message = humanizeValidationError(violation.message, formatter);
@@ -48,7 +66,9 @@ function violationToIssue(violation: Violation, formatter?: ProtoformMessageForm
 
 export function createDescriptorAwareStandardSchema<Desc extends DescMessage>(
   desc: Desc,
-  options?: ValidatorOptions & { formatMessage?: ProtoformMessageFormatter | undefined }
+  options?: ValidatorOptions & {
+    formatMessage?: ProtoformMessageFormatter | undefined;
+  }
 ): StandardSchemaV1<MessageShape<Desc>, MessageValidType<Desc>> {
   const { formatMessage, ...validatorOptions } = options ?? {};
   const registry = createRegistry(
@@ -73,13 +93,12 @@ export function createDescriptorAwareStandardSchema<Desc extends DescMessage>(
           case "valid":
             return { value: result.message };
           case "invalid":
-            return { issues: result.violations.map((violation) => violationToIssue(violation, formatMessage)) };
+            return {
+              issues: result.violations.map((violation) =>
+                violationToIssue(violation, formatMessage)
+              ),
+            };
           case "error":
-            if (result.error instanceof RuntimeError) {
-              return {
-                value: result.message as MessageValidType<Desc>,
-              };
-            }
             return { issues: [{ message: result.error.message }] };
           default:
             return result satisfies never;

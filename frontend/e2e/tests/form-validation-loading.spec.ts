@@ -13,7 +13,7 @@ import {
 
 const sourceMapSchema = z.object({ sources: z.array(z.string()) });
 const validationModulePattern =
-  /node_modules\/(?:@bufbuild\/(?:protovalidate|cel|cel-spec)|react-hook-form)\//;
+  /node_modules\/(?:@bufbuild\/(?:protovalidate|cel|cel-spec)|react-hook-form)\//u;
 const distDirectory = join(import.meta.dirname, "../../dist");
 
 function downloadedSources(scriptPaths: Set<string>) {
@@ -21,7 +21,7 @@ function downloadedSources(scriptPaths: Set<string>) {
     // Inspect the emitted assets actually requested by the browser, not chunk
     // names or config text. Missing maps fail instead of hiding a regression.
     const sourceMap: unknown = JSON.parse(
-      readFileSync(join(distDirectory, `${path}.map`), "utf8")
+      readFileSync(join(distDirectory, `${path}.map`), "utf-8")
     );
     return sourceMapSchema.parse(sourceMap).sources;
   });

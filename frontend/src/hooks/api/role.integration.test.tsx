@@ -40,7 +40,7 @@ function createWrapper(
 ) {
   activeQueryClients.push(queryClient);
 
-  return function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TransportProvider transport={transport}>
         <QueryClientProvider client={queryClient}>
@@ -48,7 +48,8 @@ function createWrapper(
         </QueryClientProvider>
       </TransportProvider>
     );
-  };
+  }
+  return Wrapper;
 }
 
 afterEach(async () => {

@@ -27,11 +27,11 @@ type CompletionClause =
   | "statement";
 
 const STRING_OR_COMMENT_PATTERN =
-  /'(?:[^']|'')*'?|"(?:[^"]|"")*"?|--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/g;
-const CLOSED_GROUP_PATTERN = /\([^()]*\)/g;
+  /'(?:[^']|'')*'?|"(?:[^"]|"")*"?|--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/gu;
+const CLOSED_GROUP_PATTERN = /\([^()]*\)/gu;
 const CLAUSE_KEYWORD_PATTERN =
-  /\b(select|from|join|where|on|having|group\s+by|order\s+by|partition\s+by|limit|offset|update|into|set|values|returning|as|with)\b/gi;
-const PARTIAL_WORD_PATTERN = /[\w$]*$/;
+  /\b(?<capture1>select|from|join|where|on|having|group\s+by|order\s+by|partition\s+by|limit|offset|update|into|set|values|returning|as|with)\b/giu;
+const PARTIAL_WORD_PATTERN = /[\w$]*$/u;
 const EXPRESSION_CLAUSES = new Set([
   "group by",
   "having",
@@ -54,11 +54,11 @@ const RELATION_CLAUSES = new Set(["from", "into", "join", "update"]);
  * read on its own.
  */
 function normalizeBeforeCursor(textBefore: string): string {
-  let text = textBefore.replace(STRING_OR_COMMENT_PATTERN, " x ");
+  let text = textBefore.replaceAll(STRING_OR_COMMENT_PATTERN, " x ");
   let previous = "";
   while (previous !== text) {
     previous = text;
-    text = text.replace(CLOSED_GROUP_PATTERN, " x ");
+    text = text.replaceAll(CLOSED_GROUP_PATTERN, " x ");
   }
   const openGroup = text.lastIndexOf("(");
   return openGroup === -1 ? text : text.slice(openGroup + 1);
@@ -75,7 +75,7 @@ function completionClause(statementBefore: string): CompletionClause {
   if (last === undefined) {
     return withoutPartial.trim() === "" ? "statement" : "other";
   }
-  const clause = last.toLowerCase().replace(/\s+/g, " ");
+  const clause = last.toLowerCase().replaceAll(/\s+/gu, " ");
   if (clause === "as") {
     return withoutPartial.trimEnd().toLowerCase().endsWith("as")
       ? "alias"
@@ -226,9 +226,15 @@ const FUNCTION_OPTIONS: Completion[] = COMMON_FUNCTIONS.map((name) =>
 
 interface ScopedColumns {
   /** No FROM yet: columns of the default schema's tables, as a guess. */
-  fromSchema: readonly { column: CompletionColumn; relation: string }[];
+  fromSchema: readonly {
+    column: CompletionColumn;
+    relation: string;
+  }[];
   /** Columns of relations the statement references, with their relation. */
-  inScope: readonly { column: CompletionColumn; relation: string }[];
+  inScope: readonly {
+    column: CompletionColumn;
+    relation: string;
+  }[];
 }
 
 function columnOptions(
@@ -263,6 +269,7 @@ function contextOptions(
         ...FUNCTION_OPTIONS,
         ...EXPRESSION_KEYWORD_OPTIONS,
       ];
+    case "alias":
     default:
       return [];
   }
@@ -325,7 +332,7 @@ function statementAround(
       full: containing.text,
     };
   }
-  const previous = statements.filter((statement) => statement.to < pos).at(-1);
+  const previous = statements.findLast((statement) => statement.to < pos);
   const start = previous ? previous.from : 0;
   const terminator = previous ? doc.indexOf(";", previous.to) : -1;
   if (terminator !== -1 && terminator < pos) {

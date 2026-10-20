@@ -13,6 +13,7 @@ import { viewsForSchemaQueryInput } from "@/hooks/api/view";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListSchemasResponse,
   SchemaService,
@@ -33,8 +34,8 @@ import {
 
 const MAX_DETAIL_TABLES = 60;
 const MAX_DERIVED_CACHE_ENTRIES = 200;
-const TABLE_SCHEMA_PATTERN = /\/schemas\/([^/]+)\/tables\//;
-const VIEW_SCHEMA_PATTERN = /\/schemas\/([^/]+)\/views\//;
+const TABLE_SCHEMA_PATTERN = /\/schemas\/(?<capture1>[^/]+)\/tables\//u;
+const VIEW_SCHEMA_PATTERN = /\/schemas\/(?<capture1>[^/]+)\/views\//u;
 
 interface TableMetadataResponse {
   columns: Awaited<
@@ -81,7 +82,7 @@ function objectIdentityKey(value: object | undefined): string {
     return "none";
   }
   const cached = objectIdentityCache.get(value);
-  if (cached) {
+  if (isNonEmptyString(cached)) {
     return cached;
   }
   nextObjectIdentity += 1;
@@ -352,7 +353,7 @@ function schemasInMapScope({
   detailScope: "all" | "selected-schema";
   schemas: StructureMapSchema[];
 }): StructureMapSchema[] {
-  if (detailScope === "all" || !activeSchemaName) {
+  if (detailScope === "all" || !isNonEmptyString(activeSchemaName)) {
     return schemas;
   }
   const cacheKey = `${detailScope}:${activeSchemaName}`;
@@ -421,8 +422,12 @@ function inspectableTables(tables: Table[]): Table[] {
   return rows;
 }
 
-function firstQueryError(queries: Array<{ error: unknown }>): unknown {
-  return queries.find((query) => query.error)?.error;
+function firstQueryError(
+  queries: {
+    error: unknown;
+  }[]
+): unknown {
+  return queries.find((query) => Boolean(query.error))?.error;
 }
 
 function tableResponsesHaveNextPage(
@@ -489,7 +494,11 @@ function structureMapTruncatedReason({
   totalInspectableTables: number;
   viewResponses: QueryDataResult<ListViewsResponse>[];
 }): string | null {
-  if (detailScope === "all" && schemaResponse?.nextPageToken) {
+  if (
+    detailScope === "all" &&
+    typeof schemaResponse?.nextPageToken === "string" &&
+    schemaResponse?.nextPageToken.length > 0
+  ) {
     return "More schemas are available.";
   }
   if (

@@ -30,7 +30,7 @@ function parseJson(raw: string): JsonParseResult {
 }
 
 function formatJsonPreview(raw: string): string {
-  const compactRaw = raw.replace(/\s+/g, " ").trim();
+  const compactRaw = raw.replaceAll(/\s+/gu, " ").trim();
   if (raw.length <= JSON_PREVIEW_PARSE_MIN_LENGTH) {
     return compactRaw;
   }

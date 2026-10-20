@@ -9,9 +9,9 @@ import { mockRolesScreen } from "../visual/role-fixtures";
 import { expect, test } from "./base";
 import { mockRpc } from "./helpers";
 
-const VERIFY_FULL = /^verify-full/;
-const GRANTS = /^Grants/;
-const SQL_EDITOR = /^SQL editor/;
+const VERIFY_FULL = /^verify-full/u;
+const GRANTS = /^Grants/u;
+const SQL_EDITOR = /^SQL editor/u;
 
 const MAX_LENGTH_INSTANCE_NAME =
   "production_analytics_eu_central_failover_readonly_reconciliatio";
@@ -144,9 +144,10 @@ test("SQL tabs support keyboard selection, panels, and external actions", async 
   await expect(
     page.getByRole("tabpanel").filter({ has: editor })
   ).toHaveAttribute("id", panelId ?? "");
-  expect(
-    (await makeAxeBuilder().include('[role="tablist"]').analyze()).violations
-  ).toEqual([]);
+  const awaitedResult1 = await makeAxeBuilder()
+    .include('[role="tablist"]')
+    .analyze();
+  expect(awaitedResult1.violations).toEqual([]);
   await page
     .getByRole("button", { name: "Close Query 1", exact: true })
     .click();
@@ -167,9 +168,10 @@ test("a narrow SQL editor remains keyboard-scrollable", async ({
     .fill(
       "SELECT carrier_id, shipment_id, expected_delivery_time FROM shipping.shipments;"
     );
-  expect(
-    (await makeAxeBuilder().include(".cm-scroller").analyze()).violations
-  ).toEqual([]);
+  const awaitedResult2 = await makeAxeBuilder()
+    .include(".cm-scroller")
+    .analyze();
+  expect(awaitedResult2.violations).toEqual([]);
 });
 
 test("connection and create actions remain reachable on a phone", async ({

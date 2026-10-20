@@ -7,23 +7,16 @@ import {
   densityState,
   type GrantedObject,
   type PillState,
-  PRIV_TONE_CLASS,
-  PRIV_TONE_PARTIAL_CLASS,
   privAbbr,
   privTone,
   privTooltip,
 } from "@/components/console-pages/role-grants-shared";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Button } from "@/components/querylane-ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { PrivilegePillTrigger } from "@/components/querylane-ui/privilege-pill";
+import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-const PILL_BASE =
-  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none tracking-section";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 export function AbbrPill({
   count,
@@ -37,34 +30,26 @@ export function AbbrPill({
   state: PillState;
 }) {
   const abbr = privAbbr(name);
-  const tooltip = grantable
-    ? `${privTooltip(name)} · WITH GRANT OPTION`
-    : privTooltip(name);
+  const tooltip =
+    grantable === true
+      ? `${privTooltip(name)} · WITH GRANT OPTION`
+      : privTooltip(name);
   const tone = privTone(name);
-  const className =
-    state === "none"
-      ? cn(
-          PILL_BASE,
-          "border-border/50 text-muted-foreground/40 min-w-[2.75rem] border-dashed"
-        )
-      : cn(
-          PILL_BASE,
-          state === "partial"
-            ? PRIV_TONE_PARTIAL_CLASS[tone]
-            : PRIV_TONE_CLASS[tone],
-          count !== undefined && "min-w-[2.75rem]"
-        );
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className={className} />}>
+      <PrivilegePillTrigger
+        counted={count !== undefined}
+        state={state}
+        tone={tone}
+      >
         {abbr}
-        {state !== "none" && grantable ? (
-          <span className="leading-none font-bold">+</span>
+        {state !== "none" && grantable === true ? (
+          <span className="font-bold leading-none">+</span>
         ) : null}
         {state !== "none" && count !== undefined ? (
           <span className="text-xs opacity-80">{count.toLocaleString()}</span>
         ) : null}
-      </TooltipTrigger>
+      </PrivilegePillTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
@@ -117,7 +102,7 @@ export function HeldPillStrip({
   const ordered = columns.filter((name) => held.has(name));
   if (ordered.length === 0) {
     return (
-      <span className="text-muted-foreground/50 font-mono text-xs italic">
+      <span className="font-mono text-muted-foreground/50 text-xs italic">
         no privileges
       </span>
     );
@@ -170,9 +155,9 @@ export function CountPill({
   value: number;
 }) {
   return (
-    <span className="border-border bg-secondary text-muted-foreground tracking-label inline-flex h-[18px] items-center gap-1 rounded-full border px-1.75 font-mono text-xs font-medium">
+    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-1.75 font-medium font-mono text-muted-foreground text-xs tracking-label">
       {value.toLocaleString()}
-      {unit ? (
+      {isNonEmptyString(unit) ? (
         <span className="font-normal">
           {unit}
           {value === 1 ? "" : "s"}
@@ -221,8 +206,8 @@ export function ContentHead({
   return (
     <div className="flex flex-col gap-1.5 pb-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
-        <Icon className={cn("text-muted-foreground size-4", iconClassName)} />
-        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <Icon className={cn("size-4 text-muted-foreground", iconClassName)} />
+        <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
         {children}
         {count === undefined ? null : (
           <CountPill partial={partial} unit={countUnit} value={count} />

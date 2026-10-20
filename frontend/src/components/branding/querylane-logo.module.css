@@ -1,5 +1,7 @@
 .rowTrack {
-  transform-box: fill-box;
+  @supports (transform-box: fill-box) {
+    transform-box: fill-box;
+  }
   transform-origin: left center;
   animation: querylane-row-shift 1.4s ease-in-out infinite;
   animation-delay: var(--row-pulse-delay);

@@ -8,12 +8,14 @@ interface LabelEntry {
   value: string;
 }
 
+const EMPTY_LABEL_MESSAGES: string[] = [];
+
 export function InstanceLabelRow({
   disabled,
   errorId,
   index,
   label,
-  messages = [],
+  messages = EMPTY_LABEL_MESSAGES,
   onChange,
   onRemove,
   configurationField,
@@ -39,7 +41,9 @@ export function InstanceLabelRow({
           data-instance-config-field={configurationField}
           data-label-key-input=""
           disabled={disabled}
-          onChange={(event) => onChange({ ...label, key: event.target.value })}
+          onChange={(event) => {
+            onChange({ ...label, key: event.target.value });
+          }}
           placeholder="Key"
           value={label.key}
         />
@@ -48,9 +52,9 @@ export function InstanceLabelRow({
           aria-invalid={invalid}
           aria-label={`Label value ${index + 1}`}
           disabled={disabled}
-          onChange={(event) =>
-            onChange({ ...label, value: event.target.value })
-          }
+          onChange={(event) => {
+            onChange({ ...label, value: event.target.value });
+          }}
           placeholder="Value"
           value={label.value}
         />

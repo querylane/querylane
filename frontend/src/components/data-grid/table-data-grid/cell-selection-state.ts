@@ -327,13 +327,15 @@ function createCellSelectionStore(): CellSelectionStore {
     }
   };
 
+  function clear() {
+    if (state.ranges.length === 0 && !state.isDragging) {
+      return;
+    }
+    setState(EMPTY_CELL_SELECTION_STATE);
+  }
+
   return {
-    clear() {
-      if (state.ranges.length === 0 && !state.isDragging) {
-        return;
-      }
-      setState(EMPTY_CELL_SELECTION_STATE);
-    },
+    clear,
     end() {
       if (!state.isDragging) {
         return;
@@ -368,7 +370,7 @@ function createCellSelectionStore(): CellSelectionStore {
     },
     selectAll(bounds) {
       if (bounds.left > bounds.right || bounds.top > bounds.bottom) {
-        this.clear();
+        clear();
         return;
       }
       setState({
@@ -388,7 +390,7 @@ function createCellSelectionStore(): CellSelectionStore {
       });
     },
     start(coordinate, options = {}) {
-      if (options.extend && state.ranges.length > 0) {
+      if (options.extend === true && state.ranges.length > 0) {
         const activeRangeIndex = state.ranges.length - 1;
         const activeRange = state.ranges[activeRangeIndex];
         if (activeRange === undefined) {
@@ -406,9 +408,8 @@ function createCellSelectionStore(): CellSelectionStore {
       }
 
       const nextRange = { anchor: coordinate, focus: coordinate };
-      const ranges = options.additive
-        ? [...state.ranges, nextRange]
-        : [nextRange];
+      const ranges =
+        options.additive === true ? [...state.ranges, nextRange] : [nextRange];
       setState({
         isDragging: true,
         ranges,

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "@rstest/core";
 import { downsampleTrend } from "@/lib/chart-data";
 
-function rows(values: (number | null)[]): { time: number; v: number | null }[] {
+function rows(values: (number | null)[]): {
+  time: number;
+  v: number | null;
+}[] {
   return values.map((v, index) => ({ time: index * 1000, v }));
 }
 

@@ -14,6 +14,7 @@ import { sampleStatement } from "@/features/sql-workbench/sql-catalog-model";
 import { SqlCatalogRail } from "@/features/sql-workbench/sql-catalog-rail";
 import { SqlEditor } from "@/features/sql-workbench/sql-editor";
 import type { SqlEditorHandle } from "@/features/sql-workbench/sql-editor-types";
+import type { formatSqlText as FormatSqlText } from "@/features/sql-workbench/sql-format";
 import { SqlHistorySheet } from "@/features/sql-workbench/sql-history-sheet";
 import {
   DEFAULT_SCHEMA,
@@ -44,6 +45,8 @@ import { useSqlCompletionNamespace } from "@/features/sql-workbench/use-sql-comp
 import { useSqlExecution } from "@/features/sql-workbench/use-sql-execution";
 import { useSqlValidator } from "@/features/sql-workbench/use-sql-validation";
 import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const EDITOR_PLACEHOLDER =
   "-- Read-only SQL against this database. ⌘/Ctrl + Enter runs the statement under the cursor.";
@@ -112,7 +115,7 @@ function useWorkbenchEditorActions({
   async function formatCurrent() {
     // sql-formatter is only needed once someone formats, so it loads then.
     // The text is read after the import so typing during the load is kept.
-    let formatSqlText: typeof import("@/features/sql-workbench/sql-format").formatSqlText;
+    let formatSqlText: typeof FormatSqlText;
     try {
       ({ formatSqlText } = await import("@/features/sql-workbench/sql-format"));
     } catch {
@@ -137,6 +140,95 @@ function useWorkbenchEditorActions({
   }
 
   return { currentStatements, formatCurrent };
+}
+
+function useWorkbenchExecutionActions({
+  activeTab,
+  currentStatements,
+  execution,
+  rowLimit,
+  setResultsTab,
+}: {
+  activeTab: SqlTab;
+  currentStatements: () => SqlStatement[];
+  execution: ReturnType<typeof useSqlExecution>;
+  rowLimit: RowLimit;
+  setResultsTab: (tab: ResultsTab) => void;
+}) {
+  const activeExecution = execution.executions[activeTab.id];
+  const isRunning = activeExecution?.status === "running";
+  const statements = splitSqlStatements(activeTab.text);
+  function runCurrent(): Promise<unknown> | undefined {
+    if (isRunning) {
+      return;
+    }
+    const pending = currentStatements();
+    if (pending.length === 0) {
+      return;
+    }
+    setResultsTab("results");
+    return runSequence(pending);
+  }
+
+  async function runSequence(pending: readonly SqlStatement[]): Promise<void> {
+    const [next, ...rest] = pending;
+    if (!next) {
+      return;
+    }
+    const status = await execution.run(activeTab.id, next.text, {
+      defaultSchema: activeTab.defaultSchema,
+      rowLimit,
+    });
+    if (status === "success") {
+      await runSequence(rest);
+    }
+  }
+
+  function runAll() {
+    if (isRunning || statements.length === 0) {
+      return;
+    }
+    setResultsTab("results");
+    return runSequence(statements);
+  }
+
+  /** Re-runs the statement that failed, not whatever is under the cursor now. */
+  function retryActiveExecution() {
+    if (!activeExecution) {
+      return runCurrent();
+    }
+    return execution.run(activeTab.id, activeExecution.statement, {
+      defaultSchema: activeTab.defaultSchema,
+      rowLimit: activeExecution.rowLimit,
+    });
+  }
+
+  function explain(analyze: boolean) {
+    const pending = currentStatements();
+    if (pending.length > 1) {
+      toast.info("Explain one statement at a time", {
+        description: "Select a single statement, or place the cursor in one.",
+      });
+      return;
+    }
+    const statement = pending[0]?.text;
+    if (isNonEmptyString(statement)) {
+      setResultsTab("plan");
+      return execution.explain(activeTab.id, statement, {
+        analyze,
+        defaultSchema: activeTab.defaultSchema,
+      });
+    }
+    return undefined;
+  }
+
+  return {
+    explain,
+    retryActiveExecution,
+    runAll,
+    runCurrent,
+    statementCount: statements.length,
+  };
 }
 
 function SqlWorkbench({
@@ -181,7 +273,9 @@ function SqlWorkbench({
   const execution = useSqlExecution({
     databaseId,
     instanceId,
-    onSettled: (event) => store.recordHistory(scope, event),
+    onSettled: (event) => {
+      store.recordHistory(scope, event);
+    },
   });
   const { namespace: schema, scope: completionScope } =
     useSqlCompletionNamespace({
@@ -202,75 +296,20 @@ function SqlWorkbench({
   const activeExplain = execution.explains[activeTab.id];
   const isRunning = activeExecution?.status === "running";
   const isExplaining = activeExplain?.status === "running";
-  const statements = splitSqlStatements(activeTab.text);
   const runningTabIds = new Set(
     Object.entries(execution.executions).flatMap(([tabId, state]) =>
       state.status === "running" ? [tabId] : []
     )
   );
 
-  function runCurrent(): Promise<unknown> | undefined {
-    if (isRunning) {
-      return;
-    }
-    const pending = currentStatements();
-    if (pending.length === 0) {
-      return;
-    }
-    setResultsTab("results");
-    return runSequence(pending);
-  }
-
-  async function runSequence(pending: readonly SqlStatement[]): Promise<void> {
-    const [next, ...rest] = pending;
-    if (!next) {
-      return;
-    }
-    const status = await execution.run(activeTab.id, next.text, {
-      defaultSchema: activeTab.defaultSchema,
+  const { explain, retryActiveExecution, runAll, runCurrent, statementCount } =
+    useWorkbenchExecutionActions({
+      activeTab,
+      currentStatements,
+      execution,
       rowLimit,
+      setResultsTab,
     });
-    if (status === "success") {
-      await runSequence(rest);
-    }
-  }
-
-  function runAll() {
-    if (isRunning || statements.length === 0) {
-      return;
-    }
-    setResultsTab("results");
-    runSequence(statements);
-  }
-
-  /** Re-runs the statement that failed, not whatever is under the cursor now. */
-  function retryActiveExecution() {
-    if (!activeExecution) {
-      return runCurrent();
-    }
-    return execution.run(activeTab.id, activeExecution.statement, {
-      defaultSchema: activeTab.defaultSchema,
-      rowLimit: activeExecution.rowLimit,
-    });
-  }
-
-  function explain(analyze: boolean) {
-    const pending = currentStatements();
-    if (pending.length > 1) {
-      toast.info("Explain one statement at a time", {
-        description: "Select a single statement, or place the cursor in one.",
-      });
-      return;
-    }
-    const statement = pending[0]?.text;
-    if (statement) {
-      setResultsTab("plan");
-      execution.explain(activeTab.id, statement, {
-        analyze,
-        defaultSchema: activeTab.defaultSchema,
-      });
-    }
-  }
 
   function openStatementInNewTab(statement: string) {
     store.addTab(scope, { text: statement });
@@ -303,7 +342,7 @@ function SqlWorkbench({
       title: relation.name,
     });
     setResultsTab("results");
-    execution.run(tabId, statement, { rowLimit });
+    handleAsyncAction(() => execution.run(tabId, statement, { rowLimit }))();
     closeMobileRail();
   }
 
@@ -356,27 +395,35 @@ function SqlWorkbench({
           historyCount={history.length}
           isExplaining={isExplaining}
           isRunning={isRunning}
-          onCancel={() => execution.cancel(activeTab.id)}
-          onCancelExplain={() => execution.cancelExplain(activeTab.id)}
-          onExplain={explain}
-          onFormat={formatCurrent}
-          onOpenHistory={() => setHistoryOpen(true)}
+          onCancel={() => {
+            execution.cancel(activeTab.id);
+          }}
+          onCancelExplain={() => {
+            execution.cancelExplain(activeTab.id);
+          }}
+          onExplain={handleAsyncAction(explain)}
+          onFormat={handleAsyncAction(formatCurrent)}
+          onOpenHistory={() => {
+            setHistoryOpen(true);
+          }}
           onRowLimitChange={setRowLimit}
-          onRun={runCurrent}
-          onRunAll={runAll}
-          onSave={() => setSaveOpen(true)}
+          onRun={handleAsyncAction(runCurrent)}
+          onRunAll={handleAsyncAction(runAll)}
+          onSave={() => {
+            setSaveOpen(true);
+          }}
           rowLimit={rowLimit}
           schemaSelect={
             <SqlSchemaSelect
               databaseId={databaseId}
               instanceId={instanceId}
-              onChange={(next) =>
-                store.updateTabSchema(scope, activeTab.id, next)
-              }
+              onChange={(next) => {
+                store.updateTabSchema(scope, activeTab.id, next);
+              }}
               value={activeTab.defaultSchema}
             />
           }
-          statementCount={statements.length}
+          statementCount={statementCount}
         />
         <ResizablePanelGroup className="min-h-0 flex-1" orientation="vertical">
           <ResizablePanel defaultSize="42" minSize="15">
@@ -386,12 +433,12 @@ function SqlWorkbench({
                 completionScope={completionScope}
                 defaultSchema={activeTab.defaultSchema}
                 key={activeTab.id}
-                onChange={(text) =>
-                  store.updateTabText(scope, activeTab.id, text)
-                }
-                onFormat={formatCurrent}
-                onRunAll={runAll}
-                onRunCurrent={runCurrent}
+                onChange={(text) => {
+                  store.updateTabText(scope, activeTab.id, text);
+                }}
+                onFormat={handleAsyncAction(formatCurrent)}
+                onRunAll={handleAsyncAction(runAll)}
+                onRunCurrent={handleAsyncAction(runCurrent)}
                 placeholder={EDITOR_PLACEHOLDER}
                 ref={editorRef}
                 schema={schema}
@@ -414,8 +461,12 @@ function SqlWorkbench({
       </TabsContent>
       <SqlHistorySheet
         history={history}
-        onClearHistory={() => store.clearHistory(scope)}
-        onDeleteSaved={(id) => store.deleteSavedQuery(scope, id)}
+        onClearHistory={() => {
+          store.clearHistory(scope);
+        }}
+        onDeleteSaved={(id) => {
+          store.deleteSavedQuery(scope, id);
+        }}
         onOpenChange={setHistoryOpen}
         onOpenHistoryEntry={openStatementInNewTab}
         onOpenSaved={openSaved}

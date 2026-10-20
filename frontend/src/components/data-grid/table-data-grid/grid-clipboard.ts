@@ -1,18 +1,18 @@
 import { toast } from "sonner";
 
 function writeClipboard(value: string) {
-  if (!navigator.clipboard) {
+  if (!Boolean(navigator.clipboard)) {
     toast.error("Clipboard isn't available in this browser");
     return;
   }
-  navigator.clipboard.writeText(value).then(
-    () => {
+  navigator.clipboard
+    .writeText(value)
+    .then(() => {
       toast.success("Copied", { duration: 1500 });
-    },
-    () => {
+    })
+    .catch(() => {
       toast.error("Couldn't copy to clipboard");
-    }
-  );
+    });
 }
 
 // writeClipboardDeferred copies text that still has to be produced
@@ -22,16 +22,20 @@ function writeClipboard(value: string) {
 // an await. Browsers without ClipboardItem fall back to writeText and
 // rely on the transient-activation window outlasting the fetch.
 function writeClipboardDeferred(getText: () => Promise<string>) {
-  if (!navigator.clipboard) {
+  if (!Boolean(navigator.clipboard)) {
     toast.error("Clipboard isn't available in this browser");
     return;
   }
   const onDone = () => toast.success("Copied", { duration: 1500 });
   const onError = () => toast.error("Couldn't copy the full value");
-  if (typeof ClipboardItem === "undefined" || !navigator.clipboard.write) {
+  if (
+    typeof ClipboardItem === "undefined" ||
+    typeof navigator.clipboard.write !== "function"
+  ) {
     getText()
       .then((text) => navigator.clipboard.writeText(text))
-      .then(onDone, onError);
+      .then(onDone)
+      .catch(onError);
     return;
   }
   const item = new ClipboardItem({
@@ -39,7 +43,7 @@ function writeClipboardDeferred(getText: () => Promise<string>) {
       (text) => new Blob([text], { type: "text/plain" })
     ),
   });
-  navigator.clipboard.write([item]).then(onDone, onError);
+  navigator.clipboard.write([item]).then(onDone).catch(onError);
 }
 
 export { writeClipboard, writeClipboardDeferred };

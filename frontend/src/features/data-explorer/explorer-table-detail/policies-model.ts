@@ -12,6 +12,7 @@ function policyModeLabel(mode: PolicyMode) {
       return "RESTRICTIVE";
     case PolicyMode.PERMISSIVE:
       return "PERMISSIVE";
+    case PolicyMode.UNSPECIFIED:
     default:
       return "UNKNOWN";
   }
@@ -74,6 +75,8 @@ function policyPredicateForCommand(
     case PolicyCommand.DELETE:
     case PolicyCommand.SELECT:
       return usingExpression || "true";
+    case PolicyCommand.UNSPECIFIED:
+    case PolicyCommand.ALL:
     default:
       return usingExpression || checkExpression || "true";
   }

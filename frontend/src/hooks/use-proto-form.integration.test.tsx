@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { describe, expect, test } from "@rstest/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { useProtoForm } from "@/hooks/use-proto-form";
+import { useProtoForm } from "@/hooks/use-proto-form/use-proto-form";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import {
   CreateInstanceSpecSchema,
@@ -96,7 +96,7 @@ describe("useProtoForm", () => {
     expect(result.current.errors.database?.message).toBeTruthy();
   });
 
-  test("retains multiple server violations on the same field", () => {
+  test("retains multiple server violations on the same field", async () => {
     const { result } = renderPostgresConfigForm("secret");
     const error = new ConnectError(
       "invalid request",
@@ -115,7 +115,9 @@ describe("useProtoForm", () => {
       ]
     );
 
-    act(() => result.current.form.setServerErrors(error));
+    await act(async () => {
+      result.current.form.setServerErrors(error);
+    });
 
     expect(Object.values(result.current.errors.host?.types ?? {})).toEqual([
       "Host is not reachable",
@@ -132,14 +134,16 @@ describe("useProtoForm", () => {
       return { form, isDirty: form.formState.isDirty };
     });
 
-    act(() =>
+    act(() => {
       result.current.form.setValue("config.host", "changed.internal", {
         shouldDirty: true,
-      })
-    );
+      });
+    });
     expect(result.current.isDirty).toBe(true);
 
-    await act(async () => result.current.form.resetField("config"));
+    await act(async () => {
+      result.current.form.resetField("config");
+    });
 
     expect(result.current.form.createMessage().config?.host).toBe("localhost");
     expect(result.current.isDirty).toBe(false);

@@ -10,7 +10,11 @@ import {
   Table2,
 } from "lucide-react";
 import type { ComponentType } from "react";
-import type { GrantsType } from "@/components/console-pages/role-detail-search";
+import {
+  type GrantsType,
+  roleDetailSearchSchema,
+} from "@/components/console-pages/role-detail-search";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   DefaultPrivilegeObjectType,
   GrantObjectType,
@@ -177,7 +181,10 @@ export interface GrantedObject {
   key: string;
   objectName: string;
   objectType: GrantObjectType;
-  privileges: { grantable: boolean; name: string }[];
+  privileges: {
+    grantable: boolean;
+    name: string;
+  }[];
   schemaName: string;
 }
 
@@ -357,9 +364,10 @@ export const SLUG_TO_OBJECT_TYPE: Record<GrantsType, GrantObjectType> = {
 export function slugForObjectType(
   type: GrantObjectType
 ): GrantsType | undefined {
-  return (Object.keys(SLUG_TO_OBJECT_TYPE) as GrantsType[]).find(
-    (slug) => SLUG_TO_OBJECT_TYPE[slug] === type
-  );
+  const slug = Object.entries(SLUG_TO_OBJECT_TYPE).find(
+    ([, objectType]) => objectType === type
+  )?.[0];
+  return roleDetailSearchSchema.shape.grantsType.parse(slug);
 }
 
 export function grantObjectTypeFilterToken(
@@ -384,8 +392,9 @@ export function grantObjectTypeFilterToken(
       return "FUNCTION";
     case GrantObjectType.LARGE_OBJECT:
       return "LARGE_OBJECT";
+    case GrantObjectType.UNSPECIFIED:
     default:
-      return;
+      return undefined;
   }
 }
 
@@ -413,7 +422,7 @@ export function privAbbr(name: string): string {
 // Tooltip text for a privilege pill: full name + a plain-language gloss.
 export function privTooltip(name: string): string {
   const description = PRIV_DESCRIPTION[name];
-  return description ? `${name} — ${description}` : name;
+  return isNonEmptyString(description) ? `${name} — ${description}` : name;
 }
 
 // ───────── Privilege tone ─────────
@@ -450,24 +459,13 @@ export function privTone(name: string): PrivTone {
 
 export const PRIV_TONE_CLASS: Record<PrivTone, string> = {
   create:
-    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    "border-permission-500/30 bg-permission-500/10 text-permission-700 dark:text-permission-300",
   default: "border-border bg-muted text-foreground",
-  destructive: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  read: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  write:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-};
-
-// Partial density: held on some-but-not-all objects in a schema/group rollup.
-export const PRIV_TONE_PARTIAL_CLASS: Record<PrivTone, string> = {
-  create:
-    "border-violet-500/20 bg-violet-500/5 text-violet-600/80 dark:text-violet-300/80",
-  default: "border-border/70 bg-muted/50 text-muted-foreground",
   destructive:
-    "border-red-500/20 bg-red-500/5 text-red-600/80 dark:text-red-400/80",
-  read: "border-emerald-500/20 bg-emerald-500/5 text-emerald-600/80 dark:text-emerald-400/80",
+    "border-negative-500/30 bg-negative-500/10 text-negative-700 dark:text-negative-400",
+  read: "border-positive-500/30 bg-positive-500/10 text-positive-700 dark:text-positive-400",
   write:
-    "border-amber-500/20 bg-amber-500/5 text-amber-600/80 dark:text-amber-400/80",
+    "border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-400",
 };
 
 // ───────── Data helpers ─────────
@@ -485,8 +483,14 @@ export function objectDisplayName(object: GrantedObject): string {
 // Distinct, grant-option-aware privileges for one object (a privilege can
 // appear once per grantor; collapse to one pill, keeping any grant option).
 export function dedupePrivileges(
-  privileges: { grantable: boolean; name: string }[]
-): { grantable: boolean; name: string }[] {
+  privileges: {
+    grantable: boolean;
+    name: string;
+  }[]
+): {
+  grantable: boolean;
+  name: string;
+}[] {
   const map = new Map<string, boolean>();
   for (const privilege of privileges) {
     map.set(
@@ -522,7 +526,7 @@ export function dominantGrantor(objects: GrantedObject[]): string | null {
   if (counts.size === 0) {
     return null;
   }
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const sorted = [...counts.entries()].toSorted((a, b) => b[1] - a[1]);
   const top = sorted[0]?.[0] ?? "";
   return sorted.length > 1 ? `${top} +${sorted.length - 1}` : top;
 }
@@ -657,7 +661,7 @@ export function buildSchemaIndex(objects: GrantedObject[]): SchemaGrantGroup[] {
     }
   }
   // Database row first, then schemas in encounter order.
-  return [...groups.values()].sort((a, b) => {
+  return [...groups.values()].toSorted((a, b) => {
     if (a.database !== b.database) {
       return a.database ? -1 : 1;
     }
@@ -744,7 +748,10 @@ export interface DefaultPrivilegeRule {
   creatorRoleName: string;
   key: string;
   objectType: DefaultPrivilegeObjectType;
-  privileges: { grantable: boolean; name: string }[];
+  privileges: {
+    grantable: boolean;
+    name: string;
+  }[];
   schemaName: string;
 }
 

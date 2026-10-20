@@ -1,7 +1,6 @@
 import { createRegistry } from "@bufbuild/protobuf";
 import type { Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-
 import { env } from "@/env";
 import { logger } from "@/lib/diagnostics";
 import { createInstanceRpcConcurrencyInterceptor } from "@/lib/instance-rpc-concurrency";
@@ -11,6 +10,7 @@ import {
   reportAppUiError,
 } from "@/lib/ui-error";
 import { createUnexpectedResponseFetch } from "@/lib/unexpected-response";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { file_google_rpc_error_details } from "@/protogen/google/rpc/error_details_pb";
 import { file_querylane_console_v1alpha1_errors } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 import { decideBlockingAppState } from "@/stores/blocking-app-state";
@@ -48,9 +48,9 @@ const EXPECTED_FAILURE_RPC_PATH =
 
 const defaultSetupInterceptorDependencies: SetupInterceptorDependencies = {
   getCurrentHref: () =>
-    typeof window === "undefined"
+    globalThis.window === undefined
       ? null
-      : `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      : `${globalThis.window.location.pathname}${globalThis.window.location.search}${globalThis.window.location.hash}`,
   loadBlockingErrorStore: () => import("@/stores/blocking-error-store"),
   logger,
   markSetupRequired,
@@ -97,14 +97,14 @@ function createSetupInterceptor(
 
     try {
       return await next(req);
-    } catch (err) {
+    } catch (error) {
       const errorContext = {
         area: "transport",
         endpoint,
         source: "connect",
       } as const;
-      attachAppUiErrorContext(err, errorContext);
-      const uiError = normalizeAppUiError(err, errorContext);
+      attachAppUiErrorContext(error, errorContext);
+      const uiError = normalizeAppUiError(error, errorContext);
 
       const blockingDecision = decideBlockingAppState({
         currentHref: dependencies.getCurrentHref(),
@@ -119,7 +119,7 @@ function createSetupInterceptor(
         },
       });
 
-      throw err;
+      throw error;
     }
   };
 }
@@ -142,7 +142,7 @@ function resolveConnectBaseUrl({
     return trimmedBaseUrl;
   }
 
-  if (isDevelopment || !currentOrigin) {
+  if (isDevelopment || !isNonEmptyString(currentOrigin)) {
     return "http://localhost:8080";
   }
 
@@ -166,7 +166,7 @@ const DEFAULT_RPC_TIMEOUT_MS = 30_000;
 const LONG_RUNNING_RPC_TIMEOUT_MS = 90_000;
 
 const locationOrigin =
-  typeof window === "undefined" ? null : window.location.origin;
+  typeof globalThis === "undefined" ? null : globalThis.location.origin;
 const connectBaseUrl = resolveConnectBaseUrl({
   configuredBaseUrl: env.PUBLIC_API_BASE_URL,
   isDevelopment: import.meta.env.DEV,

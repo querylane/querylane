@@ -11,7 +11,7 @@ import {
 // src/visual-harness. Behavior for the same states is covered by the rstest
 // browser tests beside each component.
 
-const APP_VERSION_RE = /^Querylane \d/;
+const APP_VERSION_RE = /^Querylane \d/u;
 
 async function openScenario(page: Page, scenario: string) {
   await page.goto(`/visual.html?scenario=${scenario}`);

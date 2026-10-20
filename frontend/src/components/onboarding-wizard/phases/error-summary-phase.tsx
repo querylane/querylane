@@ -5,6 +5,7 @@ import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { Button } from "@/components/querylane-ui/button";
 import { RetryActionButton } from "@/components/retry-action-button";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
@@ -14,28 +15,28 @@ import { useSetupStore } from "@/stores/setup-store";
  * unreachable host, etc.) vs a transient/infrastructure issue.
  */
 const CONFIG_ERROR_PATTERNS = [
-  /password authentication/i,
-  /no pg_hba\.conf/i,
-  /could not connect/i,
-  /connection refused/i,
-  /host not found/i,
-  /name resolution/i,
-  /no such host/i,
-  /invalid argument/i,
-  /authentication failed/i,
-  /role .+ does not exist/i,
-  /database .+ does not exist/i,
-  /needs CREATE privileges/i,
-  /port \d+ is already in use/i,
-  /ssl.*required/i,
-  /certificate/i,
-  /timeout/i,
+  /password authentication/iu,
+  /no pg_hba\.conf/iu,
+  /could not connect/iu,
+  /connection refused/iu,
+  /host not found/iu,
+  /name resolution/iu,
+  /no such host/iu,
+  /invalid argument/iu,
+  /authentication failed/iu,
+  /role .+ does not exist/iu,
+  /database .+ does not exist/iu,
+  /needs CREATE privileges/iu,
+  /port \d+ is already in use/iu,
+  /ssl.*required/iu,
+  /certificate/iu,
+  /timeout/iu,
 ];
 const STORAGE_FULL_PATTERNS = [
-  /no space left on device/i,
-  /\benospc\b/i,
-  /disk (?:is )?full/i,
-  /not enough (?:disk )?space/i,
+  /no space left on device/iu,
+  /\benospc\b/iu,
+  /disk (?:is )?full/iu,
+  /not enough (?:disk )?space/iu,
 ];
 
 function isLikelyConfigurationError(errorMessage: string): boolean {
@@ -84,7 +85,7 @@ function buildSetupFailureDescription({
   failedStepName: string | undefined;
   totalCount: number;
 }) {
-  if (!failedStepName) {
+  if (!isNonEmptyString(failedStepName)) {
     return "Setup stopped before Querylane could finish configuring the metadata database. Review the error details below and retry when you're ready.";
   }
   const position =
@@ -101,13 +102,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
 
   if (errorKind === "configuration") {
     return (
-      <div className="border-warning-400/20 bg-warning-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
-        <AlertTriangle className="text-warning-400 mt-0.5 size-4 shrink-0" />
+      <div className="flex items-start gap-4 rounded-xl border border-warning-400/20 bg-warning-500/6 px-4 py-3">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-400" />
         <div className="space-y-1">
-          <div className="text-warning-100 text-base font-medium">
+          <div className="font-medium text-base text-warning-100">
             Likely a configuration issue
           </div>
-          <p className="text-warning-100/70 text-sm">
+          <p className="text-sm text-warning-100/70">
             This error usually means the connection details need adjusting.
             Click <strong>Reconfigure</strong> to update your settings.
           </p>
@@ -117,10 +118,10 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
   }
 
   return (
-    <div className="border-info-400/20 bg-info-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
-      <RefreshCw className="text-info-400 mt-0.5 size-4 shrink-0" />
+    <div className="flex items-start gap-4 rounded-xl border border-info-400/20 bg-info-500/6 px-4 py-3">
+      <RefreshCw className="mt-0.5 size-4 shrink-0 text-info-400" />
       <div className="space-y-1">
-        <div className="text-info-100 text-base font-medium">
+        <div className="font-medium text-base text-info-100">
           May be a transient issue
         </div>
         <p className="text-info-100/70 text-sm">
@@ -210,7 +211,8 @@ export function ErrorSummaryPhase() {
     (state) => state.progressEvents
   );
   const configFilePath = useSetupStore(
-    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+    (state) =>
+      (state.onboardingState?.configFilePath ?? "") || DEFAULT_CONFIG_FILE_PATH
   );
   const failedStepName = failedEvent?.displayName;
   const failedStepError = failedEvent?.error;
@@ -222,7 +224,8 @@ export function ErrorSummaryPhase() {
     : -1;
   const totalCount = progressEvents.length;
   const errorText =
-    failedStepError || streamError?.title || "An unknown error occurred";
+    [failedStepError, streamError?.title].find(isNonEmptyString) ??
+    "An unknown error occurred";
   const errorKind = classifySetupError(errorText);
   const presentedStreamError = presentStreamError(streamError, errorKind);
 
@@ -248,18 +251,19 @@ export function ErrorSummaryPhase() {
         <SetupErrorHint errorKind={errorKind} />
 
         {/* Failed step detail */}
-        {failedStepName ? (
-          <div className="border-negative-400/18 bg-negative-500/6 rounded-xl border px-4 py-3">
+        {isNonEmptyString(failedStepName) ? (
+          <div className="rounded-xl border border-negative-400/18 bg-negative-500/6 px-4 py-3">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="bg-negative-500/18 text-negative-200 rounded-full px-3 py-1 text-sm font-medium">
+                <span className="rounded-full bg-negative-500/18 px-3 py-1 font-medium text-negative-200 text-sm">
                   Failed step
                 </span>
-                <span className="text-base font-medium text-white">
+                <span className="font-medium text-base text-white">
                   {failedStepName}
                 </span>
               </div>
-              {failedStepError && errorKind !== "storage_full" ? (
+              {isNonEmptyString(failedStepError) &&
+              errorKind !== "storage_full" ? (
                 <p className="text-negative-200/80 text-sm">
                   {failedStepError}
                 </p>
@@ -276,11 +280,11 @@ export function ErrorSummaryPhase() {
         ) : null}
 
         {errorKind === "storage_full" ? null : (
-          <div className="border-border bg-muted/30 space-y-2 rounded-xl border px-4 py-3">
-            <div className="text-foreground text-sm font-medium">
+          <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div className="font-medium text-foreground text-sm">
               Configuration file
             </div>
-            <code className="bg-muted text-muted-foreground block rounded-lg px-3 py-2 text-xs break-all">
+            <code className="block break-all rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
               {configFilePath}
             </code>
             <p className="text-muted-foreground text-sm leading-6">

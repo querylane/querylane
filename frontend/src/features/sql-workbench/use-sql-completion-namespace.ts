@@ -23,8 +23,8 @@ const NO_RELATIONS: SqlRelation[] = [];
  * default schema; this bounds how many of its tables are fetched for that.
  */
 const SCHEMA_COLUMN_TABLE_LIMIT = 12;
-const SELECT_START_PATTERN = /^\s*select\b/i;
-const FROM_PATTERN = /\bfrom\b/i;
+const SELECT_START_PATTERN = /^\s*select\b/iu;
+const FROM_PATTERN = /\bfrom\b/iu;
 
 /** What the editor's contextual completion needs besides the namespace. */
 interface CompletionScope {
@@ -108,12 +108,12 @@ function useSqlCompletionNamespace({
     ),
   });
   const columns = new Map<string, readonly CompletionColumn[]>();
-  wanted.forEach((relation, index) => {
+  for (const [index, relation] of wanted.entries()) {
     const data = columnQueries[index]?.data;
     if (data) {
       columns.set(relationKey(relation), data);
     }
-  });
+  }
   return {
     namespace: buildCompletionNamespace({ columns, relations }),
     scope: { columnsByRelation: columns, defaultSchema: schema, relations },

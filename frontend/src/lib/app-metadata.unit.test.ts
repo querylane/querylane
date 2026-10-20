@@ -1,11 +1,11 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { resolveQuerylaneAboutMetadata } from "@/lib/app-metadata";
 import { BuildInfoSchema } from "@/protogen/querylane/console/v1alpha1/console_pb";
 
 describe("resolveQuerylaneAboutMetadata", () => {
-  it("falls back to frontend version and unknown placeholders", () => {
+  test("falls back to frontend version and unknown placeholders", () => {
     const metadata = resolveQuerylaneAboutMetadata(undefined, "0.1.0");
 
     expect(metadata.version).toBe("v0.1.0");
@@ -14,7 +14,7 @@ describe("resolveQuerylaneAboutMetadata", () => {
     expect(metadata.builtAt).toBe("unknown");
   });
 
-  it("normalizes build info values when metadata is available", () => {
+  test("normalizes build info values when metadata is available", () => {
     const buildInfo = create(BuildInfoSchema, {
       builtAt: timestampFromDate(new Date("2026-01-01T12:30:00.000Z")),
       gitBranch: "main",
@@ -32,7 +32,7 @@ describe("resolveQuerylaneAboutMetadata", () => {
     expect(metadata.builtAt).toBe("2026-01-01T12:30:00.000Z");
   });
 
-  it("preserves explicit unknown version and falls back when build version is blank", () => {
+  test("preserves explicit unknown version and falls back when build version is blank", () => {
     const unknownBuild = create(BuildInfoSchema, {
       gitBranch: " unknown ",
       gitCommit: "  ",
@@ -49,7 +49,7 @@ describe("resolveQuerylaneAboutMetadata", () => {
     );
   });
 
-  it("uses unknown builtAt when timestamp conversion or formatting fails", () => {
+  test("uses unknown builtAt when timestamp conversion or formatting fails", () => {
     const buildInfo = create(BuildInfoSchema, {
       builtAt: timestampFromDate(new Date("2026-01-01T12:30:00.000Z")),
     });
@@ -61,7 +61,7 @@ describe("resolveQuerylaneAboutMetadata", () => {
     ).toBe("unknown");
   });
 
-  it("uses default built-at formatter when none is supplied", () => {
+  test("uses default built-at formatter when none is supplied", () => {
     const metadata = resolveQuerylaneAboutMetadata(
       create(BuildInfoSchema, {
         builtAt: timestampFromDate(new Date("2026-01-01T12:30:00.000Z")),

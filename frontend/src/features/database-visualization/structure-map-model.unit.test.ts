@@ -182,7 +182,7 @@ describe("buildStructureMapModel", () => {
     expect(
       model.nodes.find((node) => node.id === "column:public.orders.id")?.data
     ).toMatchObject({
-      badges: expect.arrayContaining(["COLUMN", "PK"]),
+      badges: expect.arrayContaining(["COLUMN", "PK"]) as unknown,
       title: "id",
     });
     expect(

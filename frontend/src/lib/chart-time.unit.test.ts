@@ -9,9 +9,9 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
 
-const MINUTES_PATTERN = /30/;
-const DAY_OF_MONTH_PATTERN = /5/;
-const TOOLTIP_MINUTES_PATTERN = /32/;
+const MINUTES_PATTERN = /30/u;
+const DAY_OF_MONTH_PATTERN = /5/u;
+const TOOLTIP_MINUTES_PATTERN = /32/u;
 
 describe("buildTimeTicks", () => {
   test("returns empty for degenerate domains", () => {

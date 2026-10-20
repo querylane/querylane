@@ -133,7 +133,9 @@ function useGridColumns({
       renderCell: ({ rowIdx }) => (
         <Button
           aria-label="Expand row"
-          onClick={() => setOpenRowIndex(rowIdx)}
+          onClick={() => {
+            setOpenRowIndex(rowIdx);
+          }}
           presentation="expand-cell"
           size="icon-xs"
           type="button"
@@ -159,11 +161,21 @@ function useGridColumns({
         column,
         foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
-        onCopyName: () => writeClipboard(column.columnName),
-        onHide: () => onHideColumn(column.columnName),
-        onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
-        onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
-        onToggleFreeze: () => toggleColumnFreeze(column.columnName),
+        onCopyName: () => {
+          writeClipboard(column.columnName);
+        },
+        onHide: () => {
+          onHideColumn(column.columnName);
+        },
+        onSortAsc: () => {
+          toggleColumnSort(column.columnName, "ASC");
+        },
+        onSortDesc: () => {
+          toggleColumnSort(column.columnName, "DESC");
+        },
+        onToggleFreeze: () => {
+          toggleColumnFreeze(column.columnName);
+        },
         pkColumnSet,
         renderOpenReferencedTableLink,
         resultColumns,

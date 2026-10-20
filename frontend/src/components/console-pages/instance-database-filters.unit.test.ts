@@ -36,7 +36,10 @@ const databases: TestDatabase[] = [
 ];
 
 function optionValue(
-  options: { label: string; value: string }[],
+  options: {
+    label: string;
+    value: string;
+  }[],
   label: string
 ) {
   const option = options.find((candidate) => candidate.label === label);

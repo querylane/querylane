@@ -1,9 +1,13 @@
+import { toast } from "sonner";
+import { z } from "zod";
 import { create } from "zustand";
 import {
   type PersistStorage,
   persist,
   type StorageValue,
 } from "zustand/middleware";
+import { captureException } from "@/lib/diagnostics";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * Editor tabs, run history and saved queries for the SQL workbench.
@@ -85,6 +89,61 @@ type PersistedSqlWorkbench = Pick<
   SqlWorkbenchState,
   "history" | "savedQueries" | "workspaces"
 >;
+
+const sqlTabSchema = z.object({
+  createdAt: z.number(),
+  defaultSchema: z.string().optional(),
+  id: z.string().min(1),
+  savedQueryId: z.string().optional(),
+  text: z.string(),
+  title: z.string(),
+});
+const sqlWorkspaceSchema = z
+  .object({
+    activeTabId: z.string().min(1),
+    nextTabNumber: z.int().positive(),
+    tabs: z.array(sqlTabSchema).min(1),
+  })
+  .refine(
+    (workspace) =>
+      workspace.tabs.some((tab) => tab.id === workspace.activeTabId),
+    {
+      message: "The active SQL tab is missing",
+    }
+  );
+const persistedWorkbenchSchema: z.ZodType<PersistedSqlWorkbench> = z.object({
+  history: z.record(
+    z.string(),
+    z.array(
+      z.object({
+        durationMs: z.number().nonnegative(),
+        errorSummary: z.string().optional(),
+        id: z.string().min(1),
+        rowCount: z.number().nonnegative().optional(),
+        startedAt: z.number(),
+        statement: z.string(),
+        status: z.enum(["ok", "error", "cancelled"]),
+      })
+    )
+  ),
+  savedQueries: z.record(
+    z.string(),
+    z.array(
+      z.object({
+        createdAt: z.number(),
+        id: z.string().min(1),
+        name: z.string(),
+        statement: z.string(),
+        updatedAt: z.number(),
+      })
+    )
+  ),
+  workspaces: z.record(z.string(), sqlWorkspaceSchema),
+});
+const storedWorkbenchSchema = z.object({
+  state: persistedWorkbenchSchema,
+  version: z.int().nonnegative().optional(),
+});
 
 const STORAGE_KEY = "querylane.sql-workbench.v1";
 // Every keystroke updates the tab text; writing the whole workbench to
@@ -185,13 +244,25 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
     }
   }
 
-  if (typeof window !== "undefined") {
-    window.addEventListener("pagehide", flush);
+  if (typeof globalThis !== "undefined") {
+    globalThis.addEventListener("pagehide", flush);
   }
   return {
     getItem: (name) => {
       const raw = localStorage.getItem(name);
-      return raw === null ? null : JSON.parse(raw);
+      if (raw === null) {
+        return null;
+      }
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        const { state, version } = storedWorkbenchSchema.parse(parsed);
+        return version === undefined ? { state } : { state, version };
+      } catch (error) {
+        // A mounted workbench creates a fresh workspace automatically. Keep the
+        // rejected bytes separately before that first write can replace them.
+        localStorage.setItem(`${name}.recovery`, raw);
+        throw error;
+      }
     },
     removeItem: (name) => {
       pending = undefined;
@@ -219,7 +290,7 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         set((state) =>
           withWorkspace(state, scope, (current) => ({
             activeTabId: created.id,
-            nextTabNumber: tab?.title
+            nextTabNumber: isNonEmptyString(tab?.title)
               ? current.nextTabNumber
               : current.nextTabNumber + 1,
             tabs: [...current.tabs, created],
@@ -338,7 +409,7 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
             ...state.savedQueries,
             [scope]: [query, ...(state.savedQueries[scope] ?? [])],
           },
-          ...(input.tabId
+          ...(isNonEmptyString(input.tabId)
             ? withWorkspace(state, scope, (current) => ({
                 ...current,
                 tabs: current.tabs.map((tab) =>
@@ -391,6 +462,15 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         workspaces: state.workspaces,
       }),
       storage: debouncedLocalStorage(),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error !== undefined) {
+          toast.error("Saved SQL work could not be loaded", {
+            description:
+              "Check browser storage for recovery data before clearing it.",
+          });
+          captureException(error);
+        }
+      },
       // persist stamps version 0. When the persisted shape changes, bump
       // this and add a `migrate` from the previous version.
       version: 0,

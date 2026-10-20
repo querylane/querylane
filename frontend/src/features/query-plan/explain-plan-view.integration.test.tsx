@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { ExplainPlanView } from "@/features/query-plan/explain-plan-view";
 import { EXPLAIN_ANALYZE_FIXTURE } from "@/test/fixtures/explain-plan-fixture";
 
-const SHIPMENTS_ROW = /Seq Scan.*shipments/;
-const ROW_MISMATCH = /more rows|fewer rows/;
+const SHIPMENTS_ROW = /Seq Scan.*shipments/u;
+const ROW_MISMATCH = /more rows|fewer rows/u;
 
 afterEach(cleanup);
 

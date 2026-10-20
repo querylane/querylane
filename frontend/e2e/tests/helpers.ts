@@ -55,8 +55,12 @@ export async function mockRpc(
   method: string,
   body: Record<string, unknown>
 ) {
-  await page.route(`**/${method}`, async (route) => fulfillJson(route, body));
-  await page.route(`**.${method}`, async (route) => fulfillJson(route, body));
+  await page.route(`**/${method}`, async (route) => {
+    await fulfillJson(route, body);
+  });
+  await page.route(`**.${method}`, async (route) => {
+    await fulfillJson(route, body);
+  });
 }
 
 /**
@@ -81,12 +85,24 @@ export async function mockRpcOnce(
   method: string,
   body: Record<string, unknown>
 ) {
-  await page.route(`**/${method}`, async (route) => fulfillJson(route, body), {
-    times: 1,
-  });
-  await page.route(`**.${method}`, async (route) => fulfillJson(route, body), {
-    times: 1,
-  });
+  await page.route(
+    `**/${method}`,
+    async (route) => {
+      await fulfillJson(route, body);
+    },
+    {
+      times: 1,
+    }
+  );
+  await page.route(
+    `**.${method}`,
+    async (route) => {
+      await fulfillJson(route, body);
+    },
+    {
+      times: 1,
+    }
+  );
 }
 
 export async function mockRpcError({
@@ -101,12 +117,12 @@ export async function mockRpcError({
   status?: number;
 }) {
   const body = { code: "internal", message };
-  await page.route(`**/${method}`, async (route) =>
-    fulfillJson(route, body, status)
-  );
-  await page.route(`**.${method}`, async (route) =>
-    fulfillJson(route, body, status)
-  );
+  await page.route(`**/${method}`, async (route) => {
+    await fulfillJson(route, body, status);
+  });
+  await page.route(`**.${method}`, async (route) => {
+    await fulfillJson(route, body, status);
+  });
 }
 
 export async function mockEmptyInstanceCatalog(page: Page) {

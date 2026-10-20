@@ -64,9 +64,16 @@
   overflow: auto;
   font-family: inherit;
   color-scheme: light;
-  scrollbar-color: var(--querylane-scrollbar-thumb)
-    var(--querylane-scrollbar-track);
-  scrollbar-width: thin;
+  @supports (
+      scrollbar-color: var(--querylane-scrollbar-thumb)
+        var(--querylane-scrollbar-track)
+    ) {
+    scrollbar-color: var(--querylane-scrollbar-thumb)
+      var(--querylane-scrollbar-track);
+  }
+  @supports (scrollbar-width: thin) {
+    scrollbar-width: thin;
+  }
   border: 1px solid var(--rdg-border-color);
   border-radius: var(--radius);
 }
@@ -91,8 +98,8 @@
 }
 
 .rdg::-webkit-scrollbar {
-  width: var(--querylane-scrollbar-size);
-  height: var(--querylane-scrollbar-size);
+  inline-size: var(--querylane-scrollbar-size);
+  block-size: var(--querylane-scrollbar-size);
 }
 
 .rdg::-webkit-scrollbar-track {
@@ -119,14 +126,18 @@
   padding-block: 0;
   padding-inline: 0.75rem;
   cursor: default;
-  user-select: none;
+  @supports (user-select: none) {
+    user-select: none;
+  }
   border-block-end: 1px solid var(--querylane-row-border-color);
   border-inline-end: 1px solid var(--querylane-column-border-color);
 }
 
 .rdg .rdg-header-row .rdg-cell {
   font-weight: 500;
-  user-select: none;
+  @supports (user-select: none) {
+    user-select: none;
+  }
   border-block-end: 1px solid var(--querylane-header-border-color);
   border-inline-end: 1px solid var(--querylane-column-border-color);
 }
@@ -138,28 +149,38 @@
 .rdg .rdg-select-cell *,
 .rdg .rdg-expand-cell * {
   -webkit-user-select: none;
-  user-select: none;
+  @supports (user-select: none) {
+    user-select: none;
+  }
 }
 
 .rdg .rdg-header-row .rdg-cell * {
   -webkit-user-select: none;
-  user-select: none;
+  @supports (user-select: none) {
+    user-select: none;
+  }
 }
 
 .rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) {
   -webkit-user-select: text;
-  user-select: text;
+  @supports (user-select: text) {
+    user-select: text;
+  }
 }
 
 .rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) * {
   -webkit-user-select: text;
-  user-select: text;
+  @supports (user-select: text) {
+    user-select: text;
+  }
 }
 
 .rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) button,
 .rdg .rdg-row .rdg-cell:not(.rdg-select-cell):not(.rdg-expand-cell) button * {
   -webkit-user-select: none;
-  user-select: none;
+  @supports (user-select: none) {
+    user-select: none;
+  }
 }
 
 .rdg .rdg-cell[aria-selected="true"] {

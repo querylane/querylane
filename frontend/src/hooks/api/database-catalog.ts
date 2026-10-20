@@ -7,6 +7,7 @@ import {
   buildSchemaName,
   normalizeEstimatedRowCount,
 } from "@/lib/console-resources";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListSchemasResponse,
   type Schema,
@@ -332,7 +333,9 @@ async function fetchDatabaseCatalogSearch(
   const databaseName = buildDatabaseName(input.instanceId, input.databaseId);
   const schemasResponse = await fetchSchemasPage(transport, databaseName);
   const filter = buildContainsFilter("name", input.query);
-  const limit = filter ? FILTERED_SEARCH_LIMIT : DEFAULT_SEARCH_LIMIT;
+  const limit = isNonEmptyString(filter)
+    ? FILTERED_SEARCH_LIMIT
+    : DEFAULT_SEARCH_LIMIT;
   const tableClient = createClient(TableService, transport);
   const viewClient = createClient(ViewService, transport);
   const objects: CatalogObject[] = [];
@@ -349,7 +352,7 @@ async function fetchDatabaseCatalogSearch(
       schemaId
     );
     const request = {
-      ...(filter ? { filter } : {}),
+      ...(isNonEmptyString(filter) ? { filter } : {}),
       orderBy: "name asc",
       pageSize: limit,
       parent,

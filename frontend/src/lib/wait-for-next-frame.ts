@@ -1,11 +1,11 @@
 export function waitForNextFrame() {
   return new Promise<void>((resolve) => {
-    if (typeof window === "undefined") {
+    if (globalThis.window === undefined) {
       resolve();
       return;
     }
 
-    window.requestAnimationFrame(() => {
+    globalThis.window.requestAnimationFrame(() => {
       resolve();
     });
   });

@@ -57,11 +57,11 @@ function Eyebrow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-muted-foreground tracking-heading font-medium text-(length:--text-label-sm) uppercase">
+      <span className="text-(length:--text-label-sm) font-medium text-muted-foreground uppercase tracking-heading">
         {children}
       </span>
-      {right ? (
-        <span className="text-muted-foreground font-mono text-xs">{right}</span>
+      {Boolean(right) ? (
+        <span className="font-mono text-muted-foreground text-xs">{right}</span>
       ) : null}
     </div>
   );
@@ -175,18 +175,18 @@ function SlowQueriesEmptyState() {
       className="flex flex-1 flex-col items-center justify-center text-center"
       presentation="empty"
     >
-      <div className="bg-muted flex size-10 items-center justify-center rounded-lg">
-        <Gauge aria-hidden="true" className="text-muted-foreground size-5" />
+      <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+        <Gauge aria-hidden="true" className="size-5 text-muted-foreground" />
       </div>
       <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">
+        <p className="font-medium text-foreground text-sm">
           Query statistics are off
         </p>
-        <p className="text-muted-foreground max-w-sm text-(length:--text-caption)">
+        <p className="text-(length:--text-caption) max-w-sm text-muted-foreground">
           Install pg_stat_statements to rank queries by execution time.
         </p>
       </div>
-      <code className="bg-muted text-foreground rounded-md px-3 py-1.5 font-mono text-xs">
+      <code className="rounded-md bg-muted px-3 py-1.5 font-mono text-foreground text-xs">
         CREATE EXTENSION pg_stat_statements;
       </code>
     </CardContent>
@@ -202,18 +202,18 @@ function SlowQueryRow({
 }) {
   return (
     <Button
-      className="h-auto w-full flex-col items-start text-left whitespace-normal"
+      className="h-auto w-full flex-col items-start whitespace-normal text-left"
       onClick={onOpen}
       presentation="overview-tab"
       type="button"
       variant="ghost"
     >
-      <code className="text-foreground w-full truncate font-mono text-(length:--text-caption)">
+      <code className="text-(length:--text-caption) w-full truncate font-mono text-foreground">
         {query.query || "(query text unavailable)"}
       </code>
-      <span className="text-muted-foreground flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+      <span className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
         <span className="font-mono tabular-nums">
-          <span className="text-foreground font-semibold">
+          <span className="font-semibold text-foreground">
             {formatMs(query.meanTimeMs)}
           </span>{" "}
           mean
@@ -226,7 +226,7 @@ function SlowQueryRow({
         </span>
         <Progress
           aria-label="Share of total query time"
-          className="ml-auto hidden w-16 @[26rem]:flex"
+          className="ml-auto @[26rem]:flex hidden w-16"
           value={ratioToPercent(query.totalTimeRatio)}
         />
       </span>
@@ -241,7 +241,7 @@ function SlowQueriesBody({
   insights: DatabaseQueryInsights | undefined;
   onOpenInsights: () => void;
 }) {
-  if (!insights?.queryStatsAvailable) {
+  if (!(insights?.queryStatsAvailable === true)) {
     return <SlowQueriesEmptyState />;
   }
   return (
@@ -273,7 +273,7 @@ function SlowQueriesCard({
       <CardHeader>
         <Eyebrow
           right={
-            insights?.queryStatsAvailable
+            insights?.queryStatsAvailable === true
               ? "by total execution time"
               : undefined
           }
@@ -313,7 +313,7 @@ function TopTableRow({
   const KindIcon = OBJECT_KIND_ICONS[object.kind];
   return (
     <Link
-      className="hover:bg-muted/50 focus-visible:ring-ring flex items-center gap-2.5 px-6 py-2 transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none"
+      className="flex items-center gap-2.5 px-6 py-2 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       params={params}
       search={{
         category: object.kind === "view" ? "views" : "tables",
@@ -324,13 +324,13 @@ function TopTableRow({
     >
       <KindIcon
         aria-hidden="true"
-        className="text-muted-foreground size-3.5 shrink-0"
+        className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="min-w-0 flex-1 truncate font-mono text-(length:--text-caption)">
+      <code className="text-(length:--text-caption) min-w-0 flex-1 truncate font-mono">
         <span className="text-muted-foreground">{object.schemaId}.</span>
         <span className="text-foreground">{object.objectId}</span>
       </code>
-      <span className="text-foreground w-16 shrink-0 text-right font-mono text-(length:--text-caption) tabular-nums">
+      <span className="text-(length:--text-caption) w-16 shrink-0 text-right font-mono text-foreground tabular-nums">
         {formatBytes(object.sizeBytes)}
       </span>
     </Link>
@@ -357,7 +357,7 @@ function TopTablesBody({
   }
   if (objects.length === 0) {
     return (
-      <p className="text-muted-foreground px-6 pb-2 text-(length:--text-caption)">
+      <p className="text-(length:--text-caption) px-6 pb-2 text-muted-foreground">
         {partial
           ? "No user tables or views appear in this catalog sample."
           : "No user tables or views found."}
@@ -365,7 +365,7 @@ function TopTablesBody({
     );
   }
   return (
-    <div className="divide-border/60 flex flex-col divide-y">
+    <div className="flex flex-col divide-y divide-border/60">
       {objects.map((object) => (
         <TopTableRow key={object.name} object={object} params={params} />
       ))}
@@ -424,7 +424,7 @@ function SchemaCardRow({
       : "";
   return (
     <Link
-      className="bg-card hover:bg-muted/50 focus-visible:ring-ring flex flex-col gap-1 px-6 py-3 transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none"
+      className="flex flex-col gap-1 bg-card px-6 py-3 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       params={params}
       search={{ schema: schema.schemaId }}
       to={EXPLORER_ROUTE}
@@ -432,13 +432,13 @@ function SchemaCardRow({
       <span className="flex items-center gap-2">
         <Folder
           aria-hidden="true"
-          className="text-muted-foreground size-3.5 shrink-0"
+          className="size-3.5 shrink-0 text-muted-foreground"
         />
-        <code className="text-foreground truncate font-mono font-medium text-(length:--text-caption)">
+        <code className="text-(length:--text-caption) truncate font-medium font-mono text-foreground">
           {schema.schemaId}
         </code>
       </span>
-      <span className="text-muted-foreground truncate text-xs">
+      <span className="truncate text-muted-foreground text-xs">
         {schema.tableCount} {tableUnit}
         {viewSummary}
         {` · ${formatBytes(schema.totalSizeBytes)}`}
@@ -469,7 +469,7 @@ function SchemasCardBody({
   }
   if (schemas.length === 0) {
     return (
-      <p className="text-muted-foreground px-6 pb-2 text-(length:--text-caption)">
+      <p className="text-(length:--text-caption) px-6 pb-2 text-muted-foreground">
         {partial
           ? "No schemas appear in this catalog sample."
           : "No schemas found."}
@@ -484,7 +484,7 @@ function SchemasCardBody({
   return (
     <div
       className={cn(
-        "bg-border/60 grid gap-px @[21rem]:grid-cols-2",
+        "grid @[21rem]:grid-cols-2 gap-px bg-border/60",
         wide && "@[42rem]:grid-cols-3"
       )}
     >
@@ -495,7 +495,7 @@ function SchemasCardBody({
         <div
           aria-hidden="true"
           className={cn(
-            "bg-card hidden @[21rem]:block",
+            "@[21rem]:block hidden bg-card",
             wide && "@[42rem]:hidden"
           )}
         />
@@ -507,7 +507,7 @@ function SchemasCardBody({
           ).map((key) => (
             <div
               aria-hidden="true"
-              className="bg-card hidden @[42rem]:block"
+              className="@[42rem]:block hidden bg-card"
               key={key}
             />
           ))
@@ -573,7 +573,7 @@ function OtherDatabaseRow({
   return (
     <Link
       className={cn(
-        "hover:bg-muted/50 focus-visible:ring-ring flex items-center gap-2.5 px-6 py-2 transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none",
+        "flex items-center gap-2.5 px-6 py-2 transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isCurrent && "bg-muted/40"
       )}
       params={{
@@ -584,18 +584,18 @@ function OtherDatabaseRow({
     >
       <DatabaseIcon
         aria-hidden="true"
-        className="text-muted-foreground size-3.5 shrink-0"
+        className="size-3.5 shrink-0 text-muted-foreground"
       />
-      <code className="text-foreground min-w-0 flex-1 truncate font-mono font-medium text-(length:--text-caption)">
+      <code className="text-(length:--text-caption) min-w-0 flex-1 truncate font-medium font-mono text-foreground">
         {database.displayName}
       </code>
       {database.isSystemDatabase ? (
-        <span className="text-muted-foreground shrink-0 tracking-wide text-(length:--text-micro) uppercase">
+        <span className="text-(length:--text-micro) shrink-0 text-muted-foreground uppercase tracking-wide">
           system
         </span>
       ) : null}
       {isCurrent ? (
-        <Check aria-hidden="true" className="text-primary size-3.5 shrink-0" />
+        <Check aria-hidden="true" className="size-3.5 shrink-0 text-primary" />
       ) : null}
     </Link>
   );
@@ -632,7 +632,7 @@ function OtherDatabasesCard({
             <CardLoadingRows label="Loading databases" />
           </div>
         ) : (
-          <div className="divide-border/60 flex flex-col divide-y">
+          <div className="flex flex-col divide-y divide-border/60">
             {visible.map((database) => (
               <OtherDatabaseRow
                 database={database}
@@ -645,7 +645,7 @@ function OtherDatabasesCard({
             ))}
             {overflow > 0 ? (
               <Link
-                className="text-muted-foreground hover:bg-muted/50 hover:text-foreground focus-visible:ring-ring px-6 py-2 text-center text-xs transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none"
+                className="px-6 py-2 text-center text-muted-foreground text-xs transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 params={{ instanceId }}
                 to={INSTANCE_ROUTE}
               >

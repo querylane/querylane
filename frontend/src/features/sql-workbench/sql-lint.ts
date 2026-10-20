@@ -89,18 +89,18 @@ async function mapWithConcurrency<T, R>(
   limit: number,
   task: (item: T) => Promise<R>
 ): Promise<R[]> {
-  const results = new Array<R>(items.length);
+  const results: R[] = [];
   // One iterator shared by every worker: each step takes the next unclaimed
   // item, so no item runs twice.
   const pending = items.entries();
   async function worker(): Promise<void> {
     const next = pending.next();
-    if (next.done) {
+    if (next.done === true) {
       return;
     }
     const [index, item] = next.value;
     results[index] = await task(item);
-    return worker();
+    await worker();
   }
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, () => worker())
@@ -113,7 +113,7 @@ async function mapWithConcurrency<T, R>(
  * changed and the same text now resolves differently. (`forceLinting` only
  * hurries a run that an edit already scheduled.)
  */
-const refreshSqlLint = StateEffect.define<null>();
+const refreshSqlLint = StateEffect.define();
 
 /**
  * Lints every statement in the document through the validator, one server

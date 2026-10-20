@@ -39,6 +39,7 @@ import {
   viewsForSchemaQueryInput,
 } from "@/hooks/api/view";
 import { buildSchemaName, parseResourceLeafId } from "@/lib/console-resources";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
   View_ViewType,
@@ -61,7 +62,7 @@ function useExplorerSchemaState({
     {}
   );
   const schemas = flattenSchemaSummaries(schemasQuery.data?.pages);
-  const selectedSchemaName = search.schema
+  const selectedSchemaName = isNonEmptyString(search.schema)
     ? buildSchemaName(instanceId, databaseId, search.schema)
     : undefined;
   const selectedSchemaQuery = useGetSchemaQuery(selectedSchemaName);
@@ -73,7 +74,9 @@ function useExplorerSchemaState({
   );
   const fallbackSchema = pickDefaultSchema(schemas);
   const requestedSchemaError =
-    search.schema && !requestedSchema && selectedSchemaQuery.error
+    isNonEmptyString(search.schema) &&
+    !requestedSchema &&
+    selectedSchemaQuery.error
       ? selectedSchemaQuery.error
       : undefined;
   const schemaSearchNeedsReset = Boolean(
@@ -288,9 +291,9 @@ function resolveActiveSchema({
     hasSchemaSearch &&
     !requestedSchema &&
     !fetchedRequestedSchema &&
-    !selectedSchemaQuery.error &&
+    !Boolean(selectedSchemaQuery.error) &&
     (selectedSchemaQuery.isLoading || selectedSchemaQuery.isFetching);
-  if (selectedSchemaError || isWaitingForRequestedSchema) {
+  if (Boolean(selectedSchemaError) || isWaitingForRequestedSchema) {
     return null;
   }
   return requestedSchema ?? fetchedRequestedSchema ?? fallbackSchema;
@@ -314,13 +317,13 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 function tableSummaries(
-  rawTables: Array<{
+  rawTables: {
     displayName: string;
     name: string;
     rowCount: bigint;
     sizeBytes: bigint;
     tableType?: Table_TableType | undefined;
-  }>
+  }[]
 ): TableSummary[] {
   return rawTables.map((table) => ({
     id: parseResourceLeafId(table.name),
@@ -332,13 +335,13 @@ function tableSummaries(
 }
 
 function viewSummaries(
-  rawViews: Array<{
+  rawViews: {
     displayName: string;
     name: string;
     rowCount: bigint;
     sizeBytes: bigint;
     viewType: View_ViewType;
-  }>
+  }[]
 ): ViewSummary[] {
   return rawViews.map((view) => ({
     id: parseResourceLeafId(view.name),
@@ -377,9 +380,13 @@ function viewListItems(views: ViewSummary[]) {
 
 function flattenSchemaSummaries(
   pages:
-    | Array<{
-        schemas: Array<{ displayName: string; name: string; owner: string }>;
-      }>
+    | {
+        schemas: {
+          displayName: string;
+          name: string;
+          owner: string;
+        }[];
+      }[]
     | undefined
 ): SchemaSummary[] {
   if (!pages) {

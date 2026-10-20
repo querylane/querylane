@@ -13,6 +13,7 @@ import {
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const PERCENT = 100;
 const MIN_FIT = 0.65;
@@ -31,12 +32,12 @@ const PADDING = 32;
 
 /** Leaves occupy distinct rows; parents sit between their inputs. X is depth, never time. */
 function layoutPlan(root: PlanNode) {
-  const positions: Array<{
+  const positions: {
     node: PlanNode;
     depth: number;
     x: number;
     y: number;
-  }> = [];
+  }[] = [];
   let leaves = 0;
   let maxDepth = 0;
   function visit(node: PlanNode, depth: number): number {
@@ -108,7 +109,7 @@ function PlanEdge({
   );
 }
 function nodeCaption(node: PlanNode) {
-  if (node.relationName) {
+  if (isNonEmptyString(node.relationName)) {
     return node.nodeType;
   }
   return node.children.length === 1
@@ -147,7 +148,9 @@ function MapNode({
       aria-pressed={selected}
       className="absolute top-(--plan-y) left-(--plan-x) h-(--plan-height) w-(--plan-width)"
       data-plan-node={node.id}
-      onClick={() => onSelect(node)}
+      onClick={() => {
+        onSelect(node);
+      }}
       presentation="plan-map-node"
       style={{
         "--plan-x": `${x}px`,
@@ -213,11 +216,11 @@ function PlanMap({
 }) {
   const selectedId = selection.id;
   const layout = layoutPlan(root);
-  const viewport = useRef<HTMLElement>(null);
+  const viewportRef = useRef<HTMLElement>(null);
   const [bounds, setBounds] = useState({ width: 800, height: 400 });
   const [zoom, setZoom] = useState<number | null>(null);
   useEffect(function measureMap() {
-    const element = viewport.current;
+    const element = viewportRef.current;
     if (!element || typeof ResizeObserver === "undefined") {
       return;
     }
@@ -230,7 +233,9 @@ function PlanMap({
       }
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
   const fittedScale = Math.min(
     1,
@@ -240,7 +245,7 @@ function PlanMap({
   const scale = zoom ?? Math.max(MIN_FIT, fittedScale);
   useEffect(
     function revealMapSelection() {
-      viewport.current
+      viewportRef.current
         ?.querySelector(`[data-plan-node="${selection.id}"]`)
         ?.scrollIntoView({ block: "nearest", inline: "nearest" });
     },
@@ -256,7 +261,7 @@ function PlanMap({
       <section
         aria-label="Plan map"
         className="min-h-56 flex-1 overflow-auto [background-image:radial-gradient(var(--border)_1px,transparent_1px)] [background-size:20px_20px]"
-        ref={viewport}
+        ref={viewportRef}
       >
         <div className="flex min-h-full w-max min-w-full items-center justify-center p-2">
           <div
@@ -319,7 +324,9 @@ function PlanMap({
           <Button
             aria-label="Zoom out"
             disabled={scale <= MIN_ZOOM}
-            onClick={() => setZoom(Math.max(MIN_ZOOM, scale - ZOOM_STEP))}
+            onClick={() => {
+              setZoom(Math.max(MIN_ZOOM, scale - ZOOM_STEP));
+            }}
             size="icon-xs"
             type="button"
             variant="ghost"
@@ -332,7 +339,9 @@ function PlanMap({
           <Button
             aria-label="Zoom in"
             disabled={scale >= MAX_ZOOM}
-            onClick={() => setZoom(Math.min(MAX_ZOOM, scale + ZOOM_STEP))}
+            onClick={() => {
+              setZoom(Math.min(MAX_ZOOM, scale + ZOOM_STEP));
+            }}
             size="icon-xs"
             type="button"
             variant="ghost"
@@ -340,7 +349,9 @@ function PlanMap({
             <span aria-hidden="true">+</span>
           </Button>
           <Button
-            onClick={() => setZoom(fittedScale)}
+            onClick={() => {
+              setZoom(fittedScale);
+            }}
             presentation="compact"
             size="xs"
             type="button"

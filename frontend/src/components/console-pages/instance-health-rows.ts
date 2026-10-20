@@ -15,6 +15,7 @@ import {
   formatSslMode,
   formatSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
@@ -115,6 +116,9 @@ function toneFromHealthCheckStatus(status: HealthCheckStatus): HealthRowTone {
       return "warning";
     case HealthCheckStatus.ERROR:
       return "error";
+    case HealthCheckStatus.UNSPECIFIED:
+    case HealthCheckStatus.UNKNOWN:
+    case HealthCheckStatus.NOT_APPLICABLE:
     default:
       return "muted";
   }
@@ -175,13 +179,15 @@ function unavailableRow({
   label: string;
   reason: string | undefined;
 }): HealthRowModel {
-  const value = reason?.trim() || "Not reported by the latest health check.";
+  const value = isNonEmptyString(reason?.trim())
+    ? reason?.trim()
+    : "Not reported by the latest health check.";
   return {
     detail: [{ label: "Reason", value }],
     id,
     label,
-    summary: reason?.trim() || "No data",
-    tone: reason?.trim() ? "error" : "muted",
+    summary: isNonEmptyString(reason?.trim()) ? reason?.trim() : "No data",
+    tone: isNonEmptyString(reason?.trim()) ? "error" : "muted",
   };
 }
 
@@ -400,7 +406,7 @@ function buildPgStatStatementsRow(
     });
   }
   const resetAgo = formatTimeAgo(pgss.statsResetAt);
-  if (resetAgo) {
+  if (isNonEmptyString(resetAgo)) {
     detail.push({ label: "Stats reset", value: resetAgo });
   }
 
@@ -426,7 +432,9 @@ function buildAutovacuumRow(
     autovacuum.summary.trim() ||
     [
       `${autovacuum.runningWorkers} of ${autovacuum.maxWorkers} workers`,
-      lastRunAgo ? `last ran ${lastRunAgo}` : "no runs observed",
+      isNonEmptyString(lastRunAgo)
+        ? `last ran ${lastRunAgo}`
+        : "no runs observed",
     ].join(" · ");
   return {
     detail: [
@@ -454,7 +462,7 @@ function buildAutovacuumRow(
 function buildLiveHealthRows(
   health: InstanceHealth | undefined,
   partialErrors: Status[] | undefined,
-  serverReplicationRole?: ServerInfo_ReplicationRole | undefined
+  serverReplicationRole?: ServerInfo_ReplicationRole
 ): HealthRowModel[] {
   const reasons = getHealthCheckPartialReasons(partialErrors);
   return [

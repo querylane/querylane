@@ -87,7 +87,7 @@ export function useOnboardingWizardController({
   );
   const onboardingState = useSetupStore((state) => state.onboardingState);
 
-  // allow-useEffect: sync wizard phase state
+  // sync wizard phase state
   useEffect(() => {
     resetSession();
     return () => {

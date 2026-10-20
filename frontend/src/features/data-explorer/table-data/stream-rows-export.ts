@@ -9,6 +9,7 @@ import {
   type SelectedRow,
 } from "@/features/data-explorer/table-data/selection-formatters";
 import { assertNever } from "@/lib/assert-never";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CellValueMode,
   type ReadRowsRequest,
@@ -19,6 +20,10 @@ import {
   type TableResultColumn,
   type TableResultRow,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+
+declare global {
+  interface Window extends WindowWithSaveFilePicker {}
+}
 
 const STREAM_ROWS_EXPORT_BATCH_SIZE = 1000;
 
@@ -63,10 +68,10 @@ interface FileSystemFileHandleLike {
 interface WindowWithSaveFilePicker {
   showSaveFilePicker?: (options: {
     suggestedName: string;
-    types: Array<{
+    types: {
       accept: Record<string, string[]>;
       description: string;
-    }>;
+    }[];
   }) => Promise<FileSystemFileHandleLike>;
 }
 
@@ -254,23 +259,24 @@ async function buildStreamRowsExportPayloadUnsafe({
 async function createBrowserFileSink(
   details: ExportFileDetails
 ): Promise<ExportFileSink | undefined> {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return;
   }
 
-  const { showSaveFilePicker } = window as WindowWithSaveFilePicker;
-  if (!showSaveFilePicker) {
+  const { showSaveFilePicker: pickFile } = globalThis.window;
+  if (!pickFile) {
     return;
   }
 
   const [acceptMimeType] = details.mimeType.split(";");
-  const handle = await showSaveFilePicker({
+  const handle = await pickFile({
     suggestedName: details.filename,
     types: [
       {
         accept: {
-          [acceptMimeType?.trim() || "application/octet-stream"]:
-            details.extensions,
+          [isNonEmptyString(acceptMimeType?.trim())
+            ? acceptMimeType?.trim()
+            : "application/octet-stream"]: details.extensions,
         },
         description: "Querylane export",
       },
@@ -322,7 +328,7 @@ async function exportStreamRows({
     callOptions
   );
 
-  return buildStreamRowsExportPayload({
+  return await buildStreamRowsExportPayload({
     exportFormat,
     fileSink,
     onProgress,

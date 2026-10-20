@@ -18,6 +18,7 @@ import {
   type KeyboardShortcutScope,
   type KeyboardShortcutStroke,
 } from "@/lib/keyboard-shortcut-registry";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const SHORTCUT_GROUPS: readonly KeyboardShortcutGroup[] = [
   "General",
@@ -33,9 +34,10 @@ function isTextEntryTarget(target: EventTarget | null): boolean {
   }
   const contentEditable = target.closest("[contenteditable]");
   return Boolean(
-    target.closest("input, textarea, select") ||
-      (contentEditable &&
-        contentEditable.getAttribute("contenteditable") !== "false")
+    isNonEmptyString(target.closest("input, textarea, select"))
+      ? target.closest("input, textarea, select")
+      : contentEditable &&
+          contentEditable.getAttribute("contenteditable") !== "false"
   );
 }
 
@@ -356,8 +358,10 @@ function KeyboardShortcutsProvider({
       });
     }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    globalThis.window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      globalThis.window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   return (

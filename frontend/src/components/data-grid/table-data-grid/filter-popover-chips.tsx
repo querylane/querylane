@@ -32,9 +32,9 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
             <Button
               aria-label={`Remove filter ${buildFilterLabel(rule)}`}
               className="size-4"
-              onClick={() =>
-                onChange(rules.filter((candidate) => candidate.id !== rule.id))
-              }
+              onClick={() => {
+                onChange(rules.filter((candidate) => candidate.id !== rule.id));
+              }}
               presentation="clear"
               size="sm"
               type="button"
@@ -47,7 +47,9 @@ function FilterChips({ logic, onChange, rules }: FilterChipsProps) {
       ))}
       <Button
         className="h-5"
-        onClick={() => onChange([])}
+        onClick={() => {
+          onChange([]);
+        }}
         presentation="micro"
         size="sm"
         type="button"

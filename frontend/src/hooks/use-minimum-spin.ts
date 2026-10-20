@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const MIN_SPIN_DURATION_MS = 500;
 
@@ -11,34 +11,34 @@ const MIN_SPIN_DURATION_MS = 500;
  * and holds.
  */
 function useMinimumSpin(active: boolean): boolean {
-  const [holding, setHolding] = useState(false);
-  const activatedAtRef = useRef(0);
-
-  // allow-useEffect: bridge the wall-clock minimum-spin window into state
+  const [cycle, setCycle] = useState({
+    active,
+    holding: active,
+    sequence: active ? 1 : 0,
+  });
+  if (cycle.active !== active) {
+    setCycle({
+      active,
+      holding: active || cycle.holding,
+      sequence: cycle.sequence + Number(active),
+    });
+  }
+  const { sequence } = cycle;
   useEffect(
-    function holdSpinForMinimumDuration() {
-      if (active) {
-        activatedAtRef.current = Date.now();
-        setHolding(true);
+    function expireMinimumSpin() {
+      if (sequence === 0) {
         return;
       }
-
-      const remaining =
-        MIN_SPIN_DURATION_MS - (Date.now() - activatedAtRef.current);
-      if (remaining <= 0) {
-        setHolding(false);
-        return;
-      }
-
-      const holdTimer = globalThis.setTimeout(() => {
-        setHolding(false);
-      }, remaining);
-      return () => globalThis.clearTimeout(holdTimer);
+      const timer = globalThis.setTimeout(() => {
+        setCycle((current) => ({ ...current, holding: false }));
+      }, MIN_SPIN_DURATION_MS);
+      return () => {
+        globalThis.clearTimeout(timer);
+      };
     },
-    [active]
+    [sequence]
   );
-
-  return active || holding;
+  return active || cycle.holding;
 }
 
 export { useMinimumSpin };

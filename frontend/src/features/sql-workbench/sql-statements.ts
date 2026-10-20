@@ -22,9 +22,9 @@ interface TextRange {
   to: number;
 }
 
-const DOLLAR_TAG_PATTERN = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/;
-const IDENTIFIER_CHAR_PATTERN = /[A-Za-z0-9_]/;
-const WHITESPACE_PATTERN = /\s/;
+const DOLLAR_TAG_PATTERN = /^\$(?<capture1>[A-Za-z_][A-Za-z0-9_]*)?\$/u;
+const IDENTIFIER_CHAR_PATTERN = /[A-Za-z0-9_]/u;
+const WHITESPACE_PATTERN = /\s/u;
 
 function skipQuoted(text: string, start: number, quote: string): number {
   let index = start + 1;

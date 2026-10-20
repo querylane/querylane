@@ -10,6 +10,7 @@ import { createQueryOptions } from "@connectrpc/connect-query-core";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { buildSchemaName, buildTableName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListTablesResponse,
   TableService,
@@ -39,16 +40,20 @@ function fetchTablesPage(
 ) {
   const client = createClient(TableService, transport);
   return client.listTables({
-    ...(input ?? {}),
+    ...input,
     pageToken,
   });
 }
 
 export function useGetTableQuery(name: string | undefined) {
-  return useConnectQuery(getTable, name ? { name } : undefined, {
-    ...RESOURCE_QUERY_OPTIONS.tableMetadata,
-    enabled: Boolean(name),
-  });
+  return useConnectQuery(
+    getTable,
+    isNonEmptyString(name) ? { name } : undefined,
+    {
+      ...RESOURCE_QUERY_OPTIONS.tableMetadata,
+      enabled: Boolean(name),
+    }
+  );
 }
 
 export function useListTablesInfiniteQuery(
@@ -88,7 +93,7 @@ export function tablesForSchemaQueryInput({
   schemaId: string;
 }) {
   return {
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy,
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,
     parent: buildSchemaName(instanceId, databaseId, schemaId),
@@ -154,10 +159,7 @@ export function assertNoUnhandledTableDetailQueries(
 }
 
 export function useListTableColumnsQuery(
-  input?:
-    | MessageInitShape<(typeof listTableColumns)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof listTableColumns)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof listTableColumns)["output"]>
 ) {
   return useConnectQuery(listTableColumns, input, {
@@ -172,20 +174,17 @@ export function useGetTablePartitionMetadataQuery(
 ) {
   return useConnectQuery(
     getTablePartitionMetadata,
-    name ? { name } : undefined,
+    isNonEmptyString(name) ? { name } : undefined,
     {
       ...RESOURCE_QUERY_OPTIONS.tableMetadata,
       ...options,
-      enabled: (options?.enabled ?? true) && Boolean(name),
+      enabled: Boolean(options?.enabled ?? true) && Boolean(name),
     }
   );
 }
 
 export function useListTableConstraintsQuery(
-  input?:
-    | MessageInitShape<(typeof listTableConstraints)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof listTableConstraints)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof listTableConstraints)["output"]>
 ) {
   return useConnectQuery(listTableConstraints, input, {
@@ -195,10 +194,7 @@ export function useListTableConstraintsQuery(
 }
 
 export function useListTableIndexesQuery(
-  input?:
-    | MessageInitShape<(typeof listTableIndexes)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof listTableIndexes)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof listTableIndexes)["output"]>
 ) {
   return useConnectQuery(listTableIndexes, input, {
@@ -208,10 +204,7 @@ export function useListTableIndexesQuery(
 }
 
 export function useListTablePoliciesQuery(
-  input?:
-    | MessageInitShape<(typeof listTablePolicies)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof listTablePolicies)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof listTablePolicies)["output"]>
 ) {
   return useConnectQuery(listTablePolicies, input, {
@@ -221,10 +214,7 @@ export function useListTablePoliciesQuery(
 }
 
 export function useListTableTriggersQuery(
-  input?:
-    | MessageInitShape<(typeof listTableTriggers)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof listTableTriggers)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof listTableTriggers)["output"]>
 ) {
   return useConnectQuery(listTableTriggers, input, {

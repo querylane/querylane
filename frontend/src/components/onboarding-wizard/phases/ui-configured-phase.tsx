@@ -45,7 +45,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type UseProtoFormReturn, useProtoForm } from "@/hooks/use-proto-form";
+import {
+  type UseProtoFormReturn,
+  useProtoForm,
+} from "@/hooks/use-proto-form/use-proto-form";
 import {
   formatUnsupportedPostgresConnectionParameters,
   parsePostgresConnectionString,
@@ -56,6 +59,8 @@ import {
   toSslMode,
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
@@ -70,9 +75,10 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
         <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
-      return <Check className="text-positive-400 size-4" />;
+      return <Check className="size-4 text-positive-400" />;
     case "error":
-      return <X className="text-negative-400 size-4" />;
+      return <X className="size-4 text-negative-400" />;
+    case "idle":
     default:
       return <Unplug className="size-4" />;
   }
@@ -85,6 +91,7 @@ function getTestButtonLabel(status: ConnectionTestStatus) {
       return "Connected";
     case "error":
       return "Test failed";
+    case "idle":
     default:
       return "Test connection";
   }
@@ -144,23 +151,27 @@ function ConnectionTestResult({
 }) {
   if (status === "success" && isCurrentConfigVerified) {
     return (
-      <div className="border-positive-400/25 bg-positive-500/8 text-positive-100/92 rounded-xl border px-4 py-3 text-sm">
+      <div className="rounded-xl border border-positive-400/25 bg-positive-500/8 px-4 py-3 text-positive-100/92 text-sm">
         <div className="flex items-center gap-3">
-          <Check className="text-positive-400 size-4 shrink-0" />
+          <Check className="size-4 shrink-0 text-positive-400" />
           Connection successful. Ready to continue.
         </div>
       </div>
     );
   }
 
-  if (status === "error" && errorMessage) {
+  if (
+    status === "error" &&
+    typeof errorMessage === "string" &&
+    errorMessage.length > 0
+  ) {
     return (
       <div
-        className="border-negative-400/20 bg-negative-500/8 text-negative-100/92 rounded-xl border px-4 py-3 text-sm"
+        className="rounded-xl border border-negative-400/20 bg-negative-500/8 px-4 py-3 text-negative-100/92 text-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <X className="text-negative-400 mt-0.5 size-4 shrink-0" />
+          <X className="mt-0.5 size-4 shrink-0 text-negative-400" />
           <div className="space-y-1">
             <div className="font-medium">Connection failed</div>
             <div className="text-negative-200/78 text-sm">{errorMessage}</div>
@@ -197,7 +208,7 @@ function InternalStorageSslOptions({
   return (
     <Collapsible onOpenChange={onOpenChange} open={open}>
       <div className="relative space-y-3 rounded-xl border border-white/10 bg-white/3 px-5 py-4">
-        <label className="text-sm font-medium text-white" htmlFor={modeId}>
+        <label className="font-medium text-sm text-white" htmlFor={modeId}>
           SSL mode
         </label>
         <CollapsibleTrigger
@@ -211,7 +222,7 @@ function InternalStorageSslOptions({
         </CollapsibleTrigger>
         <Select
           onValueChange={(nextValue) => {
-            if (!nextValue) {
+            if (!isNonEmptyString(nextValue)) {
               return;
             }
             onSslModeChange(nextValue);
@@ -234,7 +245,7 @@ function InternalStorageSslOptions({
             />
           </SelectContent>
         </Select>
-        <p className="text-sm leading-6 text-white/56">
+        <p className="text-sm text-white/56 leading-6">
           Choose how Querylane negotiates TLS for its internal storage database.
         </p>
         {open ? (
@@ -242,14 +253,14 @@ function InternalStorageSslOptions({
             <section aria-label="Advanced connection options" id={contentId}>
               <div className="space-y-3">
                 <label
-                  className="text-sm font-medium text-white"
+                  className="font-medium text-sm text-white"
                   htmlFor={sslNegotiationId}
                 >
                   SSL negotiation
                 </label>
                 <Select
                   onValueChange={(nextValue) => {
-                    if (!nextValue) {
+                    if (!isNonEmptyString(nextValue)) {
                       return;
                     }
                     onSslNegotiationChange(nextValue);
@@ -310,9 +321,13 @@ function ConnectionStringPasteForm({
         <div className="flex gap-3">
           <Input
             aria-describedby={
-              connectionStringError ? connectionStringErrorId : undefined
+              isNonEmptyString(connectionStringError)
+                ? connectionStringErrorId
+                : undefined
             }
-            aria-invalid={connectionStringError ? true : undefined}
+            aria-invalid={
+              isNonEmptyString(connectionStringError) ? true : undefined
+            }
             autoComplete="off"
             className="h-9 flex-1"
             id={connectionStringId}
@@ -340,7 +355,7 @@ function ConnectionStringPasteForm({
             Apply
           </Button>
         </div>
-        {connectionStringError ? (
+        {isNonEmptyString(connectionStringError) ? (
           <p
             className="text-negative-300/90 text-sm"
             id={connectionStringErrorId}
@@ -573,7 +588,7 @@ export function UiConfiguredPhase() {
           </Button>
           <div className="flex items-center gap-3">
             <ConnectionTestButton
-              onClick={handleTestConnection}
+              onClick={handleAsyncAction(handleTestConnection)}
               status={displayedConnectionTestStatus}
             />
             <UiConfiguredContinueAction
@@ -659,18 +674,18 @@ export function UiConfiguredPhase() {
               contentId={advancedConnectionOptionsId}
               modeId={sslModeId}
               onOpenChange={setAdvancedConnectionOptionsOpen}
-              onSslModeChange={(value) =>
+              onSslModeChange={(value) => {
                 setValue("sslMode", toSslMode(value), {
                   shouldDirty: true,
                   shouldValidate: true,
-                })
-              }
-              onSslNegotiationChange={(value) =>
+                });
+              }}
+              onSslNegotiationChange={(value) => {
                 setValue("sslNegotiation", toSslNegotiation(value), {
                   shouldDirty: true,
                   shouldValidate: true,
-                })
-              }
+                });
+              }}
               open={advancedConnectionOptionsOpen}
               sslModeValue={sslModeValue}
               sslNegotiationId={sslNegotiationId}
@@ -685,12 +700,12 @@ export function UiConfiguredPhase() {
               connectionStringInputRef={connectionStringInputRef}
               connectionStringValue={connectionStringValue}
               onApply={handleConnectionStringApply}
-              onErrorReset={() =>
+              onErrorReset={() => {
                 setConnectionStringFeedback((current) => ({
                   ...current,
                   error: null,
-                }))
-              }
+                }));
+              }}
               onValueChange={(value) => {
                 setConnectionStringValue(value);
               }}
@@ -698,9 +713,9 @@ export function UiConfiguredPhase() {
           </TabsContent>
         </Tabs>
 
-        {connectionStringFeedback.warning ? (
+        {isNonEmptyString(connectionStringFeedback.warning) ? (
           <p
-            className="border-warning-300/20 bg-warning-300/7 text-warning-100/90 rounded-xl border px-4 py-3 text-sm"
+            className="rounded-xl border border-warning-300/20 bg-warning-300/7 px-4 py-3 text-sm text-warning-100/90"
             role="status"
           >
             {connectionStringFeedback.warning}

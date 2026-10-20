@@ -8,9 +8,11 @@ import {
 function VisualHarness({ scenario }: { scenario: string }) {
   if (!isVisualScenarioName(scenario)) {
     return (
-      <main className="text-foreground p-6">
-        <h1 className="text-lg font-semibold">Unknown visual scenario</h1>
-        <p>Open one of: {Object.keys(VISUAL_SCENARIOS).sort().join(", ")}.</p>
+      <main className="p-6 text-foreground">
+        <h1 className="font-semibold text-lg">Unknown visual scenario</h1>
+        <p>
+          Open one of: {Object.keys(VISUAL_SCENARIOS).toSorted().join(", ")}.
+        </p>
       </main>
     );
   }
@@ -23,7 +25,7 @@ function VisualHarness({ scenario }: { scenario: string }) {
       <TooltipProvider>
         <main
           aria-label="Visual scenario"
-          className="bg-background text-foreground inline-block p-6"
+          className="inline-block bg-background p-6 text-foreground"
           data-testid="visual-frame"
         >
           <Scenario />

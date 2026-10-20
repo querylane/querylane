@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { afterEach, expect, it, rs } from "@rstest/core";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GrantsOverview } from "@/components/console-pages/role-grants-overview";
@@ -13,15 +13,15 @@ import {
   OwnedObjectSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const MAINTAIN_PUBLIC_PREVIEW_RE = /MAINTAIN on 1 table/;
-const STALE_SELECT_PUBLIC_PREVIEW_RE = /SELECT on 1 table/;
-const DEMO_ECOMMERCE_RE = /demo_ecommerce/i;
+const MAINTAIN_PUBLIC_PREVIEW_RE = /MAINTAIN on 1 table/u;
+const STALE_SELECT_PUBLIC_PREVIEW_RE = /SELECT on 1 table/u;
+const DEMO_ECOMMERCE_RE = /demo_ecommerce/iu;
 
 afterEach(() => {
   cleanup();
 });
 
-it("renders no-direct-grants prose as one description", () => {
+test("renders no-direct-grants prose as one description", () => {
   render(
     <GrantsOverview
       databaseName="demo_ecommerce"
@@ -57,12 +57,12 @@ it("renders no-direct-grants prose as one description", () => {
   const description = panel?.querySelector("[data-slot='empty-description']");
 
   expect(panel?.querySelector("[data-slot='empty-content']")).toBeNull();
-  expect(description?.textContent?.replaceAll(/\s+/g, " ").trim()).toBe(
+  expect(description?.textContent?.replaceAll(/\s+/gu, " ").trim()).toBe(
     "This role has no explicit GRANTs on demo_ecommerce. It may still be reachable via the indirect paths below."
   );
 });
 
-it("summarizes MAINTAIN in PUBLIC table grant previews", () => {
+test("summarizes MAINTAIN in PUBLIC table grant previews", () => {
   const publicObjects: GrantedObject[] = [
     {
       grantors: ["postgres"],
@@ -99,7 +99,7 @@ it("summarizes MAINTAIN in PUBLIC table grant previews", () => {
   expect(screen.queryByText(STALE_SELECT_PUBLIC_PREVIEW_RE)).toBeNull();
 });
 
-it("uses the database name when navigating to database-scope grants", async () => {
+test("uses the database name when navigating to database-scope grants", async () => {
   const user = userEvent.setup();
   const onNavigate = rs.fn();
   const objects: GrantedObject[] = [
@@ -142,7 +142,7 @@ it("uses the database name when navigating to database-scope grants", async () =
   });
 });
 
-it("qualifies every truncated facet count as partial", () => {
+test("qualifies every truncated facet count as partial", () => {
   const directObjects: GrantedObject[] = [
     {
       grantors: ["postgres"],

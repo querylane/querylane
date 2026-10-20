@@ -1,3 +1,5 @@
+import { isNonEmptyString } from "@/lib/value-guards";
+
 interface PostgresPlatform {
   arch: string;
   os: string;
@@ -27,7 +29,7 @@ const OS_SEGMENT_LABELS: readonly (readonly [string, string])[] = [
  * Matches the target triple after " on " in a PostgreSQL version() string,
  * e.g. "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc".
  */
-const PLATFORM_TRIPLE_PATTERN = /\bon\s+([\w.]+(?:-[\w.]+)+)/;
+const PLATFORM_TRIPLE_PATTERN = /\bon\s+(?<capture1>[\w.]+(?:-[\w.]+)+)/u;
 
 /**
  * Extracts architecture and operating system from a full PostgreSQL version
@@ -37,18 +39,18 @@ const PLATFORM_TRIPLE_PATTERN = /\bon\s+([\w.]+(?:-[\w.]+)+)/;
 function parsePostgresPlatform(
   version: string | null | undefined
 ): PostgresPlatform | null {
-  if (!version) {
+  if (!isNonEmptyString(version)) {
     return null;
   }
 
   const triple = PLATFORM_TRIPLE_PATTERN.exec(version)?.[1];
-  if (!triple) {
+  if (!isNonEmptyString(triple)) {
     return null;
   }
 
   const segments = triple.split("-");
   const [arch] = segments;
-  if (!arch) {
+  if (!isNonEmptyString(arch)) {
     return null;
   }
 

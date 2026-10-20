@@ -21,9 +21,10 @@ import {
   createConnectMethodQueryKey,
 } from "@/lib/connect-query-key";
 import { buildInstanceName } from "@/lib/console-resources";
-import { logger } from "@/lib/diagnostics";
+import { captureException, logger } from "@/lib/diagnostics";
 import { paginateAll } from "@/lib/paginate-all";
 import { QUERY_STALE_TIME, RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString, isUnknownArray } from "@/lib/value-guards";
 import {
   type Instance,
   InstanceService,
@@ -59,9 +60,9 @@ async function fetchAllInstances(
 ) {
   const client = createClient(InstanceService, transport);
   const instances = await paginateAll(
-    (pageToken) =>
-      client.listInstances({
-        ...(input ?? {}),
+    async (pageToken) =>
+      await client.listInstances({
+        ...input,
         pageToken: pageToken ?? "",
       }),
     (response) => response.instances
@@ -80,7 +81,7 @@ function queryKeyReferencesInstanceResource(
   if (typeof value === "string") {
     return value === instanceName || value.startsWith(`${instanceName}/`);
   }
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     return value.some((part) =>
       queryKeyReferencesInstanceResource(part, instanceName)
     );
@@ -97,7 +98,7 @@ function queryKeyIsUnscopedOrUsesTransport(
   value: unknown,
   transportKey: string | undefined
 ): boolean {
-  if (!Array.isArray(value) || value[0] !== "connect-query") {
+  if (!isUnknownArray(value) || value[0] !== "connect-query") {
     return true;
   }
   const [, options] = value;
@@ -120,7 +121,7 @@ function upsertInstance(instances: Instance[], instance: Instance) {
   return [
     ...instances.filter((item) => item.name !== instance.name),
     instance,
-  ].sort(orderInstancesByDisplayName);
+  ].toSorted(orderInstancesByDisplayName);
 }
 
 async function refreshInstanceMutationCaches({
@@ -240,19 +241,23 @@ function runInstanceMutationCacheFollowUp({
     queryClient.setQueryData(canonicalQueryKey, canonicalDataToRestore);
   }
 
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryHash !== canonicalQueryHash &&
-      query.getObserversCount() > 0 &&
-      !query.isActive(),
-    queryKey: methodQueryKey,
-    refetchType: "none",
-  });
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      disabledObservedDescendantQueryHashes.has(query.queryHash),
-    refetchType: "none",
-  });
+  queryClient
+    .invalidateQueries({
+      predicate: (query) =>
+        query.queryHash !== canonicalQueryHash &&
+        query.getObserversCount() > 0 &&
+        !query.isActive(),
+      queryKey: methodQueryKey,
+      refetchType: "none",
+    })
+    .catch(captureException);
+  queryClient
+    .invalidateQueries({
+      predicate: (query) =>
+        disabledObservedDescendantQueryHashes.has(query.queryHash),
+      refetchType: "none",
+    })
+    .catch(captureException);
 
   refreshInstanceMutationCaches({
     activeDescendantQueryHashes,
@@ -260,7 +265,7 @@ function runInstanceMutationCacheFollowUp({
     methodQueryKey,
     queryClient,
     transport,
-  }).catch((error) => {
+  }).catch((error: unknown) => {
     logger.warn("Instance mutation cache refresh failed", {
       error: error instanceof Error ? error.message : String(error),
       instanceName,
@@ -348,10 +353,7 @@ export function useListAllInstancesQuery(
 }
 
 export function useGetInstanceQuery(
-  input?:
-    | MessageInitShape<(typeof getInstance)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof getInstance)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof getInstance)["output"]>
 ) {
   return useConnectQuery(getInstance, input, {
@@ -361,30 +363,21 @@ export function useGetInstanceQuery(
 }
 
 export function useGetInstanceOverviewQuery(
-  input?:
-    | MessageInitShape<(typeof getInstanceOverview)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof getInstanceOverview)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof getInstanceOverview)["output"]>
 ) {
   return useConnectQuery(getInstanceOverview, input, options);
 }
 
 export function useCheckInstanceHealthQuery(
-  input?:
-    | MessageInitShape<(typeof checkInstanceHealth)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof checkInstanceHealth)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof checkInstanceHealth)["output"]>
 ) {
   return useConnectQuery(checkInstanceHealth, input, options);
 }
 
 export function useCheckInstanceActivityQuery(
-  input?:
-    | MessageInitShape<(typeof checkInstanceActivity)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof checkInstanceActivity)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof checkInstanceActivity)["output"]>
 ) {
   return useConnectQuery(checkInstanceActivity, input, options);
@@ -402,19 +395,21 @@ export function useCreateInstanceMutation(
 
   return useMutation(createInstance, {
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, ...context) => {
       const createdInstance = data.instance;
       runInstanceMutationCacheFollowUp({
         instanceName:
-          createdInstance?.name ||
-          (variables.instanceId ? buildInstanceName(variables.instanceId) : ""),
+          (createdInstance?.name ?? "") ||
+          (isNonEmptyString(variables.instanceId)
+            ? buildInstanceName(variables.instanceId)
+            : ""),
         queryClient,
         transport,
         updateInstances: createdInstance
           ? (instances) => upsertInstance(instances, createdInstance)
           : undefined,
       });
-      await options?.onSuccess?.(data, variables, onMutateResult, context);
+      await options?.onSuccess?.(data, variables, ...context);
     },
     transport,
   });
@@ -441,17 +436,19 @@ export function useUpdateInstanceMutation(
 
   return useMutation(updateInstance, {
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, ...context) => {
       const updatedInstance = data.instance;
       runInstanceMutationCacheFollowUp({
-        instanceName: updatedInstance?.name || variables.instance?.name || "",
+        instanceName: isNonEmptyString(updatedInstance?.name)
+          ? updatedInstance.name
+          : (variables.instance?.name ?? ""),
         queryClient,
         transport,
         updateInstances: updatedInstance
           ? (instances) => upsertInstance(instances, updatedInstance)
           : undefined,
       });
-      await options?.onSuccess?.(data, variables, onMutateResult, context);
+      await options?.onSuccess?.(data, variables, ...context);
     },
     transport,
   });
@@ -469,17 +466,17 @@ export function useDeleteInstanceMutation(
 
   return useMutation(deleteInstance, {
     ...options,
-    onSuccess: async (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, ...context) => {
       runInstanceMutationCacheFollowUp({
         instanceName: variables.name ?? "",
         queryClient,
         transport,
-        updateInstances: variables.name
+        updateInstances: isNonEmptyString(variables.name)
           ? (instances) =>
               instances.filter((instance) => instance.name !== variables.name)
           : undefined,
       });
-      await options?.onSuccess?.(data, variables, onMutateResult, context);
+      await options?.onSuccess?.(data, variables, ...context);
     },
     transport,
   });

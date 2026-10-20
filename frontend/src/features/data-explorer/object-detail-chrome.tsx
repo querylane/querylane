@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function ObjectDetailHeader({
   actions,
@@ -37,22 +38,22 @@ function ObjectDetailHeader({
         <div className="min-w-0">
           <h1
             aria-label={titleAriaLabel}
-            className="truncate font-mono text-lg leading-tight font-semibold"
+            className="truncate font-mono font-semibold text-lg leading-tight"
             title={titleAriaLabel}
           >
-            {titlePrefix ? (
+            {isNonEmptyString(titlePrefix) ? (
               <span className="text-muted-foreground">{titlePrefix}</span>
             ) : null}
             {title}
           </h1>
-          {subtitle ? (
-            <p className="text-muted-foreground truncate font-mono text-xs">
+          {Boolean(subtitle) ? (
+            <p className="truncate font-mono text-muted-foreground text-xs">
               {subtitle}
             </p>
           ) : null}
         </div>
       </div>
-      {stats || actions ? (
+      {Boolean(stats) || Boolean(actions) ? (
         <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-5">
           {stats}
           {actions}

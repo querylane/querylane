@@ -28,7 +28,7 @@ import { listSchemas } from "@/protogen/querylane/console/v1alpha1/schema-Schema
 /** Server page size: enough to browse; beyond that, people type to narrow. */
 const SCHEMA_RESULT_LIMIT = 50;
 /** PostgreSQL-internal namespaces nobody resolves table names against. */
-const INTERNAL_SCHEMA_PATTERN = /^pg_(toast|temp)/;
+const INTERNAL_SCHEMA_PATTERN = /^pg_(?<capture1>toast|temp)/u;
 
 function SchemaOption({
   name,
@@ -40,7 +40,13 @@ function SchemaOption({
   selected: boolean;
 }) {
   return (
-    <CommandItem onSelect={() => onSelect(name)} title={name} value={name}>
+    <CommandItem
+      onSelect={() => {
+        onSelect(name);
+      }}
+      title={name}
+      value={name}
+    >
       <span className="min-w-0 flex-1 truncate">{name}</span>
       <Check
         aria-hidden="true"
@@ -73,7 +79,9 @@ function SchemaResults({
         <CommandGroup>
           <SchemaOption
             name="Default schema"
-            onSelect={() => onChoose(undefined)}
+            onSelect={() => {
+              onChoose(undefined);
+            }}
             selected={value === undefined}
           />
         </CommandGroup>

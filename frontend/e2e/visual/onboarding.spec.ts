@@ -12,7 +12,7 @@ import { expectActiveElement } from "./focus";
 // for the same states is covered by the rstest browser tests beside each
 // component.
 
-const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
+const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/u;
 const UNREACHABLE_FIELD_MESSAGE =
   "PostgreSQL is unreachable with these connection settings. Check the host and port, then try again.";
 
@@ -131,7 +131,7 @@ const SETUP_PROGRESS_SCENARIOS = [
 
 test.describe("setup wizard progress phases", () => {
   for (const { heading, scenario, title } of SETUP_PROGRESS_SCENARIOS) {
-    test(title, async ({ page }) => {
+    test(`setup progress: ${title}`, async ({ page }) => {
       const frame = await openScenario(page, scenario);
       await expect(frame.getByRole("heading", { name: heading })).toBeVisible();
       await expect(frame.getByTestId("onboarding-panel")).toHaveScreenshot(

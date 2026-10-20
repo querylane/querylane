@@ -8,6 +8,7 @@ import type {
   SslModeOptionValue,
   SslNegotiationOptionValue,
 } from "@/lib/ssl-modes";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CreateInstanceSpecSchema,
   PostgresConfig_SslMode,
@@ -22,7 +23,7 @@ import type {
 const DEFAULT_POSTGRES_PORT = "5432";
 const MIN_POSTGRES_PORT = 1;
 const MAX_POSTGRES_PORT = 65_535;
-const POSTGRES_PORT_PATTERN = /^\d+$/;
+const POSTGRES_PORT_PATTERN = /^\d+$/u;
 
 interface InlineNotice {
   message: string;
@@ -190,7 +191,7 @@ function getConnectionFingerprint(formState: CreateInstanceFormState) {
 }
 
 function canCreateInstance(state: CreateInstanceWorkflowState) {
-  if (!state.lastSuccessfulConnectionFingerprint) {
+  if (!isNonEmptyString(state.lastSuccessfulConnectionFingerprint)) {
     return false;
   }
 

@@ -16,7 +16,7 @@ function resolveEffectiveCell(
   return cell;
 }
 
-const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/g;
+const SAFE_FILENAME_PATTERN = /[^a-zA-Z0-9_.-]+/gu;
 const ROW_IDENTIFIER_MAX_LENGTH = 40;
 
 function buildByteaDownloadFilename({
@@ -34,7 +34,7 @@ function buildByteaDownloadFilename({
   }
   const sanitizedParts: string[] = [];
   for (const part of parts) {
-    const sanitizedPart = part.replace(SAFE_FILENAME_PATTERN, "_");
+    const sanitizedPart = part.replaceAll(SAFE_FILENAME_PATTERN, "_");
     if (sanitizedPart !== "") {
       sanitizedParts.push(sanitizedPart);
     }

@@ -1,6 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { toast } from "sonner";
-
 import { captureException, logger } from "@/lib/diagnostics";
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import { normalizeConnectErrorState } from "@/lib/ui-error-connect";
@@ -17,6 +16,7 @@ import {
   describeUnexpectedResponse,
   findUnexpectedResponse,
 } from "@/lib/unexpected-response";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
@@ -107,7 +107,7 @@ function readAttachedContext(error: unknown): AppUiErrorContext {
   }
 
   const attached = error[APP_UI_ERROR_CONTEXT];
-  return isRecord(attached) ? (attached as AppUiErrorContext) : {};
+  return isRecord(attached) ? attached : {};
 }
 
 function attachAppUiErrorContext(
@@ -257,10 +257,14 @@ function buildSummary({
   }
 
   const condition = postgres.conditionName;
-  if (condition && postgres.operation) {
+  if (
+    isNonEmptyString(condition) &&
+    typeof postgres.operation === "string" &&
+    postgres.operation.length > 0
+  ) {
     return `PostgreSQL ${condition} during ${postgres.operation}`;
   }
-  if (condition) {
+  if (isNonEmptyString(condition)) {
     return `PostgreSQL ${condition}`;
   }
   return "PostgreSQL error";
@@ -528,7 +532,7 @@ function buildReportTags(
     postgres_sqlstate_class: error.postgres?.sqlstateClass ?? "none",
     source: error.source,
     unexpected_response_kind: error.unexpectedResponse?.kind ?? "none",
-    ...(extraTags ?? {}),
+    ...extraTags,
   };
 }
 
@@ -541,8 +545,8 @@ function buildToastOptions(error: AppUiError): {
     action: {
       label: "Report bug",
       onClick: () => {
-        if (typeof window !== "undefined") {
-          window.open(
+        if (typeof globalThis !== "undefined") {
+          globalThis.open(
             buildGitHubBugReportUrl(error),
             "_blank",
             "noopener,noreferrer"

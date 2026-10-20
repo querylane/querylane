@@ -1,4 +1,5 @@
 import type { OtherObjectCategory } from "@/components/console-pages/database-object-categories";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * SQL sources for the "other database objects" inventory (routines, sequences,
@@ -247,7 +248,7 @@ function toSqlTextLiteral(value: string): string {
 function toLikeContainsLiteral(value: string): string {
   const pattern = value
     .replaceAll("\u0000", "")
-    .replaceAll(/[\\%_]/g, (match) => `\\${match}`)
+    .replaceAll(/[\\%_]/gu, (match) => `\\${match}`)
     .replaceAll("'", "''");
   return `'%${pattern}%' ESCAPE '\\'`;
 }
@@ -304,10 +305,10 @@ function buildOtherObjectsBrowseStatement({
 }: BrowseStatementInput): string {
   const source = CATEGORY_SOURCES[category];
   const conditions: string[] = [];
-  if (search) {
+  if (isNonEmptyString(search)) {
     conditions.push(`name ILIKE ${toLikeContainsLiteral(search)}`);
   }
-  if (afterSortKey) {
+  if (isNonEmptyString(afterSortKey)) {
     const cursor = toSqlTextLiteral(afterSortKey);
     conditions.push(
       `(lower(sort_key), sort_key) > (lower(${cursor}), ${cursor})`

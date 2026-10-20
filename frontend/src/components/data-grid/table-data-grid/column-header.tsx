@@ -36,7 +36,7 @@ function ColumnHeader({
   sortPriority,
 }: ColumnHeaderProps) {
   return (
-    <div className="flex h-full w-full min-w-0 items-center gap-1.5 overflow-hidden">
+    <div className="flex size-full min-w-0 items-center gap-1.5 overflow-hidden">
       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
         {isFrozen ? (
           <Lock
@@ -68,7 +68,9 @@ function ColumnHeader({
             ) : (
               <ArrowDown aria-label="Sorted descending" className="size-3" />
             )}
-            {sortPriority ? (
+            {typeof sortPriority === "number" &&
+            sortPriority !== 0 &&
+            !Number.isNaN(sortPriority) ? (
               <span className="font-mono text-xs tabular-nums">
                 {sortPriority}
               </span>

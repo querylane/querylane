@@ -6,31 +6,37 @@ import { beforeEach, expect, rs, test } from "@rstest/core";
 import * as actualReactQuery from "@tanstack/react-query" with {
   rstest: "importActual",
 };
-import type { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { CreateInstancePageState } from "@/routes/new-instance-page";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
-import { createTestQueryClient } from "@/test/query-client";
 
 // Pixels for the create instance form live in e2e/visual/onboarding.spec.ts,
 // driven through the real /new-instance route.
 
-const MANAGED_NOT_INTERNAL_STORAGE_RE = /not Querylane internal storage/;
-const NAVIGATION_FAILURE_RE = /could not open it automatically/;
-const INVALID_CONFIG_FIELD_RE = /invalid field "config"/;
+const MANAGED_NOT_INTERNAL_STORAGE_RE = /not Querylane internal storage/u;
+const NAVIGATION_FAILURE_RE = /could not open it automatically/u;
+const INVALID_CONFIG_FIELD_RE = /invalid field "config"/u;
 const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 const SSL_MODE_DESCRIPTION =
   "Require TLS and verify both the trusted CA and the server hostname.";
 
-const routeState = rs.hoisted(() => ({
-  createInstance: rs.fn(async () => ({ instance: { name: "instances/prod" } })),
-  listDatabases: rs.fn(async () => ({ databases: [] })),
-  navigate: rs.fn(async () => undefined),
-  queryClient: null as QueryClient | null,
-  testInstanceConnection: rs.fn(async () => ({})),
-}));
+const routeState = rs.hoisted(
+  (): {
+    createInstance: ReturnType<typeof rs.fn>;
+    listDatabases: ReturnType<typeof rs.fn>;
+    navigate: ReturnType<typeof rs.fn>;
+    testInstanceConnection: ReturnType<typeof rs.fn>;
+  } => ({
+    createInstance: rs.fn(async () => ({
+      instance: { name: "instances/prod" },
+    })),
+    listDatabases: rs.fn(async () => ({ databases: [] })),
+    navigate: rs.fn(async () => undefined),
+    testInstanceConnection: rs.fn(async () => ({})),
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
@@ -48,7 +54,6 @@ rs.mock("@connectrpc/connect-query", () => ({
 rs.mock("@tanstack/react-query", () => ({
   ...actualReactQuery,
   useQueryClient: () => ({
-    ...routeState.queryClient,
     query: routeState.listDatabases,
   }),
 }));
@@ -75,7 +80,6 @@ rs.mock("@/hooks/api/instance", () => ({
 async function renderCreateInstance(
   initialState?: Partial<CreateInstancePageState>
 ) {
-  routeState.queryClient = createTestQueryClient();
   await render(
     <ScreenshotFrame>
       <div
@@ -199,7 +203,7 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
   expect(description).toBeInstanceOf(HTMLElement);
 
   if (!(popup instanceof HTMLElement)) {
-    throw new Error("SSL mode menu did not open.");
+    throw new TypeError("SSL mode menu did not open.");
   }
 
   // The popper-positioned menu zooms in on open; measure at its final size.
@@ -229,9 +233,9 @@ test("create instance SSL mode shows icons in the trigger and menu", async () =>
   await page.getByLabel("SSL mode").click();
   await expect.element(page.getByText(SSL_MODE_DESCRIPTION)).toBeVisible();
 
-  const renderedModes = Array.from(
-    document.querySelectorAll('[data-slot="ssl-mode-icon"]')
-  ).map((icon) => icon.getAttribute("data-mode"));
+  const renderedModes = [
+    ...document.querySelectorAll('[data-slot="ssl-mode-icon"]'),
+  ].map((icon) => icon.getAttribute("data-mode"));
 
   expect(new Set(renderedModes)).toEqual(
     new Set([
@@ -296,7 +300,7 @@ test("new instance creation is gated on successful connection test", async () =>
         password: "secret",
         port: 5432,
         username: "postgres",
-      }),
+      }) as unknown,
     })
   );
   expect(routeState.createInstance).not.toHaveBeenCalled();
@@ -314,9 +318,11 @@ test("new instance creation is gated on successful connection test", async () =>
 test("new instance creation navigates without waiting for database discovery", async () => {
   let resolveDatabases!: () => void;
   routeState.listDatabases.mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        resolveDatabases = () => resolve({ databases: [] });
+    async () =>
+      await new Promise((resolve) => {
+        resolveDatabases = () => {
+          resolve({ databases: [] });
+        };
       })
   );
   await renderCreateInstance();
@@ -337,12 +343,13 @@ test("new instance creation navigates without waiting for database discovery", a
 
 test("new instance creation stays disabled until success navigation completes", async () => {
   let finishNavigation!: () => void;
-  routeState.navigate.mockImplementationOnce(
-    () =>
-      new Promise<undefined>((resolve) => {
-        finishNavigation = () => resolve(undefined);
-      })
-  );
+  routeState.navigate.mockImplementationOnce(async () => {
+    await new Promise<undefined>((resolve) => {
+      finishNavigation = () => {
+        resolve(undefined);
+      };
+    });
+  });
   await renderCreateInstance();
 
   await fillRequiredConnectionFields();

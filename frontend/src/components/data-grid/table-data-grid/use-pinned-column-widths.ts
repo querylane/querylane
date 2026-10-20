@@ -50,8 +50,9 @@ function usePinnedColumnWidths({
   return {
     columnWidths:
       state.signature === columnSignature ? state.widths : NO_WIDTHS,
-    onColumnWidthsChange: (next) =>
-      setState({ signature: columnSignature, widths: pinColumnWidths(next) }),
+    onColumnWidthsChange: (next) => {
+      setState({ signature: columnSignature, widths: pinColumnWidths(next) });
+    },
   };
 }
 

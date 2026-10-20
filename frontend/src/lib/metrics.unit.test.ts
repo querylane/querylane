@@ -334,7 +334,8 @@ describe("metricRangeWindowMs", () => {
 });
 
 describe("buildInstanceMetricsInput", () => {
-  const anchorMs = 7 * 24 * 3600 * 1000; // one week past epoch
+  // One week past epoch.
+  const anchorMs = 7 * 24 * 3600 * 1000;
 
   test("leaves step unset so the backend picks the bucket size", () => {
     const input = buildInstanceMetricsInput("instances/prod", anchorMs, 6);

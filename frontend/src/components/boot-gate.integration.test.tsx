@@ -27,7 +27,7 @@ rs.mock("@tanstack/react-router", () => ({
   },
 }));
 
-const LITERAL_ESCAPE_SEQUENCE_RE = /\\u2026/;
+const LITERAL_ESCAPE_SEQUENCE_RE = /\\u2026/u;
 
 const initialSetupState = useSetupStore.getState();
 
@@ -126,7 +126,9 @@ describe("boot gate", () => {
       screen.getByRole("button", { name: "Reconfigure internal storage" })
     );
 
-    screen.getByRole("heading", { name: "Reconfigure internal storage" });
-    screen.getByText("/tmp/querylane/config.yaml");
+    expect(
+      screen.getByRole("heading", { name: "Reconfigure internal storage" })
+    ).toBeTruthy();
+    expect(screen.getByText("/tmp/querylane/config.yaml")).toBeTruthy();
   });
 });

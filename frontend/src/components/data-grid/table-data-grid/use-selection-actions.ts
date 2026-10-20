@@ -69,7 +69,9 @@ function useSelectionActions({
   selectedRows: ReadonlySet<string>;
   setSelectedRows: (next: ReadonlySet<string>) => void;
 }) {
-  const clearSelection = () => setSelectedRows(new Set());
+  const clearSelection = () => {
+    setSelectedRows(new Set());
+  };
   const selected = () =>
     collectSelectedRows({ resultColumns, rows, selectedRows });
 
@@ -160,8 +162,9 @@ function useSelectionActions({
 
   return {
     clearSelection,
-    copyCellValue: (row: GridRow, columnKey: string) =>
-      copyCellValue({ columnKey, fetchFullCell, resultColumns, row }),
+    copyCellValue: (row: GridRow, columnKey: string) => {
+      copyCellValue({ columnKey, fetchFullCell, resultColumns, row });
+    },
     copyRowAsSqlInsert: (row: GridRow) => {
       const cells = new Map<string, TableCell | undefined>();
       for (const column of resultColumns) {
@@ -187,8 +190,9 @@ function useSelectionActions({
       }
       writeClipboard(result.payload.contents);
     },
-    copyRowValues: (row: GridRow) =>
-      copyRowValues(row, resultColumns, fetchFullCell),
+    copyRowValues: (row: GridRow) => {
+      copyRowValues(row, resultColumns, fetchFullCell);
+    },
     handleCellCopy: (
       { row, column }: CellCopyArgs<GridRow>,
       event?: ClipboardEvent<HTMLDivElement>

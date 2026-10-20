@@ -12,11 +12,12 @@ import {
   sampleDatabase,
   sampleInstance,
 } from "./helpers";
+import { readRpcRequestBody } from "./read-rpc-request-body";
 
-const INVALID_DSN_RE = /Invalid DSN/i;
-const NEW_INSTANCE_URL_RE = /\/new-instance$/;
+const INVALID_DSN_RE = /Invalid DSN/iu;
+const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
 const PRODUCTION_APPDB_EXPLORER_URL_RE =
-  /\/instances\/production\/databases\/appdb\/explorer\/?$/;
+  /\/instances\/production\/databases\/appdb\/explorer\/?$/u;
 
 async function gotoCreateInstance(page: Page) {
   await test.step(
@@ -107,11 +108,11 @@ test("new instance: DSN SSL mode is sent with create request", {
 
   let createBody: Record<string, unknown> | undefined;
   await page.route("**/CreateInstance", async (route) => {
-    createBody = route.request().postDataJSON();
+    createBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, { instance: sampleInstance });
   });
   await page.route("**.CreateInstance", async (route) => {
-    createBody = route.request().postDataJSON();
+    createBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, { instance: sampleInstance });
   });
 
@@ -163,12 +164,12 @@ test("new instance: empty list create flow returns to new instance after deletin
 }, async ({ page }) => {
   await mockReadyAppWithDeletableInstance(page);
   await page.goto("/instances/production/configuration");
-  await page.route("**/DeleteInstance", async (route) =>
-    fulfillJson(route, {})
-  );
-  await page.route("**.DeleteInstance", async (route) =>
-    fulfillJson(route, {})
-  );
+  await page.route("**/DeleteInstance", async (route) => {
+    await fulfillJson(route, {});
+  });
+  await page.route("**.DeleteInstance", async (route) => {
+    await fulfillJson(route, {});
+  });
   await expect(
     page.getByRole("button", { name: "Delete instance" }).first()
   ).toBeEnabled();
@@ -198,11 +199,11 @@ test("new instance: test connection sends standalone request and shows success",
 
   let connectionBody: Record<string, unknown> | undefined;
   await page.route("**/TestInstanceConnection", async (route) => {
-    connectionBody = route.request().postDataJSON();
+    connectionBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, {});
   });
   await page.route("**.TestInstanceConnection", async (route) => {
-    connectionBody = route.request().postDataJSON();
+    connectionBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, {});
   });
 
@@ -334,11 +335,11 @@ test("new instance: advanced instance id and labels are sent on create", {
 
   let createBody: Record<string, unknown> | undefined;
   await page.route("**/CreateInstance", async (route) => {
-    createBody = route.request().postDataJSON();
+    createBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, { instance: sampleInstance });
   });
   await page.route("**.CreateInstance", async (route) => {
-    createBody = route.request().postDataJSON();
+    createBody = readRpcRequestBody(route.request().postDataJSON());
     await fulfillJson(route, { instance: sampleInstance });
   });
 

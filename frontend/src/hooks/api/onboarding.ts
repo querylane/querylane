@@ -207,10 +207,26 @@ function useWatchConfigChanges({
   onProgress,
 }: UseWatchConfigChangesOptions): UseWatchConfigChangesResult {
   const onboardingStreamingClient = useOnboardingStreamingClient();
-  const [isRunning, setIsRunning] = useState(false);
-  const [manualRetryRequired, setManualRetryRequired] = useState(false);
+  const [run, setRun] = useState({
+    enabled,
+    tick: 0,
+    isRunning: enabled,
+    manualRetryRequired: false,
+  });
   const [retryPending, setRetryPending] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
+  if (run.enabled !== enabled || run.tick !== retryTick) {
+    setRun({
+      enabled,
+      tick: retryTick,
+      isRunning: enabled,
+      manualRetryRequired: false,
+    });
+  }
+  const { isRunning, manualRetryRequired } = run;
+  const setManualRetryRequired = useEffectEvent((required: boolean) => {
+    setRun((current) => ({ ...current, manualRetryRequired: required }));
+  });
   const retryTickRef = useRef(retryTick);
   const retryPromiseRef = useRef<Promise<void> | null>(null);
   const retryResolveRef = useRef<(() => void) | null>(null);
@@ -227,7 +243,6 @@ function useWatchConfigChanges({
       return retryPromiseRef.current;
     }
 
-    setManualRetryRequired(false);
     setRetryPending(true);
 
     const retryPromise = new Promise<void>((resolve) => {
@@ -239,16 +254,14 @@ function useWatchConfigChanges({
     return retryPromise;
   };
 
-  // allow-useEffect: sync form field from server response
+  // sync form field from server response
   useEffect(() => {
     retryTickRef.current = retryTick;
   }, [retryTick]);
 
-  // allow-useEffect: sync form field from server response
+  // sync form field from server response
   useEffect(() => {
     if (!enabled) {
-      setIsRunning(false);
-      setManualRetryRequired(false);
       settleRetryState({
         retryPromiseRef,
         retryResolveRef,
@@ -260,8 +273,6 @@ function useWatchConfigChanges({
     let cancelled = false;
     const controller = new AbortController();
     const runId = retryTick;
-    setIsRunning(true);
-    setManualRetryRequired(false);
 
     runWatchStreamWithRetries({
       controller,
@@ -293,7 +304,7 @@ function useWatchConfigChanges({
       },
       setManualRetryRequired,
     })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!(cancelled || controller.signal.aborted)) {
           setManualRetryRequired(true);
           settleRetryState({
@@ -306,7 +317,7 @@ function useWatchConfigChanges({
       })
       .finally(() => {
         if (!cancelled && runId === retryTickRef.current) {
-          setIsRunning(false);
+          setRun((current) => ({ ...current, isRunning: false }));
         }
       });
 

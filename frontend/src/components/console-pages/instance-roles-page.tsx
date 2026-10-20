@@ -45,10 +45,12 @@ import {
   type RoleKind,
   roleIdOf,
 } from "@/lib/role-display";
+import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
 } from "@/lib/url-search-state";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 type KindFilter = "all" | RoleKind;
@@ -76,7 +78,10 @@ const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
   super: true,
 } satisfies RoleMapKindVisibility;
 
-const ROLE_TYPE_FILTERS: { id: RoleKind; label: string }[] = [
+const ROLE_TYPE_FILTERS: {
+  id: RoleKind;
+  label: string;
+}[] = [
   { id: "login", label: "Users" },
   { id: "super", label: "Superusers" },
   { id: "group", label: "Groups" },
@@ -120,37 +125,37 @@ function NameCell({ role }: { role: Role }) {
       <RoleAvatar kind={kind} size="sm" />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="truncate font-mono text-sm font-medium">
+          <span className="truncate font-medium font-mono text-sm">
             {role.roleName}
           </span>
           <RoleKindBadge role={role} />
         </div>
-        {subtitle ? (
-          <div className="text-muted-foreground truncate text-xs">
+        {isNonEmptyString(subtitle) ? (
+          <div className="truncate text-muted-foreground text-xs">
             <span className="truncate">{subtitle}</span>
           </div>
         ) : null}
       </div>
       <ChevronRight
         aria-hidden="true"
-        className="text-muted-foreground/0 group-hover:text-muted-foreground ml-auto size-4 transition-colors"
+        className="ml-auto size-4 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
       />
     </div>
   );
 }
 
 function LoginCell({ role }: { role: Role }) {
-  if (role.attributes?.canLogin) {
+  if (role.attributes?.canLogin === true) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="bg-positive-500 size-1.5 rounded-full" />
+        <span className="size-1.5 rounded-full bg-positive-500" />
         Yes
       </span>
     );
   }
   return (
-    <span className="text-muted-foreground inline-flex items-center gap-1.5">
-      <span className="bg-muted-foreground/35 size-1.5 rounded-full" />
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/35" />
       <span>No</span>
     </span>
   );
@@ -214,7 +219,7 @@ function summarizeRoles(roles: Role[]) {
   const kinds = roles.map((role) => {
     const kind = deriveRoleKind(role);
     counts[kind] += 1;
-    if (role.attributes?.canLogin) {
+    if (role.attributes?.canLogin === true) {
       loginCount += 1;
     }
     return kind;
@@ -274,7 +279,7 @@ function RolesDetailsContent({
         Loading matching roles…
       </p>
     );
-  } else if (error) {
+  } else if (Boolean(error)) {
     body = (
       <p className="text-destructive text-sm" role="alert">
         Could not load matching roles.
@@ -374,7 +379,7 @@ export function InstanceRolesPage({
   const filteredRolesQuery = useListAllRolesQuery(
     {
       ...rolesForInstanceQueryInput(instanceId),
-      ...(serverFilter ? { filter: serverFilter } : {}),
+      ...(isNonEmptyString(serverFilter) ? { filter: serverFilter } : {}),
     },
     { enabled: activeTab === "details" }
   );
@@ -466,7 +471,7 @@ export function InstanceRolesPage({
       error={filteredRolesQuery.error}
       filter={filter}
       isPending={filteredRolesQuery.isPending}
-      onFilterChange={setFilter}
+      onFilterChange={handleAsyncAction(setFilter)}
       onOpenRole={handleOpenRole}
       partial={Boolean(filteredRolesQuery.data?.nextPageToken)}
       roleCount={roles.length}
@@ -539,15 +544,15 @@ export function InstanceRolesPage({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="min-w-0 flex-1 sm:flex-none">
               <DataTableFilter
-                onChange={setFilter}
+                onChange={handleAsyncAction(setFilter)}
                 placeholder="Search roles…"
                 value={filter}
               />
             </div>
             <DataTableFacetedFilter
-              onSelectedValuesChange={(values) =>
-                handleRoleTypeChange(values.find(isInstanceRolesType))
-              }
+              onSelectedValuesChange={(values) => {
+                handleRoleTypeChange(values.find(isInstanceRolesType));
+              }}
               options={ROLE_TYPE_FILTERS.map((entry) => ({
                 count: counts[entry.id],
                 label: entry.label,

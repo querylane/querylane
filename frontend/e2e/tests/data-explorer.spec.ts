@@ -1,3 +1,4 @@
+import { isNonEmptyString } from "../../src/lib/value-guards";
 import { expect, test } from "./base";
 import {
   mockDataExplorerApp,
@@ -28,20 +29,20 @@ declare global {
   }
 }
 
-const EXPLORER_URL_RE = /\/instances\/production\/databases\/appdb\/explorer/;
-const BILLING_SCHEMA_URL_RE = /[?&]schema=billing\b/;
-const TABLE_CATEGORY_URL_RE = /[?&]category=tables\b/;
-const ORDERS_NAME_URL_RE = /[?&]name=orders\b/;
-const ACTIVE_ACCOUNTS_BUTTON_RE = /^active_accounts$/;
-const ORDERS_BUTTON_RE = /^orders 4 KB$/;
-const VIEW_CATEGORY_URL_RE = /[?&]category=views\b/;
-const ACTIVE_ACCOUNTS_NAME_URL_RE = /[?&]name=active_accounts\b/;
-const ORDERS_HEADING_RE = /public\.orders/;
-const SORT_WITH_ONE_COLUMN_RE = /Sort 1/;
-const TIER_ENTERPRISE_JSON_RE = /"tier":"enterprise"/;
-const COPY_BUTTON_RE = /Copy/;
+const EXPLORER_URL_RE = /\/instances\/production\/databases\/appdb\/explorer/u;
+const BILLING_SCHEMA_URL_RE = /[?&]schema=billing\b/u;
+const TABLE_CATEGORY_URL_RE = /[?&]category=tables\b/u;
+const ORDERS_NAME_URL_RE = /[?&]name=orders\b/u;
+const ACTIVE_ACCOUNTS_BUTTON_RE = /^active_accounts$/u;
+const ORDERS_BUTTON_RE = /^orders 4 KB$/u;
+const VIEW_CATEGORY_URL_RE = /[?&]category=views\b/u;
+const ACTIVE_ACCOUNTS_NAME_URL_RE = /[?&]name=active_accounts\b/u;
+const ORDERS_HEADING_RE = /public\.orders/u;
+const SORT_WITH_ONE_COLUMN_RE = /Sort 1/u;
+const TIER_ENTERPRISE_JSON_RE = /"tier":"enterprise"/u;
+const COPY_BUTTON_RE = /Copy/u;
 const DB_OVERVIEW_URL_RE =
-  /\/instances\/production\/databases\/appdb(?:[?#]|$)/;
+  /\/instances\/production\/databases\/appdb(?:[?#]|$)/u;
 // The shared sidebar renders as an 18rem sheet on phone viewports.
 const OBJECT_BROWSER_PHONE_MIN_WIDTH = 280;
 const OBJECT_BROWSER_PHONE_MAX_WIDTH = 296;
@@ -85,12 +86,12 @@ async function collectTabFocusSnapshots(
   page: Parameters<typeof mockDataExplorerApp>[0],
   steps: number
 ) {
-  const snapshots: Array<{
+  const snapshots: {
     isInObjectBrowser: boolean;
     label: string;
     role: string | null;
     tagName: string;
-  }> = [];
+  }[] = [];
 
   async function collectNextSnapshot(remainingSteps: number): Promise<void> {
     if (remainingSteps <= 0) {
@@ -117,7 +118,7 @@ async function collectTabFocusSnapshots(
           label:
             activeElement.getAttribute("aria-label") ??
             activeElement.getAttribute("placeholder") ??
-            activeElement.textContent?.replace(/\s+/g, " ").trim() ??
+            activeElement.textContent?.replaceAll(/\s+/gu, " ").trim() ??
             "",
           role: activeElement.getAttribute("role"),
           tagName: activeElement.tagName.toLowerCase(),
@@ -268,7 +269,9 @@ test("data explorer: Lighthouse route covers manual accessibility contracts", {
   const tabFocusSnapshots = await collectTabFocusSnapshots(page, 30);
   const meaningfulFocusTargets = tabFocusSnapshots.filter(
     (snapshot) =>
-      snapshot.label || snapshot.role || snapshot.tagName === "input"
+      isNonEmptyString(snapshot.label) ||
+      isNonEmptyString(snapshot.role) ||
+      snapshot.tagName === "input"
   );
 
   expect(meaningfulFocusTargets.length).toBeGreaterThanOrEqual(6);
@@ -591,7 +594,7 @@ test("data explorer: freezes wide table columns and copies selected rows", {
       configurable: true,
       value: {
         writeText: (value: string) => {
-          window.querylaneE2eClipboard = value;
+          globalThis.window.querylaneE2eClipboard = value;
           return Promise.resolve();
         },
       },
@@ -644,10 +647,13 @@ test("data explorer: freezes wide table columns and copies selected rows", {
   await page.getByRole("button", { name: COPY_BUTTON_RE }).click();
   await page.getByRole("menuitem", { name: "CSV" }).click();
   await expect
-    .poll(async () => page.evaluate(() => window.querylaneE2eClipboard ?? ""))
+    .poll(
+      async () =>
+        await page.evaluate(() => globalThis.window.querylaneE2eClipboard ?? "")
+    )
     .toContain("ada@example.com");
   const clipboardText = await page.evaluate(
-    () => window.querylaneE2eClipboard ?? ""
+    () => globalThis.window.querylaneE2eClipboard ?? ""
   );
   expect(clipboardText).toContain("grace@example.com");
 });

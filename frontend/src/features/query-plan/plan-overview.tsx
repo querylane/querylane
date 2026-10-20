@@ -25,7 +25,7 @@ function PlanOverview({
 }) {
   const ranked = nodes
     .filter((node) => (node.exclusiveMs ?? 0) > 0)
-    .sort((a, b) => (b.exclusiveMs ?? 0) - (a.exclusiveMs ?? 0));
+    .toSorted((a, b) => (b.exclusiveMs ?? 0) - (a.exclusiveMs ?? 0));
   const total = ranked.reduce((sum, node) => sum + (node.exclusiveMs ?? 0), 0);
   const [hotspot] = ranked;
   return (
@@ -36,7 +36,9 @@ function PlanOverview({
           <Button
             aria-label={`Inspect largest work: ${planNodeTitle(hotspot)}`}
             className="h-auto max-w-full justify-start"
-            onClick={() => onSelect(hotspot)}
+            onClick={() => {
+              onSelect(hotspot);
+            }}
             presentation="sql-plan-node"
             type="button"
             variant="ghost"
@@ -58,7 +60,7 @@ function PlanOverview({
           </Button>
         ) : (
           <p className="text-muted-foreground text-xs">
-            {plan.root.parallel
+            {plan.root.parallel === true
               ? "Parallel work · self time unavailable"
               : "No self-work profile"}
           </p>
@@ -75,7 +77,9 @@ function PlanOverview({
               aria-pressed={node.id === selectedId}
               className="w-(--plan-share)"
               key={node.id}
-              onClick={() => onSelect(node)}
+              onClick={() => {
+                onSelect(node);
+              }}
               presentation="plan-work"
               style={{
                 "--plan-share": `${((node.exclusiveMs ?? 0) / total) * PERCENT}%`,

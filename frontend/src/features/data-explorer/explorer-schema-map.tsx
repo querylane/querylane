@@ -181,15 +181,15 @@ function useSchemaMapCatalog({
   const columnsByTable: Record<string, Column[]> = {};
   const constraintsByTable: Record<string, TableConstraint[]> = {};
   const failedTableNames = new Set<string>();
-  tableNames.forEach((tableName, index) => {
+  for (const [index, tableName] of tableNames.entries()) {
     if (columnQueries[index]?.error || constraintQueries[index]?.error) {
       failedTableNames.add(tableName);
-      return;
+      continue;
     }
     columnsByTable[tableName] = columnQueries[index]?.data?.columns ?? [];
     constraintsByTable[tableName] =
       constraintQueries[index]?.data?.constraints ?? [];
-  });
+  }
   const queryErrors = [
     ...tableQueries,
     ...viewQueries,
@@ -249,9 +249,9 @@ function SchemaMapToolbar({
         </Badge>
       </div>
       <DataTableFacetedFilter
-        onSelectedValuesChange={(values) =>
-          onSchemaChange(values[0] ?? ALL_SCHEMAS)
-        }
+        onSelectedValuesChange={(values) => {
+          onSchemaChange(values[0] ?? ALL_SCHEMAS);
+        }}
         options={model.schemaOptions}
         searchPlaceholder="Find a schema…"
         selectedValues={selectedSchema === ALL_SCHEMAS ? [] : [selectedSchema]}
@@ -267,7 +267,9 @@ function SchemaMapToolbar({
           <Input
             aria-label="Find a table"
             className="h-8"
-            onChange={(event) => onQueryChange(event.currentTarget.value)}
+            onChange={(event) => {
+              onQueryChange(event.currentTarget.value);
+            }}
             placeholder="Find a table…"
             presentation="search"
             type="search"
@@ -349,7 +351,7 @@ function TableNode({
     >
       <Button
         aria-label={`${node.schemaName}.${node.name}`}
-        className="h-full w-full flex-col items-stretch justify-start overflow-hidden text-left"
+        className="size-full flex-col items-stretch justify-start overflow-hidden text-left"
         data-selected={selected}
         graphTone={node.tone}
         onClick={onSelect}
@@ -628,8 +630,12 @@ function SchemaMapCanvas({
           <TableNode
             key={node.id}
             node={node}
-            onOpen={() => onOpenTable(node.schemaName, node.name)}
-            onSelect={() => setSelectedTable(node.id)}
+            onOpen={() => {
+              onOpenTable(node.schemaName, node.name);
+            }}
+            onSelect={() => {
+              setSelectedTable(node.id);
+            }}
             selected={selectedTable === node.id}
           />
         ))}
@@ -644,7 +650,9 @@ function SchemaMapCanvas({
             {activeNode.rowLabel} rows
           </span>
           <Button
-            onClick={() => onOpenTable(activeNode.schemaName, activeNode.name)}
+            onClick={() => {
+              onOpenTable(activeNode.schemaName, activeNode.name);
+            }}
             size="sm"
             type="button"
             variant="outline"
@@ -653,7 +661,9 @@ function SchemaMapCanvas({
           </Button>
           <Button
             aria-label="Clear selected table"
-            onClick={() => setSelectedTable(null)}
+            onClick={() => {
+              setSelectedTable(null);
+            }}
             size="icon-sm"
             type="button"
             variant="ghost"
@@ -723,19 +733,21 @@ function ExplorerSchemaMap({
         <SchemaMapToolbar
           databaseLabel={databaseId}
           model={model}
-          onFit={() => setZoom(DEFAULT_ZOOM)}
+          onFit={() => {
+            setZoom(DEFAULT_ZOOM);
+          }}
           onQueryChange={setQuery}
           onReset={handleReset}
           onSchemaChange={(schemaName) => {
             setSelectedSchema(schemaName);
             setSelectedTable(null);
           }}
-          onZoomIn={() =>
-            setZoom((current) => Math.min(MAX_ZOOM, current + ZOOM_STEP))
-          }
-          onZoomOut={() =>
-            setZoom((current) => Math.max(MIN_ZOOM, current - ZOOM_STEP))
-          }
+          onZoomIn={() => {
+            setZoom((current) => Math.min(MAX_ZOOM, current + ZOOM_STEP));
+          }}
+          onZoomOut={() => {
+            setZoom((current) => Math.max(MIN_ZOOM, current - ZOOM_STEP));
+          }}
           query={query}
           selectedSchema={filterSchema}
           zoom={zoom}

@@ -5,9 +5,9 @@ import type { GrantedObject } from "@/components/console-pages/role-grants-share
 import { GrantsSection } from "@/components/console-pages/role-grants-tab";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const NO_DEFAULTS_RE = /No ALTER DEFAULT PRIVILEGES rules apply/;
-const NO_OWNED_OBJECTS_RE = /doesn't own any objects/;
-const NO_PUBLIC_GRANTS_RE = /No grants to PUBLIC are visible/;
+const NO_DEFAULTS_RE = /No ALTER DEFAULT PRIVILEGES rules apply/u;
+const NO_OWNED_OBJECTS_RE = /doesn't own any objects/u;
+const NO_PUBLIC_GRANTS_RE = /No grants to PUBLIC are visible/u;
 
 afterEach(() => {
   cleanup();

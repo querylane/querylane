@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
 import {
   pinColumnWidths,
@@ -6,7 +6,7 @@ import {
 } from "@/components/data-grid/table-data-grid/use-pinned-column-widths";
 
 describe("pinColumnWidths", () => {
-  it("turns measured widths into resized ones so the grid stops re-flowing them", () => {
+  test("turns measured widths into resized ones so the grid stops re-flowing them", () => {
     const pinned = pinColumnWidths(
       new Map([
         ["id", { type: "measured" as const, width: 145 }],
@@ -21,7 +21,7 @@ describe("pinColumnWidths", () => {
 });
 
 describe("usePinnedColumnWidths", () => {
-  it("leaves the grid uncontrolled until rows are on screen", () => {
+  test("leaves the grid uncontrolled until rows are on screen", () => {
     const { result } = renderHook(() =>
       usePinnedColumnWidths({ columnSignature: "id|name", hasRows: false })
     );
@@ -31,7 +31,7 @@ describe("usePinnedColumnWidths", () => {
     });
   });
 
-  it("pins reported widths and starts over when the columns change", () => {
+  test("pins reported widths and starts over when the columns change", () => {
     const { rerender, result } = renderHook(
       ({ columnSignature }) =>
         usePinnedColumnWidths({ columnSignature, hasRows: true }),

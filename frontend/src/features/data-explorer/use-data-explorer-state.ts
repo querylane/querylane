@@ -6,13 +6,14 @@ import {
 } from "@/features/data-explorer/data-explorer-types";
 import { isSchemaDetailTab } from "@/features/data-explorer/schema-detail-tab";
 import { isTableDetailTab } from "@/features/data-explorer/table-detail-tab";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type CatalogSyncMetadata,
   CatalogSyncStatus,
 } from "@/protogen/querylane/console/v1alpha1/catalog_sync_pb";
 
 function parseCategory(value: string | undefined): CategoryKey | undefined {
-  if (!value) {
+  if (!isNonEmptyString(value)) {
     return;
   }
   return isCategoryKey(value) ? value : undefined;
@@ -20,7 +21,7 @@ function parseCategory(value: string | undefined): CategoryKey | undefined {
 
 function selectionFromSearch(search: DataExplorerSearch): Selection {
   const category = parseCategory(search.category);
-  if (category && search.name) {
+  if (category && typeof search.name === "string" && search.name.length > 0) {
     return { category, kind: "resource", name: search.name };
   }
   return { kind: "schema" };
@@ -70,10 +71,10 @@ function normalizeExplorerSearch(
     schema: undefined,
     tab: undefined,
   };
-  if (search.q?.trim()) {
+  if (isNonEmptyString(search.q?.trim())) {
     normalized.q = search.q;
   }
-  if (search.schema) {
+  if (isNonEmptyString(search.schema)) {
     normalized.schema = search.schema;
   }
   if (hasResourceSelection) {

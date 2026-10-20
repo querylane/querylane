@@ -84,7 +84,7 @@ function injectSelectedResource<
       resource.name === selected.name ? selected : resource
     );
   }
-  return [...resources, selected].sort((left, right) =>
+  return [...resources, selected].toSorted((left, right) =>
     resourceDisplayName(left).localeCompare(resourceDisplayName(right))
   );
 }

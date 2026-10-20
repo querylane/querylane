@@ -52,50 +52,70 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
-const LOWER_BOUND_CATALOG_RE = /Counts, sizes, and rankings are lower bounds/;
-const state = rs.hoisted(() => ({
-  catalogQuery: {} as { data?: unknown; error?: unknown; isPending?: boolean },
-  databaseQuery: {} as QueryState<GetDatabaseResponse>,
-  databasesQuery: {} as { data?: unknown; isPending?: boolean },
-  extensionsQuery: {} as { data?: unknown; isPending?: boolean },
-  metricsQuery: {} as { data?: unknown; isPending?: boolean },
-  navigate: rs.fn(async () => undefined),
-  otherObjectsQuery: {} as {
-    data?: unknown;
-    error?: unknown;
-    isLoading?: boolean;
-  },
-  queryInsightsHook: rs.fn(),
-  queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
-}));
+const LOWER_BOUND_CATALOG_RE = /Counts, sizes, and rankings are lower bounds/u;
+const state = rs.hoisted(
+  (): {
+    catalogQuery: { data?: unknown; error?: unknown; isPending?: boolean };
+    databaseQuery: QueryState<GetDatabaseResponse>;
+    databasesQuery: { data?: unknown; isPending?: boolean };
+    extensionsQuery: { data?: unknown; isPending?: boolean };
+    metricsQuery: { data?: unknown; isPending?: boolean };
+    navigate: ReturnType<typeof rs.fn>;
+    otherObjectsQuery: {
+      data?: unknown;
+      error?: unknown;
+      isLoading?: boolean;
+    };
+    queryInsightsHook: ReturnType<typeof rs.fn>;
+    queryInsightsQuery: QueryState<GetDatabaseQueryInsightsResponse>;
+  } => ({
+    catalogQuery: {} as {
+      data?: unknown;
+      error?: unknown;
+      isPending?: boolean;
+    },
+    databaseQuery: {} as QueryState<GetDatabaseResponse>,
+    databasesQuery: {} as { data?: unknown; isPending?: boolean },
+    extensionsQuery: {} as { data?: unknown; isPending?: boolean },
+    metricsQuery: {} as { data?: unknown; isPending?: boolean },
+    navigate: rs.fn(async () => undefined),
+    otherObjectsQuery: {} as {
+      data?: unknown;
+      error?: unknown;
+      isLoading?: boolean;
+    },
+    queryInsightsHook: rs.fn(),
+    queryInsightsQuery: {} as QueryState<GetDatabaseQueryInsightsResponse>,
+  })
+);
 const SELECT_EVENTS_QUERY_BUTTON_RE =
-  /SELECT \* FROM events WHERE account_id = \$1/i;
+  /SELECT \* FROM events WHERE account_id = \$1/iu;
 const UPDATE_EVENTS_QUERY_BUTTON_RE =
-  /UPDATE events SET processed_at = now\(\) WHERE id = \$1/i;
+  /UPDATE events SET processed_at = now\(\) WHERE id = \$1/iu;
 const WITH_UPDATE_QUERY_BUTTON_RE =
-  /WITH moved AS \(UPDATE events SET processed_at = now\(\) RETURNING \*\) SELECT \* FROM moved/i;
+  /WITH moved AS \(UPDATE events SET processed_at = now\(\) RETURNING \*\) SELECT \* FROM moved/iu;
 const EXPLAIN_UPDATE_QUERY_BUTTON_RE =
-  /EXPLAIN ANALYZE UPDATE events SET processed_at = now\(\) WHERE id = \$1/i;
-const TABLE_EVENTS_QUERY_BUTTON_RE = /TABLE events/i;
-const VALUES_QUERY_BUTTON_RE = /VALUES \(\$1\)/i;
-const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/i;
-const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/i;
+  /EXPLAIN ANALYZE UPDATE events SET processed_at = now\(\) WHERE id = \$1/iu;
+const TABLE_EVENTS_QUERY_BUTTON_RE = /TABLE events/iu;
+const VALUES_QUERY_BUTTON_RE = /VALUES \(\$1\)/iu;
+const COPY_TO_QUERY_BUTTON_RE = /COPY events TO STDOUT/iu;
+const COPY_FROM_QUERY_BUTTON_RE = /COPY events FROM STDIN/iu;
 const COPY_SELECT_TO_QUERY_BUTTON_RE =
-  /COPY \(SELECT \* FROM events\) TO STDOUT/i;
+  /COPY \(SELECT \* FROM events\) TO STDOUT/iu;
 const COPY_TO_PATH_WITH_FROM_BUTTON_RE =
-  /COPY events TO '\/tmp\/from\/archive\.csv'/i;
+  /COPY events TO '\/tmp\/from\/archive\.csv'/iu;
 const COPY_FROM_PROGRAM_WITH_TO_BUTTON_RE =
-  /COPY events FROM PROGRAM 'echo TO file'/i;
-const COPY_COLUMN_TO_FROM_BUTTON_RE = /COPY events \(id, "to"\) FROM STDIN/i;
+  /COPY events FROM PROGRAM 'echo TO file'/iu;
+const COPY_COLUMN_TO_FROM_BUTTON_RE = /COPY events \(id, "to"\) FROM STDIN/iu;
 const COMMENTED_SELECT_QUERY_BUTTON_RE =
-  /\/\* trace: dashboard \*\/ SELECT \* FROM events/i;
+  /\/\* trace: dashboard \*\/ SELECT \* FROM events/iu;
 const COMMENTED_UPDATE_QUERY_BUTTON_RE =
-  /-- trace: worker\s+UPDATE events SET processed_at = now\(\)/i;
+  /-- trace: worker\s+UPDATE events SET processed_at = now\(\)/iu;
 const EXACT_THRESHOLD_QUERY_BUTTON_RE =
-  /SELECT avg\(duration_ms\) FROM events/i;
-const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/i;
+  /SELECT avg\(duration_ms\) FROM events/iu;
+const SLOW_COUNT_QUERY_BUTTON_RE = /SELECT count\(\*\) FROM events/iu;
 const QUERY_STATS_UNAVAILABLE_RE =
-  /Query statistics are unavailable for this database/;
+  /Query statistics are unavailable for this database/u;
 
 rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
@@ -647,7 +667,7 @@ function catalogResult() {
         name: "instances/prod/databases/customer-events/schemas/analytics/views/daily_rollup",
         objectId: "daily_rollup",
         owner: "analytics-owner",
-        rowCount: 5_000n,
+        rowCount: 5000n,
         schemaId: "analytics",
         sizeBytes: 2_048_000n,
         tableType: Table_TableType.UNSPECIFIED,
@@ -765,7 +785,7 @@ describe("backend database overview", () => {
       // Walk up from the label to the stat tile: the nearest ancestor that
       // contains a sparkline svg, regardless of the tile's internal layout.
       let tile = screen.getByText(label).parentElement;
-      while (tile && tile.querySelector("svg") === null) {
+      while (tile?.querySelector("svg") === null) {
         tile = tile.parentElement;
       }
       const sparkline = tile?.querySelector("svg");
@@ -826,11 +846,11 @@ describe("backend database overview", () => {
     ).toBeNull();
 
     await user.click(within(drawer).getByRole("button", { name: "Close" }));
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
         screen.queryByRole("dialog", { name: "Query insights" })
-      ).toBeNull()
-    );
+      ).toBeNull();
+    });
     expect(document.activeElement).toBe(trigger);
 
     await user.click(trigger);
@@ -1028,7 +1048,7 @@ describe("database query insights resilience", () => {
       '[data-slot="query-insights-filter-bar"]'
     );
     if (!(filterBar instanceof HTMLElement)) {
-      throw new Error("Missing query insights filter bar");
+      throw new TypeError("Missing query insights filter bar");
     }
 
     expect(filterBar.className).toContain("justify-start");
@@ -1070,7 +1090,10 @@ describe("database query insights resilience", () => {
     await user.click(
       within(filterBar).getByRole("button", { name: "Clear all" })
     );
-    expect((searchInput as HTMLInputElement).value).toBe("");
+    if (!(searchInput instanceof HTMLInputElement)) {
+      throw new TypeError("Expected search input");
+    }
+    expect(searchInput.value).toBe("");
     expect(
       screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeTruthy();

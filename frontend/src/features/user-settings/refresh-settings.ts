@@ -61,12 +61,12 @@ const REFRESH_INTERVAL_OPTIONS = [
     label: "Every day",
     value: String(ONE_DAY_MS),
   },
-] as const satisfies ReadonlyArray<{
+] as const satisfies readonly {
   description: string;
   intervalMs: RefreshIntervalMs;
   label: string;
   value: string;
-}>;
+}[];
 
 interface RefreshSettingsState {
   refreshIntervalMs: RefreshIntervalMs;
@@ -79,10 +79,10 @@ type RefreshIntervalParseResult =
 
 const REFRESH_OFF_VALUES = new Set(["manual", "never", "none", "off"]);
 const DURATION_INPUT_PATTERN =
-  /^(?:every\s+|in\s+)?(?<amount>\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?<unit>milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/i;
+  /^(?:every\s+|in\s+)?(?<amount>\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?<unit>milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/iu;
 const UNIT_ONLY_DURATION_INPUT_PATTERN =
-  /^(?:every|each)\s+(?<unit>seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/i;
-const DURATION_PREFIX_PATTERN = /^(?:every|in)\s+/i;
+  /^(?:every|each)\s+(?<unit>seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/iu;
+const DURATION_PREFIX_PATTERN = /^(?:every|in)\s+/iu;
 const NUMBER_WORD_VALUE_OFFSET = 1;
 const NUMBER_WORDS: readonly string[] = [
   "one",
@@ -130,11 +130,11 @@ const FALLBACK_REFRESH_SETTINGS_STORAGE: StateStorage = {
 };
 
 function getRefreshSettingsStorage(): StateStorage {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return FALLBACK_REFRESH_SETTINGS_STORAGE;
   }
   try {
-    return window.localStorage || FALLBACK_REFRESH_SETTINGS_STORAGE;
+    return globalThis.window.localStorage ?? FALLBACK_REFRESH_SETTINGS_STORAGE;
   } catch (error) {
     captureException(error);
     return FALLBACK_REFRESH_SETTINGS_STORAGE;
@@ -169,7 +169,7 @@ function parseDurationAmount(value: string): number {
     return parsed;
   }
   const wordIndex = NUMBER_WORDS.indexOf(value.toLowerCase());
-  return wordIndex < 0 ? Number.NaN : wordIndex + NUMBER_WORD_VALUE_OFFSET;
+  return wordIndex === -1 ? Number.NaN : wordIndex + NUMBER_WORD_VALUE_OFFSET;
 }
 
 function validateRefreshIntervalMs(

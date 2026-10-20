@@ -19,7 +19,7 @@ interface ChunkLoadRecoveryPageProps {
 }
 
 function reloadWindow(): void {
-  window.location.reload();
+  globalThis.window.location.reload();
 }
 
 export function ChunkLoadRecoveryPage({

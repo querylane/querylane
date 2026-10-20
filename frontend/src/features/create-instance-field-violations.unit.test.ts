@@ -5,7 +5,10 @@ import { extractCreateInstanceFieldViolations } from "@/features/create-instance
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 
 function badRequestError(
-  fieldViolations: { description: string; field: string }[]
+  fieldViolations: {
+    description: string;
+    field: string;
+  }[]
 ) {
   return new ConnectError(
     "invalid CreateInstanceRequest",

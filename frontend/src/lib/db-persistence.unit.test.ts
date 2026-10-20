@@ -17,9 +17,11 @@ import {
 
 function createSessionStorage(values: Map<string, string>): Storage {
   return {
-    clear: () => values.clear(),
+    clear: () => {
+      values.clear();
+    },
     getItem: (key: string) => values.get(key) ?? null,
-    key: (index: number) => Array.from(values.keys())[index] ?? null,
+    key: (index: number) => [...values.keys()][index] ?? null,
     get length() {
       return values.size;
     },
@@ -97,14 +99,15 @@ describe("writePersistedNavigationSelectionStore", () => {
       JSON.parse(values.get(NAVIGATION_SELECTION_STORAGE_KEY) ?? "{}")
     ).toEqual({ inst: { databaseId: "db" } });
 
-    stubWindowSessionStorage({
-      ...createSessionStorage(new Map()),
-      setItem: () => {
-        throw new Error("quota exceeded");
-      },
-    });
+    const fullStorage = createSessionStorage(new Map());
+    fullStorage.setItem = () => {
+      throw new Error("quota exceeded");
+    };
+    stubWindowSessionStorage(fullStorage);
 
-    expect(() => writePersistedNavigationSelectionStore({})).not.toThrow();
+    expect(() => {
+      writePersistedNavigationSelectionStore({});
+    }).not.toThrow();
   });
 });
 

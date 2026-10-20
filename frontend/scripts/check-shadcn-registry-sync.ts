@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
+import { z } from "zod";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const SUCCESS_EXIT_CODE = 0;
 const FAILURE_EXIT_CODE = 1;
@@ -12,10 +14,10 @@ const SHADCN_PACKAGE_NAME = "shadcn";
 const ANSI_ESCAPE_CHARACTER_CODE = 27;
 const EXACT_VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u;
 const ANSI_ESCAPE_PATTERN = new RegExp(
-  `${String.fromCharCode(ANSI_ESCAPE_CHARACTER_CODE)}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`,
+  `${String.fromCodePoint(ANSI_ESCAPE_CHARACTER_CODE)}(?:[@-Z\\\\-_]|\\[[0-?]*[ -/]*[@-~])`,
   "gu"
 );
-const JSON_OBJECT_LINE_PATTERN = /(^|\n)\s*\{/u;
+const JSON_OBJECT_LINE_PATTERN = /(?<capture1>^|\n)\s*\{/u;
 const OVERWRITE_PATTERN = /^\s*(?:[│┃|]\s*)?~\s+(?<path>\S+)\s+overwrite\b/u;
 const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
@@ -59,7 +61,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readPinnedShadcnPackageSpecifier() {
   const packageJson: unknown = JSON.parse(
-    readFileSync(PACKAGE_JSON_PATH, "utf8")
+    readFileSync(PACKAGE_JSON_PATH, "utf-8")
   );
   if (!isRecord(packageJson)) {
     throw new Error("package.json did not parse to an object.");
@@ -75,7 +77,7 @@ function readPinnedShadcnPackageSpecifier() {
     devDependencies[SHADCN_PACKAGE_NAME] ?? dependencies[SHADCN_PACKAGE_NAME];
 
   if (typeof version !== "string") {
-    throw new Error("package.json does not declare a shadcn dependency.");
+    throw new TypeError("package.json does not declare a shadcn dependency.");
   }
   if (!EXACT_VERSION_PATTERN.test(version)) {
     throw new Error(
@@ -89,7 +91,7 @@ function readPinnedShadcnPackageSpecifier() {
 const childProcessRunner: CommandRunner = {
   run: (command, args) => {
     const result = spawnSync(command, [...args], {
-      encoding: "utf8",
+      encoding: "utf-8",
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -128,7 +130,7 @@ function runRequiredCommand({
 }
 
 function stripAnsi(output: string) {
-  return output.replace(ANSI_ESCAPE_PATTERN, "");
+  return output.replaceAll(ANSI_ESCAPE_PATTERN, "");
 }
 
 function parseShadcnInfoComponents(output: string) {
@@ -143,21 +145,14 @@ function parseShadcnInfoComponents(output: string) {
     throw new Error("shadcn info did not return JSON output.");
   }
 
-  const info = JSON.parse(sanitizedOutput.slice(jsonStart, jsonEnd + 1)) as {
-    components?: unknown;
-  };
-
-  if (!Array.isArray(info.components)) {
-    throw new Error("shadcn info JSON did not include components[].");
-  }
-
-  return info.components.filter(
-    (component): component is string => typeof component === "string"
-  );
+  const info = z
+    .looseObject({ components: z.array(z.string()) })
+    .parse(JSON.parse(sanitizedOutput.slice(jsonStart, jsonEnd + 1)));
+  return info.components;
 }
 
 function normalizeShadcnComponents(components: string[]) {
-  return Array.from(new Set(components)).sort((left, right) =>
+  return [...new Set(components)].toSorted((left, right) =>
     left.localeCompare(right)
   );
 }
@@ -165,21 +160,22 @@ function normalizeShadcnComponents(components: string[]) {
 function findShadcnOverwriteFiles(output: string) {
   return stripAnsi(output)
     .split("\n")
-    .map((line) => line.match(OVERWRITE_PATTERN)?.groups?.["path"])
+    .map((line) => OVERWRITE_PATTERN.exec(line)?.groups?.["path"])
     .filter((path): path is string => Boolean(path));
 }
 
 function findExpectedShadcnOverwriteCount(output: string) {
-  const filesSummary = stripAnsi(output).match(FILES_SUMMARY_PATTERN);
+  const filesSummary = FILES_SUMMARY_PATTERN.exec(stripAnsi(output));
   if (!filesSummary) {
     return null;
   }
 
   const summary = filesSummary.groups?.["summary"] ?? "";
-  const overwriteCount = summary.match(OVERWRITE_SUMMARY_PATTERN)?.groups?.[
-    "count"
-  ];
-  return overwriteCount ? Number.parseInt(overwriteCount, 10) : 0;
+  const overwriteCount =
+    OVERWRITE_SUMMARY_PATTERN.exec(summary)?.groups?.["count"];
+  return isNonEmptyString(overwriteCount)
+    ? Number.parseInt(overwriteCount, 10)
+    : 0;
 }
 
 function isNoChangeShadcnDiff(output: string) {
@@ -190,7 +186,7 @@ function changedDiffLines(output: string) {
   return stripAnsi(output)
     .split("\n")
     .flatMap((line) => {
-      const match = line.match(DIFF_CHANGED_LINE_PATTERN);
+      const match = DIFF_CHANGED_LINE_PATTERN.exec(line);
       if (!match?.groups) {
         return [];
       }

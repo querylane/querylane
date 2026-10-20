@@ -97,6 +97,7 @@ import { preloadRouteCode } from "@/lib/route-code-preload";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;
@@ -366,7 +367,9 @@ function SidebarFooterContent({
             render={
               <Button
                 aria-label="About Querylane"
-                onClick={() => setIsAboutDialogOpen(true)}
+                onClick={() => {
+                  setIsAboutDialogOpen(true);
+                }}
                 presentation="quiet"
                 size="icon-sm"
                 variant="ghost"
@@ -462,7 +465,8 @@ function renderSidebarNavigationItem({
   sectionTitle: string;
   router: RegisteredRouter;
 }) {
-  const itemLinkProps = item.isDisabled ? undefined : linkProps[item.key];
+  const itemLinkProps =
+    item.isDisabled === true ? undefined : linkProps[item.key];
   const activeProps =
     item.isActive === undefined ? {} : { isActive: item.isActive };
   const renderProps = itemLinkProps
@@ -472,7 +476,7 @@ function renderSidebarNavigationItem({
   return (
     <SidebarMenuItem key={item.key}>
       <SidebarMenuButton
-        disabled={item.isDisabled || !itemLinkProps}
+        disabled={item.isDisabled === true || !itemLinkProps}
         {...activeProps}
         {...renderProps}
         tooltip={`${sectionTitle} ${item.label}`}
@@ -504,7 +508,7 @@ function SidebarDatabaseSelector() {
     getLabel: (database) => database.name,
     getValue: (database) => database.id,
   });
-  const databaseError = queryStates.databases.error
+  const databaseError = Boolean(queryStates.databases.error)
     ? normalizeAppUiError(queryStates.databases.error)
     : null;
   return (
@@ -641,7 +645,7 @@ function SidebarNavigationContent({
         );
       })}
 
-      {nextStepHint && sections.length > 0 && (
+      {isNonEmptyString(nextStepHint) && sections.length > 0 && (
         <div className="px-5 py-3 group-data-[collapsible=icon]:hidden">
           <p className="text-muted-foreground/70 text-xs leading-relaxed">
             {nextStepHint}

@@ -4,9 +4,9 @@ import { Err, type Linter, type SDK } from "@rsdoctor/types";
 // Keep this list limited to intentionally deferred feature dependencies, not
 // every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
 const HEAVY_PACKAGE =
-  /\/node_modules\/(@tanstack\/charts|@xyflow\/[^/]+|d3-[^/]+|react-data-grid|chrono-node|shiki|@shikijs\/[^/]+|oniguruma-to-es|oniguruma-parser)\//;
+  /\/node_modules\/(?<capture1>@tanstack\/charts|@xyflow\/[^/]+|d3-[^/]+|react-data-grid|chrono-node|shiki|@shikijs\/[^/]+|oniguruma-to-es|oniguruma-parser)\//u;
 const SHIKI_ONIGURUMA =
-  /\/node_modules\/(?:@shikijs\/engine-oniguruma\/|shiki\/dist\/(?:engine\/oniguruma\.mjs|wasm\.mjs|onig\.wasm)(?:$|[?#]))/;
+  /\/node_modules\/(?:@shikijs\/engine-oniguruma\/|shiki\/dist\/(?:engine\/oniguruma\.mjs|wasm\.mjs|onig\.wasm)(?:$|[?#]))/u;
 // Representative landing, form, overview, and explorer boundaries. Deliberate
 // sentinels: unrelated async vendor chunks cannot satisfy route splitting.
 const REQUIRED_ROUTE_SPLITS = [
@@ -59,7 +59,7 @@ function routeComponentPath(modulePath: string) {
   const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
   // TanStack encodes grouped split targets with `---` separators.
   const targets = new URLSearchParams(query).get("tsr-split")?.split("---");
-  return targets?.includes("component") ? path : "";
+  return targets?.includes("component") === true ? path : "";
 }
 
 export const heavyPackagesStayDeferred = defineRule(() => ({
@@ -69,19 +69,26 @@ export const heavyPackagesStayDeferred = defineRule(() => ({
     title: "querylane-heavy-packages-stay-deferred",
   },
   onCheckEnd: enforceBundleContracts,
-  check({ chunkGraph, report }) {
+  check(context) {
+    const { chunkGraph } = context;
     const reportedPackages = new Set<string>();
     for (const { chunk, module } of emittedModules(chunkGraph)) {
       const packageName = HEAVY_PACKAGE.exec(
         module.path.replaceAll("\\", "/")
       )?.[1];
-      if (!(chunk.initial && packageName)) {
+      if (
+        !(
+          chunk.initial &&
+          typeof packageName === "string" &&
+          packageName.length > 0
+        )
+      ) {
         continue;
       }
       const key = `${chunk.id}:${packageName}`;
       if (!reportedPackages.has(key)) {
         reportedPackages.add(key);
-        report({
+        context.report({
           message: `Heavy module ${module.path} is in initial chunk ${chunk.id} (${chunk.name}). Keep its feature behind a dynamic import.`,
         });
       }
@@ -96,13 +103,14 @@ export const noShikiOniguruma = defineRule(() => ({
     title: "querylane-no-shiki-oniguruma",
   },
   onCheckEnd: enforceBundleContracts,
-  check({ chunkGraph, report }) {
+  check(context) {
+    const { chunkGraph } = context;
     const reported = new Set<string>();
     for (const { chunk, module } of emittedModules(chunkGraph)) {
       const path = module.path.replaceAll("\\", "/");
       if (SHIKI_ONIGURUMA.test(path) && !reported.has(path)) {
         reported.add(path);
-        report({
+        context.report({
           message: `Forbidden Shiki Oniguruma/WASM module ${module.path} in chunk ${chunk.id} (${chunk.name}). Use shiki/core with shiki/engine/javascript.`,
         });
       }
@@ -117,7 +125,8 @@ export const routesStaySplit = defineRule(() => ({
     title: "querylane-routes-stay-split",
   },
   onCheckEnd: enforceBundleContracts,
-  check({ chunkGraph, root, report }) {
+  check(context) {
+    const { chunkGraph, root } = context;
     const expected = new Map(
       REQUIRED_ROUTE_SPLITS.map((route) => [
         `${root.replaceAll("\\", "/")}/src/routes/${route}`,
@@ -129,14 +138,14 @@ export const routesStaySplit = defineRule(() => ({
     }
     for (const [path, chunks] of expected) {
       if (chunks.size === 0) {
-        report({
+        context.report({
           message: `Missing emitted route component split ${path}. Check TanStack Router autoCodeSplitting and component exports.`,
         });
       }
       for (const chunk of [...chunks].filter(
         (candidate) => candidate.initial
       )) {
-        report({
+        context.report({
           message: `Route component split ${path} is in initial chunk ${chunk.id} (${chunk.name}). Keep route components behind their lazy boundary.`,
         });
       }

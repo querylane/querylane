@@ -39,14 +39,14 @@ function getTestConsole(): Console {
     "error" in testConsole &&
     "warn" in testConsole
   ) {
-    return testConsole as Console;
+    return testConsole;
   }
 
   throw new Error("Expected the test environment to provide a global console.");
 }
 
 function getConsoleIssueGuardState(): ConsoleIssueGuardState {
-  const existingState = Reflect.get(globalThis, stateKey);
+  const existingState: unknown = Reflect.get(globalThis, stateKey);
   if (isConsoleIssueGuardState(existingState)) {
     return existingState;
   }

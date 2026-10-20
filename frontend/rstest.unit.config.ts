@@ -1,6 +1,7 @@
 import type { RstestConfig } from "@rstest/core";
 import {
   createQuerylaneRstestBuildConfig,
+  RSTEST_MAX_WORKERS,
   RSTEST_PROJECT_NAMES,
   RSTEST_SETUP_FILE,
   RSTEST_SLOW_TEST_THRESHOLDS,
@@ -17,6 +18,7 @@ export default {
   name: RSTEST_PROJECT_NAMES.unit,
   passWithNoTests: false,
   pool: {
+    maxWorkers: RSTEST_MAX_WORKERS,
     execArgv: ["--no-experimental-webstorage"],
     type: "threads",
   },

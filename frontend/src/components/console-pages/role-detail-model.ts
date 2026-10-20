@@ -53,7 +53,10 @@ interface RoleDetailViewProps {
   builtinParentDetails: BuiltinParent[];
   comment: string;
   connLimitSub: string | undefined;
-  databases: { id: string; name: string }[];
+  databases: {
+    id: string;
+    name: string;
+  }[];
   defaultPrivileges: RoleDefaultPrivilege[];
   defaultPrivilegesPartial: boolean;
   directGrantsSub: string | undefined;
@@ -112,10 +115,10 @@ function facetStateOf(
   if (!enabled) {
     return "ready";
   }
-  if (options?.deferred) {
+  if (options?.deferred === true) {
     return "idle";
   }
-  if (query.error) {
+  if (Boolean(query.error)) {
     return "error";
   }
   if (query.isPending) {
@@ -351,10 +354,10 @@ function directGrantsSubText({
   if (effectiveDbId === null) {
     return "No databases";
   }
-  if (error) {
+  if (Boolean(error)) {
     return "Unavailable";
   }
-  if (deferred) {
+  if (deferred === true) {
     return "Open Grants to load direct grants";
   }
   return grantsReady
@@ -381,10 +384,10 @@ function ownedSubText({
   if (effectiveDbId === null) {
     return "No databases";
   }
-  if (error) {
+  if (Boolean(error)) {
     return "Unavailable";
   }
-  if (deferred) {
+  if (deferred === true) {
     return "Open Grants to load ownership";
   }
   const ownedSummary =

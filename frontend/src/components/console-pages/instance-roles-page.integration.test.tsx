@@ -12,16 +12,39 @@ import {
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const mocks = rs.hoisted(() => ({
-  accessMapPending: false,
-  accessMapRoleNames: [] as string[],
-  budgetSkippedRequestCount: 0,
-  failedRequestCount: 0,
-  navigate: rs.fn(),
-  roleQueryInputs: [] as Array<{ filter?: string; parent: string }>,
-  tableSearch: "",
-  truncatedRequestCount: 0,
-}));
+const mocks = rs.hoisted(
+  (): {
+    accessMapPending: boolean;
+    accessMapRoleNames: string[];
+    budgetSkippedRequestCount: number;
+    failedRequestCount: number;
+    navigate: ReturnType<
+      typeof rs.fn<
+        (options: {
+          search: (previous: Record<string, unknown>) => unknown;
+        }) => unknown
+      >
+    >;
+    roleQueryInputs: {
+      filter?: string;
+      parent: string;
+    }[];
+    tableSearch: string;
+    truncatedRequestCount: number;
+  } => ({
+    accessMapPending: false,
+    accessMapRoleNames: [] as string[],
+    budgetSkippedRequestCount: 0,
+    failedRequestCount: 0,
+    navigate: rs.fn(),
+    roleQueryInputs: [] as {
+      filter?: string;
+      parent: string;
+    }[],
+    tableSearch: "",
+    truncatedRequestCount: 0,
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -85,7 +108,9 @@ rs.mock("@/hooks/api/role", () => ({
     };
   },
   useRolesAccessMapResourcesQuery: (input: {
-    roles: { roleName: string }[];
+    roles: {
+      roleName: string;
+    }[];
   }) => {
     mocks.accessMapRoleNames = input.roles.map((role) => role.roleName);
     const result = {
@@ -154,7 +179,7 @@ afterEach(() => {
 });
 
 describe("instance roles page", () => {
-  test("debounces role search requests", () => {
+  test("debounces role search requests", async () => {
     rs.useFakeTimers();
     const { rerender } = render(
       <InstanceRolesPage
@@ -180,7 +205,9 @@ describe("instance roles page", () => {
       filter: 'role_name:"post"',
       parent: "instances/prod",
     });
-    act(() => rs.advanceTimersByTime(200));
+    await act(async () => {
+      rs.advanceTimersByTime(200);
+    });
     expect(mocks.roleQueryInputs).toContainEqual({
       filter: 'role_name:"post"',
       parent: "instances/prod",
@@ -215,6 +242,9 @@ describe("instance roles page", () => {
     await user.click(screen.getByRole("tab", { name: "Table" }));
 
     const navigateCall = mocks.navigate.mock.calls[0]?.[0];
+    if (!navigateCall) {
+      throw new Error("Expected navigation call");
+    }
     expect(
       navigateCall.search({ q: "app", tab: "map", type: "login" })
     ).toEqual({

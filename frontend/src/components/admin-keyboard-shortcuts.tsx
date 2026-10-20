@@ -30,27 +30,27 @@ function AdminKeyboardShortcuts() {
     );
   }
 
-  useKeyboardShortcut("navigation.data-explorer", () =>
-    navigateToPage("database.explorer")
-  );
-  useKeyboardShortcut("navigation.database-overview", () =>
-    navigateToPage("database.overview")
-  );
-  useKeyboardShortcut("navigation.roles", () =>
-    navigateToPage("instance.roles")
-  );
-  useKeyboardShortcut("navigation.extensions", () =>
-    navigateToPage("database.extensions")
-  );
-  useKeyboardShortcut("navigation.configuration", () =>
-    navigateToPage("instance.configuration")
-  );
-  useKeyboardShortcut("navigation.instance-overview", () =>
-    navigateToPage("instance.overview")
-  );
-  useKeyboardShortcut("navigation.sql-workbench", () =>
-    navigateToPage("database.sql")
-  );
+  useKeyboardShortcut("navigation.data-explorer", () => {
+    navigateToPage("database.explorer");
+  });
+  useKeyboardShortcut("navigation.database-overview", () => {
+    navigateToPage("database.overview");
+  });
+  useKeyboardShortcut("navigation.roles", () => {
+    navigateToPage("instance.roles");
+  });
+  useKeyboardShortcut("navigation.extensions", () => {
+    navigateToPage("database.extensions");
+  });
+  useKeyboardShortcut("navigation.configuration", () => {
+    navigateToPage("instance.configuration");
+  });
+  useKeyboardShortcut("navigation.instance-overview", () => {
+    navigateToPage("instance.overview");
+  });
+  useKeyboardShortcut("navigation.sql-workbench", () => {
+    navigateToPage("database.sql");
+  });
   useKeyboardShortcut("sidebar.toggle", toggleSidebar);
 
   return null;

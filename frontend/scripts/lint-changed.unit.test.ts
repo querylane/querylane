@@ -49,7 +49,10 @@ describe("changed-file lint selection", () => {
   });
 
   test("discovers workflow policy changes through the git runner", () => {
-    const calls: { command: string; args: string[] }[] = [];
+    const calls: {
+      command: string;
+      args: string[];
+    }[] = [];
     const runner = {
       run: (command: string, args: string[]) => {
         calls.push({ args, command });

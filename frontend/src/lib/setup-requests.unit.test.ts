@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 
 import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
@@ -76,32 +76,21 @@ function buildWatchResponse(
 function buildAsyncStream<T>(items: T[]): AsyncIterable<T> {
   return {
     [Symbol.asyncIterator]() {
-      let index = 0;
-
-      return {
-        next: () => {
-          const isDone = index >= items.length;
-          const item = items[index];
-          index += 1;
-          return Promise.resolve(
-            isDone
-              ? { done: true as const, value: undefined }
-              : { done: false as const, value: item as T }
-          );
-        },
-      };
+      const iterator = items[Symbol.iterator]();
+      return { next: () => Promise.resolve(iterator.next()) };
     },
   };
 }
 
 function createControlledAsyncStream<T>() {
-  const queue: T[] = [];
+  const queue: { value: T }[] = [];
   let isClosed = false;
   let wakeReader: ((result: IteratorResult<T>) => void) | null = null;
 
   const readNext = (): Promise<IteratorResult<T>> => {
-    if (queue.length > 0) {
-      return Promise.resolve({ done: false, value: queue.shift() as T });
+    const next = queue.shift();
+    if (next) {
+      return Promise.resolve({ done: false, value: next.value });
     }
 
     if (isClosed) {
@@ -127,13 +116,13 @@ function createControlledAsyncStream<T>() {
         reader({ done: false, value: item });
         return;
       }
-      queue.push(item);
+      queue.push({ value: item });
     },
     stream: {
       [Symbol.asyncIterator]() {
         return { next: readNext };
       },
-    } as AsyncIterable<T>,
+    } satisfies AsyncIterable<T>,
   };
 }
 
@@ -143,7 +132,7 @@ async function flushMicrotasks() {
 }
 
 describe("setup request builders", () => {
-  it("builds standalone connection test requests", () => {
+  test("builds standalone connection test requests", () => {
     const config = buildPostgresConfig();
 
     const request = buildConnectionTestRequest(config);
@@ -152,7 +141,7 @@ describe("setup request builders", () => {
     expect(request.config?.host).toBe("localhost");
   });
 
-  it("builds setup requests with postgres config payload", () => {
+  test("builds setup requests with postgres config payload", () => {
     const config = buildPostgresConfig();
 
     const request = buildSetupAppDatabaseRequest(config);
@@ -166,7 +155,7 @@ describe("setup request builders", () => {
 });
 
 describe("setup stream consumption", () => {
-  it("rejects when the stream closes before config persistence succeeds", async () => {
+  test("rejects when the stream closes before config persistence succeeds", async () => {
     const stream = buildAsyncStream([
       buildSucceededSetupResponse(SetupStep.INITIALIZING_SERVICES),
     ]);
@@ -176,7 +165,7 @@ describe("setup stream consumption", () => {
     ).rejects.toThrow("Database setup stream ended before setup completed");
   });
 
-  it("consumes setup stream and returns the last failure message", async () => {
+  test("consumes setup stream and returns the last failure message", async () => {
     const responses = [
       buildSetupResponse({ state: StepState.IN_PROGRESS }),
       buildSetupResponse({ state: StepState.FAILED, error: "first" }),
@@ -191,7 +180,7 @@ describe("setup stream consumption", () => {
     });
   });
 
-  it("invokes progress callback in order for async-delayed setup events", async () => {
+  test("invokes progress callback in order for async-delayed setup events", async () => {
     const controlled =
       createControlledAsyncStream<ReturnType<typeof buildSetupResponse>>();
     const states: StepState[] = [];
@@ -228,7 +217,7 @@ describe("setup stream consumption", () => {
 });
 
 describe("watch stream consumption", () => {
-  it("keeps a failure that arrives after initialization succeeded", async () => {
+  test("keeps a failure that arrives after initialization succeeded", async () => {
     const responses = [
       buildWatchResponse(StepState.SUCCEEDED, "", {
         displayName: "Initializing services",
@@ -249,7 +238,7 @@ describe("watch stream consumption", () => {
 });
 
 describe("setup stream errors", () => {
-  it("creates setup stream failure errors with attached failed event", () => {
+  test("creates setup stream failure errors with attached failed event", () => {
     const failedEvent = createProto(SetupProgressEventSchema, {
       displayName: "Apply migrations",
       error: "migration failed",

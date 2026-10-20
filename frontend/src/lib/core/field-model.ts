@@ -11,18 +11,14 @@ export interface OptionGroup {
 
 export type Renderable = string | number | boolean | null | undefined;
 
-export interface InputProps {
-  [attribute: string]: string | number | boolean | undefined;
-}
+export type InputProps = Record<string, string | number | boolean | undefined>;
 
 export interface ProviderCustomData {
   source?: string | undefined;
   [key: string]: unknown;
 }
 
-export interface FormValues {
-  [field: string]: unknown;
-}
+export type FormValues = Record<string, unknown>;
 
 export type EmptyRepeatedStringPolicy = "discard" | "preserve";
 
@@ -55,7 +51,10 @@ export interface FieldRenderHints {
   visibleWhen?: UiRule[] | undefined;
 }
 
-export interface FieldConfig<FieldTypes = string, CustomData extends ProviderCustomData = ProviderCustomData> {
+export interface FieldConfig<
+  FieldTypes = string,
+  CustomData extends ProviderCustomData = ProviderCustomData,
+> {
   customData?: CustomData | undefined;
   description?: Renderable;
   emptyRepeatedStringPolicy?: EmptyRepeatedStringPolicy | undefined;
@@ -86,7 +85,9 @@ export interface SchemaValidationError {
   path: (string | number)[];
 }
 
-export type SchemaValidation = { success: true; data: unknown } | { success: false; errors: SchemaValidationError[] };
+export type SchemaValidation =
+  | { success: true; data: unknown }
+  | { success: false; errors: SchemaValidationError[] };
 
 export interface SchemaValidationContext {
   signal: AbortSignal;
@@ -95,9 +96,14 @@ export interface SchemaValidationContext {
 export interface SchemaProvider<Values extends FormValues = FormValues> {
   getDefaultValues: () => FormValues;
   parseSchema: () => ParsedSchema;
-  validateSchema: (values: Values, context?: SchemaValidationContext) => SchemaValidation | Promise<SchemaValidation>;
+  validateSchema: (
+    values: Values,
+    context?: SchemaValidationContext
+  ) => SchemaValidation | Promise<SchemaValidation>;
 }
 
-export function getFieldHints<FieldTypes>(field: ParsedField<FieldTypes>): FieldRenderHints | undefined {
+export function getFieldHints<FieldTypes>(
+  field: ParsedField<FieldTypes>
+): FieldRenderHints | undefined {
   return field.hints;
 }

@@ -76,6 +76,8 @@ import {
   tryParseRelationQualifiedName,
 } from "@/lib/console-resources";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { ExplainQueryRequest_Format } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import type { TableIndex } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
@@ -228,7 +230,7 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
           disabled={noticesQuery.isFetching}
           onClick={() => {
             if (enabled) {
-              noticesQuery.refetch();
+              handleAsyncAction(() => noticesQuery.refetch())();
               return;
             }
             setEnabled(true);
@@ -273,10 +275,12 @@ function StandardViewDetail({
   const copyableDefinition = view
     ? runnableViewDefinition({ definition, view, viewName })
     : "";
-  const qualifiedName = schemaName ? `${schemaName}.${viewName}` : viewName;
+  const qualifiedName = isNonEmptyString(schemaName)
+    ? `${schemaName}.${viewName}`
+    : viewName;
   // The old uppercase kind eyebrow lives on as the subtitle.
   const subtitleDetails = [viewTypeLabel(view)];
-  if (view?.owner) {
+  if (isNonEmptyString(view?.owner)) {
     subtitleDetails.push(`owner: ${view.owner}`);
   }
   return (
@@ -293,7 +297,9 @@ function StandardViewDetail({
         subtitle={subtitleDetails.join(" · ")}
         title={viewName}
         titleAriaLabel={qualifiedName}
-        titlePrefix={schemaName ? `${schemaName}.` : undefined}
+        titlePrefix={
+          isNonEmptyString(schemaName) ? `${schemaName}.` : undefined
+        }
       />
 
       {view ? (
@@ -325,10 +331,10 @@ type ConcurrentRefreshReadiness =
   | "standard"
   | "unavailable";
 
-const MATERIALIZED_VIEW_TABS: Array<{
+const MATERIALIZED_VIEW_TABS: {
   label: string;
   value: MaterializedViewTab;
-}> = [
+}[] = [
   { label: "Data", value: "data" },
   { label: "Columns", value: "columns" },
   { label: "Indexes", value: "indexes" },
@@ -446,7 +452,15 @@ function DependencyLink({
     </>
   );
 
-  if (!(target && databaseId && instanceId)) {
+  if (
+    !(
+      target &&
+      typeof databaseId === "string" &&
+      databaseId.length > 0 &&
+      typeof instanceId === "string" &&
+      instanceId.length > 0
+    )
+  ) {
     return (
       <div className="flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-sm">
         {contents}
@@ -494,7 +508,7 @@ function DependenciesTab({
           <p>{query.error.message}</p>
           <Button
             onClick={() => {
-              query.refetch();
+              handleAsyncAction(() => query.refetch())();
             }}
             size="sm"
             type="button"
@@ -544,7 +558,7 @@ function DependenciesTab({
       {query.hasNextPage ? (
         <Button
           disabled={query.isFetchingNextPage}
-          onClick={() => query.fetchNextPage()}
+          onClick={handleAsyncAction(() => query.fetchNextPage())}
           type="button"
           variant="outline"
         >
@@ -578,12 +592,14 @@ function MaterializedRefreshControl({
       if (!(refreshing && startedAt !== null)) {
         return;
       }
-      const intervalId = window.setInterval(() => {
+      const intervalId = globalThis.setInterval(() => {
         setElapsedSeconds(
           Math.floor((Date.now() - startedAt) / MILLISECONDS_PER_SECOND)
         );
       }, MILLISECONDS_PER_SECOND);
-      return () => window.clearInterval(intervalId);
+      return () => {
+        globalThis.clearInterval(intervalId);
+      };
     },
     [refreshing, startedAt]
   );
@@ -613,6 +629,12 @@ function MaterializedRefreshControl({
     }
   }
 
+  function handleStandardRefresh() {
+    handleAsyncAction(() => refresh(RefreshMaterializedViewMode.STANDARD))();
+  }
+  function handleConcurrentRefresh() {
+    handleAsyncAction(() => refresh(RefreshMaterializedViewMode.CONCURRENT))();
+  }
   return (
     <>
       <Button
@@ -685,19 +707,14 @@ function MaterializedRefreshControl({
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <Button
-                  onClick={() => refresh(RefreshMaterializedViewMode.STANDARD)}
+                  onClick={handleStandardRefresh}
                   type="button"
                   variant="outline"
                 >
                   Refresh normally
                 </Button>
                 {readiness === "ready" ? (
-                  <Button
-                    onClick={() =>
-                      refresh(RefreshMaterializedViewMode.CONCURRENT)
-                    }
-                    type="button"
-                  >
+                  <Button onClick={handleConcurrentRefresh} type="button">
                     Refresh concurrently
                   </Button>
                 ) : null}
@@ -799,8 +816,10 @@ function MaterializedViewHeader({
       }
       subtitle={subtitle}
       title={viewName}
-      titleAriaLabel={schemaName ? `${schemaName}.${viewName}` : viewName}
-      titlePrefix={schemaName ? `${schemaName}.` : undefined}
+      titleAriaLabel={
+        isNonEmptyString(schemaName) ? `${schemaName}.${viewName}` : viewName
+      }
+      titlePrefix={isNonEmptyString(schemaName) ? `${schemaName}.` : undefined}
     />
   );
 }
@@ -863,7 +882,7 @@ function MaterializedViewTabs({
   return (
     <Tabs
       className="min-h-0 w-full min-w-0 flex-1 flex-col"
-      onValueChange={(value) => {
+      onValueChange={(value: string) => {
         if (isMaterializedViewTab(value)) {
           onTabChange(value);
         }

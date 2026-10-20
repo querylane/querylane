@@ -39,7 +39,7 @@ function TrendSparkline({ values }: { values: number[] }) {
   return (
     <svg
       aria-hidden="true"
-      className="text-chart-1 size-full opacity-60"
+      className="size-full text-chart-1 opacity-60"
       fill="none"
       preserveAspectRatio="none"
       viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
@@ -115,20 +115,20 @@ function StatCell({
         </div>
       ) : null}
       <div className="relative flex flex-col gap-1.5">
-        <span className="text-muted-foreground tracking-heading font-medium text-(length:--text-label-sm) uppercase">
+        <span className="text-(length:--text-label-sm) font-medium text-muted-foreground uppercase tracking-heading">
           {label}
         </span>
         <div className="flex flex-col gap-0.5">
-          <span className="text-foreground font-mono leading-none font-semibold tracking-tight text-(length:--text-heading-sm) tabular-nums">
+          <span className="text-(length:--text-heading-sm) font-mono font-semibold text-foreground tabular-nums leading-none tracking-tight">
             {value}
           </span>
-          {notice ? (
-            <span className="text-warning-600 dark:text-warning-400 mt-1 text-xs leading-snug">
+          {Boolean(notice) ? (
+            <span className="mt-1 text-warning-600 text-xs leading-snug dark:text-warning-400">
               {notice}
             </span>
           ) : null}
-          {!notice && sub ? (
-            <span className="text-muted-foreground mt-1 text-xs">{sub}</span>
+          {!Boolean(notice) && Boolean(sub) ? (
+            <span className="mt-1 text-muted-foreground text-xs">{sub}</span>
           ) : null}
         </div>
       </div>

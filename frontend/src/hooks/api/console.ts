@@ -8,10 +8,7 @@ import { getConsoleConfig } from "@/protogen/querylane/console/v1alpha1/console-
 const CONSOLE_CONFIG_STATIC_QUERY_OPTIONS = STATIC_QUERY_OPTIONS;
 
 function useGetConsoleConfigQuery(
-  input?:
-    | MessageInitShape<(typeof getConsoleConfig)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof getConsoleConfig)["input"]> | SkipToken,
   options?: UseQueryOptions<(typeof getConsoleConfig)["output"]>
 ) {
   return useQuery(getConsoleConfig, input, options);

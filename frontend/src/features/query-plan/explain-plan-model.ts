@@ -1,3 +1,4 @@
+import { isNonEmptyString, isUnknownArray } from "@/lib/value-guards";
 /**
  * Turns PostgreSQL's `EXPLAIN (FORMAT JSON)` output into a tree the plan view
  * can render. Reported metadata is retained for the inspector; timing
@@ -12,7 +13,10 @@ interface PlanNode {
   /** Inclusive actual time in ms (per loop, as PostgreSQL reports it). */
   actualTotalMs?: number | undefined;
   children: PlanNode[];
-  details: Array<{ label: string; value: string }>;
+  details: {
+    label: string;
+    value: string;
+  }[];
   /** Approximate self time: inclusive work minus child work across loops. */
   exclusiveMs?: number | undefined;
   id: string;
@@ -50,7 +54,7 @@ const DETAIL_KEYS_TO_SKIP = new Set([
 ]);
 
 function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !isUnknownArray(value);
 }
 
 function numberField(record: JsonRecord, key: string): number | undefined {
@@ -62,7 +66,7 @@ function numberField(record: JsonRecord, key: string): number | undefined {
 
 function stringField(record: JsonRecord, key: string): string | undefined {
   const value = record[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+  return isNonEmptyString(value) ? value : undefined;
 }
 
 function formatDetailValue(value: unknown): string {
@@ -85,7 +89,7 @@ function buildDetails(record: JsonRecord): PlanNode["details"] {
 
 function buildNode(record: JsonRecord, id: string): PlanNode {
   const rawChildren = record["Plans"];
-  const children = Array.isArray(rawChildren)
+  const children = isUnknownArray(rawChildren)
     ? rawChildren.flatMap((child, index) =>
         isRecord(child) ? [buildNode(child, `${id}.${index}`)] : []
       )
@@ -98,8 +102,8 @@ function buildNode(record: JsonRecord, id: string): PlanNode {
     record["Node Type"] === "Gather" ||
     record["Node Type"] === "Gather Merge" ||
     (numberField(record, "Workers Planned") ?? 0) > 0 ||
-    (Array.isArray(record["Workers"]) && record["Workers"].length > 0) ||
-    children.some((child) => child.parallel);
+    (isUnknownArray(record["Workers"]) && record["Workers"].length > 0) ||
+    children.some((child) => child.parallel === true);
   let exclusiveMs: number | undefined;
   if (
     actualTotalMs !== undefined &&
@@ -147,7 +151,7 @@ function parseExplainPlan(planJson: string): ExplainPlan | null {
   } catch {
     return null;
   }
-  const first = Array.isArray(parsed) ? parsed[0] : parsed;
+  const first = isUnknownArray(parsed) ? parsed[0] : parsed;
   if (!isRecord(first)) {
     return null;
   }
@@ -157,7 +161,7 @@ function parseExplainPlan(planJson: string): ExplainPlan | null {
   }
   const root = buildNode(planRecord, "0");
   // Worker times overlap; subtracting child totals cannot attribute self time.
-  if (root.parallel) {
+  if (root.parallel === true) {
     for (const node of flattenPlan(root)) {
       node.exclusiveMs = undefined;
     }
@@ -201,8 +205,8 @@ function planMetricValue(
 function planNodeTitle(node: PlanNode): string {
   return (
     node.nodeType +
-    (node.relationName ? ` on ${node.relationName}` : "") +
-    (node.indexName ? ` using ${node.indexName}` : "")
+    (isNonEmptyString(node.relationName) ? ` on ${node.relationName}` : "") +
+    (isNonEmptyString(node.indexName) ? ` using ${node.indexName}` : "")
   );
 }
 
@@ -233,10 +237,14 @@ function rowEstimateLabel(
   return undefined;
 }
 
-function planNodeInsights(
-  node: PlanNode
-): Array<{ label: string; detail: string }> {
-  const insights: Array<{ label: string; detail: string }> = [];
+function planNodeInsights(node: PlanNode): {
+  label: string;
+  detail: string;
+}[] {
+  const insights: {
+    label: string;
+    detail: string;
+  }[] = [];
   const { actualRows: actual, planRows: estimated } = node;
   // Both counts are per execution, not totals across loops.
   if (
@@ -245,7 +253,7 @@ function planNodeInsights(
     estimated !== undefined
   ) {
     const label = rowEstimateLabel(actual, estimated);
-    if (label) {
+    if (isNonEmptyString(label)) {
       insights.push({
         label,
         detail: `${formatCount(actual)} actual / ${formatCount(estimated)} estimated per loop. Check statistics and predicates.`,

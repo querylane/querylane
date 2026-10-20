@@ -22,7 +22,7 @@ interface RouteErrorViewProps
 }
 
 function reloadWindow(): void {
-  window.location.reload();
+  globalThis.window.location.reload();
 }
 
 export function RouteErrorView({
@@ -37,7 +37,8 @@ export function RouteErrorView({
     (state) => state.showDegradedBanner
   );
   const configFilePath = useSetupStore(
-    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+    (state) =>
+      (state.onboardingState?.configFilePath ?? "") || DEFAULT_CONFIG_FILE_PATH
   );
 
   const retry = async () => {

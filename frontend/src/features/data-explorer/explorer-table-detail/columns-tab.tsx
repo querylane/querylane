@@ -31,10 +31,6 @@ import {
   TabSkeleton,
 } from "@/features/data-explorer/explorer-table-detail/shared-ui";
 import {
-  type ColumnDefaultFilter,
-  type ColumnGenerationFilter,
-  type ColumnKeyFilter,
-  type ColumnNullabilityFilter,
   columnDefaultKind,
   columnGenerationKinds,
   columnKeyKinds,
@@ -53,6 +49,16 @@ import type { Column as TableColumn } from "@/protogen/querylane/console/v1alpha
 
 const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
   "Not available from the current column metadata API";
+
+function selectedFacetValues<Value extends string>(
+  options: readonly { value: Value }[],
+  selected: readonly string[]
+): Value[] {
+  const selectedValues = new Set(selected);
+  return options.flatMap((option) =>
+    selectedValues.has(option.value) ? [option.value] : []
+  );
+}
 
 function columnSearchText(row: ColumnRow) {
   const typeMeta = describePostgresType(row.column);
@@ -425,10 +431,19 @@ function ColumnsTab({
     indexesQuery.data.indexes
   );
   const filteredRows = filterColumnDetailRows(rows, {
-    defaultKinds: defaultKinds as ColumnDefaultFilter[],
-    generationKinds: generationKinds as ColumnGenerationFilter[],
-    keyKinds: keyKinds as ColumnKeyFilter[],
-    nullability: nullability as ColumnNullabilityFilter[],
+    defaultKinds: selectedFacetValues(
+      COLUMN_DEFAULT_FILTER_OPTIONS,
+      defaultKinds
+    ),
+    generationKinds: selectedFacetValues(
+      COLUMN_GENERATION_FILTER_OPTIONS,
+      generationKinds
+    ),
+    keyKinds: selectedFacetValues(COLUMN_KEY_FILTER_OPTIONS, keyKinds),
+    nullability: selectedFacetValues(
+      COLUMN_NULLABILITY_FILTER_OPTIONS,
+      nullability
+    ),
     typeCategories,
   });
   return (

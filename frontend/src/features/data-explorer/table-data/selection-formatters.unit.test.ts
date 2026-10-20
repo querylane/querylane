@@ -11,7 +11,6 @@ import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
   buildExport,
   createChunkedExportBuilder,
-  type ExportResult,
   type SelectedRow,
 } from "./selection-formatters";
 
@@ -275,7 +274,7 @@ describe("buildExport edge cases", () => {
   });
 
   test("unknown export formats fall back to CSV", () => {
-    const result: ExportResult = Reflect.apply(buildExport, undefined, [
+    const result: unknown = Reflect.apply(buildExport, undefined, [
       {
         exportFormat: "xml",
         rows: [row({ body: stringCell("hello"), id: stringCell("1") })],
@@ -284,11 +283,10 @@ describe("buildExport edge cases", () => {
       },
     ]);
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(result.payload.mimeType).toBe("text/csv;charset=utf-8");
+    expect(result).toMatchObject({
+      ok: true,
+      payload: { mimeType: "text/csv;charset=utf-8" },
+    });
   });
 });
 
@@ -335,15 +333,16 @@ describe("createChunkedExportBuilder", () => {
     ]);
   });
 
-  test("emits parseable JSON chunks", () => {
+  test("emits parseable JSON chunks", async () => {
     const builder = createChunkedExportBuilder("json", columns, RESOURCE);
 
     builder.addRows([row({ body: stringCell("hello"), id: stringCell("1") })]);
 
     const result = builder.finish();
 
-    expect(result.ok && JSON.parse(result.payload.contents.join(""))).toEqual([
-      { body: "hello", id: "1" },
-    ]);
+    expect(
+      result.ok &&
+        JSON.parse(await new Blob([...result.payload.contents]).text())
+    ).toEqual([{ body: "hello", id: "1" }]);
   });
 });

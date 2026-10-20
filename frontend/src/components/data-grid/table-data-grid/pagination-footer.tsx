@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface PaginationFooterProps {
   className?: string | undefined;
@@ -46,7 +47,7 @@ export function PaginationFooter({
         <span className="text-(length:--text-label-sm)">{pageSizeLabel}</span>
         <Select
           onValueChange={(value) => {
-            if (!value) {
+            if (!isNonEmptyString(value)) {
               return;
             }
             onPageSizeChange(Number.parseInt(value, 10));

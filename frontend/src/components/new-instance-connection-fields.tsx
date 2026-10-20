@@ -18,6 +18,7 @@ import {
   formatUnsupportedPostgresConnectionParameters,
   parsePostgresConnectionString,
 } from "@/lib/postgres-connection-string";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type {
   CreateInstanceFieldName,
   CreateInstanceFormErrors,
@@ -28,7 +29,7 @@ function getCreateInstanceFieldErrorDescription(
   field: CreateInstanceFieldName,
   id: string
 ) {
-  return formErrors[field] ? `${id}-error` : undefined;
+  return isNonEmptyString(formErrors[field]) ? `${id}-error` : undefined;
 }
 
 function ConnectionStringFeedback({
@@ -40,7 +41,7 @@ function ConnectionStringFeedback({
   errorId: string;
   warning: string | null;
 }) {
-  if (!(error || warning)) {
+  if (!((error ?? "") || isNonEmptyString(warning))) {
     return (
       <p className="text-muted-foreground text-xs">
         You’ll still pick a display name separately.
@@ -49,12 +50,12 @@ function ConnectionStringFeedback({
   }
   return (
     <>
-      {error ? (
+      {isNonEmptyString(error) ? (
         <p className="text-destructive text-sm" id={errorId} role="alert">
           {error}
         </p>
       ) : null}
-      {warning ? (
+      {isNonEmptyString(warning) ? (
         <p
           className="text-warning-700 dark:text-warning-300 text-sm"
           role="status"
@@ -92,10 +93,11 @@ function CreateInstanceTextField({
       field,
       id
     ),
-    "aria-invalid": error ? true : undefined,
+    "aria-invalid": isNonEmptyString(error) ? true : undefined,
     id,
-    onChange: (event: ChangeEvent<HTMLInputElement>) =>
-      updateField(field, event.target.value),
+    onChange: (event: ChangeEvent<HTMLInputElement>) => {
+      updateField(field, event.target.value);
+    },
     placeholder,
     value: formState[field],
   };
@@ -109,7 +111,7 @@ function CreateInstanceTextField({
       ) : (
         <Input {...sharedProps} type={type} />
       )}
-      {error ? (
+      {isNonEmptyString(error) ? (
         <p className="text-destructive text-sm" id={`${id}-error`}>
           {error}
         </p>
@@ -186,9 +188,13 @@ function CreateInstanceConnectionFields({
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
             aria-describedby={
-              connectionStringError ? connectionStringErrorId : undefined
+              isNonEmptyString(connectionStringError)
+                ? connectionStringErrorId
+                : undefined
             }
-            aria-invalid={connectionStringError ? true : undefined}
+            aria-invalid={
+              isNonEmptyString(connectionStringError) ? true : undefined
+            }
             id={connectionStringId}
             onChange={(event) => {
               setConnectionStringValue(event.target.value);
@@ -315,7 +321,7 @@ function CreateInstanceSslModeField({
             "sslMode",
             sslModeId
           )}
-          aria-invalid={formErrors.sslMode ? true : undefined}
+          aria-invalid={isNonEmptyString(formErrors.sslMode) ? true : undefined}
           className="w-full"
           id={sslModeId}
         >
@@ -325,7 +331,7 @@ function CreateInstanceSslModeField({
           <SslModeSelectItems />
         </SelectContent>
       </Select>
-      {formErrors.sslMode ? (
+      {isNonEmptyString(formErrors.sslMode) ? (
         <p className="text-destructive text-sm" id={`${sslModeId}-error`}>
           {formErrors.sslMode}
         </p>
@@ -363,7 +369,9 @@ function CreateInstanceSslNegotiationField({
             "sslNegotiation",
             sslNegotiationId
           )}
-          aria-invalid={formErrors.sslNegotiation ? true : undefined}
+          aria-invalid={
+            isNonEmptyString(formErrors.sslNegotiation) ? true : undefined
+          }
           className="w-full"
           id={sslNegotiationId}
         >
@@ -373,7 +381,7 @@ function CreateInstanceSslNegotiationField({
           <SslNegotiationSelectItems />
         </SelectContent>
       </Select>
-      {formErrors.sslNegotiation ? (
+      {isNonEmptyString(formErrors.sslNegotiation) ? (
         <p
           className="text-destructive text-sm"
           id={`${sslNegotiationId}-error`}

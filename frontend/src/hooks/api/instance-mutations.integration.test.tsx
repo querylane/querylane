@@ -35,28 +35,26 @@ const OTHER_INSTANCE_NAME = "instances/staging";
 const activeQueryClients: ReturnType<typeof createTestQueryClient>[] = [];
 
 function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => {
-    resolve = resolvePromise;
-  });
-  return { promise, resolve };
+  return Promise.withResolvers<T>();
 }
 
 function createWrapper(transport: Transport) {
   const queryClient = createTestQueryClient();
   activeQueryClients.push(queryClient);
 
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <TransportProvider transport={transport}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </TransportProvider>
+    );
+  }
+
   return {
     queryClient,
-    wrapper({ children }: { children: ReactNode }) {
-      return (
-        <TransportProvider transport={transport}>
-          <QueryClientProvider client={queryClient}>
-            {children}
-          </QueryClientProvider>
-        </TransportProvider>
-      );
-    },
+    wrapper: Wrapper,
   };
 }
 

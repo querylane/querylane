@@ -24,8 +24,8 @@ import {
 
 // Pixels for every wizard phase live in e2e/visual/onboarding.spec.ts.
 
-const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
-const INVALID_CONNECTION_STRING_RE = /Invalid connection string/;
+const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/u;
+const INVALID_CONNECTION_STRING_RE = /Invalid connection string/u;
 const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 
 rs.mock("@/hooks/api/instance", () => ({

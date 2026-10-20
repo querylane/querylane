@@ -18,7 +18,7 @@ function toTopObjects(
   }
   return catalog.objects
     .filter((object) => !object.isSystem)
-    .sort((left, right) => Number(right.sizeBytes - left.sizeBytes))
+    .toSorted((left, right) => Number(right.sizeBytes - left.sizeBytes))
     .slice(0, TOP_OBJECT_ROWS);
 }
 

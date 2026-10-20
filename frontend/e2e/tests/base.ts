@@ -7,7 +7,7 @@
  * falls through is treated as an unmocked backend dependency and fails the test.
  */
 
-import AxeBuilder from "@axe-core/playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import {
   test as base,
   type Page,
@@ -35,8 +35,8 @@ function isApiRequest(url: string) {
 }
 
 const test = base.extend<Fixtures>({
-  makeAxeBuilder: async ({ page }, use) => {
-    await use(() =>
+  makeAxeBuilder: async ({ page }, provideFixture) => {
+    await provideFixture(() =>
       new AxeBuilder({ page }).withTags([
         "wcag2a",
         "wcag2aa",
@@ -46,7 +46,7 @@ const test = base.extend<Fixtures>({
     );
   },
   unmockedGuard: [
-    async ({ page }, use) => {
+    async ({ page }, provideFixture) => {
       const unmockedCalls: string[] = [];
 
       await page.route("**/*", async (route) => {
@@ -73,7 +73,7 @@ const test = base.extend<Fixtures>({
         await route.continue();
       });
 
-      await use(undefined);
+      await provideFixture(undefined);
 
       if (unmockedCalls.length > 0) {
         throw new Error(

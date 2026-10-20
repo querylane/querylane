@@ -1,4 +1,5 @@
 "use client";
+
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
@@ -49,6 +50,7 @@ import {
   passwordExpiryStatus,
   predefinedRoleInfo,
 } from "@/lib/role-display";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 function roleSectionSearch(
@@ -73,7 +75,7 @@ function hasReadWriteBuiltin(role: Role): boolean {
 }
 
 function connectionLimitSubText(role: Role): string | undefined {
-  if (!role.attributes?.canLogin) {
+  if (!(role.attributes?.canLogin === true)) {
     return undefined;
   }
   return connLimitDisplay(role.attributes.connectionLimit);
@@ -96,7 +98,7 @@ function resolveGrantsView({
   if (grantsReach) {
     return { kind: "reach", reach: grantsReach };
   }
-  if (grantsSchema) {
+  if (isNonEmptyString(grantsSchema)) {
     return { kind: "schema", schema: grantsSchema, type: grantsType };
   }
   return { kind: "overview" };
@@ -251,9 +253,9 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
       // The grants drill-in is only meaningful on the grants tab; drop it
       // when leaving so a later visit lands on the grants overview.
       search: (previous) => roleSectionSearch(previous, next),
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "role-detail.section" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "role-detail.section" });
+    });
   };
   const onNavigateGrants = (next: GrantsView) => {
     navigate({
@@ -267,9 +269,9 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
         grantsType: next.kind === "schema" ? next.type : undefined,
         tab: "grants",
       }),
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "role-detail.grants" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "role-detail.grants" });
+    });
   };
   // Switching databases from inside the Grants tab: a drilled-in schema/reach
   // may not exist in the new database, so reset to the grants overview.
@@ -283,9 +285,9 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
         grantsSchema: undefined,
         grantsType: undefined,
       }),
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "role-detail.grants-database" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "role-detail.grants-database" });
+    });
   };
   return { onNavigateGrants, onSelectGrantsDatabase, setSection };
 }

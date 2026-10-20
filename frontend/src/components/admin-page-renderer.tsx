@@ -2,6 +2,7 @@
 
 import { lazy, Suspense } from "react";
 import type { AdminPageId, InstanceLayoutSearch } from "@/lib/admin-page";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const BackendDatabasePage = lazy(() =>
   import("@/components/console-pages/database-page").then((module) => ({
@@ -72,7 +73,7 @@ function InstanceAdminPageContent({
   instanceId: string | undefined;
   page: AdminPageId;
 }) {
-  if (!instanceId) {
+  if (!isNonEmptyString(instanceId)) {
     return null;
   }
   switch (page) {
@@ -107,6 +108,11 @@ function InstanceAdminPageContent({
           section="configuration"
         />
       );
+    case "database.explorer":
+    case "database.extensions":
+    case "database.overview":
+    case "database.sql":
+    case "database.workbench":
     default:
       return null;
   }
@@ -123,7 +129,13 @@ function DatabaseAdminPageContent({
   page: AdminPageId;
   search: InstanceLayoutSearch;
 }) {
-  if (!(instanceId && databaseId)) {
+  if (
+    !(
+      isNonEmptyString(instanceId) &&
+      typeof databaseId === "string" &&
+      databaseId.length > 0
+    )
+  ) {
     return null;
   }
 
@@ -164,6 +176,10 @@ function DatabaseAdminPageContent({
       return (
         <SqlWorkbenchPage databaseId={databaseId} instanceId={instanceId} />
       );
+    case "instance.activity":
+    case "instance.configuration":
+    case "instance.overview":
+    case "instance.roles":
     default:
       return null;
   }

@@ -11,13 +11,14 @@ import { buildConfigPreview } from "@/components/onboarding-wizard/phases/manual
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 
 const COPY_RESET_DELAY_MS = 1500;
 
 const writeClipboard = async (value: string) => {
-  if (!navigator.clipboard) {
+  if (!Boolean(navigator.clipboard)) {
     throw new Error("Clipboard unavailable");
   }
   await navigator.clipboard.writeText(value);
@@ -39,11 +40,12 @@ export function ManualYamlPhase() {
       if (copyState === "idle") {
         return;
       }
-      const timer = window.setTimeout(
-        () => setCopyState("idle"),
-        COPY_RESET_DELAY_MS
-      );
-      return () => window.clearTimeout(timer);
+      const timer = globalThis.window.setTimeout(() => {
+        setCopyState("idle");
+      }, COPY_RESET_DELAY_MS);
+      return () => {
+        globalThis.window.clearTimeout(timer);
+      };
     },
     [copyState]
   );
@@ -52,11 +54,12 @@ export function ManualYamlPhase() {
       if (pathCopyState === "idle") {
         return;
       }
-      const timer = window.setTimeout(
-        () => setPathCopyState("idle"),
-        COPY_RESET_DELAY_MS
-      );
-      return () => window.clearTimeout(timer);
+      const timer = globalThis.window.setTimeout(() => {
+        setPathCopyState("idle");
+      }, COPY_RESET_DELAY_MS);
+      return () => {
+        globalThis.window.clearTimeout(timer);
+      };
     },
     [pathCopyState]
   );
@@ -111,7 +114,7 @@ export function ManualYamlPhase() {
             <Button
               aria-label="Copy config file path"
               className="h-8 shrink-0"
-              onClick={copyPath}
+              onClick={handleAsyncAction(copyPath)}
               presentation="onboarding-copy"
               variant="ghost"
             >
@@ -141,14 +144,14 @@ export function ManualYamlPhase() {
             <div className="text-base font-medium text-white">config.yaml</div>
             <Button
               className="h-8"
-              onClick={async () => {
+              onClick={handleAsyncAction(async () => {
                 try {
                   await writeClipboard(configPreview);
                   setCopyState("copied");
                 } catch {
                   setCopyState("idle");
                 }
-              }}
+              })}
               presentation="onboarding-download"
               variant="ghost"
             >

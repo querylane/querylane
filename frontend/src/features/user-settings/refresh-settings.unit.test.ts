@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   formatRefreshIntervalLabel,
   parseRefreshIntervalInput,
@@ -7,22 +7,22 @@ import {
 } from "@/features/user-settings/refresh-settings";
 
 describe("refresh settings", () => {
-  it("keeps never as the default refresh cadence", () => {
+  test("keeps never as the default refresh cadence", () => {
     expect(refreshValueToIntervalMs("never")).toBeNull();
     expect(refreshIntervalMsToValue(null)).toBe("never");
   });
 
-  it("allows one minute as the fastest auto-refresh interval", () => {
+  test("allows one minute as the fastest auto-refresh interval", () => {
     expect(refreshValueToIntervalMs("60000")).toBe(60_000);
     expect(refreshIntervalMsToValue(60_000)).toBe("60000");
   });
 
-  it("rejects sub-minute or unknown refresh intervals", () => {
+  test("rejects sub-minute or unknown refresh intervals", () => {
     expect(refreshValueToIntervalMs("1000")).toBeNull();
     expect(refreshValueToIntervalMs("unknown")).toBeNull();
   });
 
-  it("parses natural language refresh intervals", async () => {
+  test("parses natural language refresh intervals", async () => {
     const now = new Date("2026-06-14T10:00:00.000Z");
 
     expect(await parseRefreshIntervalInput("every 5 minutes", now)).toEqual({
@@ -47,26 +47,23 @@ describe("refresh settings", () => {
     });
   });
 
-  it("rounds absolute date inputs to human interval precision", async () => {
+  test("rounds absolute date inputs to human interval precision", async () => {
     // Local noon keeps tomorrow at 9am within the 24-hour limit in any zone.
     const now = new Date(2026, 5, 15, 12, 6, 38, 978);
 
     const result = await parseRefreshIntervalInput("tomorrow at 9am", now);
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.intervalMs).not.toBeNull();
-      if (result.intervalMs === null) {
-        throw new Error("Expected absolute date input to become an interval.");
-      }
-      expect(result.intervalMs % 60_000).toBe(0);
-      expect(formatRefreshIntervalLabel(result.intervalMs)).not.toContain(
-        "millisecond"
-      );
+    if (!result.ok || result.intervalMs === null) {
+      throw new Error("Expected absolute date input to become an interval.");
     }
+    expect(result.intervalMs % 60_000).toBe(0);
+    expect(formatRefreshIntervalLabel(result.intervalMs)).not.toContain(
+      "millisecond"
+    );
   });
 
-  it("rejects stale, too fast, and too broad natural language intervals", async () => {
+  test("rejects stale, too fast, and too broad natural language intervals", async () => {
     const now = new Date("2026-06-14T10:00:00.000Z");
 
     expect(await parseRefreshIntervalInput("30 seconds", now)).toEqual({
@@ -79,7 +76,7 @@ describe("refresh settings", () => {
     });
   });
 
-  it("formats custom intervals", () => {
+  test("formats custom intervals", () => {
     expect(formatRefreshIntervalLabel(90_000)).toBe(
       "Every 1 minute 30 seconds"
     );

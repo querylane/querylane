@@ -11,6 +11,7 @@ import {
   sampleDatabase,
   sampleInstance,
 } from "./helpers";
+import { readRpcRequestBody } from "./read-rpc-request-body";
 
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
@@ -158,8 +159,8 @@ function readRowsResponse({
   pageToken?: unknown;
   rowCount?: string;
 } = {}) {
-  const rowId = pageToken ? "2" : "1";
-  const rowEmail = pageToken ? "grace@example.com" : email;
+  const rowId = Boolean(pageToken) ? "2" : "1";
+  const rowEmail = Boolean(pageToken) ? "grace@example.com" : email;
 
   return {
     nextPageToken,
@@ -189,8 +190,8 @@ function readRowsResponse({
 }
 
 async function fulfillTableList(route: Route) {
-  const body = route.request().postDataJSON();
-  const parent = String(body.parent ?? "");
+  const body = readRpcRequestBody(route.request().postDataJSON());
+  const parent = body.parent ?? "";
   await fulfillJson(route, {
     nextPageToken: "",
     tables: parent.includes("/schemas/billing") ? billingTables : publicTables,
@@ -199,14 +200,14 @@ async function fulfillTableList(route: Route) {
 
 async function mockSelectedSchema(page: Page) {
   await page.route("**/GetSchema", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     const schema = schemaRows.find((row) => row.name === name) ?? schemaRows[0];
     await fulfillJson(route, { schema });
   });
   await page.route("**.GetSchema", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     const schema = schemaRows.find((row) => row.name === name) ?? schemaRows[0];
     await fulfillJson(route, { schema });
   });
@@ -214,8 +215,8 @@ async function mockSelectedSchema(page: Page) {
 
 async function mockSelectedTable(page: Page) {
   await page.route("**/GetTable", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     const table = [...publicTables, ...billingTables].find(
       (row) => row.name === name
     );
@@ -226,8 +227,8 @@ async function mockSelectedTable(page: Page) {
     );
   });
   await page.route("**.GetTable", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     const table = [...publicTables, ...billingTables].find(
       (row) => row.name === name
     );
@@ -241,8 +242,8 @@ async function mockSelectedTable(page: Page) {
 
 async function mockSelectedView(page: Page) {
   await page.route("**/GetView", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     await fulfillJson(route, {
       view: {
         comment: "Customers with an active subscription",
@@ -254,8 +255,8 @@ async function mockSelectedView(page: Page) {
     });
   });
   await page.route("**.GetView", async (route) => {
-    const body = route.request().postDataJSON();
-    const name = String(body.name ?? "");
+    const body = readRpcRequestBody(route.request().postDataJSON());
+    const name = body.name ?? "";
     await fulfillJson(route, {
       view: {
         comment: "Customers with an active subscription",
@@ -326,7 +327,7 @@ async function mockReadRowsWithObserver(
   onBody: (body: Record<string, unknown>) => void
 ) {
   await page.route("**/ReadRows", async (route) => {
-    const body = route.request().postDataJSON();
+    const body = readRpcRequestBody(route.request().postDataJSON());
     onBody(body);
     await fulfillJson(
       route,
@@ -334,7 +335,7 @@ async function mockReadRowsWithObserver(
     );
   });
   await page.route("**.ReadRows", async (route) => {
-    const body = route.request().postDataJSON();
+    const body = readRpcRequestBody(route.request().postDataJSON());
     onBody(body);
     await fulfillJson(
       route,
@@ -348,23 +349,23 @@ async function mockPaginatedReadRows(
   onBody: (body: Record<string, unknown>) => void
 ) {
   await page.route("**/ReadRows", async (route) => {
-    const body = route.request().postDataJSON();
+    const body = readRpcRequestBody(route.request().postDataJSON());
     onBody(body);
     await fulfillJson(
       route,
       readRowsResponse({
-        nextPageToken: body.pageToken ? "" : "page-2",
+        nextPageToken: Boolean(body.pageToken) ? "" : "page-2",
         pageToken: body.pageToken,
       })
     );
   });
   await page.route("**.ReadRows", async (route) => {
-    const body = route.request().postDataJSON();
+    const body = readRpcRequestBody(route.request().postDataJSON());
     onBody(body);
     await fulfillJson(
       route,
       readRowsResponse({
-        nextPageToken: body.pageToken ? "" : "page-2",
+        nextPageToken: Boolean(body.pageToken) ? "" : "page-2",
         pageToken: body.pageToken,
       })
     );

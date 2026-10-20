@@ -45,6 +45,7 @@ import {
   STATEMENT_TIMEOUT_SECONDS,
 } from "@/features/sql-workbench/sql-row-limit";
 import { formatCount } from "@/features/sql-workbench/sql-workbench-format";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function ShortcutHint({ keys }: { keys: string[] }) {
   return (
@@ -91,7 +92,7 @@ function IconAction({
       />
       <TooltipContent>
         {label}
-        {shortcut ? (
+        {isNonEmptyString(shortcut) ? (
           <span className="ml-2 font-mono opacity-70">{shortcut}</span>
         ) : null}
       </TooltipContent>
@@ -165,12 +166,20 @@ function RunControl({
             <DropdownMenuShortcut>⇧⌘↵</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onExplain(false)}>
+          <DropdownMenuItem
+            onClick={() => {
+              onExplain(false);
+            }}
+          >
             <Waypoints aria-hidden="true" />
             Explain
             <DropdownMenuShortcut>estimates</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onExplain(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              onExplain(true);
+            }}
+          >
             <Waypoints aria-hidden="true" />
             Explain analyze
             <DropdownMenuShortcut>runs it</DropdownMenuShortcut>

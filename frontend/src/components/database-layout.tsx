@@ -98,7 +98,8 @@ export function DatabaseLayout({
 }) {
   const showDegradedBanner = useSetupStore((state) => state.showDegradedBanner);
   const configFilePath = useSetupStore(
-    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+    (state) =>
+      (state.onboardingState?.configFilePath ?? "") || DEFAULT_CONFIG_FILE_PATH
   );
 
   // Data Explorer renders its own full-bleed layout with an internal sidebar.

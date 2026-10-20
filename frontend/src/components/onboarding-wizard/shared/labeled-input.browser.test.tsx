@@ -9,7 +9,7 @@ import { OnboardingInvalidFieldsScenario } from "@/visual-harness/onboarding-sce
 function validationBorderColor() {
   const swatch = document.querySelector('[data-testid="validation-color"]');
   if (!(swatch instanceof HTMLElement)) {
-    throw new Error("Expected the validation color swatch.");
+    throw new TypeError("Expected the validation color swatch.");
   }
   return getComputedStyle(swatch).borderColor;
 }

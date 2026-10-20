@@ -10,6 +10,7 @@ import type {
   PostgresInstance,
 } from "@/lib/db-resource-mappers";
 import { handleNavigationResult } from "@/lib/navigation-errors";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type ScopeLevel = "none" | "instance" | "database";
 
@@ -19,10 +20,10 @@ interface RouteSelectionIds {
 }
 
 function resolveScopeLevel(ids: RouteSelectionIds): ScopeLevel {
-  if (ids.databaseId) {
+  if (isNonEmptyString(ids.databaseId)) {
     return "database";
   }
-  if (ids.instanceId) {
+  if (isNonEmptyString(ids.instanceId)) {
     return "instance";
   }
   return "none";
@@ -111,12 +112,13 @@ function useNavigationCallbacks({
     database: PostgresDatabase,
     options?: { overridePage?: AdminPageId }
   ) => {
-    if (!instanceId) {
+    if (!isNonEmptyString(instanceId)) {
       return;
     }
 
     navigateToSelection({
-      clearPageSearch: Boolean(effDatabaseId && database.id !== effDatabaseId),
+      clearPageSearch:
+        isNonEmptyString(effDatabaseId) && database.id !== effDatabaseId,
       ids: {
         databaseId: database.id,
         instanceId,

@@ -1,4 +1,5 @@
 import type { Rspack, SplitChunksConfig } from "@rsbuild/core";
+import { isNonEmptyString } from "./src/lib/value-guards";
 
 const KIB = 1024;
 const ENFORCED_SPLIT_SIZE_KIB = 80;
@@ -13,14 +14,14 @@ const managedChunkCacheGroups = {
     name: "database-visualization",
     priority: 30,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@xyflow|d3-[^/\\]+)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@xyflow|d3-[^/\\]+)[/\\]/u,
   },
   dataGrid: {
     chunks: "async",
     name: "data-grid",
     priority: 32,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\]react-data-grid[/\\]/,
+    test: /[/\\]node_modules[/\\]react-data-grid[/\\]/u,
   },
   formValidation: {
     chunks: "async",
@@ -29,7 +30,7 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     // React Hook Form stays in its onboarding-only chunk; grouping it here
     // would make the instance configuration form download a library it omits.
-    test: /[/\\]node_modules[/\\]@bufbuild[/\\](?:protovalidate|cel|cel-spec)[/\\]/,
+    test: /[/\\]node_modules[/\\]@bufbuild[/\\](?:protovalidate|cel|cel-spec)[/\\]/u,
   },
   protobufRpc: {
     chunks: "async",
@@ -37,7 +38,7 @@ const managedChunkCacheGroups = {
     priority: 20,
     reuseExistingChunk: true,
     // Keep validation engines out of the runtime used by ordinary RPC pages.
-    test: /[/\\]node_modules[/\\](?:@bufbuild[/\\]protobuf|@connectrpc[/\\][^/\\]+)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@bufbuild[/\\]protobuf|@connectrpc[/\\][^/\\]+)[/\\]/u,
   },
   sharedAsyncStyles: {
     chunks: "async",
@@ -55,14 +56,14 @@ const managedChunkCacheGroups = {
     name: "shared-ui",
     priority: 28,
     reuseExistingChunk: true,
-    test: /[/\\]src[/\\]components[/\\](?:querylane-ui|ui)[/\\]/,
+    test: /[/\\]src[/\\]components[/\\](?:querylane-ui|ui)[/\\]/u,
   },
   sqlEditor: {
     chunks: "async",
     name: "sql-editor",
     priority: 31,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/u,
   },
   // The PostgreSQL grammar and the Lezer runtime load alongside the editor
   // core; keeping them apart holds each chunk under the async script cap.
@@ -71,34 +72,32 @@ const managedChunkCacheGroups = {
     name: "sql-grammar",
     priority: 32,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@codemirror[/\\]lang-sql|@lezer)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@codemirror[/\\]lang-sql|@lezer)[/\\]/u,
   },
   sqlFormatter: {
     chunks: "async",
     name: "sql-formatter",
     priority: 31,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:sql-formatter|nearley|moo|discontinuous-range|randexp|ret|railroad-diagrams)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:sql-formatter|nearley|moo|discontinuous-range|randexp|ret|railroad-diagrams)[/\\]/u,
   },
   sqlHighlighter: {
     chunks: "async",
     name: "sql-highlighter",
     priority: 30,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@shikijs|shiki|oniguruma-parser|oniguruma-to-es)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@shikijs|shiki|oniguruma-parser|oniguruma-to-es)[/\\]/u,
   },
   uiVendor: {
     chunks: "async",
     name: "ui-vendor",
     priority: 10,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@base-ui|lucide-react)[/\\]/,
+    test: /[/\\]node_modules[/\\](?:@base-ui|lucide-react)[/\\]/u,
   },
 } satisfies NonNullable<SplitChunksConfig["cacheGroups"]>;
 
-const managedChunkGroupNames = Object.keys(managedChunkCacheGroups) as Array<
-  keyof typeof managedChunkCacheGroups
->;
+const managedChunkGroupNames = Object.keys(managedChunkCacheGroups);
 
 const managedSplitChunksConfig = {
   cacheGroups: managedChunkCacheGroups,
@@ -131,7 +130,7 @@ interface PreconnectOriginInput {
 
 function httpOrigin(rawValue: string | undefined): string | null {
   const trimmedValue = rawValue?.trim();
-  if (!trimmedValue) {
+  if (!isNonEmptyString(trimmedValue)) {
     return null;
   }
 
@@ -158,7 +157,7 @@ function createBuildCacheDigest({
             ([key, value]) =>
               key.startsWith("PUBLIC_") && typeof value === "string"
           )
-          .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+          .toSorted(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
       )
     ),
     env["NODE_ENV"] ?? "",
@@ -178,7 +177,7 @@ function createPreconnectOrigins({
     (origin): origin is string => typeof origin === "string"
   );
 
-  return Array.from(new Set(origins));
+  return [...new Set(origins)];
 }
 
 function getManagedChunkGroupNames() {

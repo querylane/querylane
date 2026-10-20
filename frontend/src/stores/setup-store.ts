@@ -203,7 +203,9 @@ function createSetSetupRequiredAction(
 
     get()
       .refreshOnboardingState()
-      .catch((error) => captureException(error));
+      .catch((error: unknown) => {
+        captureException(error);
+      });
   };
 }
 
@@ -235,7 +237,9 @@ function createSetupStore(
 }
 
 const setupStore = createSetupStore();
-registerSetupRequiredHandler(() => setupStore.getState().setSetupRequired());
+registerSetupRequiredHandler(() => {
+  setupStore.getState().setSetupRequired();
+});
 
 export type { SetupStatus, SetupStoreDependencies };
 export { createSetupStore, setupStore as useSetupStore };

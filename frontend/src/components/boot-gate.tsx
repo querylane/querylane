@@ -4,7 +4,6 @@ import { Code } from "@connectrpc/connect";
 import { useLocation } from "@tanstack/react-router";
 import type React from "react";
 import { useEffect, useRef } from "react";
-
 import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
@@ -18,6 +17,7 @@ import {
   normalizeAppUiError,
 } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
 import { useSetupStore } from "@/stores/setup-store";
 
@@ -70,8 +70,8 @@ function FullscreenMessage({
       className="flex min-h-dvh items-center justify-center p-4"
     >
       <div className="max-w-md space-y-4 text-center">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        {description ? (
+        <h1 className="font-semibold text-2xl">{title}</h1>
+        {isNonEmptyString(description) ? (
           <p className="text-muted-foreground text-sm">{description}</p>
         ) : null}
         {action}
@@ -92,7 +92,8 @@ export function BootGate({ children }: { children: React.ReactNode }) {
   const bootError = useSetupStore((state) => state.bootError);
   const bootstrap = useSetupStore((state) => state.bootstrap);
   const configFilePath = useSetupStore(
-    (state) => state.onboardingState?.configFilePath || DEFAULT_CONFIG_FILE_PATH
+    (state) =>
+      (state.onboardingState?.configFilePath ?? "") || DEFAULT_CONFIG_FILE_PATH
   );
   const status = useSetupStore((state) => state.status);
   const blockingError = useBlockingErrorStore((state) => state.blockingError);
@@ -117,13 +118,15 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     onRetry: bootstrap,
   });
 
-  // allow-useEffect: initialize app on mount
+  // initialize app on mount
   useEffect(() => {
     if (bootstrappedRef.current) {
       return;
     }
     bootstrappedRef.current = true;
-    bootstrap().catch((error) => captureException(error));
+    bootstrap().catch((error: unknown) => {
+      captureException(error);
+    });
   }, [bootstrap]);
 
   if (

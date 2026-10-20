@@ -10,8 +10,8 @@ import { mockRolesScreen } from "./role-fixtures";
 
 const LONG_IDENTITY =
   "production_analytics_eu_central_failover_readonly_reconciliatio";
-const GRANTS = /^Grants/;
-const SQL_EDITOR = /^SQL editor/;
+const GRANTS = /^Grants/u;
+const SQL_EDITOR = /^SQL editor/u;
 
 for (const width of [320, 640]) {
   test(`long configuration identity and destructive confirmation at ${width}px`, async ({

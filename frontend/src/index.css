@@ -8,26 +8,28 @@
 
 /* The router owns the snapshot around its synchronous store commit. Keep the
    shell interactive; animate only page content, never search/filter updates. */
-:root:active-view-transition-type(page-navigation) {
-  view-transition-name: none;
-}
+@supports (view-transition-name: none) {
+  :root:active-view-transition-type(page-navigation) {
+    view-transition-name: none;
+  }
 
-:root:active-view-transition-type(page-navigation)::view-transition {
-  pointer-events: none;
-}
+  :root:active-view-transition-type(page-navigation)::view-transition {
+    pointer-events: none;
+  }
 
-::view-transition-group(page-content),
-::view-transition-old(page-content),
-::view-transition-new(page-content) {
-  animation-duration: 150ms;
-  animation-timing-function: ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
   ::view-transition-group(page-content),
   ::view-transition-old(page-content),
   ::view-transition-new(page-content) {
-    animation: none;
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(page-content),
+    ::view-transition-old(page-content),
+    ::view-transition-new(page-content) {
+      animation: none;
+    }
   }
 }
 
@@ -67,12 +69,12 @@
   --chart-5: oklch(0.6 0.2 25);
   /* Categorical palette for schema/storage breakdowns (database overview).
      Order is CVD-validated for adjacent segments — assign by rank, never re-sort. */
-  --viz-cat-1: #2a78d6;
-  --viz-cat-2: #008300;
-  --viz-cat-3: #e87ba4;
-  --viz-cat-4: #eda100;
-  --viz-cat-5: #1baf7a;
-  --viz-cat-6: #eb6834;
+  --viz-cat-1: rgb(42 120 214);
+  --viz-cat-2: rgb(0 131 0);
+  --viz-cat-3: rgb(232 123 164);
+  --viz-cat-4: rgb(237 161 0);
+  --viz-cat-5: rgb(27 175 122);
+  --viz-cat-6: rgb(235 104 52);
   --viz-cat-other: oklch(0.708 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
@@ -135,12 +137,12 @@
   --chart-3: oklch(0.66 0.14 162);
   --chart-4: oklch(0.66 0.14 75);
   --chart-5: oklch(0.64 0.18 25);
-  --viz-cat-1: #3987e5;
-  --viz-cat-2: #008300;
-  --viz-cat-3: #d55181;
-  --viz-cat-4: #c98500;
-  --viz-cat-5: #199e70;
-  --viz-cat-6: #d95926;
+  --viz-cat-1: rgb(57 135 229);
+  --viz-cat-2: rgb(0 131 0);
+  --viz-cat-3: rgb(213 81 129);
+  --viz-cat-4: rgb(201 133 0);
+  --viz-cat-5: rgb(25 158 112);
+  --viz-cat-6: rgb(217 89 38);
   --viz-cat-other: oklch(0.556 0 0);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -195,6 +197,8 @@
   --color-warning-200: var(--color-amber-200);
   --color-warning-800: var(--color-amber-800);
   --color-warning-600: var(--color-amber-600);
+  --color-negative-600: var(--color-red-600);
+  --color-negative-700: var(--color-red-700);
   --color-negative-500: var(--color-red-500);
   --color-info-400: var(--color-blue-400);
   --color-info-500: var(--color-blue-500);
@@ -237,17 +241,17 @@
   --tracking-eyebrow: 0.14em;
   --tracking-display: 0.18em;
   --tracking-brand: 0.24em;
-  --color-onboarding-backdrop: #03050a;
-  --color-onboarding-card: #05070c;
-  --color-onboarding-surface: #070a11;
-  --color-onboarding-preview: #080b12;
-  --color-onboarding-grid: #090b10;
-  --color-onboarding-detail: #0d1324;
-  --color-onboarding-primary-hover: #1d3d8e;
-  --color-onboarding-primary: #21479e;
-  --color-onboarding-accent: #4d72d8;
-  --color-onboarding-focus: #4b73d7;
-  --color-onboarding-ink: #11151f;
+  --color-onboarding-backdrop: rgb(3 5 10);
+  --color-onboarding-card: rgb(5 7 12);
+  --color-onboarding-surface: rgb(7 10 17);
+  --color-onboarding-preview: rgb(8 11 18);
+  --color-onboarding-grid: rgb(9 11 16);
+  --color-onboarding-detail: rgb(13 19 36);
+  --color-onboarding-primary-hover: rgb(29 61 142);
+  --color-onboarding-primary: rgb(33 71 158);
+  --color-onboarding-accent: rgb(77 114 216);
+  --color-onboarding-focus: rgb(75 115 215);
+  --color-onboarding-ink: rgb(17 21 31);
   --leading-relaxed-copy: 1.55;
   --shadow-sidebar-border: 0 0 0 1px var(--sidebar-border);
   --shadow-sidebar-accent: 0 0 0 1px var(--sidebar-accent);
@@ -302,15 +306,22 @@
 
 @layer base {
   * {
-    scrollbar-color: var(--querylane-scrollbar-thumb)
-      var(--querylane-scrollbar-track);
-    scrollbar-width: thin;
+    @supports (
+        scrollbar-color: var(--querylane-scrollbar-thumb)
+          var(--querylane-scrollbar-track)
+      ) {
+      scrollbar-color: var(--querylane-scrollbar-thumb)
+        var(--querylane-scrollbar-track);
+    }
+    @supports (scrollbar-width: thin) {
+      scrollbar-width: thin;
+    }
     @apply border-border outline-ring/50;
   }
 
   *::-webkit-scrollbar {
-    width: var(--querylane-scrollbar-size);
-    height: var(--querylane-scrollbar-size);
+    inline-size: var(--querylane-scrollbar-size);
+    block-size: var(--querylane-scrollbar-size);
   }
 
   *::-webkit-scrollbar-track {
@@ -346,7 +357,7 @@
   }
 
   [data-slot="chart"] .querylane-chart-tooltip {
-    min-width: 9rem;
+    min-inline-size: 9rem;
   }
 
   body {

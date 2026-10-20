@@ -27,7 +27,7 @@ const INSTANCE_SCOPED_SERVICE_TYPE_NAMES: ReadonlySet<string> = new Set([
   "querylane.console.v1alpha1.ViewService",
 ]);
 
-const INSTANCE_RESOURCE_NAME_PATTERN = /^instances\/[^/]+/;
+const INSTANCE_RESOURCE_NAME_PATTERN = /^instances\/[^/]+/u;
 
 function extractInstanceScopeKey(message: unknown): string | null {
   if (typeof message !== "object" || message === null) {
@@ -56,6 +56,18 @@ interface KeyedRpcSemaphore {
   acquire: (key: string, signal?: AbortSignal) => Promise<() => void>;
 }
 
+function abortError(reason: unknown): Error {
+  if (reason instanceof Error) {
+    return reason;
+  }
+  const error = new Error(
+    typeof reason === "string" ? reason : "Operation aborted",
+    { cause: reason }
+  );
+  error.name = "AbortError";
+  return error;
+}
+
 function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
   const activeCounts = new Map<string, number>();
   const queues = new Map<string, QueuedAcquire[]>();
@@ -71,7 +83,7 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
     }
 
     let waiter = queue.shift();
-    while (waiter?.settled) {
+    while (waiter?.settled === true) {
       waiter = queue.shift();
     }
     if (queue.length === 0) {
@@ -106,20 +118,24 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
   }
 
   function acquire(key: string, signal?: AbortSignal): Promise<() => void> {
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason);
+    if (signal?.aborted === true) {
+      return Promise.reject(abortError(signal.reason));
     }
 
     if ((activeCounts.get(key) ?? 0) < limit) {
       occupySlot(key);
-      return Promise.resolve(() => releaseSlot(key));
+      return Promise.resolve(() => {
+        releaseSlot(key);
+      });
     }
 
     return new Promise((resolve, reject) => {
       const waiter: QueuedAcquire = {
         onDispatch: () => {
           signal?.removeEventListener("abort", onAbort);
-          resolve(() => releaseSlot(key));
+          resolve(() => {
+            releaseSlot(key);
+          });
         },
         settled: false,
       };
@@ -128,7 +144,7 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
           return;
         }
         waiter.settled = true;
-        reject(signal?.reason);
+        reject(abortError(signal?.reason));
       };
       signal?.addEventListener("abort", onAbort, { once: true });
       enqueue(key, waiter);
@@ -146,7 +162,7 @@ function createInstanceRpcConcurrencyInterceptor(
   const semaphore = createKeyedRpcSemaphore(limit);
 
   return (next) => async (req) => {
-    if (req.stream === true) {
+    if (req.stream) {
       return await next(req);
     }
     if (!INSTANCE_SCOPED_SERVICE_TYPE_NAMES.has(req.service.typeName)) {

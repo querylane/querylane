@@ -2,17 +2,16 @@ import { deriveConstraintKeyRows } from "@/features/data-explorer/explorer-table
 import { IDENTITY_GENERATION_LABELS } from "@/features/data-explorer/explorer-table-detail/options";
 import { derivePartitionTabCount } from "@/features/data-explorer/explorer-table-partitions";
 import { parseTableQualifiedName } from "@/lib/console-resources";
-import type {
-  Column as TableColumn,
-  TableConstraint,
-  TableIndex,
-  TablePartitionMetadata,
-  TablePolicy,
-  TableTrigger,
-} from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type IdentityGeneration,
   Table_TableType,
+  type Column as TableColumn,
+  type TableConstraint,
+  type TableIndex,
+  type TablePartitionMetadata,
+  type TablePolicy,
+  type TableTrigger,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 interface DefinitionSection {
@@ -105,7 +104,10 @@ function createTableSql({
   qualifiedTableName: string;
   tableType: Table_TableType;
 }) {
-  if (partitionMetadata?.parentTable && partitionMetadata.partitionBound) {
+  if (
+    isNonEmptyString(partitionMetadata?.parentTable) &&
+    partitionMetadata.partitionBound
+  ) {
     return `CREATE TABLE ${qualifiedTableName} PARTITION OF ${formatTableResourceName(
       partitionMetadata.parentTable
     )}\n  ${partitionMetadata.partitionBound};`;
@@ -113,9 +115,8 @@ function createTableSql({
   if (columns.length === 0) {
     return `CREATE TABLE ${qualifiedTableName} (\n  -- Column metadata unavailable\n);`;
   }
-  const columnLines = columns
-    .slice()
-    .sort((left, right) => left.ordinalPosition - right.ordinalPosition)
+  const columnLines = [...columns]
+    .toSorted((left, right) => left.ordinalPosition - right.ordinalPosition)
     .map((column, index, sortedColumns) => {
       const suffix = index < sortedColumns.length - 1 ? "," : "";
       return `  ${formatColumnDefinition(column)}${suffix}`;
@@ -125,7 +126,7 @@ function createTableSql({
     tableType === Table_TableType.TEMPORARY
       ? "CREATE TEMPORARY TABLE"
       : "CREATE TABLE";
-  const partitionClause = partitionMetadata?.partitionKey
+  const partitionClause = isNonEmptyString(partitionMetadata?.partitionKey)
     ? ` PARTITION BY ${partitionMetadata.partitionKey}`
     : "";
   return `${createPrefix} ${qualifiedTableName} (\n${columnLines}\n)${partitionClause};`;
@@ -169,9 +170,9 @@ function partitionSql({
     lines.push(
       `CREATE TABLE ${formatTableResourceName(
         partition.table
-      )} PARTITION OF ${qualifiedTableName}`
+      )} PARTITION OF ${qualifiedTableName}`,
+      `  ${partition.partitionBound};`
     );
-    lines.push(`  ${partition.partitionBound};`);
   }
   return lines.join("\n");
 }

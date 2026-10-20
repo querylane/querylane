@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { uniqueColumns } from "@/features/sql-workbench/sql-result-columns";
 import { TableResultColumnSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
@@ -8,7 +8,7 @@ function column(columnName: string) {
 }
 
 describe("uniqueColumns", () => {
-  it("gives repeated names the export's keys so every cell stays addressable", () => {
+  test("gives repeated names the export's keys so every cell stays addressable", () => {
     const columns = [column("id"), column("name"), column("id"), column("id")];
     expect(uniqueColumns(columns).map((entry) => entry.columnName)).toEqual([
       "id",
@@ -18,7 +18,7 @@ describe("uniqueColumns", () => {
     ]);
   });
 
-  it("passes distinct columns through untouched", () => {
+  test("passes distinct columns through untouched", () => {
     const columns = [column("id"), column("name")];
     const unique = uniqueColumns(columns);
     expect(unique[0]).toBe(columns[0]);

@@ -1,4 +1,5 @@
 "use client";
+
 import { Link } from "@tanstack/react-router";
 import {
   Check,
@@ -28,6 +29,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 function KpiCard({
@@ -42,11 +44,11 @@ function KpiCard({
   return (
     <Card presentation="bordered" size="sm">
       <CardContent className="flex flex-col" presentation="summary">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-xs tracking-wide uppercase">
+        <div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
           {label}
         </div>
-        <div className="text-lg font-semibold tabular-nums">{value}</div>
-        {sub ? (
+        <div className="font-semibold text-lg tabular-nums">{value}</div>
+        {isNonEmptyString(sub) ? (
           <div className="text-muted-foreground text-xs">{sub}</div>
         ) : null}
       </CardContent>
@@ -70,8 +72,8 @@ function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
 function capabilityTileClass(cap: Capability): string {
   return cn(
     "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-    cap.on && cap.danger && "border-warning-500/30 bg-warning-500/5",
-    cap.on && !cap.danger && "border-border bg-muted/30",
+    cap.on && cap.danger === true && "border-warning-500/30 bg-warning-500/5",
+    cap.on && !(cap.danger === true) && "border-border bg-muted/30",
     !cap.on && "border-border/50 border-dashed"
   );
 }
@@ -80,10 +82,10 @@ function capabilityIconClass(cap: Capability): string {
   return cn(
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     cap.on &&
-      cap.danger &&
+      cap.danger === true &&
       "bg-warning-500/15 text-warning-600 dark:text-warning-400",
     cap.on &&
-      !cap.danger &&
+      !(cap.danger === true) &&
       "bg-positive-500/15 text-positive-600 dark:text-positive-400",
     !cap.on && "bg-muted text-muted-foreground/40"
   );
@@ -91,8 +93,8 @@ function capabilityIconClass(cap: Capability): string {
 
 function capabilityKeywordClass(cap: Capability): string {
   return cn(
-    "font-mono text-xs font-medium",
-    cap.on && cap.danger && "text-warning-700 dark:text-warning-400",
+    "font-medium font-mono text-xs",
+    cap.on && cap.danger === true && "text-warning-700 dark:text-warning-400",
     !cap.on && "text-muted-foreground"
   );
 }
@@ -101,7 +103,7 @@ function capabilityValueClass(cap: Capability): string {
   if (!cap.on) {
     return "text-muted-foreground/60";
   }
-  return cap.danger
+  return cap.danger === true
     ? "text-warning-700 dark:text-warning-400"
     : "text-foreground";
 }
@@ -123,7 +125,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
       <Check
         className={cn(
           "size-4 shrink-0",
-          cap.danger
+          cap.danger === true
             ? "text-warning-600 dark:text-warning-400"
             : "text-positive-600 dark:text-positive-400"
         )}
@@ -131,7 +133,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
     );
   }
   return (
-    <span className="text-muted-foreground/50 shrink-0 tracking-wide text-(length:--text-micro) uppercase">
+    <span className="text-(length:--text-micro) shrink-0 text-muted-foreground/50 uppercase tracking-wide">
       Off
     </span>
   );
@@ -205,19 +207,21 @@ function AccessItem({
         <ItemTitle className="break-all" presentation="identifier">
           {related.roleName}
         </ItemTitle>
-        {related.options.length > 0 || related.grantor ? (
-          <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+        {related.options.length > 0 || isNonEmptyString(related.grantor) ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs">
             {related.options.map((option) => (
               <Badge key={option.key} variant="secondary">
                 {option.label}
               </Badge>
             ))}
-            {related.grantor ? <span>by {related.grantor}</span> : null}
+            {isNonEmptyString(related.grantor) ? (
+              <span>by {related.grantor}</span>
+            ) : null}
           </div>
         ) : null}
       </ItemContent>
       <ItemActions>
-        <ChevronRight className="text-muted-foreground size-4" />
+        <ChevronRight className="size-4 text-muted-foreground" />
       </ItemActions>
     </Item>
   );
@@ -265,7 +269,7 @@ function RoleNotFound({ instanceId }: { instanceId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        className="text-muted-foreground hover:text-foreground inline-flex w-fit flex-row items-center gap-1 text-sm leading-none"
+        className="inline-flex w-fit flex-row items-center gap-1 text-muted-foreground text-sm leading-none hover:text-foreground"
         params={{ instanceId }}
         search={{}}
         to="/instances/$instanceId/roles"

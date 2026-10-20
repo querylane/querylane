@@ -30,7 +30,6 @@ permissions:
 jobs:
   static:
     name: Frontend Static
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -55,10 +54,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Run Biome and shadcn lint
+      - name: Run full frontend lint and policy checks
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run lint:changed
+        run: bun run lint
       - name: Run React Doctor dead-code analysis
         run: bun run doctor:dead-code
       - name: Type check
@@ -68,7 +67,6 @@ jobs:
 
   unit:
     name: Frontend Unit
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -108,7 +106,6 @@ jobs:
 
   integration:
     name: Frontend Integration
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -148,7 +145,6 @@ jobs:
 
   browser:
     name: Frontend Browser
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -202,7 +198,6 @@ jobs:
 
   visual:
     name: Frontend Visual (${{ matrix.shard }}/3)
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Each Playwright test loads a full route; one 4-vCPU runner is CPU-bound,
@@ -251,15 +246,14 @@ jobs:
         with:
           name: playwright-visual-report-${{ matrix.shard }}
           path: |
-            frontend/e2e/playwright-report
-            frontend/e2e/test-results
+            frontend/playwright-report
+            frontend/test-results
           retention-days: 3
           overwrite: true
           if-no-files-found: ignore
 
   build:
     name: Frontend Build
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 6
     permissions:
@@ -307,7 +301,7 @@ jobs:
         run: bun run build
       - name: Verify emitted bundle contracts
         run: bun run build:profile
-      - name: Run React Doctor on changed files
+      - name: Run full React Doctor analysis
         env:
           GITHUB_TOKEN: ${{ github.token }}
           QUALITY_BASE_REF: origin/${{ github.base_ref }}

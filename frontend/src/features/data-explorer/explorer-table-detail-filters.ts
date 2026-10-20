@@ -80,11 +80,11 @@ function filterColumnDetailRows(
   rows: ColumnRow[],
   filters: ColumnDetailFilters
 ): ColumnRow[] {
-  const types = new Set(filters.typeCategories ?? []);
-  const keys = new Set(filters.keyKinds ?? []);
-  const nullability = new Set(filters.nullability ?? []);
-  const defaults = new Set(filters.defaultKinds ?? []);
-  const generations = new Set(filters.generationKinds ?? []);
+  const types = new Set(filters.typeCategories);
+  const keys = new Set(filters.keyKinds);
+  const nullability = new Set(filters.nullability);
+  const defaults = new Set(filters.defaultKinds);
+  const generations = new Set(filters.generationKinds);
   return rows.filter(
     (row) =>
       matchesSelected(types, [columnTypeCategory(row)]) &&

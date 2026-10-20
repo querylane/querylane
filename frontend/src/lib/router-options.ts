@@ -17,7 +17,7 @@ export function getDefaultPreload(): false {
 export function canPreloadRouteCode(): boolean {
   const network: NetworkNavigator | undefined =
     typeof navigator === "undefined" ? undefined : navigator;
-  if (network?.onLine === false || network?.connection?.saveData) {
+  if (network?.onLine === false || network?.connection?.saveData === true) {
     return false;
   }
   switch (network?.connection?.effectiveType) {
@@ -25,6 +25,7 @@ export function canPreloadRouteCode(): boolean {
     case "2g":
     case "3g":
       return false;
+    case undefined:
     default:
       return true;
   }
@@ -40,8 +41,8 @@ export function getDefaultViewTransition(): NonNullable<
   // Router skips the types callback on older implementations. Disable those
   // entirely so they cannot bypass the per-navigation motion preference.
   if (
-    typeof window === "undefined" ||
-    !window.CSS?.supports(
+    globalThis.window === undefined ||
+    !globalThis.window.CSS?.supports(
       "selector(:active-view-transition-type(page-navigation))"
     )
   ) {
@@ -52,7 +53,7 @@ export function getDefaultViewTransition(): NonNullable<
     types: ({ fromLocation, pathChanged }) =>
       fromLocation &&
       pathChanged &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      !globalThis.window.matchMedia("(prefers-reduced-motion: reduce)").matches
         ? ["page-navigation"]
         : false,
   };

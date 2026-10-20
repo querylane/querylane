@@ -1,5 +1,6 @@
 import type { ComponentProps, CSSProperties } from "react";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   QUERYLANE_LOGO_PALETTES,
   type QuerylaneLogoPalette,
@@ -76,7 +77,7 @@ const MIDDLE_ROW_IDLE_OPACITY = 0.5;
 function QuerylaneLogoLines({ palette }: { palette: QuerylaneLogoPalette }) {
   return (
     <>
-      {palette.bg ? (
+      {isNonEmptyString(palette.bg) ? (
         <rect fill={palette.bg} height="32" rx="7" width="32" />
       ) : null}
       <rect
@@ -143,7 +144,10 @@ function QuerylaneLogo({
 }: QuerylaneLogoProps) {
   const accessibleName = ariaLabel ?? label;
   const titleContent = title ?? accessibleName;
-  const isDecorative = !(accessibleName || ariaLabelledBy);
+  const isDecorative = !(
+    (accessibleName ?? "") ||
+    isNonEmptyString(ariaLabelledBy)
+  );
 
   return (
     <svg
@@ -159,7 +163,11 @@ function QuerylaneLogo({
       width={width}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {!isDecorative && titleContent ? <title>{titleContent}</title> : null}
+      {!isDecorative &&
+      typeof titleContent === "string" &&
+      titleContent.length > 0 ? (
+        <title>{titleContent}</title>
+      ) : null}
       <QuerylaneLogoLines palette={QUERYLANE_LOGO_PALETTES[variant]} />
     </svg>
   );

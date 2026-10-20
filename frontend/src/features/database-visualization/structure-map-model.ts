@@ -2,6 +2,7 @@ import type {
   VisualizationEdge,
   VisualizationNode,
 } from "@/features/database-visualization/graph-model";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type StructureConstraintKind =
   | "check"
@@ -93,7 +94,8 @@ interface StructureMapModel {
   summary: StructureMapSummary;
 }
 
-const REFERENCED_TABLE_PATTERN = /\/schemas\/([^/]+)\/tables\/([^/]+)$/;
+const REFERENCED_TABLE_PATTERN =
+  /\/schemas\/(?<capture1>[^/]+)\/tables\/(?<capture2>[^/]+)$/u;
 
 function tableNodeId(schemaName: string, tableName: string) {
   return `table:${schemaName}.${tableName}`;
@@ -156,7 +158,7 @@ function columnBadges(column: StructureMapColumn): string[] {
   if (column.isPrimaryKey) {
     badges.push("PK");
   }
-  if (column.isUnique) {
+  if (column.isUnique === true) {
     badges.push("UNIQUE");
   }
   if (!(column.isNullable || column.isPrimaryKey)) {
@@ -185,7 +187,13 @@ function referencedTableIdentity(
     return null;
   }
   const [, schemaName, tableName] = match;
-  if (!(schemaName && tableName)) {
+  if (
+    !(
+      isNonEmptyString(schemaName) &&
+      typeof tableName === "string" &&
+      tableName.length > 0
+    )
+  ) {
     return null;
   }
   return { schemaName, tableName };

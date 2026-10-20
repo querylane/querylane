@@ -24,7 +24,9 @@ function PasswordInput({
         aria-pressed={isVisible}
         className="absolute top-1/2 right-2 size-8 -translate-y-1/2"
         disabled={disabled}
-        onClick={() => setIsVisible((current) => !current)}
+        onClick={() => {
+          setIsVisible((current) => !current);
+        }}
         onPointerDown={(event) => {
           event.preventDefault();
         }}

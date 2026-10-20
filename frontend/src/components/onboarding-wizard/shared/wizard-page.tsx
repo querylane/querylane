@@ -25,13 +25,13 @@ export function WizardPage({
     <div className={cn("flex flex-1 flex-col", className)}>
       <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">
+          <h1 className="font-semibold text-lg text-white tracking-tight md:text-xl">
             {title}
           </h1>
           {titleBadge}
         </div>
-        {description ? (
-          <div className="max-w-3xl text-sm leading-6 text-white/62">
+        {Boolean(description) ? (
+          <div className="max-w-3xl text-sm text-white/62 leading-6">
             {description}
           </div>
         ) : null}
@@ -39,7 +39,7 @@ export function WizardPage({
 
       <div className={cn("flex-1 pt-4", contentClassName)}>{children}</div>
 
-      <footer className="mt-5 border-t border-white/10 pt-3.5">{footer}</footer>
+      <footer className="mt-5 border-white/10 border-t pt-3.5">{footer}</footer>
     </div>
   );
 }

@@ -37,7 +37,9 @@ export function ChartRangePicker({
           <Button
             aria-pressed={isActive}
             key={option.key}
-            onClick={() => onRangeChange(option.hours)}
+            onClick={() => {
+              onRangeChange(option.hours);
+            }}
             size="sm"
             variant={isActive ? "secondary" : "ghost"}
           >

@@ -13,7 +13,7 @@ function useDelayedFlag(
   const [visible, setVisible] = useState(false);
   const shownAtRef = useRef<number | undefined>(undefined);
 
-  // allow-useEffect: sync visible state to an intentionally delayed flag
+  // sync visible state to an intentionally delayed flag
   useEffect(
     function syncDelayedFlagVisibility() {
       if (active) {
@@ -26,7 +26,9 @@ function useDelayedFlag(
           setVisible(true);
         }, delayMs);
 
-        return () => globalThis.clearTimeout(showTimer);
+        return () => {
+          globalThis.clearTimeout(showTimer);
+        };
       }
 
       if (!visible) {
@@ -47,7 +49,9 @@ function useDelayedFlag(
         setVisible(false);
       }, remaining);
 
-      return () => globalThis.clearTimeout(hideTimer);
+      return () => {
+        globalThis.clearTimeout(hideTimer);
+      };
     },
     [active, delayMs, minDurationMs, visible]
   );

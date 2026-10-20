@@ -1,4 +1,5 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { BuildInfo } from "@/protogen/querylane/console/v1alpha1/console_pb";
 
 const UNKNOWN_METADATA_VALUE = "unknown";
@@ -9,7 +10,7 @@ const defaultBuiltAtFormatter = new Intl.DateTimeFormat(undefined, {
 
 function normalizeMetadataValue(value: string | undefined): string {
   const trimmed = value?.trim();
-  if (!trimmed) {
+  if (!isNonEmptyString(trimmed)) {
     return UNKNOWN_METADATA_VALUE;
   }
 

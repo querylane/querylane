@@ -11,6 +11,7 @@ import {
   isFilterOperator,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -86,10 +87,12 @@ function useDebouncedRuleValue(
       if (draft === committedValue) {
         return;
       }
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = globalThis.window.setTimeout(() => {
         commitDraft(draft);
       }, FILTER_VALUE_DEBOUNCE_MS);
-      return () => window.clearTimeout(timeoutId);
+      return () => {
+        globalThis.window.clearTimeout(timeoutId);
+      };
     },
     [committedValue, draft]
   );
@@ -107,7 +110,7 @@ function BooleanValueSelect({
   return (
     <Select
       onValueChange={(next) => {
-        if (next) {
+        if (isNonEmptyString(next)) {
           onChange(next);
         }
       }}
@@ -115,7 +118,7 @@ function BooleanValueSelect({
     >
       <SelectTrigger
         aria-label="Filter value"
-        className="col-start-1 w-full @lg/filter-popover:col-start-auto"
+        className="@lg/filter-popover:col-start-auto col-start-1 w-full"
         size="sm"
       >
         <SelectValue placeholder="Select value" />
@@ -156,20 +159,24 @@ function FilterRow({
   const value2ResetKey = `${rule.column}\u0000${rule.operator}\u0000value2`;
   const [draftValue, setDraftValue] = useDebouncedRuleValue(
     rule.value,
-    (next) => onChange({ value: next }),
+    (next) => {
+      onChange({ value: next });
+    },
     valueResetKey
   );
   const [draftValue2, setDraftValue2] = useDebouncedRuleValue(
     rule.value2 ?? "",
-    (next) => onChange({ value2: next }),
+    (next) => {
+      onChange({ value2: next });
+    },
     value2ResetKey
   );
-  const invalidInputProps = invalidMessage
+  const invalidInputProps = isNonEmptyString(invalidMessage)
     ? ({ "aria-describedby": messageId, "aria-invalid": true } as const)
     : {};
 
   function changeColumn(nextColumn: string | null) {
-    if (!nextColumn) {
+    if (!isNonEmptyString(nextColumn)) {
       return;
     }
     const nextMeta = columns.find(
@@ -183,7 +190,7 @@ function FilterRow({
   }
 
   function changeOperator(nextOperator: string | null) {
-    if (!(nextOperator && isFilterOperator(nextOperator))) {
+    if (!(isNonEmptyString(nextOperator) && isFilterOperator(nextOperator))) {
       return;
     }
     onChange({
@@ -221,7 +228,7 @@ function FilterRow({
   function renderValueEditor() {
     if (operatorMeta.valueCount === 0) {
       return (
-        <div className="text-muted-foreground col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-xs @lg/filter-popover:col-start-auto">
+        <div className="@lg/filter-popover:col-start-auto col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
           No value needed
         </div>
       );
@@ -232,22 +239,28 @@ function FilterRow({
     ) {
       return (
         <BooleanValueSelect
-          onChange={(next) => onChange({ value: next })}
+          onChange={(next) => {
+            onChange({ value: next });
+          }}
           value={rule.value}
         />
       );
     }
     return (
       <div
-        className="col-start-1 grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2 @lg/filter-popover:col-start-auto"
+        className="@lg/filter-popover:col-start-auto col-start-1 grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
         data-range={operatorMeta.valueCount === 2}
       >
         <Input
           aria-label="Filter value"
           className="h-8 min-w-0"
           onBlur={commitValueDraft}
-          onChange={(event) => setDraftValue(event.target.value)}
-          onKeyDown={(event) => applyOnEnter(event, commitValueDraft)}
+          onChange={(event) => {
+            setDraftValue(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            applyOnEnter(event, commitValueDraft);
+          }}
           placeholder={getValuePlaceholder(rule, column)}
           presentation="identifier"
           value={draftValue}
@@ -258,8 +271,12 @@ function FilterRow({
             aria-label="Filter end value"
             className="h-8 min-w-0"
             onBlur={commitValue2Draft}
-            onChange={(event) => setDraftValue2(event.target.value)}
-            onKeyDown={(event) => applyOnEnter(event, commitValue2Draft)}
+            onChange={(event) => {
+              setDraftValue2(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              applyOnEnter(event, commitValue2Draft);
+            }}
             placeholder="And"
             presentation="identifier"
             value={draftValue2}
@@ -272,11 +289,11 @@ function FilterRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5 @lg/filter-popover:grid-cols-[minmax(6rem,1fr)_14rem_minmax(7.5rem,1fr)_2rem]">
+      <div className="grid @lg/filter-popover:grid-cols-[minmax(6rem,1fr)_14rem_minmax(7.5rem,1fr)_2rem] grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5">
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
-            className="col-span-2 w-full @lg/filter-popover:col-span-1"
+            className="@lg/filter-popover:col-span-1 col-span-2 w-full"
             presentation="identifier"
             size="sm"
           >
@@ -296,7 +313,7 @@ function FilterRow({
                   >
                     {candidate.columnName}
                   </span>
-                  <span className="text-muted-foreground max-w-[45%] shrink-0 truncate font-mono text-xs uppercase">
+                  <span className="max-w-[45%] shrink-0 truncate font-mono text-muted-foreground text-xs uppercase">
                     {candidate.rawType}
                   </span>
                 </span>
@@ -305,15 +322,17 @@ function FilterRow({
           </SelectContent>
         </Select>
 
-        <div className="col-span-2 flex min-w-0 items-center gap-1 @lg/filter-popover:col-span-1">
+        <div className="@lg/filter-popover:col-span-1 col-span-2 flex min-w-0 items-center gap-1">
           <Button
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}
             className="h-8"
-            onClick={() => onChange({ negated: !rule.negated })}
+            onClick={() => {
+              onChange({ negated: !(rule.negated === true) });
+            }}
             presentation="compact"
             type="button"
-            variant={rule.negated ? "secondary" : "outline"}
+            variant={rule.negated === true ? "secondary" : "outline"}
           >
             NOT
           </Button>
@@ -355,8 +374,8 @@ function FilterRow({
           <X />
         </Button>
       </div>
-      {invalidMessage ? (
-        <p className="text-destructive pl-1 text-xs" id={messageId}>
+      {isNonEmptyString(invalidMessage) ? (
+        <p className="pl-1 text-destructive text-xs" id={messageId}>
           {invalidMessage}
         </p>
       ) : null}

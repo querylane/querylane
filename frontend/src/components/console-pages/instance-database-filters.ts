@@ -59,8 +59,8 @@ function uniqueSortedFilterOptions(
   values: string[],
   getLabel: (value: string) => string = (value) => value
 ): FacetedFilterOption[] {
-  return Array.from(new Set(values))
-    .sort((left, right) => getLabel(left).localeCompare(getLabel(right)))
+  return [...new Set(values)]
+    .toSorted((left, right) => getLabel(left).localeCompare(getLabel(right)))
     .map((value) => ({ label: getLabel(value), value }));
 }
 

@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface ColumnsPopoverProps {
@@ -56,9 +57,9 @@ function ColumnsPopover({
     if (from === to || from < 0 || to < 0) {
       return;
     }
-    const next = columnOrder.slice();
+    const next = [...columnOrder];
     const [columnName] = next.splice(from, 1);
-    if (!columnName) {
+    if (!isNonEmptyString(columnName)) {
       return;
     }
     next.splice(to, 0, columnName);
@@ -146,9 +147,9 @@ function ColumnsPopover({
                   }
                   checked={visible}
                   disabled={isLastVisible}
-                  onCheckedChange={(checked) =>
-                    onVisibilityChange(column.columnName, checked)
-                  }
+                  onCheckedChange={(checked) => {
+                    onVisibilityChange(column.columnName, checked);
+                  }}
                 />
                 <span className="min-w-0 truncate font-mono text-xs">
                   {column.columnName}
@@ -181,7 +182,9 @@ function ColumnsPopover({
                     aria-label={`Move ${column.columnName} up`}
                     className="size-7"
                     disabled={index === 0}
-                    onClick={() => moveAt(index, index - 1)}
+                    onClick={() => {
+                      moveAt(index, index - 1);
+                    }}
                     presentation="unpadded"
                     type="button"
                     variant="ghost"
@@ -192,7 +195,9 @@ function ColumnsPopover({
                     aria-label={`Move ${column.columnName} down`}
                     className="size-7"
                     disabled={index === orderedColumns.length - 1}
-                    onClick={() => moveAt(index, index + 1)}
+                    onClick={() => {
+                      moveAt(index, index + 1);
+                    }}
                     presentation="unpadded"
                     type="button"
                     variant="ghost"

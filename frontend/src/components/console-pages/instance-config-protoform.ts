@@ -4,8 +4,9 @@ import {
   labelsEqual,
   labelsToEntries,
 } from "@/components/console-pages/instance-config-model";
-import type { UseProtoFormReturn } from "@/hooks/use-proto-form";
+import type { UseProtoFormReturn } from "@/hooks/use-proto-form/use-proto-form";
 import { normalizeSslNegotiation } from "@/lib/protobuf-enums";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   Instance_CredentialState,
   InstanceSchema,
@@ -59,6 +60,7 @@ function valuesEqual(
   current: ReturnType<InstanceProtoForm["createMessage"]>,
   persisted: InstanceRecord
 ) {
+  const defaults = createInstanceFormDefaults(persisted);
   switch (path) {
     case "display_name":
       return current.displayName === persisted.displayName;
@@ -67,29 +69,31 @@ function valuesEqual(
         labelsToEntries(current.labels),
         labelsToEntries(persisted.labels)
       );
+    default:
+      return configValuesEqual(path, current, defaults);
+  }
+}
+
+function configValuesEqual(
+  path: string,
+  current: ReturnType<InstanceProtoForm["createMessage"]>,
+  defaults: ReturnType<typeof createInstanceFormDefaults>
+): boolean {
+  switch (path) {
     case "config.host":
-      return current.config?.host === (persisted.config?.host ?? "");
+      return current.config?.host === defaults.config?.host;
     case "config.port":
-      return (
-        current.config?.port ===
-        (persisted.config?.port ?? DEFAULT_POSTGRES_PORT)
-      );
+      return current.config?.port === defaults.config?.port;
     case "config.database":
-      return current.config?.database === (persisted.config?.database ?? "");
+      return current.config?.database === defaults.config?.database;
     case "config.username":
-      return current.config?.username === (persisted.config?.username ?? "");
+      return current.config?.username === defaults.config?.username;
     case "config.password":
       return false;
     case "config.ssl_mode":
-      return (
-        current.config?.sslMode ===
-        (persisted.config?.sslMode ?? PostgresConfig_SslMode.PREFER)
-      );
+      return current.config?.sslMode === defaults.config?.sslMode;
     case "config.ssl_negotiation":
-      return (
-        current.config?.sslNegotiation ===
-        normalizeSslNegotiation(persisted.config?.sslNegotiation)
-      );
+      return current.config?.sslNegotiation === defaults.config?.sslNegotiation;
     default:
       return true;
   }
@@ -117,18 +121,15 @@ function widenConfigPath(path: string) {
 }
 
 function findFirstErrorMessage(value: unknown): string | undefined {
-  if (!(value && typeof value === "object")) {
+  if (!(value !== null && typeof value === "object")) {
     return;
   }
-  if (
-    "message" in value &&
-    typeof (value as { message?: unknown }).message === "string"
-  ) {
-    return (value as { message: string }).message;
+  if ("message" in value && typeof value.message === "string") {
+    return value.message;
   }
   for (const child of Object.values(value)) {
     const message = findFirstErrorMessage(child);
-    if (message) {
+    if (isNonEmptyString(message)) {
       return message;
     }
   }

@@ -15,7 +15,7 @@ function ChartLegend({ series }: { series: ChartSeries[] }) {
             className={cn(
               "h-1 w-3.5 rounded-full",
               item.dotClassName,
-              item.dashed && "opacity-50"
+              item.dashed === true && "opacity-50"
             )}
           />
           <span className="text-muted-foreground text-xs">{item.label}</span>

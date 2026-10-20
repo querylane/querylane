@@ -9,7 +9,8 @@ const rootElement = document.querySelector("#root");
 
 if (rootElement) {
   const scenario =
-    new URLSearchParams(window.location.search).get("scenario") ?? "";
+    new URLSearchParams(globalThis.window.location.search).get("scenario") ??
+    "";
 
   createRoot(rootElement).render(
     <StrictMode>

@@ -1,4 +1,5 @@
 "use client";
+
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, Crown, ShieldCheck } from "lucide-react";
 import { RoleAvatar } from "@/components/console-pages/role-avatar";

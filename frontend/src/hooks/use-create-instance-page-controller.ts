@@ -30,9 +30,10 @@ import {
   useCreateInstanceMutation,
   useTestInstanceConnectionMutation,
 } from "@/hooks/api/instance";
-import { useProtoForm } from "@/hooks/use-proto-form";
+import { useProtoForm } from "@/hooks/use-proto-form/use-proto-form";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { CreateInstanceSpecSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { focusFirstCreateInstanceInvalidField } from "@/routes/new-instance-focus";
 import type {
@@ -83,17 +84,17 @@ function getSupplementalServerErrors(
   fieldErrors: CreateInstanceFormErrors
 ): CreateInstanceFormErrors {
   const errors: CreateInstanceFormErrors = {};
-  if (fieldErrors.instanceId) {
+  if (isNonEmptyString(fieldErrors.instanceId)) {
     errors.instanceId = fieldErrors.instanceId;
   }
-  if (fieldErrors.labels) {
+  if (isNonEmptyString(fieldErrors.labels)) {
     errors.labels = fieldErrors.labels;
   }
   return errors;
 }
 
 function hasSupplementalServerError(errors: CreateInstanceFormErrors) {
-  return Boolean(errors.instanceId || errors.labels);
+  return Boolean((errors.instanceId ?? "") || errors.labels);
 }
 
 function createServerNotice({
@@ -123,7 +124,7 @@ function createServerNotice({
 }
 
 export function useCreateInstancePageController(
-  initialState?: Partial<CreateInstanceWorkflowState> | undefined
+  initialState?: Partial<CreateInstanceWorkflowState>
 ) {
   const navigate = useNavigate({ from: "/new-instance" });
   const queryClient = useQueryClient();
@@ -144,7 +145,7 @@ export function useCreateInstancePageController(
   const [instanceId, setInstanceId] = useState(
     initialWorkflow.formState.instanceId
   );
-  // allow: proto-form-parallel-state map rows need stable IDs while blank keys
+  // map rows need stable IDs while blank keys
   // cannot be represented by a protobuf map; every valid row is synced below.
   const [labels, setLabels] = useState(initialWorkflow.formState.labels);
   const [showAdvanced, setShowAdvanced] = useState(
@@ -267,11 +268,11 @@ export function useCreateInstancePageController(
     });
   };
   const handleBack = () => {
-    navigate({ to: "/" }).catch((error: unknown) =>
+    navigate({ to: "/" }).catch((error: unknown) => {
       handleNavigationError(error, {
         area: "new-instance.back",
-      })
-    );
+      });
+    });
   };
   const handleTestConnection = async () => {
     if (!(await validate())) {
@@ -286,7 +287,7 @@ export function useCreateInstancePageController(
         formState,
         mutateAsync: testInstanceConnectionMutation.mutateAsync,
       });
-      if (outcome.error) {
+      if (Boolean(outcome.error)) {
         setTestResult(
           applyServerError(outcome.error, "test instance connection")
         );
@@ -318,7 +319,7 @@ export function useCreateInstancePageController(
         transport,
       });
       setFormNotice(
-        outcome.error
+        Boolean(outcome.error)
           ? applyServerError(outcome.error, "create instance")
           : outcome.notice
       );
@@ -342,7 +343,9 @@ export function useCreateInstancePageController(
     setLabels: updateLabels,
     showAdvanced,
     testResult,
-    toggleAdvanced: () => setShowAdvanced((current) => !current),
+    toggleAdvanced: () => {
+      setShowAdvanced((current) => !current);
+    },
     updateField,
   };
 }
