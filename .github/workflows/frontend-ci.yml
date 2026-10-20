@@ -126,17 +126,7 @@ jobs:
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run unit tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|react-doctor-policy)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:unit
-          else
-            bun run test:unit:changed
-          fi
+        run: bun run test:unit:ci
 
   integration:
     needs: changes
@@ -167,17 +157,7 @@ jobs:
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run integration tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:integration
-          else
-            bun run test:integration:changed
-          fi
+        run: bun run test:integration:ci
 
   browser:
     needs: changes
@@ -222,17 +202,19 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium
       - name: Run browser tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:browser:ci
-          else
-            bun run test:browser:changed
-          fi
+        run: bun run test:browser:ci
+      - name: Run end-to-end tests
+        run: bun run test:e2e:ci
+      - name: Upload browser and E2E failure reports
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: browser-e2e-failure-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 3
+          if-no-files-found: ignore
 
   visual:
     needs: changes
