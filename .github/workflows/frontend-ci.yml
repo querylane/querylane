@@ -211,6 +211,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: *playwright_image
+      options: --ipc=host
     timeout-minutes: 8
     env:
       HOME: /root
@@ -224,9 +225,9 @@ jobs:
       - uses: *action_setup_node
         with:
           node-version: *node_version
-      - uses: *action_setup_bun
-        with:
-          bun-version: *bun_version
+      # The canonical image has Node, but lacks setup-bun's unzip dependency.
+      - name: Install Bun
+        run: npm install --global bun@${{ env.BUN_VERSION }}
       - name: Restore Bun package cache
         uses: *action_cache
         with:
