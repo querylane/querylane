@@ -6,6 +6,7 @@ const HEAVY_JOBS = [
   "unit",
   "integration",
   "browser",
+  "e2e",
   "visual",
   "build",
 ];

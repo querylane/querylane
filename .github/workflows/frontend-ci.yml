@@ -203,13 +203,54 @@ jobs:
         run: bunx playwright install chromium
       - name: Run browser tests
         run: bun run test:browser:ci
-      - name: Run end-to-end tests
+
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    name: Frontend E2E
+    runs-on: ubuntu-latest
+    container:
+      image: *playwright_image
+    timeout-minutes: 8
+    env:
+      HOME: /root
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check Playwright image matches the installed version
+        shell: bash
+        run: |
+          set -euo pipefail
+          installed="$(bun -e 'console.log(require("playwright/package.json").version)')"
+          case "$PLAYWRIGHT_IMAGE" in
+            *":v${installed}-"*) ;;
+            *) echo "::error::PLAYWRIGHT_IMAGE ($PLAYWRIGHT_IMAGE) does not match playwright ${installed}"; exit 1 ;;
+          esac
+      - name: Run all E2E and accessibility tests without worker contention
         run: bun run test:e2e:ci
-      - name: Upload browser and E2E failure reports
+      - name: Upload E2E failure reports
         if: failure()
         uses: *action_upload_artifact
         with:
-          name: browser-e2e-failure-report
+          name: e2e-failure-report
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -334,7 +375,7 @@ jobs:
   gate:
     name: Frontend Quality Gate
     if: always()
-    needs: [changes, static, unit, integration, browser, visual, build]
+    needs: [changes, static, unit, integration, browser, e2e, visual, build]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
