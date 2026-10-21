@@ -774,25 +774,27 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
     page === "database.workbench";
   return (
     <Sidebar className="overflow-hidden" collapsible="offcanvas">
-      <SidebarBrandHeader />
-      {isDrillInMode ? (
-        <ExplorerRailContent backLink={linkProps["database.overview"]} />
-      ) : (
-        <SidebarNavigationContent
-          linkProps={linkProps}
-          nextStepHint={nextStepHint}
-          sections={sections}
-        />
-      )}
+      <nav aria-label="Workspace" className="flex size-full min-h-0 flex-col">
+        <SidebarBrandHeader />
+        {isDrillInMode ? (
+          <ExplorerRailContent backLink={linkProps["database.overview"]} />
+        ) : (
+          <SidebarNavigationContent
+            linkProps={linkProps}
+            nextStepHint={nextStepHint}
+            sections={sections}
+          />
+        )}
 
-      <SidebarFooter>
-        <SidebarFooterContent
-          aboutMetadata={aboutMetadata}
-          footerError={footerError}
-          isCollapsed={isCollapsed}
-          onRetryFooter={retryFooter}
-        />
-      </SidebarFooter>
+        <SidebarFooter>
+          <SidebarFooterContent
+            aboutMetadata={aboutMetadata}
+            footerError={footerError}
+            isCollapsed={isCollapsed}
+            onRetryFooter={retryFooter}
+          />
+        </SidebarFooter>
+      </nav>
     </Sidebar>
   );
 }

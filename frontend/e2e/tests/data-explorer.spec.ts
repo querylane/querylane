@@ -242,11 +242,11 @@ test("data explorer: Lighthouse route covers manual accessibility contracts", {
   ).toBeVisible();
 
   const results = await makeAxeBuilder().analyze();
-  const seriousViolations = results.violations.filter((violation) =>
-    ["critical", "serious"].includes(violation.impact ?? "")
-  );
-
-  expect(seriousViolations).toEqual([]);
+  await test.info().attach("accessibility-scan", {
+    body: JSON.stringify(results, null, 2),
+    contentType: "application/json",
+  });
+  expect(results.violations).toEqual([]);
   await expect(page.getByRole("main")).toBeVisible();
   await expect(
     page.getByRole("complementary", { name: "Database objects" })

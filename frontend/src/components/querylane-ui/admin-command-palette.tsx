@@ -11,7 +11,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/querylane-ui/command";
 import { formatRows } from "@/features/data-explorer/format-rows";
 import { useDatabaseCatalogSearchQuery } from "@/hooks/api/database-catalog";
 import {
@@ -431,7 +431,6 @@ function AdminCommandPaletteContent({
       <div className="relative">
         <CommandInput
           aria-label="Search tables, screens, roles, or saved queries"
-          autoFocus={true}
           className="pr-16 text-sm"
           onValueChange={setQuery}
           placeholder="Jump to a table, screen, role, or saved query…"

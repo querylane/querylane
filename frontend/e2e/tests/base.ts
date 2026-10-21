@@ -42,6 +42,8 @@ const test = base.extend<Fixtures>({
         "wcag2aa",
         "wcag21a",
         "wcag21aa",
+        "wcag22aa",
+        "best-practice",
       ])
     );
   },

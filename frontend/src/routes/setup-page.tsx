@@ -108,7 +108,7 @@ export function SetupRoutePage() {
   }
 
   return (
-    <div className="bg-background min-h-dvh">
+    <main className="bg-background min-h-dvh">
       <div className="flex w-full flex-col">
         {blockingError && blockingError.blockingReason !== "setup_required" ? (
           <AppInlineError error={blockingError} />
@@ -126,6 +126,6 @@ export function SetupRoutePage() {
           open={true}
         />
       </div>
-    </div>
+    </main>
   );
 }

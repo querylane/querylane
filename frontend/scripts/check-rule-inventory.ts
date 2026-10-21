@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import shadcn from "@shadcn/lint";
 import { z } from "zod";
-import { isUnknownArray } from "../src/lib/value-guards";
+import oxlintConfig from "../oxlint.config";
+import { isRecord, isUnknownArray } from "../src/lib/value-guards";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ESLINT_SCOPE_PATTERN = /^eslint\//u;
@@ -92,14 +94,82 @@ function assertNativeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
     }
     const configured =
       configuredRules[entry.rule.replace(ESLINT_SCOPE_PATTERN, "")];
-    const level = isUnknownArray(configured) ? configured[0] : configured;
-    if (level !== "deny" && level !== "error" && level !== 2) {
-      throw new Error(`Reviewed error rule is not enforced: ${entry.rule}`);
+    assertErrorLevel(entry.rule, configured);
+  }
+}
+
+function assertErrorLevel(rule: string, configured: unknown) {
+  const level = isUnknownArray(configured) ? configured[0] : configured;
+  const severity = isRecord(level) ? level["level"] : level;
+  if (severity !== "deny" && severity !== "error" && severity !== 2) {
+    throw new Error(`Reviewed error rule is not enforced: ${rule}`);
+  }
+}
+
+async function assertBiomeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
+  // Bun's JSONC loader preserves the actual commented configuration without
+  // inventing a second JSON parser or inheriting a preset's default severity.
+  const module: unknown = await import(join(ROOT, "biome.jsonc"));
+  const { rules, enabled } = z
+    .object({
+      default: z.object({
+        linter: z.object({
+          enabled: z.boolean().optional(),
+          rules: z.record(z.string(), z.unknown()),
+        }),
+      }),
+    })
+    .parse(module).default.linter;
+  if (enabled === false) {
+    throw new Error("Biome linter must remain enabled");
+  }
+  for (const entry of entries) {
+    if (entry.decision !== "error") {
+      continue;
+    }
+    const [group, name] = entry.rule.split("/");
+    const groupRules = rules[group ?? ""];
+    assertErrorLevel(
+      entry.rule,
+      isRecord(groupRules) ? groupRules[name ?? ""] : undefined
+    );
+  }
+}
+
+async function assertDoctorRuleLevels(
+  entries: z.infer<typeof ruleEntry>[],
+  doctor: { key: string; severity: string }[]
+) {
+  const { default: doctorConfig } = await import("../doctor.config");
+  if (
+    (doctorConfig.ignore?.rules?.length ?? 0) > 0 ||
+    (doctorConfig.ignore?.tags?.length ?? 0) > 0 ||
+    (doctorConfig.ignore?.overrides?.length ?? 0) > 0
+  ) {
+    throw new Error(
+      "Doctor rule, tag and per-file suppressions are not permitted"
+    );
+  }
+  const severities = new Map(
+    doctor.map((entry) => [entry.key, entry.severity])
+  );
+  for (const entry of entries) {
+    if (entry.decision === "error") {
+      assertErrorLevel(entry.rule, severities.get(entry.rule));
     }
   }
 }
 
-function checkRuleInventory() {
+function assertShadcnRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
+  const rules = new Map(Object.entries(oxlintConfig.rules));
+  for (const entry of entries) {
+    if (entry.decision === "error") {
+      assertErrorLevel(entry.rule, rules.get(entry.rule));
+    }
+  }
+}
+
+async function checkRuleInventory() {
   const inventory = inventorySchema.parse(
     readJson(join(ROOT, "quality/rule-inventory.json"))
   );
@@ -107,7 +177,7 @@ function checkRuleInventory() {
     .array(z.object({ scope: z.string(), value: z.string() }))
     .parse(toolJson("oxlint", ["--rules", "--format", "json"]));
   const doctor = z
-    .array(z.object({ key: z.string() }))
+    .array(z.object({ key: z.string(), severity: z.string() }))
     .parse(toolJson("react-doctor", ["rules", "list", "--json"]));
   assertReviewedRuleIds(
     inventory.oxlint.map((entry) => entry.rule),
@@ -121,7 +191,14 @@ function checkRuleInventory() {
     inventory.biome.map((entry) => entry.rule),
     biomeRuleIds()
   );
+  assertReviewedRuleIds(
+    inventory.shadcn.map((entry) => entry.rule),
+    Object.keys(shadcn.rules).map((rule) => `shadcn/${rule}`)
+  );
+  await assertBiomeRuleLevels(inventory.biome);
   assertNativeRuleLevels(inventory.oxlint);
+  await assertDoctorRuleLevels(inventory.reactDoctor, doctor);
+  assertShadcnRuleLevels(inventory.shadcn);
   const manifest = z
     .object({
       dependencies: z.record(z.string(), z.string()),
@@ -142,7 +219,7 @@ function checkRuleInventory() {
 }
 
 if (import.meta.main) {
-  checkRuleInventory();
+  await checkRuleInventory();
 }
 
 export { assertReviewedRuleIds };

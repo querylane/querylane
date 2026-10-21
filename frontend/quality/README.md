@@ -42,7 +42,7 @@ Biome's formatting settings are materialized from Ultracite. Oxlint copies prese
 
 ## Reviewed rule policy
 
-The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, a changed tool pin, or a native rule recorded as an error but disabled in the effective configuration. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
+The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, or a changed tool pin. It also verifies every recorded error against Biome's explicit configuration, Oxlint's effective native configuration, Doctor's effective severities, and the loaded shadcn plugin configuration. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
 Some deliberate decisions:
 
@@ -92,7 +92,9 @@ These tools must not process untrusted archives, proxy configuration, or project
 
 The core/SQL bundle caps include the measured cost of boundary validation and the compatible editor refresh. Initial payload and largest-async limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
 
-Compiler regressions exercise both real binaries: valid CSS variables pass, invalid CSS properties fail, and unchecked indexing/exact optional violations fail. Guard tests exercise actual filesystem bypasses. Rule-inventory tests prove a newly introduced rule cannot silently pass the review gate.
+Compiler regressions exercise both real binaries: valid CSS variables pass, invalid CSS properties fail, and unchecked indexing/exact optional violations fail. Guard tests exercise actual filesystem bypasses. Rule-inventory tests invoke the actual CLI with downgraded configurations: turning a recorded error off or into a warning, disabling Biome, or adding a Doctor ignore cannot silently pass the review gate.
+
+The onboarding and explorer accessibility journeys scan WCAG 2.0/2.1/2.2 A/AA and axe's stable best-practice rules. Every reported violation fails, including minor/moderate findings; no severity filter or node exclusion is applied. Full JSON reports retain passes, inapplicable checks, and incomplete items for review. A passing automated scan is not a claim of complete accessibility or manual assistive-technology coverage. See [Playwright's accessibility guidance](https://playwright.dev/docs/accessibility-testing) and [axe's rule/result semantics](https://www.deque.com/axe/core-documentation/api-documentation/).
 
 ## Required CI check
 

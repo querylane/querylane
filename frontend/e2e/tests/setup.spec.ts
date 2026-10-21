@@ -55,7 +55,7 @@ test("onboarding boot error renders retryable error state from mocked RPC failur
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 
-test("onboarding entrypoint has no serious accessibility violations", {
+test("onboarding entrypoint has no accessibility violations", {
   tag: ["@feat:onboarding", "@a11y"],
 }, async ({ makeAxeBuilder, page }) => {
   await mockOnboardingRequiredScenario(page);
@@ -65,11 +65,11 @@ test("onboarding entrypoint has no serious accessibility violations", {
   ).toBeVisible();
 
   const results = await makeAxeBuilder().analyze();
-  const seriousViolations = results.violations.filter((violation) =>
-    ["critical", "serious"].includes(violation.impact ?? "")
-  );
-
-  expect(seriousViolations).toEqual([]);
+  await test.info().attach("accessibility-scan", {
+    body: JSON.stringify(results, null, 2),
+    contentType: "application/json",
+  });
+  expect(results.violations).toEqual([]);
 });
 
 test("onboarding UI setup choice opens internal storage form and can go back", {

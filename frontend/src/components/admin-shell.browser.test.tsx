@@ -482,10 +482,11 @@ test("admin header truncates a long instance name without wrapping and exposes t
     .toBeVisible();
 });
 
-test("command palette opens over the full admin layout", async () => {
+test("command palette opens over the layout and restores focus on dismissal", async () => {
   await renderAdminShell();
 
-  await page.getByRole("button", { name: "Search or jump to" }).click();
+  const trigger = page.getByRole("button", { name: "Search or jump to" });
+  await trigger.click();
 
   const dialog = page.getByRole("dialog", { name: "Search or jump to" });
   await expect.element(dialog).toBeVisible();
@@ -494,6 +495,9 @@ test("command palette opens over the full admin layout", async () => {
   await expect
     .element(page.getByText(`${LONG_DATABASE_NAME}.public.shipments`))
     .toBeVisible();
+  await page.locator("body").press("Escape");
+  await expect.element(dialog).not.toBeVisible();
+  await expect.element(trigger).toBeFocused();
 });
 
 test("keyboard shortcut help opens over the full admin layout", async () => {
