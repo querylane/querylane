@@ -294,6 +294,9 @@ async function mockTableCatalog(page: Page) {
   await page.route("**/ListTables", (route) => fulfillTableList(route));
   await page.route("**.ListTables", (route) => fulfillTableList(route));
   await mockRpc(page, "ListTableColumns", { columns: orderColumns });
+  await mockRpc(page, "GetTablePartitionMetadata", {
+    partitionMetadata: { childPartitions: [] },
+  });
   await mockRpc(page, "ListTableIndexes", { indexes: orderIndexes });
   await mockRpc(page, "ListTableConstraints", {
     constraints: orderConstraints,

@@ -13,6 +13,7 @@ import {
   type Page,
   expect as playwrightExpect,
 } from "playwright/test";
+import { shouldGuardApiRequest } from "../../src/test/api-request-policy";
 import { e2eEnv } from "../env";
 
 interface Fixtures {
@@ -21,18 +22,6 @@ interface Fixtures {
 }
 
 const expect = playwrightExpect;
-
-function isApiRequest(url: string) {
-  const parsedUrl = new URL(url);
-  const apiBaseUrl = new URL(
-    e2eEnv.QUERYLANE_API_URL ?? "http://localhost:8080"
-  );
-
-  return (
-    parsedUrl.origin === apiBaseUrl.origin ||
-    (parsedUrl.hostname === "localhost" && parsedUrl.port === "8080")
-  );
-}
 
 const test = base.extend<Fixtures>({
   makeAxeBuilder: async ({ page }, provideFixture) => {
@@ -53,11 +42,12 @@ const test = base.extend<Fixtures>({
 
       await page.route("**/*", async (route) => {
         const request = route.request();
-        const contentType = request.headers()["content-type"] ?? "";
-        const shouldGuard =
-          request.method() === "POST" &&
-          contentType.includes("json") &&
-          isApiRequest(request.url());
+        const shouldGuard = shouldGuardApiRequest({
+          apiBaseUrl: e2eEnv.QUERYLANE_API_URL ?? "http://localhost:8080",
+          headers: request.headers(),
+          method: request.method(),
+          url: request.url(),
+        });
 
         if (shouldGuard) {
           unmockedCalls.push(request.url());
