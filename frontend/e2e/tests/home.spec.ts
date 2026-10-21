@@ -6,6 +6,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithInstance,
   mockReadyOnboarding,
   sampleDatabase,
@@ -17,6 +18,10 @@ const CONFIG_MANAGED_EMPTY_RE =
   /Instances are managed via the server configuration file/iu;
 const PRODUCTION_INSTANCE_URL_RE = /\/instances\/production\/?$/u;
 const AUDIT_DATABASE_URL_RE = /\/instances\/production\/databases\/audit\/?$/u;
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("home: ready API-managed empty catalog redirects to new instance", {
   tag: ["@feat:instances", "@flow:create"],

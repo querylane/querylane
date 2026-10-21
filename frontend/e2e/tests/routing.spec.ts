@@ -5,6 +5,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyEmptyApp,
   mockReadyOnboarding,
   mockRpcError,
@@ -35,6 +36,10 @@ const reportingInstance = {
   labels: { env: "reporting" },
   name: "instances/reporting",
 };
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("home: instanceId search opens the requested instance instead of the first one", {
   tag: ["@smoke", "@feat:routing", "@flow:navigate"],

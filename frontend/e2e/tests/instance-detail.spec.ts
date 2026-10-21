@@ -9,6 +9,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithDeletableInstance,
   mockReadyAppWithInstance,
   mockReadyOnboarding,
@@ -72,6 +73,10 @@ async function routeSuccessfulUpdateInstance(
     await fulfillJson(route, { instance: sampleInstance });
   });
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("database overview: renders backend metadata for selected database", {
   tag: ["@smoke", "@feat:database", "@flow:query"],

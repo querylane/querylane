@@ -1,4 +1,5 @@
 import type { Page, Route } from "playwright/test";
+import { connectStreamBody } from "../visual/serve-service";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -256,7 +257,7 @@ export async function mockInstanceDetails(
     },
   });
   await mockRpc(page, "InstanceService/GetInstanceOverview", {
-    overview: {
+    instanceOverview: {
       cache: { hitRatio: 0.97 },
       connections: { maxConnections: 100, totalConnections: 12 },
       storage: { totalSizeBytes: "104857600" },
@@ -278,6 +279,21 @@ export async function mockDatabaseDetails(
   await mockRpc(page, "DatabaseService/GetDatabase", {
     database,
   });
+}
+
+/** Overview panels with no telemetry samples or auxiliary catalog entries. */
+export async function mockOverviewSupportData(page: Page) {
+  await mockRpc(page, "MetricsService/QueryMetrics", {});
+  await mockRpc(page, "InstanceService/CheckInstanceHealth", {});
+  await mockRpc(page, "ExtensionService/ListExtensions", { extensions: [] });
+  await mockRpc(page, "SchemaService/ListSchemas", { schemas: [] });
+  await mockRpc(page, "DatabaseService/GetDatabaseQueryInsights", {});
+  await page.route("**.SQLService/ExecuteQuery", (route) =>
+    route.fulfill({
+      body: connectStreamBody([]),
+      contentType: "application/connect+json",
+    })
+  );
 }
 
 export async function mockRoles(page: Page, roles: MockRole[] = sampleRoles) {

@@ -127,7 +127,7 @@ for (const routeName of ["workbench", "sql"]) {
 
 test("workbench recovers from an error and inspects the live execution plan", async ({
   page,
-  makeAxeBuilder,
+  checkAccessibility,
 }) => {
   await mockConsoleResources(page);
   await mockRpc(page, "SQLService/ValidateQuery", {});
@@ -205,10 +205,23 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await expect(
     page.getByRole("columnheader", { name: "Shared blocks" })
   ).toBeVisible();
-  const awaitedResult1 = await makeAxeBuilder()
-    .include('[aria-label="Query plan"]')
-    .analyze();
-  expect(awaitedResult1.violations).toEqual([]);
+  await checkAccessibility();
+  const workSelector = page.getByRole("button", {
+    name: "Inspect self work distribution",
+  });
+  await workSelector.focus();
+  await workSelector.press("Enter");
+  const smallOperation = page.getByRole("menuitemradio", {
+    name: "Inspect work for Hash: 15 ms",
+  });
+  await expect(smallOperation).toBeVisible();
+  await checkAccessibility();
+  await softScreenshot(page, "workbench-self-work-menu");
+  await smallOperation.click();
+  await expect(
+    inspector.getByRole("heading", { name: "Hash", exact: true })
+  ).toBeVisible();
+  await expect(workSelector).toBeFocused();
   await expect(page).toHaveURL(url);
   await softScreenshot(page, "workbench-plan-inspector");
 });

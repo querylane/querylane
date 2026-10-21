@@ -57,7 +57,7 @@ for (const viewport of [
   for (const theme of ["light", "dark"] as const) {
     test(`startup: saved ${theme}, ${viewport.name}, CSP and React handoff`, async ({
       page,
-      makeAxeBuilder,
+      checkAccessibility,
     }) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({
@@ -78,7 +78,9 @@ for (const viewport of [
         await expect(logo).toHaveAttribute("src", `/icon-${theme}.svg`);
         await expect(logo).toHaveJSProperty("complete", true);
         await expect(logo).toHaveJSProperty("naturalWidth", 32);
-        await expect(status.locator("span")).toHaveClass("sr-only");
+        await expect(status.getByRole("heading", { level: 1 })).toHaveClass(
+          "sr-only"
+        );
         const bounds = await logo.boundingBox();
         expect(bounds).toEqual({
           height: 40,
@@ -104,8 +106,7 @@ for (const viewport of [
           },
           maxDiffPixels: 0,
         });
-        const awaitedResult1 = await makeAxeBuilder().analyze();
-        expect(awaitedResult1.violations).toEqual([]);
+        await checkAccessibility();
       } finally {
         startup.release();
       }

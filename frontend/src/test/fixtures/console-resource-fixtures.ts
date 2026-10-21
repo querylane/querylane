@@ -60,6 +60,7 @@ import {
 } from "../../protogen/querylane/console/v1alpha1/schema_pb";
 import { SQLService } from "../../protogen/querylane/console/v1alpha1/sql_pb";
 import {
+  ListTableColumnsResponseSchema,
   ListTablesResponseSchema,
   Table_TableType,
   type TableSchema,
@@ -824,6 +825,7 @@ function consoleResourceServices(fixture: ConsoleResourceFixture) {
       },
     } satisfies Partial<ServiceImpl<typeof SQLService>>,
     table: {
+      listTableColumns: () => create(ListTableColumnsResponseSchema),
       listTables: ({ parent }) =>
         create(ListTablesResponseSchema, {
           tables: fixture.catalog.tables[leafId(parent)] ?? [],

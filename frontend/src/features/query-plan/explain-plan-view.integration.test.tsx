@@ -9,6 +9,22 @@ const ROW_MISMATCH = /more rows|fewer rows/u;
 
 afterEach(cleanup);
 
+test("self-work selection keeps small operations reachable through a menu", async () => {
+  const user = userEvent.setup();
+  render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
+  await user.click(
+    screen.getByRole("button", { name: "Inspect self work distribution" })
+  );
+  await user.click(
+    screen.getByRole("menuitemradio", { name: "Inspect work for Hash: 15 ms" })
+  );
+  expect(
+    within(
+      screen.getByRole("complementary", { name: "Plan node details" })
+    ).getByRole("heading", { name: "Hash" })
+  ).not.toBeNull();
+});
+
 test("does not diagnose a one-row estimate rounding to zero as a statistics problem", () => {
   const rawPlan = JSON.stringify([
     {

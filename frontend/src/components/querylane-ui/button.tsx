@@ -7,8 +7,9 @@ const buttonPresentations = cva("", {
   variants: {
     presentation: {
       "plan-map-node":
-        "border-border bg-card hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-chart-4/15 h-auto flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg border p-0 text-left font-normal whitespace-normal shadow-sm aria-pressed:ring-2",
-      "plan-work": "h-full min-w-0 shrink rounded-none p-0 hover:opacity-80",
+        "h-auto flex-col items-stretch justify-start gap-0 overflow-hidden whitespace-normal rounded-lg border border-border bg-card p-0 text-left font-normal shadow-sm hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-2 aria-pressed:ring-chart-4/15",
+      "plan-work":
+        "h-6 w-full justify-start gap-2 rounded-sm p-0 hover:bg-transparent",
       warning: "text-warning-600 hover:text-warning-700",
       quiet: "text-muted-foreground hover:text-foreground",
       "sidebar-action":

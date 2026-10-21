@@ -6,7 +6,7 @@ test.use({ hasTouch: true });
 test("mobile navigation dismisses by swiping and restores keyboard focus", async ({
   page,
   context,
-  makeAxeBuilder,
+  checkAccessibility,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openAdminShell(page);
@@ -18,8 +18,7 @@ test("mobile navigation dismisses by swiping and restores keyboard focus", async
   if (!bounds) {
     throw new Error("Expected mobile navigation drawer bounds");
   }
-  const awaitedResult1 = await makeAxeBuilder().analyze();
-  expect(awaitedResult1.violations).toEqual([]);
+  await checkAccessibility();
 
   await test.step("swipe the navigation header closed", async () => {
     await page.mouse.move(bounds.x + bounds.width - 30, bounds.y + 12);

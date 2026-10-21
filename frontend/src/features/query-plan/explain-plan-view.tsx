@@ -461,6 +461,7 @@ function PlanExplorer({
       role="region"
       value={mode}
     >
+      {!focused && <h2 className="sr-only">Query plan</h2>}
       <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
         <TabsList aria-label="Plan display" className="h-7">
           <TabsTrigger className="h-6" presentation="sql-plan-mode" value="map">

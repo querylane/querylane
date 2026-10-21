@@ -16,6 +16,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyOnboarding,
   mockRpc,
   mockRpcError,
@@ -142,6 +143,10 @@ async function gotoExplorer(
   await expect(page).toHaveURL(EXPLORER_URL_RE);
 }
 
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
+
 test("data explorer: schema overview shows top tables and switches schema", {
   tag: ["@smoke", "@feat:data-explorer", "@flow:query"],
 }, async ({ page }) => {
@@ -234,19 +239,14 @@ test("data explorer: table detail tabs show catalog metadata", {
 
 test("data explorer: Lighthouse route covers manual accessibility contracts", {
   tag: ["@feat:data-explorer", "@a11y"],
-}, async ({ makeAxeBuilder, page }) => {
+}, async ({ checkAccessibility, page }) => {
   await gotoExplorer(page, "?schema=public&category=tables&name=orders");
 
   await expect(
     page.getByRole("heading", { name: ORDERS_HEADING_RE })
   ).toBeVisible();
 
-  const results = await makeAxeBuilder().analyze();
-  await test.info().attach("accessibility-scan", {
-    body: JSON.stringify(results, null, 2),
-    contentType: "application/json",
-  });
-  expect(results.violations).toEqual([]);
+  await checkAccessibility();
   await expect(page.getByRole("main")).toBeVisible();
   await expect(
     page.getByRole("complementary", { name: "Database objects" })

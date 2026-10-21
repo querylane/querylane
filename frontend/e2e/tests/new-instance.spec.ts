@@ -6,6 +6,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithDeletableInstance,
   mockReadyEmptyApp,
   mockRpc,
@@ -55,6 +56,10 @@ async function testConnection(page: Page) {
   await page.getByRole("button", { name: "Test connection" }).click();
   await expect(page.getByText("Connection successful.")).toBeVisible();
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("new instance: validates required fields before submit", {
   tag: ["@feat:instances", "@flow:query"],

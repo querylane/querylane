@@ -17,24 +17,31 @@ import { shouldGuardApiRequest } from "../../src/test/api-request-policy";
 import { e2eEnv } from "../env";
 
 interface Fixtures {
-  makeAxeBuilder: () => AxeBuilder;
+  checkAccessibility: () => Promise<void>;
   unmockedGuard: undefined;
 }
 
 const expect = playwrightExpect;
 
 const test = base.extend<Fixtures>({
-  makeAxeBuilder: async ({ page }, provideFixture) => {
-    await provideFixture(() =>
-      new AxeBuilder({ page }).withTags([
-        "wcag2a",
-        "wcag2aa",
-        "wcag21a",
-        "wcag21aa",
-        "wcag22aa",
-        "best-practice",
-      ])
-    );
+  checkAccessibility: async ({ page }, provideFixture, testInfo) => {
+    await provideFixture(async () => {
+      const results = await new AxeBuilder({ page })
+        .withTags([
+          "wcag2a",
+          "wcag2aa",
+          "wcag21a",
+          "wcag21aa",
+          "wcag22aa",
+          "best-practice",
+        ])
+        .analyze();
+      await testInfo.attach("accessibility-scan", {
+        body: JSON.stringify(results, null, 2),
+        contentType: "application/json",
+      });
+      expect(results.violations).toEqual([]);
+    });
   },
   unmockedGuard: [
     async ({ page }, provideFixture) => {

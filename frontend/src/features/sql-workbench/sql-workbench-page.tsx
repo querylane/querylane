@@ -367,6 +367,7 @@ function SqlWorkbench({
       presentation="flush"
       value={activeTab.id}
     >
+      <h1 className="sr-only">SQL workbench</h1>
       <ExplorerSidebarPortal>
         <SqlCatalogRail
           databaseId={databaseId}

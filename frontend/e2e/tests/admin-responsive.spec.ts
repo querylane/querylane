@@ -6,6 +6,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithInstance,
   mockReadyOnboarding,
   sampleDatabase,
@@ -91,6 +92,10 @@ async function mockLongAdminPath(page: Page) {
   await mockDatabases(page, [database]);
   await mockDatabaseDetails(page, database);
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("admin header: phone viewport exposes sidebar navigation", async ({
   page,

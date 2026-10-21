@@ -3,6 +3,7 @@ import type { Page, Request, Response } from "playwright/test";
 import { FRONTEND_PERF_BUDGETS } from "../../scripts/perf-budgets";
 import { expect, test } from "./base";
 import { mockDataExplorerApp } from "./data-explorer-fixtures";
+import { mockOverviewSupportData } from "./helpers";
 
 const DATA_EXPLORER_TABLE_URL =
   "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders";
@@ -95,6 +96,10 @@ function createAssetPayloadRecorder(page: Page) {
     },
   };
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("perf: direct Data Explorer route becomes ready within budget", {
   tag: ["@perf", "@feat:data-explorer"],

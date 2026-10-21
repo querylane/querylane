@@ -537,8 +537,8 @@ function SidebarDatabaseSelector() {
         />
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-mono font-medium text-(length:--text-caption)",
-            selectedDatabase ? "text-foreground" : "text-muted-foreground"
+            "text-(length:--text-caption) min-w-0 flex-1 truncate font-medium font-mono",
+            selectedDatabase ? "text-foreground" : "text-sidebar-foreground/75"
           )}
         >
           {selectedDatabase?.name ?? "Select database"}

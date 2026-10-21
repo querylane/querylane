@@ -1,4 +1,12 @@
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/querylane-ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/querylane-ui/dropdown-menu";
 import {
   type ExplainPlan,
   type PlanNode,
@@ -69,34 +77,76 @@ function PlanOverview({
       {total > 0 ? (
         <fieldset
           aria-label="Approximate self work distribution"
-          className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-sm"
+          className="mt-3"
         >
-          {ranked.map((node) => (
-            <Button
-              aria-label={`Inspect work for ${planNodeTitle(node)}: ${formatPlanMs(node.exclusiveMs ?? 0)}`}
-              aria-pressed={node.id === selectedId}
-              className="w-(--plan-share)"
-              key={node.id}
-              onClick={() => {
-                onSelect(node);
-              }}
-              presentation="plan-work"
-              style={{
-                "--plan-share": `${((node.exclusiveMs ?? 0) / total) * PERCENT}%`,
-              }}
-              title={`${planNodeTitle(node)} · ${formatPlanMs(node.exclusiveMs ?? 0)} approximate self work`}
-              type="button"
-              variant="ghost"
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label="Inspect self work distribution"
+                  presentation="plan-work"
+                  type="button"
+                  variant="ghost"
+                />
+              }
             >
               <span
-                className={cn(
-                  "size-full",
-                  node.id === hotspot?.id ? "bg-chart-4" : "bg-chart-2/55",
-                  node.id === selectedId && "ring-foreground ring-1 ring-inset"
-                )}
-              />
-            </Button>
-          ))}
+                aria-hidden="true"
+                className="flex h-2.5 min-w-0 flex-1 gap-0.5 overflow-hidden rounded-sm"
+              >
+                {ranked.map((node) => (
+                  <span
+                    className={cn(
+                      "h-full w-(--plan-share) shrink",
+                      node.id === hotspot?.id ? "bg-chart-4" : "bg-chart-2/55",
+                      node.id === selectedId &&
+                        "ring-1 ring-foreground ring-inset"
+                    )}
+                    key={node.id}
+                    style={{
+                      "--plan-share": `${((node.exclusiveMs ?? 0) / total) * PERCENT}%`,
+                    }}
+                  />
+                ))}
+              </span>
+              <ChevronDown aria-hidden="true" className="size-3.5 shrink-0" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              aria-label="Self work operations"
+              render={(menuProps) => (
+                <section aria-label="Self work selection">
+                  <div {...menuProps} />
+                </section>
+              )}
+            >
+              <DropdownMenuRadioGroup
+                onValueChange={(value: unknown) => {
+                  const node = ranked.find(
+                    (candidate) => candidate.id === value
+                  );
+                  if (node) {
+                    onSelect(node);
+                  }
+                }}
+                value={selectedId}
+              >
+                {ranked.map((node) => (
+                  <DropdownMenuRadioItem
+                    aria-label={`Inspect work for ${planNodeTitle(node)}: ${formatPlanMs(node.exclusiveMs ?? 0)}`}
+                    closeOnClick={true}
+                    key={node.id}
+                    value={node.id}
+                  >
+                    {planNodeTitle(node)}
+                    <span className="ml-auto pl-4 font-mono text-muted-foreground text-xs">
+                      {formatPlanMs(node.exclusiveMs ?? 0)}
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </fieldset>
       ) : null}
     </div>
