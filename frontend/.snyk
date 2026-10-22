@@ -1,0 +1,1098 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.1
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JS-BASICFTP-20419408:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > get-uri@6.0.5 > basic-ftp@5.3.1':
+        reason: >-
+          Not reachable in current frontend commands: Client.list requires FTP
+          directory input. lighthouserc.cjs audits the loopback mock; no FTP/PAC
+          URL is configured or exposed to UI inputs. Re-triage if these
+          input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:27.555Z
+  SNYK-JS-BRACEEXPANSION-20244948:
+    - '@lhci/cli@0.15.1 > chrome-launcher@0.13.4 > rimraf@3.0.2 > glob@7.2.3 > minimatch@3.1.5 > brace-expansion@1.1.18':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:29.419Z
+    - '@shadcn/lint@0.1.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:31.455Z
+    - shadcn@4.22.1 > ts-morph@26.0.0 > @ts-morph/common@0.27.0 > minimatch@10.2.6 > brace-expansion@5.0.9:
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:33.392Z
+  SNYK-JS-BRACEEXPANSION-20244950:
+    - '@lhci/cli@0.15.1 > chrome-launcher@0.13.4 > rimraf@3.0.2 > glob@7.2.3 > minimatch@3.1.5 > brace-expansion@1.1.18':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:35.293Z
+    - '@shadcn/lint@0.1.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:37.744Z
+    - shadcn@4.22.1 > ts-morph@26.0.0 > @ts-morph/common@0.27.0 > minimatch@10.2.6 > brace-expansion@5.0.9:
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:39.712Z
+  SNYK-JS-BRACEEXPANSION-20244952:
+    - '@lhci/cli@0.15.1 > chrome-launcher@0.13.4 > rimraf@3.0.2 > glob@7.2.3 > minimatch@3.1.5 > brace-expansion@1.1.18':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:41.599Z
+    - '@shadcn/lint@0.1.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > minimatch@10.2.6 > brace-expansion@5.0.9':
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:43.490Z
+    - shadcn@4.22.1 > ts-morph@26.0.0 > @ts-morph/common@0.27.0 > minimatch@10.2.6 > brace-expansion@5.0.9:
+        reason: >-
+          Not reachable in current frontend commands: Glob patterns come from
+          checked-in lint/build/tool configuration, not database values or URL
+          filters. No remote-controlled expansion pattern in current commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:45.840Z
+  SNYK-JS-BRACES-19963945:
+    - '@changesets/cli@2.31.1 > @changesets/apply-release-plan@7.1.1 > @changesets/config@3.1.4 > @changesets/get-dependents-graph@2.1.4 > @manypkg/get-packages@1.1.3 > globby@11.1.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3':
+        reason: >-
+          Not reachable in current frontend commands: Recursive glob AST input
+          is checked-in tooling configuration/CLI patterns. No browser or RPC
+          input reaches brace compilation in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:47.780Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3:
+        reason: >-
+          Not reachable in current frontend commands: Recursive glob AST input
+          is checked-in tooling configuration/CLI patterns. No browser or RPC
+          input reaches brace compilation in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:49.770Z
+    - ultracite@8.0.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3:
+        reason: >-
+          Not reachable in current frontend commands: Recursive glob AST input
+          is checked-in tooling configuration/CLI patterns. No browser or RPC
+          input reaches brace compilation in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:51.643Z
+  SNYK-JS-COMPRESSION-19778377:
+    - '@lhci/cli@0.15.1 > compression@1.8.1':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI fallback-server
+          uses this middleware. lighthouserc.cjs instead starts
+          scripts/lighthouse-mock-server.ts; Querylane UI does not serve Express
+          responses. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:53.652Z
+  SNYK-JS-DEEPMERGE-19964053:
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > deepmerge@4.3.1:
+        reason: >-
+          Not reachable in current frontend commands: Tooling configuration
+          merge only; no app import or browser/RPC input path to mergeObject.
+          This acceptance does not cover processing untrusted tool
+          configuration. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:55.732Z
+    - shadcn@4.22.1 > deepmerge@4.3.1:
+        reason: >-
+          Not reachable in current frontend commands: Tooling configuration
+          merge only; no app import or browser/RPC input path to mergeObject.
+          This acceptance does not cover processing untrusted tool
+          configuration. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:57.705Z
+    - ultracite@8.0.0 > deepmerge@4.3.1:
+        reason: >-
+          Not reachable in current frontend commands: Tooling configuration
+          merge only; no app import or browser/RPC input path to mergeObject.
+          This acceptance does not cover processing untrusted tool
+          configuration. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:28:59.761Z
+  SNYK-JS-ENGINEIO-20335255:
+    - '@rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > socket.io@4.8.1 > engine.io@6.6.9':
+        reason: >-
+          Not reachable in current frontend commands: rsbuild.config.ts sets
+          disableClientServer:true for optional Rsdoctor. Normal builds omit the
+          plugin; no Engine.IO handshake endpoint is exposed by these commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:01.677Z
+    - '@rsdoctor/rspack-plugin@1.6.4 > @rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > socket.io@4.8.1 > engine.io@6.6.9':
+        reason: >-
+          Not reachable in current frontend commands: rsbuild.config.ts sets
+          disableClientServer:true for optional Rsdoctor. Normal builds omit the
+          plugin; no Engine.IO handshake endpoint is exposed by these commands.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:03.636Z
+  SNYK-JS-EXTRACTZIP-17660777:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > extract-zip@2.0.1':
+        reason: >-
+          Not reachable in current frontend commands: Puppeteer browser-install
+          extraction only. LHCI uses installed Chrome; browser setup uses
+          Playwright. No external archive is extracted by the current LHCI
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:05.701Z
+  SNYK-JS-EXTRACTZIP-19653641:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > extract-zip@2.0.1':
+        reason: >-
+          Not reachable in current frontend commands: Puppeteer browser-install
+          extraction only. LHCI uses installed Chrome; browser setup uses
+          Playwright. No external archive is extracted by the current LHCI
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:07.978Z
+  SNYK-JS-FASTURI-19502739:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:09.867Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:11.857Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:13.855Z
+  SNYK-JS-FASTURI-19502854:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:15.761Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:18.032Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:20.021Z
+  SNYK-JS-FASTURI-19846649:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:22.022Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:23.943Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:25.880Z
+  SNYK-JS-FASTURI-21279301:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:27.903Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:29.703Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:31.502Z
+  SNYK-JS-FASTURI-21279303:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:33.325Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:35.205Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:37.239Z
+  SNYK-JS-FASTURI-21279304:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:39.216Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:41.204Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:43.085Z
+  SNYK-JS-FASTURI-21279306:
+    - react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:44.936Z
+    - react-scan@0.5.7 > react-doctor@0.9.17 > conf@15.1.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:46.900Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > conf@10.2.0 > ajv@8.20.0 > fast-uri@3.1.6:
+        reason: >-
+          Not reachable in current frontend commands: Used under tooling
+          Ajv/conf/schema handling, not Querylane URL navigation, SSRF checks or
+          proxy routing. No application authorization decision uses its parsed
+          host. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:48.875Z
+  SNYK-JS-HONO-19499068:
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > hono@4.13.3:
+        reason: >-
+          Not reachable in current frontend commands: Transitive of shadcn MCP
+          support. Registry sync invokes info/add --dry-run, not MCP
+          server/SSG/JSX/body/static routing; no Hono request input in current
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:50.831Z
+  SNYK-JS-HONO-19499091:
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > hono@4.13.3:
+        reason: >-
+          Not reachable in current frontend commands: Transitive of shadcn MCP
+          support. Registry sync invokes info/add --dry-run, not MCP
+          server/SSG/JSX/body/static routing; no Hono request input in current
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:52.798Z
+  SNYK-JS-HONO-19499093:
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > hono@4.13.3:
+        reason: >-
+          Not reachable in current frontend commands: Transitive of shadcn MCP
+          support. Registry sync invokes info/add --dry-run, not MCP
+          server/SSG/JSX/body/static routing; no Hono request input in current
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:54.807Z
+  SNYK-JS-HONO-19964059:
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > hono@4.13.3:
+        reason: >-
+          Not reachable in current frontend commands: Transitive of shadcn MCP
+          support. Registry sync invokes info/add --dry-run, not MCP
+          server/SSG/JSX/body/static routing; no Hono request input in current
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:56.907Z
+  SNYK-JS-HONO-20883336:
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > hono@4.13.3:
+        reason: >-
+          Not reachable in current frontend commands: Transitive of shadcn MCP
+          support. Registry sync invokes info/add --dry-run, not MCP
+          server/SSG/JSX/body/static routing; no Hono request input in current
+          commands. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:29:58.852Z
+  SNYK-JS-INFLIGHT-6095116:
+    - '@lhci/cli@0.15.1 > chrome-launcher@0.13.4 > rimraf@3.0.2 > glob@7.2.3 > inflight@1.0.6':
+        reason: >-
+          Not reachable in current frontend commands: Legacy LHCI glob helper in
+          bounded CLI runs; no application endpoint schedules
+          attacker-controlled repeated inflight operations. Upstream has no fix.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:00.844Z
+  SNYK-JS-IPADDRESS-20250962:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > socks-proxy-agent@8.0.5 > socks@2.8.9 > ip-address@10.5.0':
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:02.845Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express-rate-limit@8.6.2 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:04.657Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > socks@2.8.9 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:06.600Z
+  SNYK-JS-IPADDRESS-20250964:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > socks-proxy-agent@8.0.5 > socks@2.8.9 > ip-address@10.5.0':
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:08.469Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express-rate-limit@8.6.2 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:10.496Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > socks@2.8.9 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:12.400Z
+  SNYK-JS-IPADDRESS-20250983:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > socks-proxy-agent@8.0.5 > socks@2.8.9 > ip-address@10.5.0':
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:14.475Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express-rate-limit@8.6.2 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:16.449Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > socks@2.8.9 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:18.320Z
+  SNYK-JS-IPADDRESS-20250985:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > socks-proxy-agent@8.0.5 > socks@2.8.9 > ip-address@10.5.0':
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:20.138Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express-rate-limit@8.6.2 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:22.152Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > socks@2.8.9 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:24.092Z
+  SNYK-JS-IPADDRESS-21185770:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > @puppeteer/browsers@2.13.2 > proxy-agent@6.5.0 > pac-proxy-agent@7.2.0 > socks-proxy-agent@8.0.5 > socks@2.8.9 > ip-address@10.5.0':
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:26.044Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express-rate-limit@8.6.2 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:28.019Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > socks@2.8.9 > ip-address@10.5.0:
+        reason: >-
+          Not reachable in current frontend commands: Tooling SOCKS/proxy
+          configuration and inactive MCP rate limiter only. No Querylane
+          SSRF/allowlist decision uses its classifiers; proxy configuration is
+          operator-owned. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:29.949Z
+  SNYK-JS-JSYAML-19496768:
+    - '@changesets/cli@2.31.1 > @changesets/apply-release-plan@7.1.1 > @changesets/config@3.1.4 > @changesets/get-dependents-graph@2.1.4 > @manypkg/get-packages@1.1.3 > read-yaml-file@1.1.0 > js-yaml@3.15.1':
+        reason: >-
+          Not reachable in current frontend commands: LHCI config is checked-in
+          lighthouserc.cjs; Changesets reads repository release notes. No
+          browser/RPC-controlled YAML merge document reaches this loader.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:33.677Z
+    - '@changesets/cli@2.31.1 > @changesets/get-release-plan@4.0.16 > @changesets/read@0.6.7 > @changesets/parse@0.4.3 > js-yaml@4.3.1':
+        reason: >-
+          Not reachable in current frontend commands: LHCI config is checked-in
+          lighthouserc.cjs; Changesets reads repository release notes. No
+          browser/RPC-controlled YAML merge document reaches this loader.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:35.550Z
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > js-yaml@3.15.1':
+        reason: >-
+          Not reachable in current frontend commands: LHCI config is checked-in
+          lighthouserc.cjs; Changesets reads repository release notes. No
+          browser/RPC-controlled YAML merge document reaches this loader.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:37.419Z
+  SNYK-JS-LAUNCHEDITOR-21282013:
+    - '@rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:39.184Z
+    - '@rsdoctor/rspack-plugin@1.6.4 > @rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:41.104Z
+  SNYK-JS-LAUNCHEDITOR-21282025:
+    - '@rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:43.075Z
+    - '@rsdoctor/rspack-plugin@1.6.4 > @rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:44.922Z
+  SNYK-JS-LAUNCHEDITOR-21282031:
+    - '@rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:46.761Z
+    - '@rsdoctor/rspack-plugin@1.6.4 > @rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          server uses editor launching; rsbuild.config.ts sets
+          disableClientServer:true. No app-controlled filename reaches an editor
+          process. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:48.904Z
+  SNYK-JS-PICOMATCH-21248802:
+    - '@changesets/cli@2.31.1 > @changesets/apply-release-plan@7.1.1 > @changesets/config@3.1.4 > @changesets/get-dependents-graph@2.1.4 > @manypkg/get-packages@1.1.3 > globby@11.1.0 > fast-glob@3.3.3 > micromatch@4.0.8 > picomatch@2.3.2':
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:50.861Z
+    - '@shadcn/lint@0.1.0 > @typescript-eslint/parser@8.70.0 > @typescript-eslint/typescript-estree@8.70.0 > tinyglobby@0.2.17 > picomatch@4.0.5':
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:52.789Z
+    - '@tanstack/router-plugin@1.168.23 > @tanstack/router-generator@1.167.21 > @tanstack/router-utils@1.162.2 > tinyglobby@0.2.17 > picomatch@4.0.5':
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:54.768Z
+    - '@tanstack/router-plugin@1.168.23 > unplugin@3.3.0 > picomatch@4.0.5':
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:56.624Z
+    - react-scan@0.5.7 > @rollup/pluginutils@5.4.0 > picomatch@4.0.5:
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:30:58.535Z
+    - react-scan@0.5.7 > unplugin@3.3.0 > picomatch@4.0.5:
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:00.497Z
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > picomatch@4.0.5:
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:02.583Z
+    - shadcn@4.22.1 > @shadcn/registry@0.2.0 > fast-glob@3.3.3 > micromatch@4.0.8 > picomatch@2.3.2:
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:04.415Z
+    - ultracite@8.0.0 > fast-glob@3.3.3 > micromatch@4.0.8 > picomatch@2.3.2:
+        reason: >-
+          Not reachable in current frontend commands: Build/lint/registry tools
+          consume repository-owned glob patterns, not URL filters or database
+          text. No untrusted extglob input in current commands. Re-triage if
+          these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:06.326Z
+  SNYK-JS-PROXYADDR-19812342:
+    - '@lhci/cli@0.15.1 > express@4.22.2 > proxy-addr@2.0.7':
+        reason: >-
+          Not reachable in current frontend commands: No frontend IP-based
+          authorization or mapped-IPv6 trust subnet. LHCI fallback Express
+          server is unused; shadcn MCP server is not invoked by registry sync.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:08.324Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > proxy-addr@2.0.7:
+        reason: >-
+          Not reachable in current frontend commands: No frontend IP-based
+          authorization or mapped-IPv6 trust subnet. LHCI fallback Express
+          server is unused; shadcn MCP server is not invoked by registry sync.
+          Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:10.301Z
+  SNYK-JS-QS-19432017:
+    - '@lhci/cli@0.15.1 > express@4.22.2 > body-parser@1.20.6 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:12.116Z
+    - '@lhci/cli@0.15.1 > express@4.22.2 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:14.179Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:16.098Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:18.079Z
+  SNYK-JS-QS-19432019:
+    - '@lhci/cli@0.15.1 > express@4.22.2 > body-parser@1.20.6 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:20.054Z
+    - '@lhci/cli@0.15.1 > express@4.22.2 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:22.027Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:23.903Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:25.855Z
+  SNYK-JS-QS-20943482:
+    - '@lhci/cli@0.15.1 > express@4.22.2 > body-parser@1.20.6 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:27.728Z
+    - '@lhci/cli@0.15.1 > express@4.22.2 > qs@6.15.3':
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:29.854Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > body-parser@2.3.0 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:31.776Z
+    - shadcn@4.22.1 > @modelcontextprotocol/sdk@1.32.1 > express@5.2.1 > qs@6.15.3:
+        reason: >-
+          Not reachable in current frontend commands: No app import. LHCI
+          fallback server is unused; registry info/add do not run MCP Express
+          endpoints. Current paths do not parse then stringify attacker objects
+          with comma/prototype options. Re-triage if these input/feature
+          assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:33.754Z
+  SNYK-JS-SEROVAL-20417221:
+    - '@tanstack/react-query-devtools@5.104.2 > @tanstack/query-devtools@5.104.2 > solid-js@1.9.15 > seroval@1.5.6':
+        reason: >-
+          Not reachable in current frontend commands: Solid web server export
+          only: solid-js/web/dist/server.js imports seroval; browser web.js does
+          not. Querylane is a client SPA; router uses separate patched
+          seroval@1.6.3. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:35.719Z
+  SNYK-JS-SEROVAL-20417223:
+    - '@tanstack/react-query-devtools@5.104.2 > @tanstack/query-devtools@5.104.2 > solid-js@1.9.15 > seroval@1.5.6':
+        reason: >-
+          Not reachable in current frontend commands: Solid web server export
+          only: solid-js/web/dist/server.js imports seroval; browser web.js does
+          not. Querylane is a client SPA; router uses separate patched
+          seroval@1.6.3. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:37.803Z
+  SNYK-JS-SHELLQUOTE-20250993:
+    - '@rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1 > shell-quote@1.10.0':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          editor launcher uses this chain. Server disabled in rsbuild.config.ts;
+          no parse/comment-token/quote flow from UI input. Re-triage if these
+          input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:39.633Z
+    - '@rsdoctor/rspack-plugin@1.6.4 > @rsdoctor/core@1.6.4 > @rsdoctor/sdk@1.6.4 > launch-editor@2.14.1 > shell-quote@1.10.0':
+        reason: >-
+          Not reachable in current frontend commands: Only optional Rsdoctor
+          editor launcher uses this chain. Server disabled in rsbuild.config.ts;
+          no parse/comment-token/quote flow from UI input. Re-triage if these
+          input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:41.486Z
+  SNYK-JS-TMP-11501554:
+    - '@lhci/cli@0.15.1 > inquirer@6.5.2 > external-editor@3.1.0 > tmp@0.0.33':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:43.388Z
+    - '@lhci/cli@0.15.1 > tmp@0.1.0':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:45.259Z
+  SNYK-JS-TMP-16881240:
+    - '@lhci/cli@0.15.1 > inquirer@6.5.2 > external-editor@3.1.0 > tmp@0.0.33':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:47.258Z
+    - '@lhci/cli@0.15.1 > tmp@0.1.0':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:49.524Z
+  SNYK-JS-TMP-17315641:
+    - '@lhci/cli@0.15.1 > inquirer@6.5.2 > external-editor@3.1.0 > tmp@0.0.33':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:51.519Z
+    - '@lhci/cli@0.15.1 > tmp@0.1.0':
+        reason: >-
+          Not reachable in current frontend commands: Only LHCI interactive
+          wizard external-editor uses this chain. Current autorun/collect/upload
+          commands do not open an external editor or accept temp path options
+          from UI input. Re-triage if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:53.463Z
+  SNYK-JS-UNDICI-19635206:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:55.553Z
+  SNYK-JS-UNDICI-19635208:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:57.628Z
+  SNYK-JS-UNDICI-19635210:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:31:59.575Z
+  SNYK-JS-UNDICI-19635212:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:01.449Z
+  SNYK-JS-UNDICI-19635214:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:03.460Z
+  SNYK-JS-UNDICI-19635216:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:05.314Z
+  SNYK-JS-UNDICI-19635218:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:07.202Z
+  SNYK-JS-UNDICI-19635220:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:09.385Z
+  SNYK-JS-UNDICI-19635222:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:11.277Z
+  SNYK-JS-UNDICI-19635226:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:13.220Z
+  SNYK-JS-UNDICI-21181005:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:15.840Z
+  SNYK-JS-UNDICI-21181009:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:17.766Z
+  SNYK-JS-UNDICI-21181011:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:19.825Z
+  SNYK-JS-UNDICI-21181013:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:21.728Z
+  SNYK-JS-UNDICI-21181015:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:23.617Z
+  SNYK-JS-UNDICI-21181017:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:25.911Z
+  SNYK-JS-UNDICI-21181019:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:30.073Z
+  SNYK-JS-UNDICI-21185768:
+    - shadcn@4.22.1 > @dotenvx/dotenvx@1.75.1 > undici@7.29.0:
+        reason: >-
+          Not reachable in current frontend commands: Remaining old copy is
+          dotenvx under shadcn, not registry fetch. Registry uses patched
+          undici@7.30.1. Current commands load local env configuration, not
+          remote dotenvx services. Re-triage if these input/feature assumptions
+          change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:32.497Z
+  SNYK-JS-UUID-16133035:
+    - '@lhci/cli@0.15.1 > uuid@8.3.2':
+        reason: >-
+          Not reachable in current frontend commands: LHCI node-runner calls
+          uuid.v4() without a caller-supplied buffer or offset. No vulnerable
+          external-buffer write path; browser uses crypto.randomUUID. Re-triage
+          if these input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:32:34.943Z
+  SNYK-JS-ZOD-20510278:
+    - '@lhci/cli@0.15.1 > @lhci/utils@0.15.1 > lighthouse@12.6.1 > puppeteer-core@24.43.1 > chromium-bidi@14.0.0 > zod@3.25.76':
+        reason: >-
+          Not reachable in current frontend commands: Remaining zod@3.25.76 is
+          chromium-bidi under LHCI Puppeteer. LHCI runs CDP, not BiDi message
+          schema validation; the app uses patched zod@4.6.7. Re-triage if these
+          input/feature assumptions change.
+        expires: 2027-01-20T00:00:00.000Z
+        created: 2026-10-22T14:33:05.728Z
+patch: {}
