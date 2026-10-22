@@ -90,7 +90,7 @@ function kpi(label: string): HTMLElement {
 
 afterEach(cleanup);
 
-describe("RoleDetailView", () => {
+describe("role detail view", () => {
   test("keeps a partial-access warning visible outside the access map tab", () => {
     render(<RoleDetailView {...roleDetailProps()} partialAccess={true} />);
 

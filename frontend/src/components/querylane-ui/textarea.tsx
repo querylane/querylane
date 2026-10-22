@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const textareaPresentations = cva("", {
   variants: {
     presentation: {
-      diagnostic: "bg-muted/40 font-mono text-muted-foreground text-xs",
+      diagnostic: "bg-muted/40 text-muted-foreground font-mono text-xs",
     },
   },
 });

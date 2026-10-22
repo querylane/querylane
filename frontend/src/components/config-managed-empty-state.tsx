@@ -38,7 +38,7 @@ export function ConfigManagedEmptyState({
     <EmptyState
       action={
         <div className="flex flex-col items-center gap-3">
-          <code className="rounded-md bg-muted px-2.5 py-1 font-mono text-muted-foreground text-xs">
+          <code className="bg-muted text-muted-foreground rounded-md px-2.5 py-1 font-mono text-xs">
             {configFilePath}
           </code>
           <Button
@@ -81,7 +81,7 @@ export function ConfigManagedEmptyState({
 
   if (variant === "fullscreen") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background p-6">
+      <div className="bg-background flex min-h-dvh items-center justify-center p-6">
         <div className="w-full max-w-lg">{emptyState}</div>
       </div>
     );

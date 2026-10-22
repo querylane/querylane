@@ -23,7 +23,7 @@ function ComboboxTrigger({
     <ComboboxPrimitive.Trigger
       className={cn(
         presentation === "sidebar" &&
-          "h-9 w-full justify-start gap-2 rounded-md border-sidebar-border bg-sidebar-accent px-2.5 text-left shadow-sm hover:border-ring hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-popup-open:border-ring",
+          "border-sidebar-border bg-sidebar-accent hover:border-ring hover:bg-sidebar-accent focus-visible:ring-sidebar-ring data-popup-open:border-ring h-9 w-full justify-start gap-2 rounded-md px-2.5 text-left shadow-sm focus-visible:ring-2",
         className
       )}
       render={<Button type="button" variant="outline" />}
@@ -45,7 +45,7 @@ function ComboboxContent({
       >
         <ComboboxPrimitive.Popup
           className={cn(
-            "flex max-h-(--available-height) w-60 max-w-(--available-width) origin-(--transform-origin) flex-col rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none",
+            "bg-popover text-popover-foreground ring-foreground/10 flex max-h-(--available-height) w-60 max-w-(--available-width) origin-(--transform-origin) flex-col rounded-md shadow-md ring-1 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none",
             className
           )}
           {...props}
@@ -65,7 +65,7 @@ function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
       />
       <SearchIcon
         aria-hidden="true"
-        className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground"
+        className="text-muted-foreground pointer-events-none absolute top-3 left-3 size-4"
       />
     </div>
   );
@@ -79,7 +79,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden data-disabled:pointer-events-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:opacity-50",
+        "data-highlighted:bg-muted data-highlighted:text-foreground relative flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
       {...props}

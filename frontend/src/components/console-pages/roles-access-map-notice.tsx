@@ -14,7 +14,7 @@ function RolesAccessMapNotice(props: RolesAccessMapNoticeProps) {
     }
     return (
       <p
-        className="text-sm text-warning-700 dark:text-warning-300"
+        className="text-warning-700 dark:text-warning-300 text-sm"
         role="status"
       >
         {`${props.failedRequestCount} access request${

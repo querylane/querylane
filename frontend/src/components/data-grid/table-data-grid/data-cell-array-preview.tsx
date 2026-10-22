@@ -34,13 +34,13 @@ type KeyedArrayItem = ReturnType<typeof keyPostgresArrayItems>[number];
 function ArrayItemRow({ entry }: { entry: KeyedArrayItem }) {
   return (
     <li className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
-      <span className="font-mono text-muted-foreground text-xs tabular-nums">
+      <span className="text-muted-foreground font-mono text-xs tabular-nums">
         {entry.position}
       </span>
       {entry.item.isNull ? (
         <span className="text-muted-foreground italic">SQL NULL</span>
       ) : (
-        <code className="break-all font-mono text-xs">
+        <code className="font-mono text-xs break-all">
           {entry.item.display}
         </code>
       )}
@@ -59,20 +59,20 @@ function ArrayItemsContent({
 }) {
   if (!parsed.ok) {
     return (
-      <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-3 font-mono text-xs">
+      <pre className="bg-muted/30 min-h-0 flex-1 overflow-auto rounded-md border p-3 font-mono text-xs break-all whitespace-pre-wrap">
         {raw}
       </pre>
     );
   }
   if (parsed.items.length === 0) {
     return (
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
-        <div className="p-4 text-muted-foreground text-sm">Empty array</div>
+      <div className="bg-muted/20 min-h-0 flex-1 overflow-auto rounded-md border">
+        <div className="text-muted-foreground p-4 text-sm">Empty array</div>
       </div>
     );
   }
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
+    <div className="bg-muted/20 min-h-0 flex-1 overflow-auto rounded-md border">
       <ol className="divide-y">
         {keyedItems.map((entry) => (
           <ArrayItemRow entry={entry} key={entry.key} />
@@ -103,7 +103,7 @@ function ArrayPreviewDialog({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] flex-col overflow-hidden"
+        className="!flex max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] !max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
         presentation="spacious"
       >
         <DialogHeader className="shrink-0" presentation="closeable">
@@ -113,7 +113,7 @@ function ArrayPreviewDialog({
           </DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-warning-700 text-xs dark:text-warning-300">
+          <p className="border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-300 rounded-md border px-3 py-2 text-xs">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>
@@ -159,13 +159,13 @@ function ArrayPreview({
         data-testid={`${columnName}-array-preview`}
         title={title}
       >
-        <span className="shrink-0 rounded-full border border-reference-500/25 bg-reference-500/10 px-1.5 py-0.5 font-medium text-reference-700 text-xs leading-none dark:text-reference-300">
+        <span className="border-reference-500/25 bg-reference-500/10 text-reference-700 dark:text-reference-300 shrink-0 rounded-full border px-1.5 py-0.5 text-xs leading-none font-medium">
           {summary}
         </span>
         {firstItems.map(({ item, key }) => (
           <code
             className={cn(
-              "text-(length:--text-micro) max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono",
+              "bg-muted/40 max-w-24 truncate rounded border px-1.5 py-0.5 font-mono text-(length:--text-micro)",
               item.isNull
                 ? "text-muted-foreground italic"
                 : "text-foreground/80"

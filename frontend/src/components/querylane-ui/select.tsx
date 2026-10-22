@@ -25,7 +25,7 @@ const selectContentPresentations = cva("", {
   variants: {
     presentation: {
       onboarding:
-        "rounded-card border border-white/10 bg-onboarding-surface p-2 text-white shadow-(--shadow-onboarding-control)",
+        "rounded-card bg-onboarding-surface border border-white/10 p-2 text-white shadow-(--shadow-onboarding-control)",
     },
   },
 });
@@ -93,7 +93,7 @@ const selectTriggerPresentations = cva("", {
       identifier: "font-mono",
       compact: "gap-1 text-xs",
       onboarding:
-        "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 [&_svg]:text-white/68",
+        "focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm leading-none text-white [&_svg]:text-white/68",
     },
   },
 });

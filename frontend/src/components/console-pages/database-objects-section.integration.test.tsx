@@ -126,7 +126,7 @@ afterEach(() => {
   rs.restoreAllMocks();
 });
 
-describe("DatabaseObjectsPanel", () => {
+describe("database objects panel", () => {
   it("renders one card per present category with kind-specific rows", () => {
     render(
       <DatabaseObjectsPanel

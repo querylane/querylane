@@ -10,6 +10,14 @@
   "css": {
     "parser": { "cssModules": true }
   },
+  "tailwind": {
+    "stylesheet": "./src/index.css"
+  },
+  // Keep documentation formatting outside the frontend code-quality gate.
+  "markdown": {
+    "formatter": { "enabled": false },
+    "linter": { "enabled": false }
+  },
   "javascript": {
     "globals": [
       "__API_BASE_URL__",
@@ -89,7 +97,8 @@
           "options": {
             "max": 3
           }
-        }
+        },
+        "useRegexpTest": "error"
       },
       "correctness": {
         "noChildrenProp": "error",
@@ -102,6 +111,8 @@
           }
         },
         "noProcessGlobal": "error",
+        // React Native's raw-text restrictions do not apply to React DOM.
+        "noReactNativeRawText": "off",
         "noReactPropAssignments": "error",
         "noRestrictedElements": {
           "level": "error",
@@ -151,27 +162,66 @@
         "useUniqueElementIds": "error"
       },
       "nursery": {
+        // Biome 2.6 rules for this React DOM, TypeScript, and Tailwind project.
+        "noAccidentalBitwiseOperators": "error",
+        "noArgumentsCallerOrCallee": "error",
         "noBaseToString": "error",
-        "noDuplicateSelectors": "error",
-        "noIdenticalTestTitle": "error",
+        "noDoubleComparison": "error",
+        "noDuplicateMapKeys": "error",
+        "noExcessiveStatementsPerFunction": {
+          "level": "error",
+          "options": { "max": 50 }
+        },
         "noImpliedEval": "error",
+        "noInvalidThis": "error",
         "noNegationInEqualityCheck": "error",
-        "noPlaywrightWaitForSelector": "error",
-        "noPlaywrightWaitForTimeout": "error",
-        "noReactStringRefs": "error",
+        "noNestedSwitch": "error",
+        "noNestedTemplateLiterals": "error",
+        "noObjectConstructor": "error",
+        "noOctal": "error",
+        "noProcessExit": "error",
+        "noPromiseExecutorReturn": "error",
         "noRestrictedDependencies": "error",
+        "noTailwindLegacyUtilities": "error",
+        // The import-aware shadcn/no-restyle rule owns registry components;
+        // Biome also flags unstyled icons, router links, and local primitives.
+        "noTailwindRestyledComponents": "off",
         "noUnsafePlusOperands": "error",
-        "useDomNodeTextContent": "error",
+        "noUnsafeUnaryMinus": "error",
+        "noUselessAssignment": "error",
+        "noUselessCall": "error",
+        "noUselessDateGetTime": "error",
+        "noZeroFractions": "error",
+        "useBigintLiterals": "error",
+        "useCapitalizedConstructors": "error",
+        "useConsistentJsonFileRead": "error",
         "useExhaustiveSwitchCases": "error",
         "useIncludes": "error",
+        "useLowercaseTestTitle": {
+          "level": "error",
+          "options": {
+            "allowedPrefixes": [
+              "AIP ",
+              "Cmd+",
+              "DSN-",
+              "GitHub ",
+              "Go ",
+              "PostgreSQL ",
+              "SQL ",
+              "SSL ",
+              "UI-"
+            ]
+          }
+        },
+        "useMatchingFunctionName": "error",
+        "useNamedFunction": "error",
         "useNullishCoalescing": "error",
         "useReactFunctionComponentDefinition": "error",
-        "useRegexpTest": "error",
-        "useSortedClasses": "error",
+        "useSimplifiedBooleanReturn": "error",
         "useStringStartsEndsWith": "error",
-        "useTestHooksInOrder": "error",
-        "useTestHooksOnTop": "error",
-        "useThisInClassMethods": "error"
+        "useTailwindSortedClasses": "error",
+        "useTailwindStaticClassStrings": "error",
+        "useUnaryMinus": "error"
       },
       "performance": {
         "noAccumulatingSpread": "error",
@@ -182,7 +232,8 @@
         "noReExportAll": "error",
         // Solid's <For> component is not valid in this React application.
         "useSolidForComponent": "off",
-        "useTopLevelRegex": "error"
+        "useTopLevelRegex": "error",
+        "useDomNodeTextContent": "error"
       },
       "security": {
         "noBlankTarget": "error",
@@ -200,6 +251,8 @@
         // Plain JSX text is clearer than redundant string expressions.
         "noJsxLiterals": "off",
         "noImplicitBoolean": "error",
+        // Runtime geometry and chart values are passed through CSS variables.
+        "noInlineStyles": "off",
         "noMagicNumbers": "error",
         "noNamespace": "error",
         "noNestedTernary": "error",
@@ -238,6 +291,8 @@
         },
         "useConsistentArrayType": "error",
         "useConsistentCurlyBraces": "error",
+        // Rstest uses it(), while Playwright uses test().
+        "useConsistentTestIt": "off",
         "useDefaultParameterLast": "error",
         "useErrorCause": "error",
         "useExportType": "error",
@@ -247,6 +302,10 @@
         "useImportType": "error",
         "useNodejsImportProtocol": "error",
         "useNumberNamespace": "error",
+        // Existing numbered captures are consumed by parser/replacement APIs.
+        "useNamedCaptureGroup": "off",
+        // Preserve existing regex semantics; Unicode mode changes valid patterns.
+        "useUnicodeRegex": "off",
         "useReadonlyClassProperties": "error",
         "useSelfClosingElements": "error",
         "useSpreadOverApply": "error",
@@ -278,7 +337,11 @@
             ]
           }
         },
-        "useSingleVarDeclarator": "error"
+        "useSingleVarDeclarator": "error",
+        "noPlaywrightWaitForSelector": "error",
+        "useTestHooksInOrder": "error",
+        "useTestHooksOnTop": "error",
+        "useThisInClassMethods": "error"
       },
       "suspicious": {
         "noDuplicateTestHooks": "error",
@@ -290,6 +353,11 @@
         "noAssignInExpressions": "error",
         "noBitwiseOperators": "error",
         "noConsole": "error",
+        // Conditional browser capabilities and assertion helpers are intentional.
+        "noConditionalExpect": "off",
+        "useExpect": "off",
+        // Browser support is governed by Rsbuild's targets, not CSS Baseline age.
+        "useBaseline": "off",
         "noDeprecatedImports": "error",
         "noDoubleEquals": "error",
         "noEmptyInterface": "error",
@@ -303,7 +371,11 @@
         "noReturnAssign": "error",
         "noThenProperty": "error",
         "noTsIgnore": "error",
-        "useDeprecatedDate": "error"
+        "useDeprecatedDate": "error",
+        "noDuplicateSelectors": "error",
+        "noIdenticalTestTitle": "error",
+        "noPlaywrightWaitForTimeout": "error",
+        "noReactStringRefs": "error"
       }
     }
   },
@@ -358,6 +430,10 @@
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
+          },
+          "nursery": {
+            // CLI wrappers intentionally propagate child-process exit statuses.
+            "noProcessExit": "off"
           },
           "suspicious": {
             "noConsole": "off"
@@ -450,6 +526,17 @@
       ],
       "linter": {
         "rules": {
+          "correctness": {
+            // Rstest mock factories define replacement components once.
+            "noComponentHookFactories": "off"
+          },
+          "nursery": {
+            // Test suites contain setup and multiple assertions, unlike app logic.
+            "noExcessiveStatementsPerFunction": {
+              "level": "error",
+              "options": { "max": 100 }
+            }
+          },
           "security": {
             "noSecrets": "off"
           },
@@ -477,6 +564,17 @@
           },
           "suspicious": {
             "noDocumentCookie": "off"
+          }
+        }
+      }
+    },
+    {
+      // Payload benchmarks must include assets arriving after the UI is ready.
+      "includes": ["e2e/tests/data-explorer-perf.spec.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noPlaywrightNetworkidle": "off"
           }
         }
       }

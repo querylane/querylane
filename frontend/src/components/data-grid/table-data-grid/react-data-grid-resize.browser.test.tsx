@@ -90,7 +90,9 @@ test("batches continuous grid resizes", async () => {
   for (let width = 980; width >= 800; width -= 20) {
     deliverResize(width);
   }
-  await new Promise((resolve) => setTimeout(resolve, 75));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 75);
+  });
 
   expect(resizeCommitCount).toBeLessThanOrEqual(3);
 });

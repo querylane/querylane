@@ -1,7 +1,3 @@
-const VERIFY_FULL = /^verify-full/;
-const GRANTS = /^Grants/;
-const SQL_EDITOR = /^SQL editor/;
-
 import type { Locator } from "playwright/test";
 import { consoleInstance } from "../../src/test/fixtures/console-resource-fixtures";
 import { roleDetailFixture } from "../../src/test/fixtures/role-fixtures";
@@ -12,6 +8,10 @@ import {
 import { mockRolesScreen } from "../visual/role-fixtures";
 import { expect, test } from "./base";
 import { mockRpc } from "./helpers";
+
+const VERIFY_FULL = /^verify-full/;
+const GRANTS = /^Grants/;
+const SQL_EDITOR = /^SQL editor/;
 
 const MAX_LENGTH_INSTANCE_NAME =
   "production_analytics_eu_central_failover_readonly_reconciliatio";

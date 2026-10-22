@@ -90,13 +90,13 @@ function ActiveSortSummary({ summary }: { summary: string | null }) {
   return (
     <Badge
       aria-label="Active sort summary"
-      className="@3xl/data-grid-toolbar:inline-flex hidden h-8 min-w-0 max-w-[min(34rem,42cqw)] justify-start"
+      className="hidden h-8 max-w-[min(34rem,42cqw)] min-w-0 justify-start @3xl/data-grid-toolbar:inline-flex"
       presentation="grid-count"
       role="group"
       title={`Active sort: ${summary}`}
       variant="outline"
     >
-      <span className="shrink-0 font-medium text-foreground">Sort</span>
+      <span className="text-foreground shrink-0 font-medium">Sort</span>
       <span className="min-w-0 truncate font-mono text-xs">{summary}</span>
     </Badge>
   );
@@ -121,7 +121,7 @@ function SelectionSummary({
   }
   return (
     <>
-      <span className="font-medium text-foreground">
+      <span className="text-foreground font-medium">
         {selectedCount.toLocaleString()} selected
       </span>
       <Button
@@ -226,7 +226,7 @@ function DataGridToolbar({
         />
         <ActiveSortSummary summary={sortSummary} />
 
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-muted-foreground text-xs">
+        <div className="text-muted-foreground ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs">
           <SelectionSummary
             allowSqlExport={allowSqlExport}
             onClearSelection={onClearSelection}

@@ -116,7 +116,7 @@ function SortPopover({
         className="w-full"
         size="sm"
       >
-        <Plus className="size-3.5 text-muted-foreground" />
+        <Plus className="text-muted-foreground size-3.5" />
         <SelectValue placeholder="Add sort column" />
       </SelectTrigger>
       <SelectContent>
@@ -161,7 +161,7 @@ function SortPopover({
       <DataGridPopoverContent
         align="end"
         aria-label="Sort rows"
-        className="w-fit min-w-64 max-w-[min(calc(100vw-1rem),var(--available-width))] space-y-1.5 overflow-hidden p-2"
+        className="w-fit max-w-[min(calc(100vw-1rem),var(--available-width))] min-w-64 space-y-1.5 overflow-hidden p-2"
         collisionBoundary={popoverBoundary ?? undefined}
         style={popoverStyle}
       >
@@ -184,7 +184,7 @@ function SortPopover({
           // Capped at the popover's min content width (min-w-64 minus p-2) so
           // the sentence wraps instead of stretching the empty popover wider
           // than it renders once sort rows exist.
-          <p className="max-w-60 px-1 text-muted-foreground text-xs">
+          <p className="text-muted-foreground max-w-60 px-1 text-xs">
             No sort applied. Add a column or click a header in the grid.
           </p>
         ) : (
@@ -309,7 +309,7 @@ function SortRow({
       >
         <GripVertical
           aria-hidden={true}
-          className="size-3.5 shrink-0 text-muted-foreground/60 group-hover/sort-row:text-foreground"
+          className="text-muted-foreground/60 group-hover/sort-row:text-foreground size-3.5 shrink-0"
         />
       </Button>
       <Select onValueChange={swapColumn} value={sort.columnKey}>

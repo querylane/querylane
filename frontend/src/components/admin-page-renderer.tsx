@@ -51,14 +51,14 @@ function AdminPageFallback() {
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-3">
-        <div className="h-4 w-24 rounded bg-muted" />
-        <div className="h-8 w-64 rounded bg-muted" />
-        <div className="h-4 w-full max-w-xl rounded bg-muted" />
+        <div className="bg-muted h-4 w-24 rounded" />
+        <div className="bg-muted h-8 w-64 rounded" />
+        <div className="bg-muted h-4 w-full max-w-xl rounded" />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="h-28 rounded-xl border bg-card" />
-        <div className="h-28 rounded-xl border bg-card" />
-        <div className="h-28 rounded-xl border bg-card" />
+        <div className="bg-card h-28 rounded-xl border" />
+        <div className="bg-card h-28 rounded-xl border" />
+        <div className="bg-card h-28 rounded-xl border" />
       </div>
       <span className="sr-only">Loading page content</span>
     </div>

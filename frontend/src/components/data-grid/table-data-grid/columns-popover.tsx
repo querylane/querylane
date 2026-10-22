@@ -93,7 +93,7 @@ function ColumnsPopover({
         collisionBoundary={popoverBoundary ?? undefined}
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="font-medium text-xs">Columns</p>
+          <p className="text-xs font-medium">Columns</p>
           <Button
             aria-label="Reset columns"
             className="h-6"
@@ -108,11 +108,11 @@ function ColumnsPopover({
           </Button>
         </div>
         {onFetchVisibleColumnsChange ? (
-          <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/30 p-2.5">
+          <div className="bg-muted/30 flex items-start justify-between gap-3 rounded-md border p-2.5">
             <div className="min-w-0">
-              <p className="font-medium text-xs">Fetch visible columns only</p>
+              <p className="text-xs font-medium">Fetch visible columns only</p>
               <p
-                className="mt-0.5 text-muted-foreground text-xs"
+                className="text-muted-foreground mt-0.5 text-xs"
                 id={fetchVisibleDescriptionId}
               >
                 Excludes hidden columns from row payloads while keeping them

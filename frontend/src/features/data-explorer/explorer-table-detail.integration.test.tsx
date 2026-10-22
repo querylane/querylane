@@ -382,7 +382,7 @@ afterEach(() => {
   rs.clearAllMocks();
 });
 
-describe("TableDetail definition document", () => {
+describe("table detail definition document", () => {
   it("renders the definition tab as a copyable schema document", async () => {
     tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
       columns: [
@@ -636,7 +636,7 @@ describe("TableDetail definition document", () => {
   });
 });
 
-describe("TableDetail definition safety", () => {
+describe("table detail definition safety", () => {
   it("shows copy failures instead of silently ignoring them", async () => {
     const user = userEvent.setup();
     const originalClipboard = Object.getOwnPropertyDescriptor(
@@ -677,7 +677,7 @@ describe("TableDetail definition safety", () => {
   });
 });
 
-describe("TableDetail tab routing", () => {
+describe("table detail tab routing", () => {
   it("honors URL-backed metadata tabs and reports tab changes", async () => {
     const user = userEvent.setup();
     const onTabChange = rs.fn();
@@ -706,7 +706,7 @@ describe("TableDetail tab routing", () => {
   });
 });
 
-describe("TableDetail partitions pagination", () => {
+describe("table detail partitions pagination", () => {
   it("shows summary cards without pagination chrome when no child partitions load", () => {
     tableQueries.partitionMetadata.data = create(
       GetTablePartitionMetadataResponseSchema,
@@ -740,7 +740,7 @@ describe("TableDetail partitions pagination", () => {
   });
 });
 
-describe("TableDetail constraints tab", () => {
+describe("table detail constraints tab", () => {
   it("combines the quicksearch with the inline kind filter", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.data = create(ListTableConstraintsResponseSchema, {
@@ -832,7 +832,7 @@ describe("TableDetail constraints tab", () => {
   });
 });
 
-describe("TableDetail columns tab", () => {
+describe("table detail columns tab", () => {
   it("renders and filters a dense column inventory", async () => {
     const user = userEvent.setup();
     tableQueries.columns.data = create(ListTableColumnsResponseSchema, {
@@ -977,7 +977,7 @@ describe("TableDetail columns tab", () => {
   });
 });
 
-describe("TableDetail indexes tab", () => {
+describe("table detail indexes tab", () => {
   it("renders usage stats, partial indexes, expression indexes, and unused pills", () => {
     tableQueries.indexes.data = create(ListTableIndexesResponseSchema, {
       indexes: [
@@ -1084,7 +1084,7 @@ describe("TableDetail indexes tab", () => {
   });
 });
 
-describe("TableDetail indexes tab SQL and stats", () => {
+describe("table detail indexes tab SQL and stats", () => {
   it("preserves quoted key parts in fallback index SQL", async () => {
     const user = userEvent.setup();
     const clipboard = mockClipboardWriteText();
@@ -1124,7 +1124,7 @@ describe("TableDetail indexes tab SQL and stats", () => {
   });
 });
 
-describe("TableDetail triggers tab", () => {
+describe("table detail triggers tab", () => {
   it("paginates filtered trigger cards and changes page size", async () => {
     const user = userEvent.setup();
     tableQueries.triggers.data = create(ListTableTriggersResponseSchema, {
@@ -1305,7 +1305,7 @@ describe("TableDetail triggers tab", () => {
   });
 });
 
-describe("TableDetail metadata errors", () => {
+describe("table detail metadata errors", () => {
   it("renders every failed metadata query with real RPC endpoints", async () => {
     const user = userEvent.setup();
     tableQueries.constraints.error = createMetadataError({
@@ -1393,7 +1393,7 @@ function renderPoliciesTab(policies: TablePolicy[]) {
   );
 }
 
-describe("TableDetail policies tab pagination", () => {
+describe("table detail policies tab pagination", () => {
   it("returns to the first policy page when mode filters change", async () => {
     const user = userEvent.setup();
     renderPoliciesTab(
@@ -1427,7 +1427,7 @@ describe("TableDetail policies tab pagination", () => {
   });
 });
 
-describe("TableDetail policies tab", () => {
+describe("table detail policies tab", () => {
   it("previews UPDATE visibility from USING without folding in WITH CHECK", async () => {
     const user = userEvent.setup();
     tableQueries.policies.data = create(ListTablePoliciesResponseSchema, {

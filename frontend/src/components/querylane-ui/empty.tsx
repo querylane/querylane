@@ -15,11 +15,11 @@ const emptyPresentations = cva("", {
     presentation: {
       borderless: "border-0 p-0",
       compact: "border-0 p-4",
-      page: "border border-border bg-card",
-      panel: "rounded-xl border border-border bg-card px-6 py-10",
-      "panel-compact": "rounded-md border border-border bg-card px-4 py-6",
+      page: "border-border bg-card border",
+      panel: "border-border bg-card rounded-xl border px-6 py-10",
+      "panel-compact": "border-border bg-card rounded-md border px-4 py-6",
       "panel-dashed":
-        "rounded-md border border-border border-dashed bg-card px-6 py-10",
+        "border-border bg-card rounded-md border border-dashed px-6 py-10",
       search: "rounded-md border-0 px-4 py-8",
       "search-compact": "rounded-md border-0 px-4 py-3.5",
       "search-header": "rounded-md border-0 px-4 py-6",

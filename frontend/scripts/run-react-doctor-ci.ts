@@ -109,8 +109,9 @@ function escapeTableCell(value: string) {
 }
 
 function renderDiagnostic(diagnostic: DoctorDiagnostic) {
+  const lineSuffix = diagnostic.line ? `:${diagnostic.line}` : "";
   const location = diagnostic.filePath
-    ? `${diagnostic.filePath}${diagnostic.line ? `:${diagnostic.line}` : ""}`
+    ? `${diagnostic.filePath}${lineSuffix}`
     : "unknown";
   const tags =
     diagnostic.tags && diagnostic.tags.length > 0
@@ -151,9 +152,12 @@ function renderMarkdown(report: DoctorReport, commitSha: string | undefined) {
     }
   }
 
+  const commitSuffix = commitSha
+    ? ` for commit \`${commitSha.slice(0, SHORT_SHA_LENGTH)}\``
+    : "";
   lines.push(
     "",
-    `<sub>Reviewed by [React Doctor](https://react.doctor)${commitSha ? ` for commit \`${commitSha.slice(0, SHORT_SHA_LENGTH)}\`` : ""}.</sub>`
+    `<sub>Reviewed by [React Doctor](https://react.doctor)${commitSuffix}.</sub>`
   );
 
   return `${lines.join("\n")}\n`;

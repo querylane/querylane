@@ -39,7 +39,7 @@ describe("other database objects query", () => {
     expect(
       tableValueToText(
         create(TableValueSchema, {
-          kind: { case: "int64Value", value: BigInt(42) },
+          kind: { case: "int64Value", value: 42n },
         })
       )
     ).toBe("42");

@@ -7,6 +7,7 @@ import {
   formatCount,
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
+import { cn } from "@/lib/utils";
 
 const DESCRIPTIONS: Record<string, string> = {
   Aggregate: "Combines input rows into aggregate results.",
@@ -67,33 +68,33 @@ function PlanNodeInspector({
   return (
     <aside
       aria-label="Plan node details"
-      className="@4xl:w-80 shrink-0 @4xl:overflow-auto border-t @4xl:border-t-0 @4xl:border-l bg-card"
+      className="bg-card shrink-0 border-t @4xl:w-80 @4xl:overflow-auto @4xl:border-t-0 @4xl:border-l"
     >
       <div className="border-b p-5">
-        <p className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mb-2 flex items-center gap-2 text-xs">
           <span
             aria-hidden="true"
-            className="size-1.5 rounded-full bg-chart-4"
+            className="bg-chart-4 size-1.5 rounded-full"
           />
           Selected operation
         </p>
-        <h3 className="font-semibold text-xl tracking-tight">
+        <h3 className="text-xl font-semibold tracking-tight">
           {node.nodeType}
         </h3>
         {node.relationName ? (
-          <p className="mt-1 break-all font-mono text-sm">
+          <p className="mt-1 font-mono text-sm break-all">
             {node.relationName}
           </p>
         ) : null}
         {node.indexName ? (
-          <p className="mt-1 break-all font-mono text-muted-foreground text-xs">
+          <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
             {node.indexName}
           </p>
         ) : null}
         <div className="mt-5 flex items-end justify-between">
           <div>
-            <p className="mb-1 text-muted-foreground text-xs">Self time ≈</p>
-            <p className="font-mono text-2xl tabular-nums tracking-tight">
+            <p className="text-muted-foreground mb-1 text-xs">Self time ≈</p>
+            <p className="font-mono text-2xl tracking-tight tabular-nums">
               {node.exclusiveMs === undefined
                 ? "—"
                 : formatPlanMs(node.exclusiveMs)}
@@ -104,7 +105,7 @@ function PlanNodeInspector({
           ) : null}
         </div>
         {DESCRIPTIONS[node.nodeType] ? (
-          <p className="mt-3 text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
             {DESCRIPTIONS[node.nodeType]}
           </p>
         ) : null}
@@ -114,8 +115,8 @@ function PlanNodeInspector({
         <div className="space-y-3 border-b p-5">
           {insights.map((insight) => (
             <div className="border-chart-4 border-l-2 pl-3" key={insight.label}>
-              <p className="font-medium text-xs">{insight.label}</p>
-              <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+              <p className="text-xs font-medium">{insight.label}</p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                 {insight.detail}
               </p>
             </div>
@@ -127,7 +128,7 @@ function PlanNodeInspector({
           {predicates.map((detail) => (
             <div key={detail.label}>
               <dt className="mb-2 font-medium">{detail.label}</dt>
-              <dd className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+              <dd className="bg-muted/60 rounded-md p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
                 {detail.value}
               </dd>
             </div>
@@ -145,13 +146,13 @@ function PlanNodeInspector({
         ))}
       </dl>
       {parallel ? (
-        <p className="border-b px-5 py-3 text-muted-foreground text-xs">
+        <p className="text-muted-foreground border-b px-5 py-3 text-xs">
           Parallel or async plan. Self time is unavailable; total time includes
           overlapping work.
         </p>
       ) : null}
       <div className="flex items-center justify-between px-5 pt-4">
-        <p className="font-medium text-xs">Reported properties</p>
+        <p className="text-xs font-medium">Reported properties</p>
         <Button
           onClick={onViewJson}
           presentation="compact"
@@ -165,8 +166,8 @@ function PlanNodeInspector({
       <dl className="space-y-3 p-5 text-xs">
         {otherDetails.map((detail) => (
           <div key={detail.label}>
-            <dt className="mb-1 text-muted-foreground">{detail.label}</dt>
-            <dd className="whitespace-pre-wrap break-words font-mono text-xs [overflow-wrap:anywhere]">
+            <dt className="text-muted-foreground mb-1">{detail.label}</dt>
+            <dd className="font-mono text-xs [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
               {detail.value}
             </dd>
           </div>
@@ -183,7 +184,7 @@ function RowComparison({ node }: { node: PlanNode }) {
       {" "}
       {node.actualRows !== undefined || node.planRows !== undefined ? (
         <div className="space-y-3 border-b p-5">
-          <p className="font-medium text-xs">Rows per loop</p>
+          <p className="text-xs font-medium">Rows per loop</p>
           {[
             { label: "Actual", value: node.actualRows, color: "bg-chart-2" },
             {
@@ -201,10 +202,13 @@ function RowComparison({ node }: { node: PlanNode }) {
               </div>
               <div
                 aria-hidden="true"
-                className="h-1 overflow-hidden rounded-full bg-muted"
+                className="bg-muted h-1 overflow-hidden rounded-full"
               >
                 <div
-                  className={`${row.color} h-full w-(--plan-share) rounded-full`}
+                  className={cn(
+                    row.color,
+                    "h-full w-(--plan-share) rounded-full"
+                  )}
                   style={{
                     "--plan-share": `${rowMaximum > 0 ? ((row.value ?? 0) / rowMaximum) * PERCENT : 0}%`,
                   }}

@@ -21,7 +21,7 @@ function ObjectName({ name }: { name: string }) {
   return (
     <>
       {schema ? <span className="text-muted-foreground">{schema}.</span> : null}
-      <span className="font-medium text-foreground">{rest}</span>
+      <span className="text-foreground font-medium">{rest}</span>
     </>
   );
 }
@@ -34,8 +34,8 @@ function ObjectRowShell({
   tag: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-border/60 border-b py-2 last:border-0">
-      <code className="text-(length:--text-caption) min-w-0 truncate font-mono">
+    <div className="border-border/60 flex items-center justify-between gap-4 border-b py-2 last:border-0">
+      <code className="min-w-0 truncate font-mono text-(length:--text-caption)">
         {children}
       </code>
       {tag}
@@ -45,7 +45,7 @@ function ObjectRowShell({
 
 function UppercaseTag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-(length:--text-micro) shrink-0 text-muted-foreground uppercase tracking-wide">
+    <span className="text-muted-foreground shrink-0 tracking-wide text-(length:--text-micro) uppercase">
       {children}
     </span>
   );
@@ -75,7 +75,7 @@ function SequenceRow({ object }: { object: OtherDatabaseObject }) {
   return (
     <ObjectRowShell
       tag={
-        <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+        <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
           {lastValue}
         </span>
       }
@@ -101,7 +101,7 @@ function CronRow({ object }: { object: OtherDatabaseObject }) {
   return (
     <ObjectRowShell
       tag={
-        <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+        <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
           {schedule}
         </span>
       }
@@ -130,13 +130,13 @@ function ObjectRow({ object }: { object: OtherDatabaseObject }) {
 function ExtensionRow({ extension }: { extension: Extension }) {
   return (
     <div
-      className="flex items-baseline justify-between gap-3 border-border/60 border-b py-2 last:border-0"
+      className="border-border/60 flex items-baseline justify-between gap-3 border-b py-2 last:border-0"
       title={extension.comment}
     >
-      <code className="text-(length:--text-caption) min-w-0 truncate font-medium font-mono text-foreground">
+      <code className="text-foreground min-w-0 truncate font-mono font-medium text-(length:--text-caption)">
         {extension.displayName}
       </code>
-      <span className="shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+      <span className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums">
         {extension.installedVersion}
       </span>
     </div>

@@ -83,9 +83,9 @@ function SchemaGrantBody({
   return (
     <>
       {grantor ? (
-        <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+        <div className="text-muted-foreground -mt-3.5 pb-3.5 text-xs">
           granted by{" "}
-          <span className="font-mono text-foreground/75">{grantor}</span>
+          <span className="text-foreground/75 font-mono">{grantor}</span>
         </div>
       ) : null}
       <RoleGrantsTableStatus

@@ -106,7 +106,7 @@ afterEach(() => {
   fitViewMock.mockClear();
 });
 
-describe("FlowCanvas", () => {
+describe("flow canvas", () => {
   test("passes useful labels to React Flow nodes", () => {
     const nodeWithSubtitle: VisualizationNode = {
       ...firstNode,

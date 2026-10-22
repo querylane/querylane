@@ -23,7 +23,7 @@ export function InstanceDangerZoneSection({
               Permanently remove <InlineCode>{instanceDisplayName}</InlineCode>
               from Querylane. This action cannot be undone.
               {deleteDisabledReason ? (
-                <span className="mt-2 block text-destructive">
+                <span className="text-destructive mt-2 block">
                   {deleteDisabledReason}
                 </span>
               ) : null}

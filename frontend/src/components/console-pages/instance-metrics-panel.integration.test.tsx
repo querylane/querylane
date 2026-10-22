@@ -95,7 +95,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe("InstanceMetricsPanel comparison overlay", () => {
+describe("instance metrics panel comparison overlay", () => {
   test("draws the previous-period overlay automatically, with no toggle", async () => {
     renderPanel({ response: fullResponse(true) });
 
@@ -111,7 +111,7 @@ describe("InstanceMetricsPanel comparison overlay", () => {
   });
 });
 
-describe("InstanceMetricsPanel nascent coverage", () => {
+describe("instance metrics panel nascent coverage", () => {
   test("shows a concrete collecting state below the three-point floor", () => {
     renderPanel({ response: nascentResponse() });
 

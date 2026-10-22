@@ -40,7 +40,7 @@ export function LeaseCell({ execution }: { execution: AdminRunnerExecution }) {
       <span className="truncate text-sm">
         {owner.hostname || "unknown host"}
       </span>
-      <span className="font-mono text-muted-foreground text-xs">
+      <span className="text-muted-foreground font-mono text-xs">
         {shortReplicaId(owner.replicaId)} · expires{" "}
         {formatRelativeTimestamp(execution.leaseExpiresAt)}
       </span>

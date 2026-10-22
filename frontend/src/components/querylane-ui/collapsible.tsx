@@ -11,9 +11,9 @@ const collapsibleTriggerPresentations = cva("", {
   variants: {
     presentation: {
       onboarding:
-        "gap-1 rounded-md px-1.5 py-0.5 text-sm text-white/58 outline-none transition-colors hover:text-white focus-visible:border-onboarding-focus focus-visible:ring-3 focus-visible:ring-onboarding-focus/25",
+        "focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 gap-1 rounded-md px-1.5 py-0.5 text-sm text-white/58 transition-colors outline-none hover:text-white focus-visible:ring-3",
       health:
-        "gap-3 rounded-md p-2 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 group-data-[tone=error]/health-check:focus-visible:ring-destructive/30 group-data-[tone=error]/health-check:hover:bg-destructive/10",
+        "hover:bg-muted/50 focus-visible:ring-ring/50 group-data-[tone=error]/health-check:focus-visible:ring-destructive/30 group-data-[tone=error]/health-check:hover:bg-destructive/10 gap-3 rounded-md p-2 transition-colors outline-none focus-visible:ring-3",
     },
   },
 });
@@ -64,7 +64,7 @@ const collapsiblePresentations = cva("", {
   variants: {
     presentation: {
       health:
-        "rounded-md data-[tone=error]:border data-[tone=error]:border-destructive/30 data-[tone=error]:bg-destructive/5",
+        "data-[tone=error]:border-destructive/30 data-[tone=error]:bg-destructive/5 rounded-md data-[tone=error]:border",
     },
   },
 });

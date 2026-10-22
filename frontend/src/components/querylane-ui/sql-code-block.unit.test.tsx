@@ -6,7 +6,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe("SqlCodeBlock", () => {
+describe("sql code block", () => {
   test("renders SQL snippets through Shiki while preserving copy text", async () => {
     const sql = `-- Required before DROP ROLE "replicator";
 CREATE ROLE "replicator" WITH LOGIN REPLICATION;

@@ -93,7 +93,7 @@ function DefaultsBody({
         ) : (
           <>
             No{" "}
-            <span className="font-mono text-foreground/80">
+            <span className="text-foreground/80 font-mono">
               ALTER DEFAULT PRIVILEGES
             </span>{" "}
             rules apply to this role.
@@ -103,15 +103,15 @@ function DefaultsBody({
     );
   }
   return (
-    <div className="flex flex-col overflow-hidden rounded-md border border-border">
+    <div className="border-border flex flex-col overflow-hidden rounded-md border">
       {rules.map((rule) => (
         <div
-          className="grid grid-cols-[1fr_auto] items-center gap-4 border-border not-first:border-t px-4 py-3 text-sm"
+          className="border-border grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 text-sm not-first:border-t"
           key={rule.key}
         >
           <span className="leading-relaxed">
             <span className="text-muted-foreground">When </span>
-            <span className="text-(length:--text-label-lg) font-mono text-foreground/85">
+            <span className="text-foreground/85 font-mono text-(length:--text-label-lg)">
               {rule.creatorRoleName}
             </span>
             <span className="text-muted-foreground"> creates new </span>
@@ -119,7 +119,7 @@ function DefaultsBody({
               {DEFAULT_PRIV_OBJECT_LABEL[rule.objectType]}
             </strong>
             <span className="text-muted-foreground"> in </span>
-            <span className="text-(length:--text-label-lg) font-mono text-foreground/85">
+            <span className="text-foreground/85 font-mono text-(length:--text-label-lg)">
               {rule.schemaName || "any schema"}
             </span>
             <span className="text-muted-foreground"> → grant </span>
@@ -168,8 +168,8 @@ function DefaultsDrillView({
         partial={partial}
         title="Default privileges"
       />
-      <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
-        <span className="font-mono text-foreground/75">
+      <div className="text-muted-foreground -mt-3.5 pb-3.5 text-xs">
+        <span className="text-foreground/75 font-mono">
           ALTER DEFAULT PRIVILEGES
         </span>{" "}
         rules that grant privileges on objects that don&apos;t exist yet.
@@ -249,7 +249,7 @@ function PublicDrillView({
         partial={partial}
         title="Granted to PUBLIC"
       />
-      <div className="-mt-3.5 pb-3.5 text-muted-foreground text-xs">
+      <div className="text-muted-foreground -mt-3.5 pb-3.5 text-xs">
         Granted to every role in this database, including this one. Not unique
         to this role.
       </div>
@@ -262,7 +262,7 @@ function PublicDrillView({
           ) : (
             <>
               No grants to{" "}
-              <span className="font-mono text-foreground/80">PUBLIC</span> are
+              <span className="text-foreground/80 font-mono">PUBLIC</span> are
               visible from this role.
             </>
           )}
@@ -354,7 +354,7 @@ function HeadlineBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-md border px-2 font-medium text-xs",
+        "inline-flex h-6 shrink-0 items-center rounded-md border px-2 text-xs font-medium whitespace-nowrap",
         HEADLINE_TONE_CLASS[headline.tone]
       )}
       title={headline.title}
@@ -393,7 +393,7 @@ function DatabaseSelect({
         className="max-w-full"
         size="sm"
       >
-        <Database className="size-3.5 text-muted-foreground" />
+        <Database className="text-muted-foreground size-3.5" />
         <SelectValue placeholder="Select database" />
       </SelectTrigger>
       <SelectContent>

@@ -203,7 +203,7 @@ afterEach(() => {
   rs.clearAllMocks();
 });
 
-describe("DataExplorerPage", () => {
+describe("data explorer page", () => {
   it("keeps the explorer shell visible while schemas are loading", () => {
     mocks.schemasQuery.data = undefined;
     mocks.schemasQuery.error = null;

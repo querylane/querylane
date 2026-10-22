@@ -48,8 +48,8 @@ import {
   View_ViewType,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-const ZERO_BYTES = BigInt(0);
-const ZERO_ROWS = BigInt(0);
+const ZERO_BYTES = 0n;
+const ZERO_ROWS = 0n;
 const EM_DASH = "—";
 const NO_OWNER_FILTER_LABEL = "No owner";
 
@@ -127,9 +127,9 @@ function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
     <span className="flex min-w-0 items-center gap-2">
       <Icon
         aria-hidden="true"
-        className="size-3.5 shrink-0 text-muted-foreground"
+        className="text-muted-foreground size-3.5 shrink-0"
       />
-      <span className="text-(length:--text-caption) truncate font-mono">
+      <span className="truncate font-mono text-(length:--text-caption)">
         {row.displayName}
       </span>
     </span>
@@ -199,7 +199,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       accessorFn: (row) => row.owner,
       cell: ({ row }) =>
         row.original.owner ? (
-          <span className="font-mono text-muted-foreground text-xs">
+          <span className="text-muted-foreground font-mono text-xs">
             {row.original.owner}
           </span>
         ) : (
@@ -215,7 +215,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       accessorFn: (row) => row.comment,
       cell: ({ row }) =>
         row.original.comment ? (
-          <span className="block truncate text-muted-foreground text-xs">
+          <span className="text-muted-foreground block truncate text-xs">
             {row.original.comment}
           </span>
         ) : (
@@ -356,7 +356,7 @@ function SchemaObjectsLoading() {
   return (
     <div
       aria-label="Loading objects"
-      className="flex flex-col gap-2 rounded-lg border border-border p-3"
+      className="border-border flex flex-col gap-2 rounded-lg border p-3"
       role="status"
     >
       <span className="sr-only">Loading objects</span>
@@ -413,7 +413,7 @@ function SchemaDetailNotices({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
       {hasObjectsError ? (
-        <div className="text-(length:--text-caption) rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive">
+        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-(length:--text-caption)">
           Failed to load some objects in this schema. Refresh the page to try
           again.
         </div>

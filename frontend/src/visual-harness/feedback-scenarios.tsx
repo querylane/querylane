@@ -29,7 +29,7 @@ function ignoreRetry() {
 
 function FeedbackSurface({ children }: { children: ReactNode }) {
   return (
-    <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
+    <div className="border-border bg-background text-foreground w-[1100px] rounded-2xl border p-8">
       {children}
     </div>
   );
@@ -39,8 +39,8 @@ function FeedbackSectionStatesScenario() {
   return (
     <FeedbackSurface>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4 rounded-xl border border-border p-5">
-          <h2 className="font-semibold text-lg">Section states</h2>
+        <div className="border-border space-y-4 rounded-xl border p-5">
+          <h2 className="text-lg font-semibold">Section states</h2>
           <AsyncSectionState
             hasContent={false}
             isPending={true}
@@ -51,12 +51,12 @@ function FeedbackSectionStatesScenario() {
             isRefreshing={true}
             refreshingMessage="Refreshing table statistics…"
           >
-            <div className="rounded-lg border border-border bg-card p-4 text-sm">
+            <div className="border-border bg-card rounded-lg border p-4 text-sm">
               Existing content stays visible while fresh metadata loads.
             </div>
           </AsyncSectionState>
         </div>
-        <div className="space-y-4 rounded-xl border border-border p-5">
+        <div className="border-border space-y-4 rounded-xl border p-5">
           <ConfigManagedNotice />
           <EmptyState
             action={
@@ -81,8 +81,8 @@ function FeedbackFormRecoveryScenario() {
     <FeedbackSurface>
       <div className="space-y-6">
         <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="space-y-3 rounded-xl border border-border p-5">
-            <h2 className="font-semibold text-lg">Connection credentials</h2>
+          <div className="border-border space-y-3 rounded-xl border p-5">
+            <h2 className="text-lg font-semibold">Connection credentials</h2>
             <div className="grid gap-2 text-sm">
               <Label htmlFor={passwordId}>Password</Label>
               <PasswordInput
@@ -131,9 +131,9 @@ function FeedbackFormRecoveryScenario() {
 
 function PostgresErrorSummariesScenario() {
   return (
-    <div className="w-[1100px] space-y-5 rounded-2xl border border-border bg-background p-6 text-foreground">
+    <div className="border-border bg-background text-foreground w-[1100px] space-y-5 rounded-2xl border p-6">
       <header className="space-y-1">
-        <h1 className="font-semibold text-2xl tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Common PostgreSQL errors
         </h1>
         <p className="text-muted-foreground text-sm">
@@ -145,10 +145,10 @@ function PostgresErrorSummariesScenario() {
       <div className="grid grid-cols-2 gap-4">
         {POSTGRES_ERROR_EXAMPLES.map((example) => (
           <section
-            className="space-y-2 rounded-xl border border-border bg-muted/20 p-4"
+            className="border-border bg-muted/20 space-y-2 rounded-xl border p-4"
             key={example.sqlstate}
           >
-            <h2 className="font-medium text-sm">{example.label}</h2>
+            <h2 className="text-sm font-medium">{example.label}</h2>
             <AppErrorView error={createPostgresError(example)} />
           </section>
         ))}
@@ -159,7 +159,7 @@ function PostgresErrorSummariesScenario() {
 
 function PostgresErrorDetailsScenario() {
   return (
-    <div className="w-[720px] rounded-2xl border border-border bg-background p-6 text-foreground">
+    <div className="border-border bg-background text-foreground w-[720px] rounded-2xl border p-6">
       <AppErrorView
         error={createPostgresError(POSTGRES_PERMISSION_ERROR_EXAMPLE)}
         onRetry={ignoreRetry}

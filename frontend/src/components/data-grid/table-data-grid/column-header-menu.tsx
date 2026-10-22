@@ -87,7 +87,7 @@ function ColumnHeaderMenu({
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="flex flex-col" presentation="stacked">
-            <span className="truncate font-mono text-foreground">
+            <span className="text-foreground truncate font-mono">
               {columnName}
             </span>
             <span className="truncate font-mono text-xs">

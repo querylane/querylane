@@ -72,7 +72,7 @@ beforeEach(() => {
   useOnboardingWizardStore.getState().resetSession();
 });
 
-describe("Onboarding wizard — browser behavior", () => {
+describe("onboarding wizard — browser behavior", () => {
   test("method selection presents all available ways to get started", async () => {
     await renderWizard();
 

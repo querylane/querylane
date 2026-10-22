@@ -16,13 +16,13 @@ const cardPresentations = cva("", {
     presentation: {
       danger: "border-destructive/30 bg-destructive/3",
       onboarding:
-        "border-white/10 bg-onboarding-card py-0 text-white shadow-(--shadow-onboarding-dialog)",
-      floating: "border bg-background/95 shadow-lg backdrop-blur-sm",
-      "bordered-flush": "gap-0 border-border py-0",
+        "bg-onboarding-card border-white/10 py-0 text-white shadow-(--shadow-onboarding-dialog)",
+      floating: "bg-background/95 border shadow-lg backdrop-blur-sm",
+      "bordered-flush": "border-border gap-0 py-0",
       flush: "gap-0 py-0",
       bordered: "border-border",
       compact: "gap-4",
-      split: "gap-0 py-0 md:divide-x md:divide-border",
+      split: "md:divide-border gap-0 py-0 md:divide-x",
       error: "border-destructive/30",
     },
     layout: {
@@ -52,7 +52,7 @@ const cardHeaderPresentations = cva("", {
     presentation: {
       compact: "py-4",
       spacious: "gap-3",
-      definition: "border-b bg-muted/40 py-3",
+      definition: "bg-muted/40 border-b py-3",
       insights: "border-b py-4",
       "insights-stacked": "gap-3 py-4",
       section: "gap-4",
@@ -95,11 +95,11 @@ const cardContentPresentations = cva("", {
       "compact-row": "gap-3",
       "tight-row": "gap-2",
       empty: "gap-3 py-10",
-      divided: "divide-y divide-border/60 p-0",
+      divided: "divide-border/60 divide-y p-0",
       metric: "gap-y-1 px-4 py-0",
       inset: "px-4",
       "definition-description":
-        "py-4 text-muted-foreground text-sm leading-relaxed",
+        "text-muted-foreground py-4 text-sm leading-relaxed",
     },
   },
 });

@@ -8,7 +8,7 @@ test.each([
   { selectionKeys: "", table: "orders" },
   { selectionKeys: "{ArrowDown}", table: "orders_archive" },
 ])(
-  "Tab completes the highlighted table $table without indenting SQL",
+  "tab completes the highlighted table $table without indenting SQL",
   async ({ selectionKeys, table }) => {
     const user = userEvent.setup();
     const onChange = rs.fn();
@@ -46,7 +46,7 @@ test.each([
   }
 );
 
-test("Tab and Shift+Tab still indent when no completion is open", async () => {
+test("tab and Shift+Tab still indent when no completion is open", async () => {
   const user = userEvent.setup();
   const onChange = rs.fn();
   await render(

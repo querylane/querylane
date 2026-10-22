@@ -1,10 +1,15 @@
 import { create } from "@bufbuild/protobuf";
 import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as routerActual from "@tanstack/react-router" with {
   rstest: "importActual",
 };
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { RouteErrorView } from "@/components/route-error-view";
+import { reserveChunkLoadReloadAttempt } from "@/lib/chunk-load-recovery";
+import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
+import { useSetupStore } from "@/stores/setup-store";
 
 const routerMock = rs.hoisted(() => ({
   invalidate: rs.fn(async () => undefined),
@@ -14,12 +19,6 @@ rs.mock("@tanstack/react-router", () => ({
   ...routerActual,
   useRouter: () => routerMock,
 }));
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouteErrorView } from "@/components/route-error-view";
-import { reserveChunkLoadReloadAttempt } from "@/lib/chunk-load-recovery";
-import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-import { useSetupStore } from "@/stores/setup-store";
 
 const CHUNK_LOAD_ERROR = new Error(
   "Loading chunk 9818 failed.\n(missing: https://demo.querylane.net/static/js/async/9818.55e76f5dd2.js)"

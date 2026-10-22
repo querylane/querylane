@@ -424,8 +424,8 @@ function InstancePageHeader({
     <>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-          <div className="flex min-w-0 max-w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="min-w-0 text-balance font-semibold text-2xl text-foreground tracking-tight [overflow-wrap:anywhere]">
+          <div className="flex max-w-full min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="text-foreground min-w-0 text-2xl font-semibold tracking-tight text-balance [overflow-wrap:anywhere]">
               {instance.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-2">
@@ -436,7 +436,7 @@ function InstancePageHeader({
               />
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+          <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
             {lastRefreshedLabel ? (
               <span className="hidden sm:inline">{lastRefreshedLabel}</span>
             ) : null}
@@ -458,7 +458,7 @@ function InstancePageHeader({
             </Button>
           </div>
         </div>
-        <div className="text-(length:--text-caption) flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+        <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-(length:--text-caption)">
           {instance.config?.host ? (
             <>
               <CopyableHost
@@ -542,12 +542,12 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
         <div className="flex items-center gap-2">
           <Database
             aria-hidden="true"
-            className="size-3.5 shrink-0 text-muted-foreground/50"
+            className="text-muted-foreground/50 size-3.5 shrink-0"
           />
-          <span className="font-medium text-sm">{db.name}</span>
+          <span className="text-sm font-medium">{db.name}</span>
           <ChevronRight
             aria-hidden="true"
-            className="ml-0.5 size-3 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
+            className="text-muted-foreground/0 group-hover:text-muted-foreground ml-0.5 size-3 transition-colors"
           />
         </div>
       );
@@ -609,14 +609,14 @@ function InstanceDatabasesSectionHeader({ count }: { count: number | null }) {
     <div className="flex items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-base text-foreground">Databases</h2>
+          <h2 className="text-foreground text-base font-semibold">Databases</h2>
           {count === null ? null : (
             <span className="text-muted-foreground text-xs tabular-nums">
               {count}
             </span>
           )}
         </div>
-        <p className="text-(length:--text-caption) -mt-0.5 text-muted-foreground">
+        <p className="text-muted-foreground -mt-0.5 text-(length:--text-caption)">
           Databases returned by the backend for this instance.
         </p>
       </div>

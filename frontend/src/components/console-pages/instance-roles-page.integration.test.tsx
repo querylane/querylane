@@ -153,7 +153,7 @@ afterEach(() => {
   mocks.truncatedRequestCount = 0;
 });
 
-describe("InstanceRolesPage", () => {
+describe("instance roles page", () => {
   test("debounces role search requests", () => {
     rs.useFakeTimers();
     const { rerender } = render(

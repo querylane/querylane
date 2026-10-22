@@ -70,9 +70,9 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
         <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
-      return <Check className="size-4 text-positive-400" />;
+      return <Check className="text-positive-400 size-4" />;
     case "error":
-      return <X className="size-4 text-negative-400" />;
+      return <X className="text-negative-400 size-4" />;
     default:
       return <Unplug className="size-4" />;
   }
@@ -144,9 +144,9 @@ function ConnectionTestResult({
 }) {
   if (status === "success" && isCurrentConfigVerified) {
     return (
-      <div className="rounded-xl border border-positive-400/25 bg-positive-500/8 px-4 py-3 text-positive-100/92 text-sm">
+      <div className="border-positive-400/25 bg-positive-500/8 text-positive-100/92 rounded-xl border px-4 py-3 text-sm">
         <div className="flex items-center gap-3">
-          <Check className="size-4 shrink-0 text-positive-400" />
+          <Check className="text-positive-400 size-4 shrink-0" />
           Connection successful. Ready to continue.
         </div>
       </div>
@@ -156,11 +156,11 @@ function ConnectionTestResult({
   if (status === "error" && errorMessage) {
     return (
       <div
-        className="rounded-xl border border-negative-400/20 bg-negative-500/8 px-4 py-3 text-negative-100/92 text-sm"
+        className="border-negative-400/20 bg-negative-500/8 text-negative-100/92 rounded-xl border px-4 py-3 text-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <X className="mt-0.5 size-4 shrink-0 text-negative-400" />
+          <X className="text-negative-400 mt-0.5 size-4 shrink-0" />
           <div className="space-y-1">
             <div className="font-medium">Connection failed</div>
             <div className="text-negative-200/78 text-sm">{errorMessage}</div>
@@ -197,7 +197,7 @@ function InternalStorageSslOptions({
   return (
     <Collapsible onOpenChange={onOpenChange} open={open}>
       <div className="relative space-y-3 rounded-xl border border-white/10 bg-white/3 px-5 py-4">
-        <label className="font-medium text-sm text-white" htmlFor={modeId}>
+        <label className="text-sm font-medium text-white" htmlFor={modeId}>
           SSL mode
         </label>
         <CollapsibleTrigger
@@ -234,7 +234,7 @@ function InternalStorageSslOptions({
             />
           </SelectContent>
         </Select>
-        <p className="text-sm text-white/56 leading-6">
+        <p className="text-sm leading-6 text-white/56">
           Choose how Querylane negotiates TLS for its internal storage database.
         </p>
         {open ? (
@@ -242,7 +242,7 @@ function InternalStorageSslOptions({
             <section aria-label="Advanced connection options" id={contentId}>
               <div className="space-y-3">
                 <label
-                  className="font-medium text-sm text-white"
+                  className="text-sm font-medium text-white"
                   htmlFor={sslNegotiationId}
                 >
                   SSL negotiation
@@ -700,7 +700,7 @@ export function UiConfiguredPhase() {
 
         {connectionStringFeedback.warning ? (
           <p
-            className="rounded-xl border border-warning-300/20 bg-warning-300/7 px-4 py-3 text-sm text-warning-100/90"
+            className="border-warning-300/20 bg-warning-300/7 text-warning-100/90 rounded-xl border px-4 py-3 text-sm"
             role="status"
           >
             {connectionStringFeedback.warning}

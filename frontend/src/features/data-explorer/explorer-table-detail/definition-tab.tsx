@@ -47,7 +47,7 @@ function DefinitionSectionCard({ section }: { section: DefinitionSection }) {
   return (
     <Card className="min-w-0" presentation="flush" size="sm">
       <CardHeader presentation="definition">
-        <h2 className="flex items-center gap-2 font-medium text-sm">
+        <h2 className="flex items-center gap-2 text-sm font-medium">
           {section.title}
         </h2>
         <CardDescription presentation="identifier">
@@ -79,8 +79,8 @@ function DefinitionSideCard({
   return (
     <Card className="min-w-0" presentation="flush" size="sm">
       <CardHeader presentation="definition">
-        <h2 className="flex items-center gap-2 font-medium text-sm">
-          <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <Icon aria-hidden="true" className="text-muted-foreground size-4" />
           {title}
         </h2>
         {action ? <CardAction>{action}</CardAction> : null}
@@ -114,8 +114,8 @@ function ReferencedTablesCard({ references }: { references: string[] }) {
           references.length > 0 ? "definition-separated" : "definition-plain"
         }
       >
-        <h2 className="flex items-center gap-2 font-medium text-sm">
-          <Layers aria-hidden="true" className="size-4 text-muted-foreground" />
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <Layers aria-hidden="true" className="text-muted-foreground size-4" />
           Referenced tables
         </h2>
         <CardDescription>
@@ -168,12 +168,12 @@ function DefinitionCommandStep({
   title: string;
 }) {
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-lg border">
-      <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
-        <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-xs">
+    <div className="max-w-full min-w-0 overflow-hidden rounded-lg border">
+      <div className="bg-muted/60 flex items-center gap-2 border-b px-3 py-2">
+        <span className="bg-muted-foreground/20 flex size-5 items-center justify-center rounded-full font-mono text-xs">
           {number}
         </span>
-        <h3 className="font-medium text-xs">{title}</h3>
+        <h3 className="text-xs font-medium">{title}</h3>
         <CopyIconButton
           ariaLabel={`Copy ${title.toLowerCase()} command`}
           className="ml-auto"
@@ -182,9 +182,9 @@ function DefinitionCommandStep({
       </div>
       <section
         aria-label={`${title} command`}
-        className="max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        className="focus-visible:ring-ring max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-inset"
       >
-        <pre className="min-h-14 w-max min-w-full whitespace-pre bg-transparent p-3 font-mono text-xs leading-relaxed">
+        <pre className="min-h-14 w-max min-w-full bg-transparent p-3 font-mono text-xs leading-relaxed whitespace-pre">
           <BashSyntaxHighlight code={command} />
         </pre>
       </section>
@@ -204,9 +204,10 @@ function ReproduceLocallyCard({
   tableName: string;
 }) {
   const createDatabaseCommand = `createdb -h localhost "\${DATABASE_NAME:-${shellDoubleQuoteEscape(databaseId)}}"`;
+  const dumpFileName = `${tableName}.sql`;
   const restoreCommand = [
     `psql -h localhost -d "\${DATABASE_NAME:-${shellDoubleQuoteEscape(databaseId)}}" \\`,
-    `  -f ${shellSingleQuote(`${tableName}.sql`)}`,
+    `  -f ${shellSingleQuote(dumpFileName)}`,
   ].join("\n");
   const allSteps = [
     "export POSTGRES_HOST='your-host'",
@@ -264,7 +265,7 @@ function ReproduceLocallyCard({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
+        <div className="bg-background flex min-h-8 items-center rounded-lg border px-3 py-1.5 text-sm">
           <span>Template: pg_dump, schema only (SQL)</span>
         </div>
         <DefinitionCommandStep
@@ -437,12 +438,12 @@ function DefinitionTab({
           tab="definition"
         />
       ) : null}
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-muted-foreground text-sm">
+      <div className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center gap-2 text-sm">
         <span>Schema document</span>
         <span aria-hidden="true">·</span>
         <span>
           generated live from{" "}
-          <code className="rounded bg-muted px-1 py-0.5">pg_catalog</code>
+          <code className="bg-muted rounded px-1 py-0.5">pg_catalog</code>
         </span>
         <span aria-hidden="true">·</span>
         <span>{toolbar.lastFetchedLabel}</span>
@@ -476,7 +477,7 @@ function DefinitionTab({
         schemaName={schemaName}
         tableName={tableName}
       />
-      <p className="px-1 text-muted-foreground text-xs leading-relaxed">
+      <p className="text-muted-foreground px-1 text-xs leading-relaxed">
         Definition is generated from pg_catalog on each visit; Querylane never
         stores or mutates schema.
       </p>

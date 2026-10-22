@@ -83,10 +83,10 @@ function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded font-semibold uppercase tracking-wider",
-        size === "md" && "text-(length:--text-micro) h-5 px-1.5",
-        size === "sm" && "text-(length:--text-micro-sm) h-4 px-1 font-mono",
-        mono && "font-mono normal-case tracking-normal",
+        "inline-flex items-center rounded font-semibold tracking-wider uppercase",
+        size === "md" && "h-5 px-1.5 text-(length:--text-micro)",
+        size === "sm" && "h-4 px-1 font-mono text-(length:--text-micro-sm)",
+        mono && "font-mono tracking-normal normal-case",
         PILL_TONE_CLASSES[tone]
       )}
       title={title}

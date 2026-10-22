@@ -30,7 +30,7 @@ rs.mock("@/hooks/api/table-data", () => ({
   useReadCellValueMutation: tableDataApi.useReadCellValueMutation,
 }));
 
-describe("RecordField", () => {
+describe("record field", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();

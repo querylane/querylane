@@ -25,7 +25,7 @@ test("materialized view data tab renders its real grid", async () => {
   await render(
     <HarnessProviders transport={transport}>
       <ScreenshotFrame>
-        <div className="h-[820px] w-[1180px] rounded-2xl border border-border bg-background p-8 text-foreground">
+        <div className="border-border bg-background text-foreground h-[820px] w-[1180px] rounded-2xl border p-8">
           <ViewDetail
             databaseId="appdb"
             instanceId="production"

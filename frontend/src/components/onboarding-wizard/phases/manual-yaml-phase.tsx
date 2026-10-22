@@ -101,11 +101,11 @@ export function ManualYamlPhase() {
     >
       <div className="space-y-5">
         <div className="rounded-xl border border-white/10 bg-white/3 p-4">
-          <div className="font-medium text-base text-white/84">
+          <div className="text-base font-medium text-white/84">
             Default path
           </div>
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-onboarding-preview px-4 py-3">
-            <span className="min-w-0 flex-1 break-all font-mono text-white/92 text-xs">
+          <div className="bg-onboarding-preview mt-3 flex items-center gap-3 rounded-xl border border-white/8 px-4 py-3">
+            <span className="min-w-0 flex-1 font-mono text-xs break-all text-white/92">
               {configFilePath}
             </span>
             <Button
@@ -123,13 +123,13 @@ export function ManualYamlPhase() {
               {pathCopyState === "copied" ? "Copied" : "Copy path"}
             </Button>
           </div>
-          <p className="mt-3 text-sm text-white/54 leading-6">
+          <p className="mt-3 text-sm leading-6 text-white/54">
             Override with{" "}
-            <code className="rounded bg-white/6 px-1.5 py-0.5 text-white/72 text-xs">
+            <code className="rounded bg-white/6 px-1.5 py-0.5 text-xs text-white/72">
               {"--config <path>"}
             </code>{" "}
             or{" "}
-            <code className="rounded bg-white/6 px-1.5 py-0.5 text-white/72 text-xs">
+            <code className="rounded bg-white/6 px-1.5 py-0.5 text-xs text-white/72">
               QUERYLANE_CONFIG
             </code>
             .
@@ -137,8 +137,8 @@ export function ManualYamlPhase() {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-white/10 bg-white/3">
-          <div className="flex items-center justify-between border-white/8 border-b px-5 py-4">
-            <div className="font-medium text-base text-white">config.yaml</div>
+          <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
+            <div className="text-base font-medium text-white">config.yaml</div>
             <Button
               className="h-8"
               onClick={async () => {
@@ -160,14 +160,14 @@ export function ManualYamlPhase() {
               {copyState === "copied" ? "Copied" : "Copy"}
             </Button>
           </div>
-          <pre className="overflow-x-auto p-4 font-mono text-white/84 text-xs leading-6">
+          <pre className="overflow-x-auto p-4 font-mono text-xs leading-6 text-white/84">
             <code data-testid="manual-yaml-config-preview">
               {configPreview}
             </code>
           </pre>
         </div>
 
-        <div className="rounded-xl border border-onboarding-accent/24 bg-onboarding-detail px-4 py-3 text-sm text-white/70 leading-6">
+        <div className="border-onboarding-accent/24 bg-onboarding-detail rounded-xl border px-4 py-3 text-sm leading-6 text-white/70">
           Querylane will begin watching the configured path on step 3. Once the
           file is saved, it will validate the contents and continue setup
           automatically.

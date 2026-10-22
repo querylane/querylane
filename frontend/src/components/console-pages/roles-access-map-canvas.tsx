@@ -264,10 +264,10 @@ function RoleNodeButton({
         aria-hidden="true"
         className={cn("mr-2 size-2 rounded-full", roleDotClass(node.kind))}
       />
-      <span className="min-w-0 flex-1 truncate font-mono font-semibold text-xs">
+      <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">
         {node.title}
       </span>
-      <span className="ml-2 shrink-0 text-muted-foreground text-xs">
+      <span className="text-muted-foreground ml-2 shrink-0 text-xs">
         {node.subtitle}
       </span>
     </Button>
@@ -306,13 +306,13 @@ function ObjectNodeButton({
     >
       <Database
         aria-hidden="true"
-        className="mr-2 size-3.5 shrink-0 text-muted-foreground"
+        className="text-muted-foreground mr-2 size-3.5 shrink-0"
       />
       <span className="min-w-0">
-        <span className="block truncate font-mono font-semibold text-xs leading-tight">
+        <span className="block truncate font-mono text-xs leading-tight font-semibold">
           {node.title}
         </span>
-        <span className="block truncate text-muted-foreground text-xs leading-tight">
+        <span className="text-muted-foreground block truncate text-xs leading-tight">
           {node.subtitle}
         </span>
       </span>
@@ -323,7 +323,7 @@ function ObjectNodeButton({
 function EmptyObjects({ incomplete }: { incomplete: boolean }) {
   return (
     <div
-      className="absolute top-(--layout-top) left-(--layout-left) flex h-36 w-(--layout-width) items-center justify-center rounded-xl border border-dashed bg-background/70 text-center text-muted-foreground text-sm"
+      className="bg-background/70 text-muted-foreground absolute top-(--layout-top) left-(--layout-left) flex h-36 w-(--layout-width) items-center justify-center rounded-xl border border-dashed text-center text-sm"
       style={{
         "--layout-left": `${OBJECT_X}px`,
         "--layout-top": `${OBJECT_TOP}px`,
@@ -376,7 +376,7 @@ function AccessFiltersPopover({
             {hiddenEdgeCount > 0 ? (
               <span
                 aria-hidden="true"
-                className="rounded-full bg-muted px-1.5 font-mono text-muted-foreground text-xs"
+                className="bg-muted text-muted-foreground rounded-full px-1.5 font-mono text-xs"
               >
                 {hiddenEdgeCount}
               </span>
@@ -390,12 +390,12 @@ function AccessFiltersPopover({
         </PopoverHeader>
         <div className="grid gap-2">
           {builtInRoleCount > 0 ? (
-            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted">
+            <div className="hover:bg-muted flex min-w-0 items-center justify-between gap-3 rounded-lg p-2">
               <div className="min-w-0">
                 <Label htmlFor={builtInRolesSwitchId} presentation="compact">
                   Built-in roles
                 </Label>
-                <p className="truncate text-muted-foreground text-xs">
+                <p className="text-muted-foreground truncate text-xs">
                   Show {builtInRoleCount} PostgreSQL-provided role
                   {builtInRoleCount === 1 ? "" : "s"}.
                 </p>
@@ -412,7 +412,7 @@ function AccessFiltersPopover({
             const switchId = `role-access-map-${filter.tone}`;
             return (
               <div
-                className="flex min-w-0 items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted"
+                className="hover:bg-muted flex min-w-0 items-center justify-between gap-3 rounded-lg p-2"
                 key={filter.tone}
               >
                 <div className="flex min-w-0 items-center gap-2">
@@ -427,7 +427,7 @@ function AccessFiltersPopover({
                     <Label htmlFor={switchId} presentation="compact">
                       {filter.label}
                     </Label>
-                    <p className="truncate text-muted-foreground text-xs">
+                    <p className="text-muted-foreground truncate text-xs">
                       {filter.description}
                     </p>
                   </div>
@@ -570,7 +570,7 @@ function RolesAccessMapCanvas({
           showBuiltInRoles={showBuiltInRoles}
         />
         <div className="flex-1" />
-        <fieldset className="flex items-center rounded-lg border bg-background p-0.5 shadow-sm">
+        <fieldset className="bg-background flex items-center rounded-lg border p-0.5 shadow-sm">
           <legend className="sr-only">Role access map zoom controls</legend>
           <Button
             aria-label="Zoom out"
@@ -581,7 +581,7 @@ function RolesAccessMapCanvas({
           >
             <Minus className="size-4" />
           </Button>
-          <span className="min-w-10 text-center font-mono text-muted-foreground text-xs tabular-nums">
+          <span className="text-muted-foreground min-w-10 text-center font-mono text-xs tabular-nums">
             {Math.round(zoom * ZOOM_PERCENT_FACTOR)}%
           </span>
           <Button
@@ -593,11 +593,11 @@ function RolesAccessMapCanvas({
           >
             <Plus className="size-4" />
           </Button>
-          <div className="mx-1 h-4 w-px bg-border" />
+          <div className="bg-border mx-1 h-4 w-px" />
           <Button onClick={fitZoom} size="sm" type="button" variant="ghost">
             Fit
           </Button>
-          <div className="mx-1 h-4 w-px bg-border" />
+          <div className="bg-border mx-1 h-4 w-px" />
           <Button
             aria-label={
               isExpanded
@@ -621,7 +621,7 @@ function RolesAccessMapCanvas({
         </span>
       </div>
       <div
-        className="overflow-auto rounded-2xl border bg-card shadow-xs"
+        className="bg-card overflow-auto rounded-2xl border shadow-xs"
         ref={viewportRef}
       >
         <div
@@ -632,7 +632,7 @@ function RolesAccessMapCanvas({
           }}
         >
           <div
-            className="transform-(--layout-transform) relative h-(--layout-height) w-(--layout-width) origin-top-left"
+            className="relative h-(--layout-height) w-(--layout-width) origin-top-left transform-(--layout-transform)"
             style={{
               "--layout-height": `${height}px`,
               "--layout-transform": `scale(${zoom})`,
@@ -640,13 +640,13 @@ function RolesAccessMapCanvas({
             }}
           >
             <div
-              className="text-(length:--text-micro-lg) absolute top-2 left-(--layout-left) font-semibold text-muted-foreground uppercase tracking-section"
+              className="text-muted-foreground tracking-section absolute top-2 left-(--layout-left) font-semibold text-(length:--text-micro-lg) uppercase"
               style={{ "--layout-left": `${ROLE_X}px` }}
             >
               Roles
             </div>
             <div
-              className="text-(length:--text-micro-lg) absolute top-2 left-(--layout-left) font-semibold text-muted-foreground uppercase tracking-section"
+              className="text-muted-foreground tracking-section absolute top-2 left-(--layout-left) font-semibold text-(length:--text-micro-lg) uppercase"
               style={{ "--layout-left": `${OBJECT_X}px` }}
             >
               Objects
@@ -703,7 +703,7 @@ function RolesAccessMapCanvas({
       {collapsedMapSurface}
       <Dialog onOpenChange={setIsExpanded} open={isExpanded}>
         <DialogContent
-          className="!flex !max-w-[calc(100vw-2rem)] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden"
+          className="!flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
           presentation="spacious-padded"
         >
           <DialogHeader>

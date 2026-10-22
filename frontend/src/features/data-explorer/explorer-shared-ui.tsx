@@ -14,11 +14,11 @@ function HeaderStat({
       {loading ? (
         <Skeleton className="my-0.5 h-4 w-10" />
       ) : (
-        <span className="font-mono font-semibold text-sm tabular-nums">
+        <span className="font-mono text-sm font-semibold tabular-nums">
           {value}
         </span>
       )}
-      <span className="text-(length:--text-micro) text-muted-foreground uppercase tracking-wider">
+      <span className="text-muted-foreground tracking-wider text-(length:--text-micro) uppercase">
         {label}
       </span>
     </div>

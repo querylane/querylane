@@ -18,7 +18,7 @@ async function holdReact(page: Page) {
   });
   await page.addInitScript(() => {
     const observer = new MutationObserver(() => {
-      if (document.getElementById("root")) {
+      if (document.querySelector("#root")) {
         document.documentElement.dataset["themeAtBody"] =
           document.documentElement.className;
         observer.disconnect();

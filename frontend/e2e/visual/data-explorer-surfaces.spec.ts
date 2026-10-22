@@ -155,11 +155,11 @@ test.describe("schema map", () => {
       page.getByRole("img", { exact: true, name: label }).locator("path")
     );
     await Promise.all(
-      edges.flatMap((edge) => [
-        expect(edge).toHaveCSS("animation-duration", "0.5s"),
-        expect(edge).toHaveCSS("animation-iteration-count", "infinite"),
-        expect(edge).not.toHaveCSS("animation-name", "none"),
-      ])
+      edges.map(async (edge) => {
+        await expect(edge).toHaveCSS("animation-duration", "0.5s");
+        await expect(edge).toHaveCSS("animation-iteration-count", "infinite");
+        await expect(edge).not.toHaveCSS("animation-name", "none");
+      })
     );
   });
 });

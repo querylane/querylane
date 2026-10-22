@@ -74,7 +74,7 @@ afterEach(() => {
   rs.clearAllMocks();
 });
 
-describe("RoleDetailContent", () => {
+describe("role detail content", () => {
   test("derives partial-access flags from enabled response page tokens", () => {
     hookMocks.grants.mockReturnValue(
       settledQuery({ grants: [], nextPageToken: "more-grants" })

@@ -61,7 +61,7 @@ function ActivityStatValue({ tone, value }: ActivityStat) {
   return (
     <span
       className={cn(
-        "font-bold font-mono text-xl tabular-nums tracking-tight",
+        "font-mono text-xl font-bold tracking-tight tabular-nums",
         tone === "warning" && "text-warning-600 dark:text-warning-400",
         tone === "danger" && "text-destructive"
       )}
@@ -97,7 +97,7 @@ function ActivityStatsBar({
             : undefined
         }
       >
-        <span className="font-bold font-mono text-xl tabular-nums tracking-tight">
+        <span className="font-mono text-xl font-bold tracking-tight tabular-nums">
           {hasActivity
             ? (activity?.totalConnections ?? 0).toLocaleString()
             : "—"}
@@ -122,7 +122,7 @@ function ActivityStateBadge({ row }: { row: ActivitySessionRow }) {
 
 function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
   return (
-    <div className="mt-2 ml-4 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+    <div className="border-border bg-muted/30 mt-2 ml-4 flex items-center gap-2 rounded-lg border px-3 py-2">
       <Badge variant="outline">waiting · pid {row.pid}</Badge>
       <div className="min-w-0 flex-1">
         <SqlCodeBlock
@@ -132,7 +132,7 @@ function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
           variant="inline"
         />
       </div>
-      <span className="shrink-0 font-mono text-warning-700 text-xs tabular-nums dark:text-warning-300">
+      <span className="text-warning-700 dark:text-warning-300 shrink-0 font-mono text-xs tabular-nums">
         waiting {row.duration}
       </span>
     </div>
@@ -142,7 +142,7 @@ function BlockedSessionRow({ row }: { row: ActivitySessionRow }) {
 function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
   if (!chain.blocker) {
     return (
-      <div className="rounded-lg border border-border p-3">
+      <div className="border-border rounded-lg border p-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">
             blocker unavailable · pid {chain.blockerPid}
@@ -159,10 +159,10 @@ function BlockingChainGroup({ chain }: { chain: BlockingChain }) {
   }
 
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="border-border rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">blocker · pid {chain.blocker.pid}</Badge>
-        <span className="font-mono text-muted-foreground text-xs">
+        <span className="text-muted-foreground font-mono text-xs">
           {chain.blocker.user} · {chain.blocker.app} · {chain.blocker.state}{" "}
           {chain.blocker.duration}
         </span>
@@ -191,7 +191,7 @@ function BlockingChainCard({ chains }: { chains: BlockingChain[] }) {
     <Card size="sm">
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <LockKeyhole className="size-4 text-warning-600 dark:text-warning-400" />
+          <LockKeyhole className="text-warning-600 dark:text-warning-400 size-4" />
           <CardTitle>Blocking chains</CardTitle>
           <WarningBadge>
             {chains.length.toLocaleString()}{" "}
@@ -226,7 +226,7 @@ const ACTIVITY_COLUMNS: DataTableColumnDef<ActivitySessionRow>[] = [
     cell: ({ row }) => (
       <div className="min-w-0">
         <div className="truncate font-mono text-sm">{row.original.user}</div>
-        <div className="truncate text-muted-foreground text-xs">
+        <div className="text-muted-foreground truncate text-xs">
           {row.original.app}
         </div>
       </div>
@@ -281,7 +281,7 @@ const ACTIVITY_COLUMNS: DataTableColumnDef<ActivitySessionRow>[] = [
   {
     accessorFn: (row) => row.query,
     cell: ({ row }) => (
-      <div className="min-w-0 max-w-[420px] overflow-hidden">
+      <div className="max-w-[420px] min-w-0 overflow-hidden">
         <SqlCodeBlock
           copyable={false}
           presentation="compact"
@@ -298,7 +298,7 @@ const ACTIVITY_COLUMNS: DataTableColumnDef<ActivitySessionRow>[] = [
 
 function InspectorSectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+    <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
       {children}
     </h3>
   );
@@ -306,7 +306,7 @@ function InspectorSectionTitle({ children }: { children: React.ReactNode }) {
 
 function SessionTimelineList({ row }: { row: ActivitySessionRow }) {
   return (
-    <ol className="ml-1 space-y-2.5 border-border border-l pl-4">
+    <ol className="border-border ml-1 space-y-2.5 border-l pl-4">
       {presentSessionTimeline(row).map((item) => (
         <li
           className="relative flex items-baseline justify-between gap-3"
@@ -314,7 +314,7 @@ function SessionTimelineList({ row }: { row: ActivitySessionRow }) {
         >
           <span
             aria-hidden="true"
-            className="absolute top-1/2 -left-[20.5px] size-2 -translate-y-1/2 rounded-full bg-popover"
+            className="bg-popover absolute top-1/2 -left-[20.5px] size-2 -translate-y-1/2 rounded-full"
           >
             <span
               className={cn(
@@ -349,12 +349,12 @@ function SessionPeerCard({
   row: ActivitySessionRow;
 }) {
   return (
-    <div className="space-y-2 rounded-lg border border-border p-3">
+    <div className="border-border space-y-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">
           {caption} · pid {row.pid}
         </Badge>
-        <span className="min-w-0 truncate font-mono text-muted-foreground text-xs">
+        <span className="text-muted-foreground min-w-0 truncate font-mono text-xs">
           {row.user} · {row.app} · {row.state} {row.duration}
         </span>
         <Button
@@ -383,10 +383,10 @@ function SessionWaitEvent({ row }: { row: ActivitySessionRow }) {
     return null;
   }
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="border-border rounded-lg border p-3">
       <div className="font-mono text-sm">{row.wait}</div>
       {row.waitExplanation ? (
-        <p className="mt-1 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-1 text-xs">
           {row.waitExplanation}
         </p>
       ) : null}
@@ -416,7 +416,7 @@ function SessionBlocker({
     );
   }
   return (
-    <div className="rounded-lg border border-border p-3 text-muted-foreground text-sm">
+    <div className="border-border text-muted-foreground rounded-lg border p-3 text-sm">
       Blocked by PID {row.blockedByPid}, which is not in the session sample.
     </div>
   );
@@ -526,7 +526,7 @@ function SessionInspector({
             />
           </Button>
         </div>
-        <SheetDescription className="break-words" presentation="identifier">
+        <SheetDescription className="wrap-break-word" presentation="identifier">
           {row.user} · {row.app} · {row.database} · {row.client}
         </SheetDescription>
       </SheetHeader>
@@ -693,8 +693,8 @@ function ActivityPageHeader({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold text-2xl tracking-tight">Activity</h2>
-        <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+        <h2 className="text-2xl font-semibold tracking-tight">Activity</h2>
+        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
           {lastRefreshedLabel ? (
             <span className="hidden sm:inline">{lastRefreshedLabel}</span>
           ) : null}
@@ -716,7 +716,7 @@ function ActivityPageHeader({
           </Button>
         </div>
       </div>
-      <p className="max-w-3xl text-muted-foreground text-sm">
+      <p className="text-muted-foreground max-w-3xl text-sm">
         Shows who is connected to this server right now, what they are running,
         and whether anything is stuck waiting on a lock. It lists up to 50
         sessions, riskiest first: refresh to take a new snapshot.

@@ -8,7 +8,7 @@ const labels = [
   { id: "team", key: "team", value: "analytics" },
 ];
 
-describe("InstanceConfigurationLabels", () => {
+describe("instance configuration labels", () => {
   test("names dynamic label inputs and remove actions accessibly", async () => {
     const user = userEvent.setup();
     const onChange = rs.fn();

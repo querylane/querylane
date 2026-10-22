@@ -380,9 +380,10 @@ function buildPgStatStatementsRow(
     });
   }
 
-  const installedValue = pgss.extensionInstalled
-    ? `Yes${pgss.extensionVersion ? ` (v${pgss.extensionVersion})` : ""}`
-    : "No";
+  const versionSuffix = pgss.extensionVersion
+    ? ` (v${pgss.extensionVersion})`
+    : "";
+  const installedValue = pgss.extensionInstalled ? `Yes${versionSuffix}` : "No";
   const detail: HealthRowDetail[] = [
     { label: "Installed", value: installedValue },
     {

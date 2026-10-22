@@ -331,7 +331,7 @@ function InstanceConfigurationFields({
             >
               <SslModeSelectValue value={sslMode} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
+            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
               <SslModeSelectItems />
             </SelectContent>
           </Select>
@@ -366,7 +366,7 @@ function InstanceConfigurationFields({
             >
               <SslNegotiationSelectValue value={sslNegotiation} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
+            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
               <SslNegotiationSelectItems />
             </SelectContent>
           </Select>
@@ -580,7 +580,7 @@ function InstanceConfigurationNotice({
       {formNotice.variant === "error" ? (
         <AlertCircle className="size-4" />
       ) : (
-        <CheckCircle2 className="size-4 text-positive-600" />
+        <CheckCircle2 className="text-positive-600 size-4" />
       )}
       <AlertTitle>
         {formNotice.variant === "error" ? "Could not save" : "Saved"}

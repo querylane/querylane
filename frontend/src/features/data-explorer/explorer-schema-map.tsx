@@ -242,8 +242,8 @@ function SchemaMapToolbar({
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
       <div className="mr-1 flex items-center gap-2">
-        <Network aria-hidden="true" className="size-4 text-primary" />
-        <h2 className="font-semibold text-base tracking-tight">Schema map</h2>
+        <Network aria-hidden="true" className="text-primary size-4" />
+        <h2 className="text-base font-semibold tracking-tight">Schema map</h2>
         <Badge className="h-5" presentation="identifier" variant="outline">
           {databaseLabel}
         </Badge>
@@ -262,7 +262,7 @@ function SchemaMapToolbar({
         <div className="relative min-w-48 flex-1 sm:w-72">
           <Search
             aria-hidden="true"
-            className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+            className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
           />
           <Input
             aria-label="Find a table"
@@ -286,7 +286,7 @@ function SchemaMapToolbar({
           >
             <Minus aria-hidden="true" className="size-4" />
           </Button>
-          <span className="w-12 text-center font-mono text-muted-foreground text-xs">
+          <span className="text-muted-foreground w-12 text-center font-mono text-xs">
             {zoom}%
           </span>
           <Button
@@ -364,12 +364,12 @@ function TableNode({
         type="button"
         variant="ghost"
       >
-        <span className="flex h-9 items-center gap-2 border-b bg-muted px-3">
+        <span className="bg-muted flex h-9 items-center gap-2 border-b px-3">
           <span className={cn("size-2 rounded-full", tone.dot)} />
-          <span className="text-(length:--text-caption) min-w-0 truncate font-mono font-semibold">
+          <span className="min-w-0 truncate font-mono font-semibold text-(length:--text-caption)">
             {node.name}
           </span>
-          <span className="ml-auto shrink-0 font-mono text-muted-foreground text-xs">
+          <span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs">
             {node.rowLabel}
           </span>
         </span>
@@ -401,18 +401,18 @@ function TableNode({
                     </Badge>
                   ) : null}
                 </span>
-                <span className="shrink-0 text-muted-foreground">
+                <span className="text-muted-foreground shrink-0">
                   {column.type}
                 </span>
               </span>
             ))
           ) : (
-            <span className="block p-3 text-muted-foreground text-xs">
+            <span className="text-muted-foreground block p-3 text-xs">
               No columns found.
             </span>
           )}
           {node.truncatedColumnCount > 0 ? (
-            <span className="block px-3 font-mono text-muted-foreground text-xs">
+            <span className="text-muted-foreground block px-3 font-mono text-xs">
               + {node.truncatedColumnCount.toLocaleString()} more
             </span>
           ) : null}
@@ -431,10 +431,10 @@ function ViewNode({ node }: { node: SchemaMapViewNode }) {
       x={node.x}
       y={node.y}
     >
-      <div className="h-full rounded-xl border border-dashed bg-muted/30 p-3 shadow-sm">
+      <div className="bg-muted/30 h-full rounded-xl border border-dashed p-3 shadow-sm">
         <div className="flex items-center gap-2">
           <span className={cn("size-2 rounded-sm", tone.dot)} />
-          <span className="min-w-0 truncate font-mono font-semibold text-xs">
+          <span className="min-w-0 truncate font-mono text-xs font-semibold">
             {node.name}
           </span>
           <Badge
@@ -445,7 +445,7 @@ function ViewNode({ node }: { node: SchemaMapViewNode }) {
             View
           </Badge>
         </div>
-        <p className="mt-2 line-clamp-2 font-mono text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-2 line-clamp-2 font-mono text-xs">
           {node.definitionLabel}
         </p>
       </div>
@@ -461,7 +461,7 @@ function SchemaMapMinimap({
   return (
     <div
       aria-hidden="true"
-      className="absolute right-3 bottom-3 rounded-lg border bg-background/85 p-2 shadow-sm backdrop-blur"
+      className="bg-background/85 absolute right-3 bottom-3 rounded-lg border p-2 shadow-sm backdrop-blur"
     >
       <svg
         className="block"
@@ -547,7 +547,7 @@ function SchemaMapCanvas({
     <section
       aria-label="Schema relationship map"
       className={cn(
-        "relative min-h-0 flex-1 overflow-auto bg-background",
+        "bg-background relative min-h-0 flex-1 overflow-auto",
         styles["canvas"]
       )}
     >
@@ -577,7 +577,7 @@ function SchemaMapCanvas({
             />
             <text
               className={cn(
-                "text-(length:--text-xs) fill-current stroke-background font-mono font-semibold",
+                "stroke-background fill-current font-mono font-semibold text-(length:--text-xs)",
                 TONE_CLASSES[hull.tone].text
               )}
               paintOrder="stroke"
@@ -636,7 +636,7 @@ function SchemaMapCanvas({
       </svg>
       <SchemaMapMinimap model={model} />
       {activeNode ? (
-        <div className="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-popover px-3 py-1.5 text-sm shadow-md">
+        <div className="bg-popover absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-1.5 text-sm shadow-md">
           <span className="font-mono font-semibold">
             {activeNode.schemaName}.{activeNode.name}
           </span>
@@ -663,7 +663,7 @@ function SchemaMapCanvas({
         </div>
       ) : null}
       {catalogTruncated ? (
-        <p className="absolute right-3 bottom-28 rounded-lg border bg-background/90 px-3 py-2 text-muted-foreground text-xs shadow-sm">
+        <p className="bg-background/90 text-muted-foreground absolute right-3 bottom-28 rounded-lg border px-3 py-2 text-xs shadow-sm">
           Some schemas have more objects. This map shows the first loaded page.
         </p>
       ) : null}
@@ -717,7 +717,7 @@ function ExplorerSchemaMap({
   return (
     <section
       aria-label={`Schema map for ${activeSchemaName}`}
-      className="flex h-full min-h-[32rem] overflow-hidden rounded-xl border bg-background"
+      className="bg-background flex h-full min-h-[32rem] overflow-hidden rounded-xl border"
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <SchemaMapToolbar
@@ -752,7 +752,7 @@ function ExplorerSchemaMap({
         {catalog.isLoading ? (
           <div
             aria-label="Loading schema map"
-            className="flex min-h-[26rem] items-center justify-center text-muted-foreground"
+            className="text-muted-foreground flex min-h-[26rem] items-center justify-center"
             role="status"
           >
             Loading schema map…

@@ -28,7 +28,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe("SqlCode token cache", () => {
+describe("sql code token cache", () => {
   test("defers highlighting without delaying text and tokenizes duplicate SQL once", async () => {
     expect(highlighter.creations).toBe(0);
     const sql = "SELECT * FROM shipping.shipments WHERE id = $1";

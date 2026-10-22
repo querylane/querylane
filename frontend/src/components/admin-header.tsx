@@ -140,7 +140,7 @@ function BreadcrumbDropdownList({
     return (
       <output
         aria-live="polite"
-        className="flex items-center gap-2 p-3 text-muted-foreground text-sm"
+        className="text-muted-foreground flex items-center gap-2 p-3 text-sm"
       >
         <Spinner className="size-4" />
         <span>{loadingMessage ?? `Loading ${label.toLowerCase()}…`}</span>
@@ -153,7 +153,7 @@ function BreadcrumbDropdownList({
       {showRefreshingState ? (
         <output
           aria-live="polite"
-          className="flex items-center gap-2 px-3 py-2 text-muted-foreground text-xs"
+          className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-xs"
         >
           <Spinner className="size-3.5" />
           <span>{`Refreshing ${label.toLowerCase()}…`}</span>
@@ -222,7 +222,7 @@ function BreadcrumbTriggerBody({
       ) : null}
       <ChevronsUpDown
         aria-hidden="true"
-        className="size-3 shrink-0 text-muted-foreground"
+        className="text-muted-foreground size-3 shrink-0"
       />
     </span>
   );
@@ -416,10 +416,10 @@ function InstanceCommandItem({
         </OverflowAwareText>
         {instance.credentialsUnreadable ? (
           <>
-            <span className="truncate text-destructive text-xs">
+            <span className="text-destructive truncate text-xs">
               Credentials need attention
             </span>
-            <span className="truncate text-destructive text-xs underline underline-offset-2">
+            <span className="text-destructive truncate text-xs underline underline-offset-2">
               Review credentials
             </span>
           </>
@@ -473,7 +473,7 @@ function RegisterInstanceCommand({
             presentation="secondary"
             value="register new instance config managed"
           >
-            <Lock className="size-4 text-muted-foreground" />
+            <Lock className="text-muted-foreground size-4" />
             <span className="text-muted-foreground text-sm">
               Register instance
             </span>
@@ -498,7 +498,7 @@ function RegisterInstanceCommand({
       }}
       value="register new instance"
     >
-      <Plus className="size-4 text-muted-foreground" />
+      <Plus className="text-muted-foreground size-4" />
       <span className="text-muted-foreground text-sm">Register instance</span>
     </CommandItem>
   );
@@ -604,7 +604,7 @@ function DatabaseSelector({
         triggerWidth="database"
         value={selectedDatabase?.name ?? null}
         valuePrefix={
-          <span className="shrink-0 font-medium text-muted-foreground text-sm">
+          <span className="text-muted-foreground shrink-0 text-sm font-medium">
             DB:
           </span>
         }
@@ -645,7 +645,7 @@ function PathSeparator({ className }: { className?: string | undefined }) {
   return (
     <span
       className={cn(
-        "flex select-none items-center font-light text-lg text-muted-foreground/40",
+        "text-muted-foreground/40 flex items-center text-lg font-light select-none",
         className
       )}
     >
@@ -673,7 +673,7 @@ function RoleBreadcrumbSegment({
   return (
     <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
       <Link
-        className="rounded-sm px-1 text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm px-1 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
         params={{ instanceId }}
         to="/instances/$instanceId/roles"
       >
@@ -709,7 +709,7 @@ function PageBreadcrumb() {
         <PathSeparator className="hidden lg:flex" />
         <span
           aria-current="page"
-          className="hidden min-w-0 truncate px-2 py-1 font-medium text-foreground text-sm lg:block"
+          className="text-foreground hidden min-w-0 truncate px-2 py-1 text-sm font-medium lg:block"
         >
           {tail.label}
         </span>
@@ -788,7 +788,7 @@ export function AdminHeader() {
     ? `https://github.com/${githubRepo}`
     : "https://github.com/querylane/querylane";
   return (
-    <header className="z-20 flex h-12 shrink-0 items-center gap-1 overflow-hidden border-border border-b bg-background px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
+    <header className="border-border bg-background z-20 flex h-12 shrink-0 items-center gap-1 overflow-hidden border-b px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
       <SidebarTrigger
         aria-label="Open navigation menu"
         className="shrink-0 lg:hidden"

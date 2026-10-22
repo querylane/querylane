@@ -25,7 +25,7 @@ function ignoreRetry() {
 
 function ConsoleSurface({ children }: { children: ReactNode }) {
   return (
-    <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
+    <div className="border-border bg-background text-foreground w-[1100px] rounded-2xl border p-8">
       {children}
     </div>
   );
@@ -78,7 +78,7 @@ function ConsoleSqlstateScenario() {
               data-testid={`sqlstate-scenario-${scenario.slug}`}
               key={scenario.label}
             >
-              <h2 className="font-semibold text-base">{scenario.label}</h2>
+              <h2 className="text-base font-semibold">{scenario.label}</h2>
               <AppInlineError
                 error={normalizeAppUiError(scenario.error, {
                   area: "console.sqlstate.visual",

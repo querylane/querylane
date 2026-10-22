@@ -63,7 +63,8 @@ function ownsPreview(objects: OwnedObject[]): string {
   }
   const shown = schemaList.slice(0, EXAMPLE_LIMIT - 1).join(", ");
   const extra = schemaList.length - (EXAMPLE_LIMIT - 1);
-  return `${breakdown} in ${extra > 0 ? `${shown} +${extra}` : shown}`;
+  const schemaSummary = extra > 0 ? `${shown} +${extra}` : shown;
+  return `${breakdown} in ${schemaSummary}`;
 }
 
 function defaultsPreview(rules: DefaultPrivilegeRule[]): string {
@@ -137,12 +138,12 @@ function SectionHead({
 }) {
   return (
     <div className="flex items-baseline gap-2.5 px-0.5">
-      <span className="font-semibold text-foreground text-sm">{title}</span>
+      <span className="text-foreground text-sm font-semibold">{title}</span>
       {count === undefined ? null : (
         <CountPill partial={partial} value={count} />
       )}
       {hint ? (
-        <span className="ml-auto text-muted-foreground text-xs">{hint}</span>
+        <span className="text-muted-foreground ml-auto text-xs">{hint}</span>
       ) : null}
     </div>
   );
@@ -159,10 +160,10 @@ function TotalBadge({
 }) {
   return (
     <span className="flex flex-col items-end whitespace-nowrap">
-      <span className="text-(length:--text-body) font-medium font-mono text-foreground leading-tight tracking-tight">
+      <span className="text-foreground font-mono leading-tight font-medium tracking-tight text-(length:--text-body)">
         {value.toLocaleString()}
       </span>
-      <span className="flex items-center gap-1 text-muted-foreground text-xs">
+      <span className="text-muted-foreground flex items-center gap-1 text-xs">
         <span>
           {unit}
           {value === 1 ? "" : "s"}
@@ -189,7 +190,7 @@ function DrillRow({
       variant="ghost"
     >
       {children}
-      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+      <ChevronRight className="text-muted-foreground group-hover:text-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
     </Button>
   );
 }
@@ -216,12 +217,12 @@ function SchemaListRow({
     <DrillRow
       onClick={() => onNavigate({ kind: "schema", schema: targetSchema })}
     >
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <Icon className="text-muted-foreground size-4 shrink-0" />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="text-(length:--text-caption-lg) truncate font-medium font-mono text-foreground">
+        <span className="text-foreground truncate font-mono font-medium text-(length:--text-caption-lg)">
           {name}
         </span>
-        <span className="truncate text-muted-foreground text-xs">
+        <span className="text-muted-foreground truncate text-xs">
           {partial
             ? "Available direct grant results"
             : schemaBreakdownLabel(group)}
@@ -262,7 +263,7 @@ function ReachRow({
     detail = "Loading…";
   }
   let total: ReactNode = (
-    <span className="font-mono text-muted-foreground/50 text-sm">
+    <span className="text-muted-foreground/50 font-mono text-sm">
       {EM_DASH}
     </span>
   );
@@ -275,7 +276,7 @@ function ReachRow({
     <DrillRow onClick={onClick}>
       <Icon className={cn("size-4 shrink-0", iconClassName)} />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="text-(length:--text-caption-lg) truncate font-medium font-sans text-foreground">
+        <span className="text-foreground truncate font-sans font-medium text-(length:--text-caption-lg)">
           {name}
         </span>
         <span
@@ -311,7 +312,7 @@ function DirectGrantSchemaScope({
     <>
       {" "}
       across{" "}
-      <strong className="font-medium text-foreground">
+      <strong className="text-foreground font-medium">
         {schemaCount.toLocaleString()}
       </strong>{" "}
       schema{schemaCount === 1 ? "" : "s"}
@@ -335,7 +336,7 @@ function DirectGrantsLede({
   }
   return (
     <>
-      <strong className="font-medium text-foreground">
+      <strong className="text-foreground font-medium">
         {totalDirect.toLocaleString()}
       </strong>{" "}
       {grantsPartial ? "available direct grant" : "direct grant"}
@@ -345,7 +346,7 @@ function DirectGrantsLede({
         schemaCount={schemaCount}
       />
       {grantsPartial ? (
-        <span className="font-medium text-foreground"> · Partial</span>
+        <span className="text-foreground font-medium"> · Partial</span>
       ) : null}
       .
     </>
@@ -376,7 +377,7 @@ function OverviewLede({
         <>
           {" "}
           Reachable via{" "}
-          <strong className="font-medium text-foreground">
+          <strong className="text-foreground font-medium">
             {indirectPaths}
           </strong>{" "}
           indirect path{indirectPaths === 1 ? "" : "s"}.
@@ -415,7 +416,7 @@ function DirectGrantsSection({
           partial={grantsPartial}
           title="Direct grants"
         />
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="border-border overflow-hidden rounded-md border">
           {schemaIndex.map((group) => (
             <SchemaListRow
               databaseName={databaseName}
@@ -442,8 +443,8 @@ function DirectGrantsSection({
       ) : (
         <>
           This role has no explicit{" "}
-          <span className="font-mono text-foreground/80">GRANT</span>s on{" "}
-          <span className="font-mono text-foreground/80">{databaseName}</span>.
+          <span className="text-foreground/80 font-mono">GRANT</span>s on{" "}
+          <span className="text-foreground/80 font-mono">{databaseName}</span>.
           {indirectPaths > 0
             ? " It may still be reachable via the indirect paths below."
             : ""}
@@ -502,7 +503,7 @@ function GrantsOverview({
           hint="implicit & inherited paths"
           title="Also reachable via"
         />
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="border-border overflow-hidden rounded-md border">
           <ReachRow
             count={ownedObjects.length}
             desc={

@@ -64,7 +64,7 @@ function RoleGrantsTableStatus({
       ) : null}
       {children}
       {partial ? (
-        <p className="pt-2 text-muted-foreground text-xs">
+        <p className="text-muted-foreground pt-2 text-xs">
           Showing the first 1,000 matching rows. Refine the filters to narrow
           the results.
         </p>
@@ -83,8 +83,8 @@ function ObjectNameCell({ object }: { object: GrantedObject }) {
     GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED];
   return (
     <span className="flex items-center gap-2">
-      <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="text-(length:--text-caption) font-mono text-foreground">
+      <meta.icon className="text-muted-foreground size-3.5 shrink-0" />
+      <span className="text-foreground font-mono text-(length:--text-caption)">
         {showSchema ? (
           <>
             <span className="text-muted-foreground">{object.schemaName}.</span>
@@ -116,7 +116,7 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   }
   return (
     <span
-      className="text-(length:--text-label-lg) font-mono text-muted-foreground"
+      className="text-muted-foreground font-mono text-(length:--text-label-lg)"
       title={grantor.title}
     >
       {grantor.text}

@@ -28,7 +28,7 @@ export function ChartRangePicker({
 }: ChartRangePickerProps) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
+      className="bg-muted/40 inline-flex items-center gap-0.5 rounded-md p-0.5"
       data-slot="button-group"
     >
       {options.map((option) => {

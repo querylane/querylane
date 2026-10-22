@@ -76,11 +76,11 @@ function OnboardingInvalidFieldsScenario() {
     <>
       <div
         aria-hidden="true"
-        className="hidden border-destructive dark:border-destructive/50"
+        className="border-destructive dark:border-destructive/50 hidden"
         data-testid="validation-color"
       />
       <div
-        className="w-96 bg-onboarding-backdrop p-6"
+        className="bg-onboarding-backdrop w-96 p-6"
         data-testid="invalid-fields"
       >
         <LabeledInput

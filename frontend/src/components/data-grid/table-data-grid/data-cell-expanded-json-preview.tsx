@@ -17,9 +17,9 @@ function ExpandedJsonPreview({ raw }: { raw: string }) {
     <span className="flex min-w-0 flex-1 items-start gap-2">
       <code
         className={cn(
-          "min-w-0 flex-1 font-mono text-permission-600 text-xs dark:text-permission-400",
+          "text-permission-600 dark:text-permission-400 min-w-0 flex-1 font-mono text-xs",
           mode === "pretty" && pretty
-            ? "max-h-20 overflow-auto whitespace-pre text-left"
+            ? "max-h-20 overflow-auto text-left whitespace-pre"
             : "truncate whitespace-nowrap"
         )}
         title={title}

@@ -6,17 +6,17 @@ import { cn } from "@/lib/utils";
 const inputPresentations = cva("", {
   variants: {
     presentation: {
-      "search-clearable": "text-(length:--text-caption) pr-7 pl-8",
+      "search-clearable": "pr-7 pl-8 text-(length:--text-caption)",
       search: "pl-8",
       "identifier-search": "pl-8 font-mono text-xs",
       "search-body": "pl-8 text-sm",
       "onboarding-connection":
-        "rounded-lg border border-white/10 bg-white/3 px-4 py-0 font-mono text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-info-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-info-400/25",
+        "focus-visible:border-info-400 focus-visible:ring-info-400/25 rounded-lg border border-white/10 bg-white/3 px-4 py-0 font-mono text-sm leading-none text-white placeholder:text-white/32 focus-visible:ring-1 focus-visible:outline-none",
       identifier: "font-mono",
       compact: "text-xs",
       password: "pr-12",
       onboarding:
-        "rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm text-white leading-none placeholder:text-white/32 focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25",
+        "focus-visible:border-onboarding-focus focus-visible:ring-onboarding-focus/25 rounded-lg border-white/10 bg-white/3 px-3 py-0 text-sm leading-none text-white placeholder:text-white/32",
     },
     trailingAction: { true: "pr-12" },
     validation: {
