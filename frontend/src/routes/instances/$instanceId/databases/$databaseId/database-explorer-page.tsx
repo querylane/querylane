@@ -29,7 +29,7 @@ function DatabaseExplorerLoadingShell() {
             <Skeleton className="h-8" presentation="control" />
             <Skeleton className="h-8" presentation="control" />
           </div>
-          <p className="px-3 py-6 text-center text-muted-foreground text-sm">
+          <p className="text-muted-foreground px-3 py-6 text-center text-sm">
             Loading schemas…
           </p>
         </div>

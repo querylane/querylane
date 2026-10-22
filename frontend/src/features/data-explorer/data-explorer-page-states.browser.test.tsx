@@ -11,6 +11,7 @@ import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ExplorerRailFrame } from "@/__tests__/explorer-rail-test-utils";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
+import { cn } from "@/lib/utils";
 import {
   GetSchemaResponseSchema,
   ListSchemasResponseSchema,
@@ -47,7 +48,7 @@ rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () => {
     }) => {
       const grid = (
         <div
-          className="h-64 w-full rounded-lg border border-border bg-muted/20"
+          className="border-border bg-muted/20 h-64 w-full rounded-lg border"
           data-testid="mock-table-data-grid"
         />
       );
@@ -135,7 +136,10 @@ function renderExplorerPage({
     <HarnessProviders transport={transport}>
       <ScreenshotFrame>
         <div
-          className={`h-[720px] ${width} overflow-hidden rounded-2xl border border-border bg-background text-foreground`}
+          className={cn(
+            "border-border bg-background text-foreground h-[720px] overflow-hidden rounded-2xl border",
+            width
+          )}
           data-testid="explorer-shell"
         >
           <ExplorerRailFrame>

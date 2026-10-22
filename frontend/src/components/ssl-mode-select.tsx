@@ -39,7 +39,7 @@ function SslModeIcon({
   return (
     <Icon
       aria-hidden="true"
-      className={cn("size-4 text-muted-foreground", className)}
+      className={cn("text-muted-foreground size-4", className)}
       data-mode={mode}
       data-slot="ssl-mode-icon"
     />
@@ -104,7 +104,7 @@ function SslModeSelectItems({
       <span className="flex min-w-0 items-start gap-3">
         <span
           className={cn(
-            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
+            "bg-muted text-muted-foreground mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md",
             iconContainerClassName
           )}
         >

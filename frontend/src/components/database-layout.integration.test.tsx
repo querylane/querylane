@@ -74,7 +74,7 @@ rs.mock("@/components/app-sidebar", () => {
   return Object.fromEntries([["AppSidebar", MockAppSidebar]]);
 });
 
-describe("DatabaseLayout route transitions", () => {
+describe("database layout route transitions", () => {
   beforeEach(() => {
     routerState.isLoading = false;
     routerState.pathname = "/instances/prod";

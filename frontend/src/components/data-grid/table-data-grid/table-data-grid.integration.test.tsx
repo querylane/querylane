@@ -591,7 +591,7 @@ function teardownTableDataGridIntegrationTest() {
   useTableColumnLayoutSettingsStore.setState({ layouts: {} });
 }
 
-describe("TableDataGrid query setup", () => {
+describe("table data grid query setup", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -610,7 +610,7 @@ describe("TableDataGrid query setup", () => {
   });
 });
 
-describe("TableDataGrid foreign key references", () => {
+describe("table data grid foreign key references", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -838,7 +838,7 @@ describe("TableDataGrid foreign key references", () => {
   });
 });
 
-describe("TableDataGrid row interactions", () => {
+describe("table data grid row interactions", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -938,7 +938,7 @@ describe("TableDataGrid row interactions", () => {
   });
 });
 
-describe("TableDataGrid cell selection", () => {
+describe("table data grid cell selection", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -1037,7 +1037,7 @@ describe("TableDataGrid cell selection", () => {
   });
 });
 
-describe("TableDataGrid cell selection navigation", () => {
+describe("table data grid cell selection navigation", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -1212,7 +1212,7 @@ describe("TableDataGrid cell selection navigation", () => {
   });
 });
 
-describe("TableDataGrid cell selection full values", () => {
+describe("table data grid cell selection full values", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -1265,7 +1265,7 @@ describe("TableDataGrid cell selection full values", () => {
   });
 });
 
-describe("TableDataGrid truncated-cell copy", () => {
+describe("table data grid truncated-cell copy", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -1297,7 +1297,7 @@ describe("TableDataGrid truncated-cell copy", () => {
   });
 });
 
-describe("TableDataGrid value dialogs", () => {
+describe("table data grid value dialogs", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();
@@ -1342,7 +1342,7 @@ describe("TableDataGrid value dialogs", () => {
   });
 });
 
-describe("TableDataGrid column layout", () => {
+describe("table data grid column layout", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
@@ -1508,7 +1508,7 @@ describe("TableDataGrid column layout", () => {
   });
 });
 
-describe("TableDataGrid local state", () => {
+describe("table data grid local state", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();
@@ -1618,7 +1618,7 @@ describe("TableDataGrid local state", () => {
   });
 });
 
-describe("TableDataGrid error recovery", () => {
+describe("table data grid error recovery", () => {
   afterEach(() => {
     cleanup();
     rs.clearAllMocks();

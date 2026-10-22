@@ -454,7 +454,7 @@ function activityHealthResponse() {
         ],
         idleConnections: 39,
         idleInTransactionConnections: 1,
-        longestTransactionSeconds: BigInt(252),
+        longestTransactionSeconds: 252n,
         longRunningTransactionConnections: 1,
         maxConnections: 100,
         sessions: [
@@ -464,7 +464,7 @@ function activityHealthResponse() {
             clientAddress: "10.2.0.7",
             clientPort: 51_234,
             databaseName: "logistics",
-            durationSeconds: BigInt(252),
+            durationSeconds: 252n,
             pid: 4211,
             query:
               "UPDATE shipping.shipments SET status = 'in_transit', updated_at = now() WHERE id = $1",
@@ -480,7 +480,7 @@ function activityHealthResponse() {
             clientAddress: "10.2.0.8",
             clientPort: 55_432,
             databaseName: "logistics",
-            durationSeconds: BigInt(38),
+            durationSeconds: 38n,
             pid: 4302,
             query: "UPDATE shipping.shipments SET eta = $1 WHERE id = $2",
             queryAgeSeconds: 38n,

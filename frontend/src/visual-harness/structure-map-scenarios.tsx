@@ -16,7 +16,7 @@ function DatabaseStructureMapScenario() {
       routerPath={`/instances/${STRUCTURE_MAP_INSTANCE_ID}/databases/${STRUCTURE_MAP_DATABASE_ID}/explorer`}
       transport={transport}
     >
-      <div className="h-[900px] w-[1180px] overflow-hidden rounded-2xl border border-border bg-background p-5 text-foreground">
+      <div className="border-border bg-background text-foreground h-[900px] w-[1180px] overflow-hidden rounded-2xl border p-5">
         <DatabaseStructureMap
           activeSchemaName="public"
           databaseId={STRUCTURE_MAP_DATABASE_ID}

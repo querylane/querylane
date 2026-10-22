@@ -34,7 +34,7 @@ export function DataValueDialog({
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
-        className="!flex !max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100vw-2rem))] flex-col overflow-hidden"
+        className="!flex max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100vw-2rem))] !max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
         presentation="spacious"
       >
         <DialogHeader className="shrink-0" presentation="closeable">
@@ -42,7 +42,7 @@ export function DataValueDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-warning-700 text-xs dark:text-warning-300">
+          <p className="border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-300 rounded-md border px-3 py-2 text-xs">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>

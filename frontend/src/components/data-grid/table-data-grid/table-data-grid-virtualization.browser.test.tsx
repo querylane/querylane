@@ -35,7 +35,7 @@ test("table detail uses available height while keeping 500-row pages virtualized
   await render(
     <HarnessProviders transport={transport}>
       <ScreenshotFrame>
-        <div className="flex h-[1600px] w-[1120px] flex-col rounded-2xl border border-border bg-background p-6 text-foreground">
+        <div className="border-border bg-background text-foreground flex h-[1600px] w-[1120px] flex-col rounded-2xl border p-6">
           <TableDetail
             databaseId="appdb"
             instanceId="production"

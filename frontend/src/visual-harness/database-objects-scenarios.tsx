@@ -13,7 +13,7 @@ import {
 
 function DatabaseObjectsSurface({ children }: { children: ReactNode }) {
   return (
-    <div className="w-[1060px] rounded-2xl bg-background p-8 text-foreground">
+    <div className="bg-background text-foreground w-[1060px] rounded-2xl p-8">
       {children}
     </div>
   );

@@ -30,7 +30,7 @@ function JsonPreview({
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2">
       <code
-        className="block min-w-0 flex-1 truncate whitespace-nowrap font-mono text-permission-600 text-xs dark:text-permission-400"
+        className="text-permission-600 dark:text-permission-400 block min-w-0 flex-1 truncate font-mono text-xs whitespace-nowrap"
         data-testid={`${columnName}-json-preview`}
         title={title}
       >

@@ -56,10 +56,10 @@ export function SummaryCard({ label, value }: SummaryCardProps) {
         className="flex h-full flex-col justify-center"
         presentation="metric"
       >
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           {label}
         </p>
-        <div className="flex min-h-6 items-center font-semibold text-base">
+        <div className="flex min-h-6 items-center text-base font-semibold">
           {value}
         </div>
       </CardContent>
@@ -82,7 +82,7 @@ export function SummaryCountValue({
   }
   if (isPending) {
     return (
-      <span className="flex items-center gap-2 text-muted-foreground text-sm">
+      <span className="text-muted-foreground flex items-center gap-2 text-sm">
         <Spinner className="size-4" />
         <span>Loading…</span>
       </span>
@@ -100,7 +100,7 @@ export function InstanceStatsBar({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 divide-x divide-border overflow-hidden rounded-lg border border-border lg:grid-cols-4",
+        "divide-border border-border grid grid-cols-2 divide-x overflow-hidden rounded-lg border lg:grid-cols-4",
         className
       )}
     >
@@ -129,7 +129,7 @@ export function InstanceStatItem({
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="flex w-fit cursor-help items-center gap-1 text-muted-foreground text-xs">
+                <span className="text-muted-foreground flex w-fit cursor-help items-center gap-1 text-xs">
                   {label}
                   <Info aria-hidden="true" className="size-3 opacity-60" />
                 </span>
@@ -143,7 +143,7 @@ export function InstanceStatItem({
         <div className="flex min-h-7 items-baseline gap-1.5">
           {children}
           {suffix ? (
-            <span className="font-mono text-muted-foreground text-xs tabular-nums">
+            <span className="text-muted-foreground font-mono text-xs tabular-nums">
               {suffix}
             </span>
           ) : null}
@@ -158,9 +158,9 @@ export function InstanceStatItem({
 export function CopyableHost({ host, port }: { host: string; port?: number }) {
   const fullHost = port ? `${host}:${port}` : host;
   return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+    <span className="inline-flex max-w-full min-w-0 items-center gap-1">
       <OverflowTooltip
-        className="min-w-0 max-w-[min(18rem,calc(100vw-6rem))]"
+        className="max-w-[min(18rem,calc(100vw-6rem))] min-w-0"
         forceTooltip={true}
         presentation="metric"
         tooltipContent={fullHost}
@@ -185,16 +185,16 @@ export function PageHeader({
   title: string;
 }) {
   return (
-    <div className="min-w-0 max-w-full space-y-2">
-      <p className="text-muted-foreground text-xs uppercase tracking-brand">
+    <div className="max-w-full min-w-0 space-y-2">
+      <p className="text-muted-foreground tracking-brand text-xs uppercase">
         {eyebrow}
       </p>
       <div className="space-y-1">
-        <h1 className="break-words font-semibold text-2xl tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] wrap-break-word sm:text-3xl">
           {title}
         </h1>
         {description ? (
-          <p className="max-w-3xl text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground max-w-3xl">{description}</p>
         ) : null}
       </div>
     </div>
@@ -240,10 +240,10 @@ export function MetadataCard({
         <dl className="grid gap-x-6 gap-y-2 md:grid-cols-3">
           {items.map((item) => (
             <div className="min-w-0 space-y-1" key={item.label}>
-              <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+              <dt className="text-muted-foreground text-xs tracking-wide uppercase">
                 {item.label}
               </dt>
-              <dd className="min-w-0 break-words text-sm [overflow-wrap:anywhere]">
+              <dd className="min-w-0 text-sm [overflow-wrap:anywhere] wrap-break-word">
                 {item.value}
               </dd>
             </div>

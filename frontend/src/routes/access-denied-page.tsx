@@ -52,9 +52,9 @@ export function AccessDeniedRoutePage() {
     <AppShellFrame>
       <div className="mx-auto flex max-w-5xl items-center justify-center">
         <div className="w-full space-y-4">
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="text-muted-foreground flex items-center justify-center gap-2">
             <ShieldX className="size-5" />
-            <span className="font-medium text-sm">
+            <span className="text-sm font-medium">
               Blocking navigation until access is restored
             </span>
           </div>

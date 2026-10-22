@@ -36,7 +36,7 @@ export function EmptyState({
         <EmptyMedia variant="icon">
           <Icon />
         </EmptyMedia>
-        <h2 className="font-medium text-lg tracking-tight">{title}</h2>
+        <h2 className="text-lg font-medium tracking-tight">{title}</h2>
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       {action ? <EmptyContent>{action}</EmptyContent> : null}

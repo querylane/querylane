@@ -65,7 +65,7 @@ function renderCollapsedOffcanvasSidebar() {
   return sidebarPanel;
 }
 
-describe("Sidebar hover reveal", () => {
+describe("sidebar hover reveal", () => {
   test("retracts the temporary reveal after the pointer leaves the sidebar", async () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();

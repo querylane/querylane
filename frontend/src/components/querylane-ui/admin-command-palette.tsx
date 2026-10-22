@@ -162,9 +162,9 @@ function NavigationTargetGroup({
           onSelect={() => onSelect(target.page)}
           value={target.label}
         >
-          <ChevronRight className="size-3.5 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground size-3.5" />
           <span className="text-(length:--text-caption)">{target.label}</span>
-          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
             {target.summary}
           </span>
         </CommandItem>
@@ -203,11 +203,11 @@ function DatabaseObjectGroup({
             onSelect={() => onSelect(object)}
             value={label}
           >
-            <ChevronRight className="size-3.5 text-muted-foreground" />
-            <span className="text-(length:--text-caption) font-mono">
+            <ChevronRight className="text-muted-foreground size-3.5" />
+            <span className="font-mono text-(length:--text-caption)">
               {label}
             </span>
-            <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
+            <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
               {databaseObjectRowCount(object)}
             </span>
           </CommandItem>
@@ -236,11 +236,11 @@ function RoleCommandGroup({
           onSelect={() => onSelect(role)}
           value={role.roleName}
         >
-          <ChevronRight className="size-3.5 text-muted-foreground" />
-          <span className="text-(length:--text-caption) font-mono">
+          <ChevronRight className="text-muted-foreground size-3.5" />
+          <span className="font-mono text-(length:--text-caption)">
             {role.roleName}
           </span>
-          <span className="text-(length:--text-label-md) ml-auto text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
             {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
           </span>
         </CommandItem>
@@ -262,13 +262,13 @@ function PaletteQueryStatus({
 }) {
   if (isPending) {
     return (
-      <output className="block px-4 py-3 text-muted-foreground text-xs">
+      <output className="text-muted-foreground block px-4 py-3 text-xs">
         {loadingMessage}
       </output>
     );
   }
   if (error) {
-    return <p className="px-4 py-3 text-destructive text-xs">{errorMessage}</p>;
+    return <p className="text-destructive px-4 py-3 text-xs">{errorMessage}</p>;
   }
   return null;
 }
@@ -418,7 +418,7 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
+      className="[&_[data-slot=input-group]]:border-border! rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
       label="Search tables, screens, roles, or saved queries"
       shouldFilter={false}
     >
@@ -431,7 +431,7 @@ function AdminCommandPaletteContent({
           placeholder="Jump to a table, screen, role, or saved query…"
           value={query}
         />
-        <kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md bg-muted px-2 py-1 font-mono text-muted-foreground text-xs">
+        <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md px-2 py-1 font-mono text-xs">
           esc
         </kbd>
       </div>
@@ -489,7 +489,7 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
     <CommandPaletteContext.Provider value={controller}>
       {children}
       <CommandDialog
-        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border border-border p-0 shadow-lg sm:max-w-[600px]"
+        className="border-border top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
         onOpenChange={setOpen}
         open={open}

@@ -29,7 +29,7 @@ function countingValidator(
   return { calls, validator };
 }
 
-describe("ProblemCache", () => {
+describe("problem cache", () => {
   it("asks the server once per statement and scope", async () => {
     const cache = new ProblemCache();
     const { calls, validator } = countingValidator([PROBLEM, null]);
@@ -84,7 +84,9 @@ describe("mapWithConcurrency", () => {
       async (delay) => {
         inFlight += 1;
         peak = Math.max(peak, inFlight);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve) => {
+          setTimeout(resolve, delay);
+        });
         inFlight -= 1;
         return delay * 2;
       }

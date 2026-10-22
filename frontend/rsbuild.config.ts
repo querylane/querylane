@@ -6,7 +6,7 @@ import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginTailwindcss } from "@rsbuild/plugin-tailwindcss";
 import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin";
 import { createEnv } from "@t3-oss/env-core";
-import { TanStackRouterRspack } from "@tanstack/router-plugin/rspack";
+import { tanstackRouter } from "@tanstack/router-plugin/rspack";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";
 import { z } from "zod";
 import {
@@ -229,7 +229,7 @@ export default defineConfig({
     rspack(config) {
       config.plugins ??= [];
       config.plugins.push(
-        TanStackRouterRspack({
+        tanstackRouter({
           autoCodeSplitting: true,
           codeSplittingOptions: {
             // Keep tiny fallback wrappers with their UI, not in extra requests.

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const labelPresentations = cva("", {
   variants: {
     presentation: {
-      onboarding: "font-medium text-sm text-white",
+      onboarding: "text-sm font-medium text-white",
       compact: "text-xs",
       column: "gap-2 font-normal",
     },

@@ -52,7 +52,7 @@ export function CatalogKindBadge({
         </Badge>
       ) : null}
       {shouldShowUnpopulatedStatus(isMaterialized, isPopulated) ? (
-        <span className="font-mono text-muted-foreground text-xs uppercase">
+        <span className="text-muted-foreground font-mono text-xs uppercase">
           unpopulated
         </span>
       ) : null}

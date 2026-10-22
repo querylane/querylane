@@ -218,7 +218,7 @@ function TriggerCard({
   const whenExpression = triggerWhenExpression(trigger);
   return (
     <div
-      className="flex-none rounded-lg border bg-card px-3.5 py-2.75 shadow-xs"
+      className="bg-card flex-none rounded-lg border px-3.5 py-2.75 shadow-xs"
       data-trigger-name={trigger.triggerName}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -232,7 +232,7 @@ function TriggerCard({
         <span className="sr-only">
           {trigger.enabled ? "Enabled trigger" : "Disabled trigger"}
         </span>
-        <span className="text-(length:--text-label-lg) font-mono font-semibold">
+        <span className="font-mono font-semibold text-(length:--text-label-lg)">
           {trigger.triggerName}
         </span>
         {trigger.timing ? (
@@ -253,24 +253,24 @@ function TriggerCard({
         {trigger.enabled ? null : (
           <span
             className={cn(
-              "inline-flex h-[18px] items-center rounded-full px-2 font-medium text-xs",
+              "inline-flex h-[18px] items-center rounded-full px-2 text-xs font-medium",
               PILL_TONE_CLASSES.amber
             )}
           >
             disabled
           </span>
         )}
-        <span className="ml-auto truncate font-mono text-muted-foreground text-xs">
+        <span className="text-muted-foreground ml-auto truncate font-mono text-xs">
           {triggerFunctionLabel(trigger)}
         </span>
       </div>
       {whenExpression ? (
-        <div className="mt-[7px] font-mono text-muted-foreground text-xs">
+        <div className="text-muted-foreground mt-[7px] font-mono text-xs">
           WHEN ({whenExpression})
         </div>
       ) : null}
       <div className="mt-[9px] flex items-start gap-2 border-t pt-2">
-        <pre className="text-(length:--text-label-sm) m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono leading-relaxed-copy">
+        <pre className="leading-relaxed-copy m-0 min-w-0 flex-1 font-mono wrap-break-word whitespace-pre-wrap text-(length:--text-label-sm)">
           <SqlSyntaxHighlight sql={formatTriggerSqlForDisplay(sql)} />
         </pre>
         <TriggerSqlCopyButton sql={sql} triggerName={trigger.triggerName} />

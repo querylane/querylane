@@ -29,7 +29,7 @@ function DatabaseEncodingValue({
   return (
     <span
       className={cn(
-        "inline-flex min-w-0 max-w-full items-center gap-2",
+        "inline-flex max-w-full min-w-0 items-center gap-2",
         className
       )}
       title={encodingTitle}
@@ -40,7 +40,7 @@ function DatabaseEncodingValue({
         </Badge>
       ) : null}
       {trimmedCollation ? (
-        <span className="min-w-0 truncate font-mono text-muted-foreground text-xs">
+        <span className="text-muted-foreground min-w-0 truncate font-mono text-xs">
           {trimmedCollation}
         </span>
       ) : null}

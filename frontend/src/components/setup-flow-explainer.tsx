@@ -95,7 +95,7 @@ export function SetupFlowExplainer({
         >
           <span
             className={cn(
-              "text-(length:--text-micro) uppercase tracking-eyebrow",
+              "tracking-eyebrow text-(length:--text-micro) uppercase",
               classes.activeKicker
             )}
           >
@@ -114,7 +114,7 @@ export function SetupFlowExplainer({
         >
           <span
             className={cn(
-              "text-(length:--text-micro) uppercase tracking-eyebrow",
+              "tracking-eyebrow text-(length:--text-micro) uppercase",
               classes.inactiveKicker
             )}
           >
@@ -141,7 +141,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "text-xs uppercase tracking-display",
+            "tracking-display text-xs uppercase",
             classes.activeKicker
           )}
         >
@@ -163,7 +163,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "text-xs uppercase tracking-display",
+            "tracking-display text-xs uppercase",
             classes.inactiveKicker
           )}
         >

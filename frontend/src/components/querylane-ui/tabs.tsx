@@ -63,7 +63,7 @@ const tabsListPresentations = cva("", {
       "sql-results": "bg-transparent p-0",
       "sql-workbench": "h-full justify-start rounded-none bg-transparent p-0",
       metrics:
-        "divide-x divide-y divide-border rounded-none border-border border-b bg-transparent p-0 sm:divide-y-0",
+        "divide-border border-border divide-x divide-y rounded-none border-b bg-transparent p-0 sm:divide-y-0",
     },
   },
 });
@@ -88,11 +88,11 @@ const tabsTriggerPresentations = cva("", {
       inspector: "px-3",
       truncated: "truncate",
       "sql-workbench":
-        "h-auto max-w-56 flex-none gap-1.5 rounded-none border-0 border-border border-r px-3 py-2 text-xs data-active:bg-background group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:bg-background",
+        "border-border data-active:bg-background dark:data-active:bg-background h-auto max-w-56 flex-none gap-1.5 rounded-none border-0 border-r px-3 py-2 text-xs group-data-[variant=default]/tabs-list:data-active:shadow-none",
       "sql-compact": "gap-1.5 px-2.5 text-xs",
       "sql-plan-mode": "px-2 text-xs",
       metric:
-        "gap-1.5 rounded-none border-0 px-4 py-3 before:bg-primary before:opacity-0 hover:bg-muted/50 data-active:bg-transparent data-active:before:opacity-100 group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:bg-transparent",
+        "before:bg-primary hover:bg-muted/50 gap-1.5 rounded-none border-0 px-4 py-3 before:opacity-0 data-active:bg-transparent group-data-[variant=default]/tabs-list:data-active:shadow-none data-active:before:opacity-100 dark:data-active:bg-transparent",
     },
   },
 });

@@ -273,7 +273,9 @@ function roleFixtureDatabase(id: string) {
   });
 }
 
-const NEVER = new Promise<never>(() => undefined);
+const NEVER = new Promise<never>(() => {
+  // Intentionally stays pending to exercise loading and cancellation.
+});
 
 /**
  * Connect service implementations for the role screens. Pass them to

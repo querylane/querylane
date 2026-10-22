@@ -225,11 +225,11 @@ function flowNodeClass({
   selected: boolean;
 }) {
   return cn(
-    "border bg-card text-card-foreground shadow-sm transition-colors",
+    "bg-card text-card-foreground border shadow-sm transition-colors",
     density === "compact"
       ? "w-[176px] rounded-lg p-2"
       : "w-[260px] rounded-xl p-3",
-    selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+    selected && "ring-primary ring-offset-background ring-2 ring-offset-2",
     NODE_KIND_CLASS[kind]
   );
 }
@@ -254,7 +254,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
           {data.subtitle ? (
             <p
               className={cn(
-                "truncate text-muted-foreground uppercase tracking-wider",
+                "text-muted-foreground truncate tracking-wider uppercase",
                 data.density === "compact"
                   ? "text-(length:--text-micro)"
                   : "text-(length:--text-label-sm)"
@@ -274,7 +274,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
           </h3>
         </div>
         {data.navigation ? (
-          <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+          <ExternalLink className="text-muted-foreground size-3.5 shrink-0" />
         ) : null}
       </div>
       {data.badges.length > 0 ? (
@@ -298,7 +298,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
           {visibleLines.map((line) => (
             <p
               className={cn(
-                "truncate font-mono text-muted-foreground",
+                "text-muted-foreground truncate font-mono",
                 data.density === "compact"
                   ? "text-(length:--text-micro)"
                   : "text-(length:--text-label-sm)"
@@ -310,7 +310,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
             </p>
           ))}
           {extraCount > 0 ? (
-            <p className="text-(length:--text-label-sm) text-muted-foreground">
+            <p className="text-muted-foreground text-(length:--text-label-sm)">
               +{extraCount} more
             </p>
           ) : null}
@@ -714,7 +714,7 @@ function FlowCanvas({
   return (
     <div
       className={cn(
-        "h-[min(72dvh,760px)] min-h-[520px] overflow-hidden rounded-xl border bg-background",
+        "bg-background h-[min(72dvh,760px)] min-h-[520px] overflow-hidden rounded-xl border",
         className
       )}
     >
@@ -730,7 +730,7 @@ function FlowCanvas({
         <AutoFitView key={viewportKey} />
         {actionPanel ? (
           <Panel
-            className="nodrag nopan rounded-lg border bg-popover/95 p-2 text-popover-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-popover/85"
+            className="nodrag nopan bg-popover/95 text-popover-foreground supports-[backdrop-filter]:bg-popover/85 rounded-lg border p-2 shadow-lg backdrop-blur"
             position="top-right"
           >
             {actionPanel}
@@ -740,7 +740,7 @@ function FlowCanvas({
         <MiniMap
           ariaLabel="Canvas minimap"
           bgColor="var(--card)"
-          className="overflow-hidden rounded-lg border border-border shadow-md"
+          className="border-border overflow-hidden rounded-lg border shadow-md"
           maskColor="color-mix(in oklab, var(--muted) 72%, transparent)"
           nodeColor="var(--primary)"
           nodeStrokeColor="var(--border)"
@@ -749,7 +749,7 @@ function FlowCanvas({
           zoomable={true}
         />
         <Controls
-          className="border border-border bg-card text-foreground shadow-md"
+          className="border-border bg-card text-foreground border shadow-md"
           style={REACT_FLOW_CONTROLS_STYLE}
         />
       </ReactFlow>

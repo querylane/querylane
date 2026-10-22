@@ -29,7 +29,7 @@ function PlanOverview({
   const total = ranked.reduce((sum, node) => sum + (node.exclusiveMs ?? 0), 0);
   const [hotspot] = ranked;
   return (
-    <div className="border-b bg-card @3xl:px-5 px-4 py-3">
+    <div className="bg-card border-b px-4 py-3 @3xl:px-5">
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
         <SummaryNumbers count={nodes.length} plan={plan} />
         {hotspot && total > 0 ? (
@@ -42,14 +42,14 @@ function PlanOverview({
             variant="ghost"
           >
             <span className="min-w-0 text-left">
-              <span className="block text-muted-foreground text-xs">
+              <span className="text-muted-foreground block text-xs">
                 Largest available self work ≈
               </span>
               <span className="mt-1 flex items-center gap-2 text-xs">
                 <span className="truncate">
                   {hotspot.relationName ?? hotspot.nodeType}
                 </span>
-                <span className="font-mono text-warning-700 tabular-nums dark:text-warning-400">
+                <span className="text-warning-700 dark:text-warning-400 font-mono tabular-nums">
                   {Math.round(((hotspot.exclusiveMs ?? 0) / total) * PERCENT)}%
                 </span>
                 <span aria-hidden="true">↗</span>
@@ -88,7 +88,7 @@ function PlanOverview({
                 className={cn(
                   "size-full",
                   node.id === hotspot?.id ? "bg-chart-4" : "bg-chart-2/55",
-                  node.id === selectedId && "ring-1 ring-foreground ring-inset"
+                  node.id === selectedId && "ring-foreground ring-1 ring-inset"
                 )}
               />
             </Button>
@@ -106,12 +106,12 @@ function SummaryNumbers({ plan, count }: { plan: ExplainPlan; count: number }) {
   return (
     <div className="flex items-center gap-6">
       <div>
-        <p className="mb-1 flex items-center gap-1.5 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
           {plan.executionTimeMs === undefined
             ? "Estimated cost"
             : "Execution time"}
         </p>
-        <p className="font-medium text-2xl tabular-nums tracking-tight">
+        <p className="text-2xl font-medium tracking-tight tabular-nums">
           {plan.executionTimeMs === undefined
             ? cost
             : formatPlanMs(plan.executionTimeMs)}
@@ -120,11 +120,11 @@ function SummaryNumbers({ plan, count }: { plan: ExplainPlan; count: number }) {
       <div className="border-l pl-6 text-xs">
         <p className="font-medium tabular-nums">
           {rows === undefined ? "—" : formatCount(rows)}{" "}
-          <span className="font-normal text-muted-foreground">
+          <span className="text-muted-foreground font-normal">
             rows {plan.root.actualRows === undefined ? "estimated" : "returned"}
           </span>
         </p>
-        <p className="mt-2 text-muted-foreground">
+        <p className="text-muted-foreground mt-2">
           {count} operations
           {plan.planningTimeMs === undefined
             ? ""

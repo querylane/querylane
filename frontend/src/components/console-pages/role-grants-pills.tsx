@@ -45,7 +45,7 @@ export function AbbrPill({
     state === "none"
       ? cn(
           PILL_BASE,
-          "min-w-[2.75rem] border-border/50 border-dashed text-muted-foreground/40"
+          "border-border/50 text-muted-foreground/40 min-w-[2.75rem] border-dashed"
         )
       : cn(
           PILL_BASE,
@@ -59,7 +59,7 @@ export function AbbrPill({
       <TooltipTrigger render={<span className={className} />}>
         {abbr}
         {state !== "none" && grantable ? (
-          <span className="font-bold leading-none">+</span>
+          <span className="leading-none font-bold">+</span>
         ) : null}
         {state !== "none" && count !== undefined ? (
           <span className="text-xs opacity-80">{count.toLocaleString()}</span>
@@ -117,7 +117,7 @@ export function HeldPillStrip({
   const ordered = columns.filter((name) => held.has(name));
   if (ordered.length === 0) {
     return (
-      <span className="font-mono text-muted-foreground/50 text-xs italic">
+      <span className="text-muted-foreground/50 font-mono text-xs italic">
         no privileges
       </span>
     );
@@ -170,7 +170,7 @@ export function CountPill({
   value: number;
 }) {
   return (
-    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-1.75 font-medium font-mono text-muted-foreground text-xs tracking-label">
+    <span className="border-border bg-secondary text-muted-foreground tracking-label inline-flex h-[18px] items-center gap-1 rounded-full border px-1.75 font-mono text-xs font-medium">
       {value.toLocaleString()}
       {unit ? (
         <span className="font-normal">
@@ -221,8 +221,8 @@ export function ContentHead({
   return (
     <div className="flex flex-col gap-1.5 pb-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
-        <Icon className={cn("size-4 text-muted-foreground", iconClassName)} />
-        <h2 className="font-semibold text-xl tracking-tight">{title}</h2>
+        <Icon className={cn("text-muted-foreground size-4", iconClassName)} />
+        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
         {children}
         {count === undefined ? null : (
           <CountPill partial={partial} unit={countUnit} value={count} />

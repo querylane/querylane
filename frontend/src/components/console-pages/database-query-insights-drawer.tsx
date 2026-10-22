@@ -18,8 +18,8 @@ const DatabaseQueryInsightsContent = lazy(() =>
 function QueryInsightsDrawerFallback() {
   return (
     <div className="grid gap-4">
-      <div className="h-80 rounded-xl border bg-card" />
-      <div className="h-48 rounded-xl border bg-card" />
+      <div className="bg-card h-80 rounded-xl border" />
+      <div className="bg-card h-48 rounded-xl border" />
       <span className="sr-only">Loading query insights</span>
     </div>
   );
@@ -39,7 +39,7 @@ function DatabaseQueryInsightsDrawer({
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
-        className="!w-full !max-w-none sm:!w-[80vw] sm:!max-w-5xl overflow-hidden"
+        className="!w-full !max-w-none overflow-hidden sm:!w-[80vw] sm:!max-w-5xl"
         presentation="detail"
         side="right"
       >

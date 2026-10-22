@@ -129,7 +129,7 @@ afterEach(() => {
   rs.clearAllMocks();
 });
 
-describe("DatabaseStructureMap", () => {
+describe("database structure map", () => {
   test("syncs the selected canvas node when the explorer target changes", async () => {
     const { rerender } = render(
       <DatabaseStructureMap

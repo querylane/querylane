@@ -393,7 +393,7 @@ function SidebarFooterContent({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Logo className="size-10 shrink-0 rounded-md" />
-            <p className="font-medium text-base">Querylane</p>
+            <p className="text-base font-medium">Querylane</p>
           </div>
 
           <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-2">
@@ -428,7 +428,7 @@ function ExplorerRailContent({
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return (
     <>
-      <div className="flex flex-col gap-2 border-sidebar-border border-b p-2">
+      <div className="border-sidebar-border flex flex-col gap-2 border-b p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -529,11 +529,11 @@ function SidebarDatabaseSelector() {
       >
         <HardDrive
           aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground"
+          className="text-muted-foreground size-4 shrink-0"
         />
         <span
           className={cn(
-            "text-(length:--text-caption) min-w-0 flex-1 truncate font-medium font-mono",
+            "min-w-0 flex-1 truncate font-mono font-medium text-(length:--text-caption)",
             selectedDatabase ? "text-foreground" : "text-muted-foreground"
           )}
         >
@@ -541,7 +541,7 @@ function SidebarDatabaseSelector() {
         </span>
         <ChevronsUpDown
           aria-hidden="true"
-          className="size-3.5 shrink-0 text-muted-foreground"
+          className="text-muted-foreground size-3.5 shrink-0"
         />
       </ComboboxTrigger>
       <ComboboxContent>
@@ -553,7 +553,7 @@ function SidebarDatabaseSelector() {
           <AppInlineError className="m-2" error={databaseError} />
         ) : null}
         {queryStates.databases.isPending ? (
-          <output className="block p-3 text-muted-foreground text-sm">
+          <output className="text-muted-foreground block p-3 text-sm">
             Loading databases…
           </output>
         ) : null}
@@ -567,14 +567,14 @@ function SidebarDatabaseSelector() {
             <ComboboxItem key={database.id} value={database.id}>
               <HardDrive
                 aria-hidden="true"
-                className="size-4 shrink-0 text-muted-foreground"
+                className="text-muted-foreground size-4 shrink-0"
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="min-w-0 truncate text-sm">
                   {database.name}
                 </span>
                 {database.owner ? (
-                  <span className="min-w-0 truncate text-muted-foreground text-xs">
+                  <span className="text-muted-foreground min-w-0 truncate text-xs">
                     owner {database.owner}
                   </span>
                 ) : null}
@@ -601,7 +601,7 @@ function SidebarNavigationContent({
     <SidebarContent>
       {sections.length === 0 && (
         <div className="flex flex-1 items-center justify-center px-4 group-data-[collapsible=icon]:hidden">
-          <p className="text-center text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-center text-sm leading-relaxed">
             Select an instance to get started
           </p>
         </div>
@@ -664,14 +664,14 @@ function SidebarSearchButton() {
       variant="outline"
     >
       <Search className="size-3.5 shrink-0" />
-      <span className="text-(length:--text-caption) truncate">
+      <span className="truncate text-(length:--text-caption)">
         Search or jump to…
       </span>
       <span aria-hidden="true" className="ml-auto flex gap-0.5">
-        <kbd className="text-(length:--text-micro) flex size-5 items-center justify-center rounded bg-muted font-mono">
+        <kbd className="bg-muted flex size-5 items-center justify-center rounded font-mono text-(length:--text-micro)">
           ⌘
         </kbd>
-        <kbd className="text-(length:--text-micro) flex size-5 items-center justify-center rounded bg-muted font-mono">
+        <kbd className="bg-muted flex size-5 items-center justify-center rounded font-mono text-(length:--text-micro)">
           K
         </kbd>
       </span>
@@ -701,7 +701,7 @@ function SidebarBrandHeader() {
           variant="ghost"
         >
           <Logo className="size-7 shrink-0" logoStyle="flat" />
-          <span className="truncate font-semibold text-sm tracking-tight">
+          <span className="truncate text-sm font-semibold tracking-tight">
             Querylane
           </span>
         </Button>

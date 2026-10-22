@@ -612,7 +612,9 @@ function leafId(resourceName: string) {
   return resourceName.split("/").at(-1) ?? "";
 }
 
-const NEVER = new Promise<never>(() => undefined);
+const NEVER = new Promise<never>(() => {
+  // Intentionally stays pending to exercise loading and cancellation.
+});
 
 function metaDatabaseUnavailableError() {
   return new ConnectError(

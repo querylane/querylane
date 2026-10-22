@@ -531,7 +531,7 @@ function TopQueriesTable({
 }) {
   if (queries.length === 0) {
     return (
-      <div className="px-5 py-8 text-muted-foreground text-sm">
+      <div className="text-muted-foreground px-5 py-8 text-sm">
         No matching query runtime data.
       </div>
     );
@@ -568,7 +568,7 @@ function TopQueriesTable({
               presentation={selected ? "selected" : undefined}
             >
               <TableCell
-                className="min-w-0 max-w-[34rem]"
+                className="max-w-[34rem] min-w-0"
                 presentation="insight-leading"
               >
                 <Button
@@ -635,7 +635,7 @@ function QueryPaginationFooter({
   });
   return (
     <div
-      className="flex min-h-10 flex-wrap items-center gap-2 border-t px-5 py-2 text-muted-foreground text-xs"
+      className="text-muted-foreground flex min-h-10 flex-wrap items-center gap-2 border-t px-5 py-2 text-xs"
       data-slot="query-insights-pagination"
     >
       {totalRows > 0 ? (
@@ -714,10 +714,10 @@ function QueryStatsGrid({ query }: { query: QueryRuntimeInsight }) {
     <div className="grid min-w-0 grid-cols-2 gap-2">
       {stats.map((stat) => (
         <div
-          className="min-w-0 rounded-lg border border-border p-3"
+          className="border-border min-w-0 rounded-lg border p-3"
           key={stat.label}
         >
-          <div className="font-medium text-muted-foreground text-xs">
+          <div className="text-muted-foreground text-xs font-medium">
             {stat.label}
           </div>
           <div className="mt-1 font-mono text-sm tabular-nums">
@@ -942,7 +942,7 @@ function SequentialScanHotspotsCard({
       </CardHeader>
       <CardContent presentation="chart">
         {hotspots.length > 0 ? (
-          <div className="divide-y divide-border">
+          <div className="divide-border divide-y">
             {hotspots.map((hotspot) => (
               <div
                 className="grid gap-2 px-5 py-3"
@@ -965,7 +965,7 @@ function SequentialScanHotspotsCard({
                   value={insightProgressValue(hotspot.sequentialScanRatio)}
                   variant="warning"
                 />
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
+                <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
                   <span>{formatBytes(hotspot.totalSizeBytes)}</span>
                   <span>
                     {formatInsightInteger(hotspot.sequentialScans)} sequential
@@ -979,7 +979,7 @@ function SequentialScanHotspotsCard({
             ))}
           </div>
         ) : (
-          <p className="px-5 pb-5 text-muted-foreground text-sm">
+          <p className="text-muted-foreground px-5 pb-5 text-sm">
             No sequential scan pressure reported yet.
           </p>
         )}
@@ -1003,7 +1003,7 @@ function TableCacheHitCard({
       </CardHeader>
       <CardContent presentation="chart">
         {cacheHits.length > 0 ? (
-          <div className="divide-y divide-border">
+          <div className="divide-border divide-y">
             {cacheHits.map((cacheHit) => {
               const warning = cacheHit.hitRatio < CACHE_HIT_WARNING_THRESHOLD;
               const label = formatQualifiedTable(
@@ -1031,7 +1031,7 @@ function TableCacheHitCard({
                     value={insightProgressValue(cacheHit.hitRatio)}
                     variant={warning ? "warning" : "default"}
                   />
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
+                  <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
                     <span>
                       {formatInsightInteger(cacheHit.heapBlocksHit)} heap hits
                     </span>
@@ -1045,7 +1045,7 @@ function TableCacheHitCard({
             })}
           </div>
         ) : (
-          <p className="px-5 pb-5 text-muted-foreground text-sm">
+          <p className="text-muted-foreground px-5 pb-5 text-sm">
             No table cache data yet.
           </p>
         )}
@@ -1056,7 +1056,7 @@ function TableCacheHitCard({
 
 function QueryInsightsEmptyState() {
   return (
-    <div className="rounded-xl border border-border bg-card p-8">
+    <div className="border-border bg-card rounded-xl border p-8">
       <EmptyState
         description="Query insights need pg_stat_statements or PostgreSQL table statistics. Install the extension or grant stats access, then refresh this page."
         icon={ChartNoAxesColumnIncreasing}
@@ -1177,13 +1177,13 @@ function DatabaseInsightsLoadingState() {
   return (
     <div className="grid gap-4">
       <div className="space-y-2">
-        <div className="h-7 w-48 rounded bg-muted" />
-        <div className="h-4 w-96 max-w-full rounded bg-muted" />
+        <div className="bg-muted h-7 w-48 rounded" />
+        <div className="bg-muted h-4 w-96 max-w-full rounded" />
       </div>
-      <div className="h-80 rounded-xl border bg-card" />
+      <div className="bg-card h-80 rounded-xl border" />
       <div className="grid gap-4 xl:grid-cols-2">
-        <div className="h-48 rounded-xl border bg-card" />
-        <div className="h-48 rounded-xl border bg-card" />
+        <div className="bg-card h-48 rounded-xl border" />
+        <div className="bg-card h-48 rounded-xl border" />
       </div>
       <span className="sr-only">Loading query insights</span>
     </div>

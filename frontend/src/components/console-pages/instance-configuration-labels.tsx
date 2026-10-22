@@ -29,7 +29,7 @@ export function InstanceConfigurationLabels({
     <div className="mt-6 space-y-3 border-t pt-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium text-sm">Labels</h4>
+          <h4 className="text-sm font-medium">Labels</h4>
           <p className="text-muted-foreground text-xs">
             Key-value pairs for organizing and filtering instances.
           </p>
@@ -81,7 +81,7 @@ export function InstanceConfigurationLabels({
       )}
       {generalMessages.length > 0 ? (
         <p
-          className="whitespace-pre-line text-destructive text-xs"
+          className="text-destructive text-xs whitespace-pre-line"
           id={errorId}
           role="alert"
         >

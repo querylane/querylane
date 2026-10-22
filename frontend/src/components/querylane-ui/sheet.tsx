@@ -72,8 +72,8 @@ const sheetTitlePresentations = cva("", {
   variants: {
     presentation: {
       heading: "text-base",
-      identifier: "truncate font-mono font-semibold text-base",
-      query: "font-mono font-semibold text-sm",
+      identifier: "truncate font-mono text-base font-semibold",
+      query: "font-mono text-sm font-semibold",
       record: "font-mono text-base leading-snug",
     },
   },

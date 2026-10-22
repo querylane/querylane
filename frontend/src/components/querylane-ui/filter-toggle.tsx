@@ -15,10 +15,10 @@ function FilterToggle({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-card/80 p-2">
+    <div className="bg-card/80 flex items-center justify-between gap-3 rounded-lg border p-2">
       <div className="min-w-0">
         <Label htmlFor={id}>{label}</Label>
-        <p className="mt-1 truncate text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-1 truncate text-xs">
           {description}
         </p>
       </div>

@@ -157,7 +157,7 @@ function ForeignKeyReferenceQueryState({
     );
   }
   return (
-    <p className="py-6 text-center text-muted-foreground text-sm" role="status">
+    <p className="text-muted-foreground py-6 text-center text-sm" role="status">
       Referenced row not found.
     </p>
   );
@@ -199,7 +199,7 @@ function ForeignKeyReferenceContent({
           ) : (
             <>
               Referenced by {preview.sourceColumn} ={" "}
-              <code className="break-all rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs break-all">
                 {preview.displayValue}
               </code>
               .

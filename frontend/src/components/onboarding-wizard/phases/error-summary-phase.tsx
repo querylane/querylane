@@ -101,13 +101,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
 
   if (errorKind === "configuration") {
     return (
-      <div className="flex items-start gap-4 rounded-xl border border-warning-400/20 bg-warning-500/6 px-4 py-3">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-400" />
+      <div className="border-warning-400/20 bg-warning-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
+        <AlertTriangle className="text-warning-400 mt-0.5 size-4 shrink-0" />
         <div className="space-y-1">
-          <div className="font-medium text-base text-warning-100">
+          <div className="text-warning-100 text-base font-medium">
             Likely a configuration issue
           </div>
-          <p className="text-sm text-warning-100/70">
+          <p className="text-warning-100/70 text-sm">
             This error usually means the connection details need adjusting.
             Click <strong>Reconfigure</strong> to update your settings.
           </p>
@@ -117,10 +117,10 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
   }
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-info-400/20 bg-info-500/6 px-4 py-3">
-      <RefreshCw className="mt-0.5 size-4 shrink-0 text-info-400" />
+    <div className="border-info-400/20 bg-info-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
+      <RefreshCw className="text-info-400 mt-0.5 size-4 shrink-0" />
       <div className="space-y-1">
-        <div className="font-medium text-base text-info-100">
+        <div className="text-info-100 text-base font-medium">
           May be a transient issue
         </div>
         <p className="text-info-100/70 text-sm">
@@ -249,13 +249,13 @@ export function ErrorSummaryPhase() {
 
         {/* Failed step detail */}
         {failedStepName ? (
-          <div className="rounded-xl border border-negative-400/18 bg-negative-500/6 px-4 py-3">
+          <div className="border-negative-400/18 bg-negative-500/6 rounded-xl border px-4 py-3">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="rounded-full bg-negative-500/18 px-3 py-1 font-medium text-negative-200 text-sm">
+                <span className="bg-negative-500/18 text-negative-200 rounded-full px-3 py-1 text-sm font-medium">
                   Failed step
                 </span>
-                <span className="font-medium text-base text-white">
+                <span className="text-base font-medium text-white">
                   {failedStepName}
                 </span>
               </div>
@@ -276,11 +276,11 @@ export function ErrorSummaryPhase() {
         ) : null}
 
         {errorKind === "storage_full" ? null : (
-          <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
-            <div className="font-medium text-foreground text-sm">
+          <div className="border-border bg-muted/30 space-y-2 rounded-xl border px-4 py-3">
+            <div className="text-foreground text-sm font-medium">
               Configuration file
             </div>
-            <code className="block break-all rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
+            <code className="bg-muted text-muted-foreground block rounded-lg px-3 py-2 text-xs break-all">
               {configFilePath}
             </code>
             <p className="text-muted-foreground text-sm leading-6">

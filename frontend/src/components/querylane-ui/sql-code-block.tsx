@@ -9,20 +9,21 @@ const sqlCodeBlockPresentations = cva("", {
   variants: {
     presentation: {
       definition:
-        "text-(length:--text-xs) rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10",
+        "bg-muted/30 rounded-none rounded-b-xl border-0 p-4 pr-10 text-(length:--text-xs)",
       compact: "text-xs",
     },
   },
 });
 
-const sqlCodeBlockVariants = cva("min-w-0 max-w-full font-mono", {
+const sqlCodeBlockVariants = cva("max-w-full min-w-0 font-mono", {
   variants: {
     variant: {
       block:
-        "rounded-md border bg-muted/40 p-3 text-foreground text-xs leading-relaxed",
+        "bg-muted/40 text-foreground rounded-md border p-3 text-xs leading-relaxed",
       compact:
-        "overflow-x-auto whitespace-pre-wrap break-words rounded-md border-0 bg-muted/55 px-3 py-2 text-foreground text-xs leading-relaxed",
-      inline: "text-(length:--text-xs) truncate leading-normal",
+        "bg-muted/55 text-foreground overflow-x-auto rounded-md border-0 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap",
+      // Keep line height after font size: cn() resolves conflicts in order.
+      inline: ["truncate text-(length:--text-xs)", "leading-normal"],
     },
     copyable: { true: "", false: "" },
     wrap: { true: "", false: "" },
@@ -31,7 +32,7 @@ const sqlCodeBlockVariants = cva("min-w-0 max-w-full font-mono", {
     {
       variant: "block",
       wrap: true,
-      className: "overflow-x-hidden whitespace-pre-wrap break-words",
+      className: "overflow-x-hidden wrap-break-word whitespace-pre-wrap",
     },
     { variant: "block", wrap: false, className: "overflow-x-auto" },
     { variant: "block", wrap: true, copyable: true, className: "pr-14" },
@@ -84,7 +85,7 @@ export function SqlCodeBlock({
   const inline = variant === "inline";
 
   return (
-    <div className={cn("relative min-w-0 max-w-full", inline && "w-full")}>
+    <div className={cn("relative max-w-full min-w-0", inline && "w-full")}>
       <pre
         className={cn(
           sqlCodeBlockVariants({ variant, wrap, copyable }),

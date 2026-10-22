@@ -66,7 +66,7 @@ function HistoryRow({
   return (
     <li>
       <Button
-        className="h-auto w-full flex-col items-start whitespace-normal text-left"
+        className="h-auto w-full flex-col items-start text-left whitespace-normal"
         onClick={() => onOpen(entry.statement)}
         presentation="sql-list-row"
         type="button"
@@ -75,7 +75,7 @@ function HistoryRow({
         <span className="line-clamp-2 w-full font-mono text-xs leading-relaxed">
           {summarizeStatement(entry.statement, PREVIEW_LENGTH)}
         </span>
-        <span className="flex w-full flex-wrap items-center gap-x-2 text-muted-foreground text-xs">
+        <span className="text-muted-foreground flex w-full flex-wrap items-center gap-x-2 text-xs">
           <span className={cn("font-medium", statusTone(entry.status))}>
             {STATUS_LABEL[entry.status]}
           </span>
@@ -83,7 +83,7 @@ function HistoryRow({
             <span key={part}>{part}</span>
           ))}
           {entry.errorSummary ? (
-            <span className="line-clamp-1 w-full text-destructive/80">
+            <span className="text-destructive/80 line-clamp-1 w-full">
               {entry.errorSummary}
             </span>
           ) : null}
@@ -105,16 +105,16 @@ function SavedRow({
   return (
     <li className="group flex items-start gap-1">
       <Button
-        className="h-auto min-w-0 flex-1 flex-col items-start whitespace-normal text-left"
+        className="h-auto min-w-0 flex-1 flex-col items-start text-left whitespace-normal"
         onClick={() => onOpen(query.id)}
         presentation="sql-list-row"
         type="button"
         variant="ghost"
       >
-        <span className="w-full truncate font-medium text-sm">
+        <span className="w-full truncate text-sm font-medium">
           {query.name}
         </span>
-        <span className="line-clamp-2 w-full font-mono text-muted-foreground text-xs leading-relaxed">
+        <span className="text-muted-foreground line-clamp-2 w-full font-mono text-xs leading-relaxed">
           {summarizeStatement(query.statement, PREVIEW_LENGTH)}
         </span>
       </Button>
@@ -135,7 +135,7 @@ function SavedRow({
 
 function EmptyListMessage({ children }: { children: string }) {
   return (
-    <p className="px-3 py-6 text-center text-muted-foreground text-sm">
+    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
       {children}
     </p>
   );
@@ -294,7 +294,7 @@ function SqlHistorySheet({
             browser.
           </SheetDescription>
         </SheetHeader>
-        <div className="flex items-center gap-2 border-border border-b px-4 py-2">
+        <div className="border-border flex items-center gap-2 border-b px-4 py-2">
           <SheetTabs
             historyCount={history.length}
             onChange={setTab}

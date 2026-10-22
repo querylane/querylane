@@ -586,7 +586,6 @@ test("data explorer: renders null boolean json and long text cells", {
 test("data explorer: freezes wide table columns and copies selected rows", {
   tag: ["@feat:data-explorer", "@flow:query"],
 }, async ({ page }) => {
-  let clipboardText = "";
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -647,7 +646,9 @@ test("data explorer: freezes wide table columns and copies selected rows", {
   await expect
     .poll(async () => page.evaluate(() => window.querylaneE2eClipboard ?? ""))
     .toContain("ada@example.com");
-  clipboardText = await page.evaluate(() => window.querylaneE2eClipboard ?? "");
+  const clipboardText = await page.evaluate(
+    () => window.querylaneE2eClipboard ?? ""
+  );
   expect(clipboardText).toContain("grace@example.com");
 });
 

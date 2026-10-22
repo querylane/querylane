@@ -165,7 +165,7 @@ async function renderConsolePage(
         <div
           className={cn(
             width,
-            "rounded-2xl border border-border bg-background text-foreground"
+            "border-border bg-background text-foreground rounded-2xl border"
           )}
           data-testid="console-page"
         >

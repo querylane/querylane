@@ -27,7 +27,7 @@ function RulesEditor({
 }: RulesEditorProps) {
   if (rules.length === 0) {
     return (
-      <p className="px-1 py-0.5 text-muted-foreground text-xs">
+      <p className="text-muted-foreground px-1 py-0.5 text-xs">
         No columns are available to filter.
       </p>
     );
@@ -42,7 +42,7 @@ function RulesEditor({
           key={rule.id}
         >
           {index === 0 ? (
-            <span className="pt-2 pr-1 text-right text-muted-foreground text-xs">
+            <span className="text-muted-foreground pt-2 pr-1 text-right text-xs">
               where
             </span>
           ) : (

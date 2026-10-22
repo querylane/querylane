@@ -87,7 +87,7 @@ export function EmbeddedPhase() {
             <div>Data path</div>
             {/* Mono has a larger x-height than the sans face — one size down
                 keeps the path visually level with the 14px sans values. */}
-            <div className="min-w-0 break-all font-mono text-white/88 text-xs leading-5">
+            <div className="min-w-0 font-mono text-xs leading-5 break-all text-white/88">
               {embeddedDataPath}
             </div>
             <div>Network</div>

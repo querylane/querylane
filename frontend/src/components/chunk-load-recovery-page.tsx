@@ -31,17 +31,17 @@ export function ChunkLoadRecoveryPage({
   return (
     <main
       className={cn(
-        "flex min-h-dvh items-center justify-center bg-background p-4",
+        "bg-background flex min-h-dvh items-center justify-center p-4",
         containerClassName
       )}
     >
       <Card className={cn("w-full max-w-xl", className)}>
         <CardHeader presentation="spacious">
-          <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="bg-primary/10 text-primary flex size-11 items-center justify-center rounded-full">
             <RefreshCcw aria-hidden="true" className="size-5" />
           </div>
           <div className="space-y-2">
-            <h1 className="font-medium text-xl leading-normal">
+            <h1 className="text-xl leading-normal font-medium">
               Querylane was updated
             </h1>
             <CardDescription aria-live="polite">
@@ -52,7 +52,7 @@ export function ChunkLoadRecoveryPage({
           </div>
         </CardHeader>
         <CardContent presentation="stacked">
-          <div className="rounded-lg border border-border bg-muted/30 p-3 text-muted-foreground text-sm">
+          <div className="border-border bg-muted/30 text-muted-foreground rounded-lg border p-3 text-sm">
             Your browser tried to open an app file from an older deployment. A
             refresh loads the newest files and keeps you on this page.
           </div>

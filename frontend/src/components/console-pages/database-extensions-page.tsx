@@ -72,7 +72,7 @@ function StatusCell({ extension }: { extension: PresentedExtension }) {
         className={cn(
           "text-xs",
           installed
-            ? "font-medium text-positive-700 dark:text-positive-300"
+            ? "text-positive-700 dark:text-positive-300 font-medium"
             : "text-muted-foreground"
         )}
       >
@@ -138,7 +138,7 @@ function statusTabLabel(label: string, count: number) {
   return (
     <span className="flex items-center gap-1.5">
       {label}
-      <span className="font-mono text-muted-foreground text-xs tabular-nums">
+      <span className="text-muted-foreground font-mono text-xs tabular-nums">
         {count}
       </span>
     </span>
@@ -172,7 +172,7 @@ function LedgerToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative w-full sm:w-64">
-        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
         <Input
           aria-label="Search extensions…"
           onChange={(event) => onSearchChange(event.target.value)}
@@ -217,7 +217,7 @@ function LedgerToolbar({
           </SelectContent>
         </Select>
       ) : null}
-      <span className="ml-auto text-muted-foreground text-xs">
+      <span className="text-muted-foreground ml-auto text-xs">
         {filteredCount} of {extensions.length} extensions
       </span>
     </div>
@@ -234,23 +234,23 @@ function DrawerStatusHero({ extension }: { extension: PresentedExtension }) {
       .filter(Boolean)
       .join(" · ");
     return (
-      <div className="rounded-lg border border-success/30 bg-success/5 p-3">
-        <p className="flex items-center gap-2 font-medium text-positive-700 text-sm dark:text-positive-300">
-          <span aria-hidden="true" className="size-2 rounded-full bg-success" />
+      <div className="border-success/30 bg-success/5 rounded-lg border p-3">
+        <p className="text-positive-700 dark:text-positive-300 flex items-center gap-2 text-sm font-medium">
+          <span aria-hidden="true" className="bg-success size-2 rounded-full" />
           Installed · {extension.installedVersion || extension.versionLabel}
         </p>
         {detailLine ? (
-          <p className="mt-1 text-muted-foreground text-xs">{detailLine}</p>
+          <p className="text-muted-foreground mt-1 text-xs">{detailLine}</p>
         ) : null}
       </div>
     );
   }
   return (
-    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="flex items-center gap-2 font-medium text-sm">
+    <div className="border-border bg-muted/40 space-y-2 rounded-lg border p-3">
+      <p className="flex items-center gap-2 text-sm font-medium">
         <span
           aria-hidden="true"
-          className="size-2 rounded-full bg-muted-foreground/40"
+          className="bg-muted-foreground/40 size-2 rounded-full"
         />
         Not installed in this database
       </p>
@@ -271,7 +271,7 @@ function DrawerDetailsList({ extension }: { extension: PresentedExtension }) {
           key={fact.label}
         >
           <dt className="text-muted-foreground">{fact.label}</dt>
-          <dd className="break-words text-right font-mono">{fact.value}</dd>
+          <dd className="text-right font-mono wrap-break-word">{fact.value}</dd>
         </div>
       ))}
     </dl>
@@ -287,7 +287,7 @@ function CuratedDrawerSections({
   if (!curated) {
     return (
       <section className="space-y-2">
-        <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+        <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Details
         </h3>
         <DrawerDetailsList extension={extension} />
@@ -298,7 +298,7 @@ function CuratedDrawerSections({
     <>
       <section className="space-y-2">
         <div className="flex items-baseline gap-2">
-          <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
+          <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             Try it
           </h3>
           <span className="text-muted-foreground text-xs">
@@ -327,7 +327,7 @@ function CuratedDrawerSections({
             <div className="space-y-2">
               {curated.provides.map((item) => (
                 <p className="text-sm leading-relaxed" key={item.label}>
-                  <span className="font-medium font-mono text-xs">
+                  <span className="font-mono text-xs font-medium">
                     {item.label}
                   </span>
                   <span className="text-muted-foreground"> — {item.value}</span>
@@ -380,7 +380,7 @@ function ExtensionDrawer({
                 <Badge variant={extension.badgeVariant}>
                   {extension.statusLabel}
                 </Badge>
-                <span className="ml-auto font-mono text-muted-foreground text-xs tabular-nums">
+                <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
                   {extension.versionLabel}
                 </span>
               </div>
@@ -442,7 +442,7 @@ function ExtensionsLedger({
           title="No extensions match"
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="border-border overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow presentation="inspector">

@@ -79,7 +79,7 @@ function ErrorBadge({ label, value }: { label: string; value: string | null }) {
   }
 
   return (
-    <div className="rounded-full border border-border px-3 py-1 font-mono text-muted-foreground text-xs">
+    <div className="border-border text-muted-foreground rounded-full border px-3 py-1 font-mono text-xs">
       {label}: {value}
     </div>
   );
@@ -185,7 +185,7 @@ function ErrorDetailsDialog({
             <ReportBugLink error={error} />
           </div>
           <div className="space-y-2">
-            <h3 className="font-medium text-sm">Technical details</h3>
+            <h3 className="text-sm font-medium">Technical details</h3>
             <Textarea
               aria-label="Technical details JSON"
               className="h-96 max-h-96 resize-none whitespace-pre"
@@ -224,11 +224,11 @@ function AppPageError({
           className="flex flex-col items-center text-center"
           presentation="recovery"
         >
-          <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="size-6 text-destructive" />
+          <div className="bg-destructive/10 flex size-12 items-center justify-center rounded-full">
+            <AlertTriangle className="text-destructive size-6" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="font-semibold text-lg tracking-tight">
+            <h2 className="text-lg font-semibold tracking-tight">
               {error.title}
             </h2>
             <p className="text-muted-foreground text-sm">{error.summary}</p>
@@ -269,16 +269,16 @@ function AppCompactError({
     <div className={cn("w-full", containerClassName)}>
       <div
         className={cn(
-          "rounded-lg border border-destructive/30 bg-destructive/5 p-3",
+          "border-destructive/30 bg-destructive/5 rounded-lg border p-3",
           className
         )}
         role="alert"
       >
         <div className="flex items-start gap-2.5">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+          <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="font-medium text-sm leading-snug">{error.title}</p>
-            <p className="line-clamp-3 break-words text-muted-foreground text-xs">
+            <p className="text-sm leading-snug font-medium">{error.title}</p>
+            <p className="text-muted-foreground line-clamp-3 text-xs wrap-break-word">
               {error.summary}
             </p>
             {error.retryGuidance ? (

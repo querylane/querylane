@@ -222,7 +222,7 @@ function IndexSummaryStrip({
   const invalidCount = indexInvalidCount(indexes);
   return (
     <p
-      className="font-mono text-muted-foreground text-xs"
+      className="text-muted-foreground font-mono text-xs"
       data-slot="index-summary-strip"
     >
       {segments.join(" · ")}
@@ -237,7 +237,7 @@ function IndexSummaryStrip({
 function IndexNameCell({ index }: { index: TableIndex }) {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <span className="truncate font-mono font-semibold text-foreground text-xs">
+      <span className="text-foreground truncate font-mono text-xs font-semibold">
         {index.indexName || "unnamed_index"}
       </span>
       {index.isUnique ? (

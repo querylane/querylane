@@ -141,19 +141,19 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
   return (
     <div className="min-w-[14rem]">
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate font-mono font-semibold text-foreground text-xs">
+        <span className="text-foreground truncate font-mono text-xs font-semibold">
           {column.columnName}
         </span>
         <ColumnBadges row={row} />
       </div>
       {column.comment ? (
-        <div className="mt-1 max-w-[22rem] truncate text-muted-foreground text-xs">
+        <div className="text-muted-foreground mt-1 max-w-[22rem] truncate text-xs">
           {column.comment}
         </div>
       ) : null}
       {column.generationExpression ? (
         <div
-          className="mt-1 max-w-[22rem] truncate font-mono text-muted-foreground text-xs"
+          className="text-muted-foreground mt-1 max-w-[22rem] truncate font-mono text-xs"
           title={column.generationExpression}
         >
           AS {column.generationExpression}
@@ -172,7 +172,7 @@ function ColumnInventoryTypeCell({ column }: { column: TableColumn }) {
     typeMeta.badges.length > 0 ? ` ${typeMeta.badges.join(" · ")}.` : "";
   return (
     <span
-      className="font-mono text-muted-foreground text-xs"
+      className="text-muted-foreground font-mono text-xs"
       title={`${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
     >
       {typeMeta.displayType}
@@ -348,7 +348,7 @@ function ColumnsInventoryTable({
         />
         {filters}
         <div className="flex-1" />
-        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
           <span>Catalog metadata</span>
           <span aria-hidden="true">·</span>
           <RefreshControl

@@ -99,7 +99,7 @@ function MethodOption({
       </span>
       <span className="min-w-0 flex-1 space-y-1 overflow-hidden">
         <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-          <span className="min-w-0 break-words font-semibold text-sm text-white [overflow-wrap:anywhere] md:text-base">
+          <span className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] wrap-break-word text-white md:text-base">
             {getMethodLabel(method)}
           </span>
           {content.badge ? (
@@ -112,7 +112,7 @@ function MethodOption({
             </Badge>
           ) : null}
         </span>
-        <span className="block max-w-3xl break-words text-white/58 text-xs leading-5 [overflow-wrap:anywhere]">
+        <span className="block max-w-3xl text-xs leading-5 [overflow-wrap:anywhere] wrap-break-word text-white/58">
           {content.description}
         </span>
       </span>
@@ -228,11 +228,11 @@ export function MethodSelectionPhase() {
       ) : null}
       <div aria-label="Setup method" className="space-y-2.5" role="radiogroup">
         {methods.length === 0 ? (
-          <div className="rounded-xl border border-white/12 border-dashed bg-white/3 px-4 py-6 text-center">
-            <p className="font-medium text-sm text-white">
+          <div className="rounded-xl border border-dashed border-white/12 bg-white/3 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-white">
               No setup methods available
             </p>
-            <p className="mx-auto mt-2 max-w-2xl text-sm text-white/58 leading-6">
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/58">
               Querylane did not receive any supported setup methods from the
               server. Refresh the page after checking the server configuration.
             </p>

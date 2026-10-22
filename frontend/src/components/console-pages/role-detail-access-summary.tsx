@@ -51,7 +51,7 @@ function AccessSummaryRow({
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
-              "font-medium text-sm",
+              "text-sm font-medium",
               !row.active && "text-muted-foreground"
             )}
           >
@@ -75,7 +75,7 @@ function AccessSummaryRow({
         {row.status}
       </Badge>
       {jump ? (
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
+        <ChevronRight className="text-muted-foreground/40 group-hover:text-foreground size-4 shrink-0 transition-colors" />
       ) : null}
     </>
   );
@@ -122,7 +122,7 @@ function ScopeGroup({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-(length:--text-label-sm) flex items-center gap-1 px-1 font-medium text-muted-foreground uppercase tracking-wide">
+      <div className="text-muted-foreground flex items-center gap-1 px-1 font-medium tracking-wide text-(length:--text-label-sm) uppercase">
         {label}
       </div>
       {rows.map((row) => (
@@ -179,9 +179,9 @@ function AccessSummary({
                 In
                 <Database
                   aria-hidden="true"
-                  className="size-3 shrink-0 text-muted-foreground"
+                  className="text-muted-foreground size-3 shrink-0"
                 />
-                <span className="font-mono text-foreground normal-case">
+                <span className="text-foreground font-mono normal-case">
                   {databaseName}
                 </span>
               </>
@@ -194,7 +194,7 @@ function AccessSummary({
         />
       </div>
       {rlsNote ? (
-        <p className="mt-3 flex items-start gap-1.5 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-3 flex items-start gap-1.5 text-xs">
           <ShieldOff className="mt-0.5 size-3 shrink-0" />
           <span>{rlsNote}</span>
         </p>

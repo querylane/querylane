@@ -116,9 +116,13 @@ async function executeRows({
       case "columnMetadata":
         columns = result.value.columns.map((column) => column.columnName);
         break;
-      case "rowBatch":
-        rows.push(...result.value.rows.map((row) => rowToRecord(columns, row)));
+      case "rowBatch": {
+        const batchColumns = columns;
+        rows.push(
+          ...result.value.rows.map((row) => rowToRecord(batchColumns, row))
+        );
         break;
+      }
       case "stats":
         break;
       default:

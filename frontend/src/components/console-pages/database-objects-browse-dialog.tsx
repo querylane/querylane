@@ -110,7 +110,7 @@ function BrowseResults({
   if (isError) {
     return (
       <div className="flex flex-col items-start gap-3 py-2">
-        <p className="text-(length:--text-caption) text-muted-foreground">
+        <p className="text-muted-foreground text-(length:--text-caption)">
           Failed to load objects.
         </p>
         <RetryActionButton
@@ -124,7 +124,7 @@ function BrowseResults({
   }
   if (isEmpty) {
     return (
-      <p className="text-(length:--text-caption) py-2 text-muted-foreground">
+      <p className="text-muted-foreground py-2 text-(length:--text-caption)">
         No objects match this search.
       </p>
     );
@@ -237,7 +237,7 @@ function ExtensionsBrowseDialog({
       total={extensions.length}
     >
       {visible.length === 0 ? (
-        <p className="text-(length:--text-caption) py-2 text-muted-foreground">
+        <p className="text-muted-foreground py-2 text-(length:--text-caption)">
           No extensions match this search.
         </p>
       ) : (

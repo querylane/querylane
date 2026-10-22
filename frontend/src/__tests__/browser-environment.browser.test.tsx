@@ -26,7 +26,7 @@ test("browser test setup applies the configured theme and reduced motion", () =>
 test("browser test environment loads app styles and deterministic visual-test CSS", async () => {
   await render(
     <ScreenshotFrame>
-      <div className="rounded-xl bg-primary p-4 text-primary-foreground">
+      <div className="bg-primary text-primary-foreground rounded-xl p-4">
         Styled browser frame
       </div>
     </ScreenshotFrame>

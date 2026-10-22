@@ -83,7 +83,7 @@ function LabelsEditor({
       )}
       {generalMessages.length > 0 ? (
         <p
-          className="whitespace-pre-line text-destructive text-sm"
+          className="text-destructive text-sm whitespace-pre-line"
           id={errorId}
           role="alert"
         >
@@ -101,7 +101,7 @@ export function CreateInstancePageHeader({ onBack }: { onBack: () => void }) {
         <span className="sr-only">Back</span>
       </Button>
       <div>
-        <h1 className="font-semibold text-2xl tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Postgres server to manage
         </h1>
         <p className="text-muted-foreground text-sm">

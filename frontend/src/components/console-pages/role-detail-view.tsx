@@ -64,7 +64,7 @@ function RoleHero({
       <RoleAvatar kind={kind} size="lg" />
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-mono font-semibold text-2xl tracking-tight">
+          <h1 className="font-mono text-2xl font-semibold tracking-tight">
             {roleName}
           </h1>
           <Badge title={ROLE_KIND_TOOLTIP[kind]} variant="secondary">
@@ -89,13 +89,13 @@ function RoleHero({
           ) : null}
         </div>
         {isSystem ? (
-          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
             <ShieldCheck className="size-3.5 shrink-0" />
             <span>{systemDescription}</span>
           </div>
         ) : null}
         {!isSystem && comment ? (
-          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
             <span>{comment}</span>
           </div>
         ) : null}
@@ -125,7 +125,7 @@ function RoleDetailView(props: RoleDetailViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        className="inline-flex w-fit flex-row items-center gap-1 text-muted-foreground text-sm leading-none hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground inline-flex w-fit flex-row items-center gap-1 text-sm leading-none"
         params={{ instanceId }}
         search={{}}
         to="/instances/$instanceId/roles"

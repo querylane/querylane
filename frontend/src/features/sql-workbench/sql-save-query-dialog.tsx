@@ -61,7 +61,7 @@ function SqlSaveQueryDialog({
                 value={name}
               />
             </Field>
-            <p className="line-clamp-3 rounded-md bg-muted px-3 py-2 font-mono text-muted-foreground text-xs leading-relaxed">
+            <p className="bg-muted text-muted-foreground line-clamp-3 rounded-md px-3 py-2 font-mono text-xs leading-relaxed">
               {summarizeStatement(statement, STATEMENT_PREVIEW_MAX_LENGTH)}
             </p>
           </div>

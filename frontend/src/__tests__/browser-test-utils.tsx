@@ -25,7 +25,7 @@ function ScreenshotFrame({ children }: { children: ReactNode }) {
     >
       <TooltipProvider>
         <div
-          className={cn(themeClassName, "bg-background p-6 text-foreground")}
+          className={cn(themeClassName, "bg-background text-foreground p-6")}
           data-testid="screenshot-frame"
           data-visual-test-root=""
         >

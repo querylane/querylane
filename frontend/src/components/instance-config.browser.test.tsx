@@ -22,7 +22,7 @@ function createInstance() {
 function renderInstanceConfigSurface(children: ReactNode) {
   return render(
     <ScreenshotFrame>
-      <div className="w-[1100px] space-y-6 rounded-2xl border border-border bg-background p-8 text-foreground">
+      <div className="border-border bg-background text-foreground w-[1100px] space-y-6 rounded-2xl border p-8">
         {children}
       </div>
     </ScreenshotFrame>

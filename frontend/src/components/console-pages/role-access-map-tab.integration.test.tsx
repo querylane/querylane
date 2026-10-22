@@ -137,7 +137,7 @@ afterEach(() => {
   navigateMock.mockClear();
 });
 
-describe("RoleAccessMapTab", () => {
+describe("role access map tab", () => {
   test("renders canvas actions inside the access map and filters facets", async () => {
     const user = userEvent.setup();
 

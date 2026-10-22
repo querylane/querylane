@@ -1,0 +1,20 @@
+diff --git a/config/biome/core/biome.jsonc b/config/biome/core/biome.jsonc
+index cfcef622192ca54af7db77896c6356b7cc97ceeb..ee9a8838ef6407bf7ac7fa55263230eedcb5b471 100644
+--- a/config/biome/core/biome.jsonc
++++ b/config/biome/core/biome.jsonc
+@@ -294,13 +294,8 @@
+       "nursery": {
+         // Typically we don't enable nursery rules anymore (https://github.com/haydenbleasel/ultracite/issues/457)
+         // but this was requested specifically by a lot of people.
+-        "useSortedClasses": {
+-          "fix": "safe",
+-          "level": "error",
+-          "options": {
+-            // class and className attributes are sorted by default.
+-            "functions": ["clsx", "cva", "tw", "twMerge", "cn", "twJoin", "tv"]
+-          }
++        "useTailwindSortedClasses": {
++          "level": "error"
+         }
+       },
+       "performance": {

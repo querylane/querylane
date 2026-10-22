@@ -46,9 +46,9 @@ function InternalStorageRecoveryDialog({
 
         <div className="space-y-5">
           <div className="space-y-2">
-            <div className="font-medium text-sm">Configuration file</div>
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-xs">
+            <div className="text-sm font-medium">Configuration file</div>
+            <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2">
+              <code className="min-w-0 flex-1 text-xs break-all">
                 {configFilePath}
               </code>
               <CopyIconButton
@@ -59,9 +59,9 @@ function InternalStorageRecoveryDialog({
           </div>
 
           <div className="space-y-2">
-            <div className="font-medium text-sm">Reset command</div>
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
-              <code className="min-w-0 flex-1 break-all text-xs">
+            <div className="text-sm font-medium">Reset command</div>
+            <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2">
+              <code className="min-w-0 flex-1 text-xs break-all">
                 {resetCommand}
               </code>
               <CopyIconButton

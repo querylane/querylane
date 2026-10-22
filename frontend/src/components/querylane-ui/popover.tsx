@@ -14,7 +14,7 @@ const popoverTriggerPresentations = cva("", {
   variants: {
     presentation: {
       breadcrumb:
-        "gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "hover:bg-accent focus-visible:ring-ring gap-1.5 rounded-md px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none",
     },
     breadcrumbWidth: {
       instance: "max-w-[11rem] sm:max-w-[14rem]",

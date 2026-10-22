@@ -47,7 +47,7 @@ function renderPartialFacet(
   );
 }
 
-describe("GrantsSection partial empty states", () => {
+describe("grants section partial empty states", () => {
   test("keeps an empty direct-grant page inconclusive", () => {
     renderPartialFacet({ kind: "overview" });
 

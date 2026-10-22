@@ -132,7 +132,7 @@ function ExtensionsCard({
       <CardContent className="flex flex-col">
         {isPending ? <CardLoadingRows label="Loading extensions" /> : null}
         {emptyText ? (
-          <p className="text-(length:--text-caption) py-2 text-muted-foreground">
+          <p className="text-muted-foreground py-2 text-(length:--text-caption)">
             {emptyText}
           </p>
         ) : null}
@@ -185,7 +185,7 @@ function ObjectsErrorCard({
         className="flex flex-col items-start"
         presentation="compact-row"
       >
-        <p className="text-(length:--text-caption) text-muted-foreground">
+        <p className="text-muted-foreground text-(length:--text-caption)">
           Failed to load other database objects.
         </p>
         {onRetry ? (
@@ -267,7 +267,7 @@ function DatabaseObjectsPanel({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <h2 className="font-semibold text-foreground text-sm">
+        <h2 className="text-foreground text-sm font-semibold">
           Database objects
         </h2>
         <p className="text-muted-foreground text-xs">

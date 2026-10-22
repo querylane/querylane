@@ -7,7 +7,7 @@ test("minimap preserves the card surface in both themes", async () => {
   const { container } = await render(
     <div className="h-96 w-full">
       <div
-        className="rounded-lg border border-border bg-card"
+        className="border-border bg-card rounded-lg border"
         data-testid="theme-reference"
       />
       <FlowCanvas direction="LR" edges={[]} nodes={[]} />

@@ -227,7 +227,7 @@ function renderAdminShell(options?: { configManaged?: boolean }) {
     >
       <TooltipProvider>
         <div
-          className="dark h-[760px] w-[1100px] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+          className="dark border-border bg-background text-foreground h-[760px] w-[1100px] overflow-hidden rounded-2xl border"
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
@@ -238,11 +238,11 @@ function renderAdminShell(options?: { configManaged?: boolean }) {
                   <SidebarInset className="min-w-0">
                     <AdminHeader />
                     <main className="p-6">
-                      <div className="rounded-xl border border-border bg-card p-6">
-                        <h1 className="font-semibold text-2xl">
+                      <div className="border-border bg-card rounded-xl border p-6">
+                        <h1 className="text-2xl font-semibold">
                           Database overview
                         </h1>
-                        <p className="mt-2 text-muted-foreground text-sm">
+                        <p className="text-muted-foreground mt-2 text-sm">
                           Main content remains visible while the header and
                           sidebar expose the active instance/database path.
                         </p>
@@ -284,14 +284,14 @@ function renderDatabaseLayout({
         <div
           className={cn(
             visualTheme,
-            "h-[760px] w-[1100px] overflow-hidden rounded-lg border border-border bg-background text-foreground"
+            "border-border bg-background text-foreground h-[760px] w-[1100px] overflow-hidden rounded-lg border"
           )}
           data-testid="admin-shell-visual-root"
         >
           <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
             <DatabaseLayout page={layoutPage}>
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="font-semibold text-2xl">{title}</h1>
+              <div className="border-border bg-card rounded-xl border p-6">
+                <h1 className="text-2xl font-semibold">{title}</h1>
               </div>
             </DatabaseLayout>
           </div>
@@ -582,7 +582,9 @@ test("admin header keeps the disabled register instance tooltip open while hover
   );
   await expect.element(tooltip).toBeVisible();
 
-  await new Promise((resolve) => setTimeout(resolve, 350));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 350);
+  });
 
   await expect.element(tooltip).toBeVisible();
 });

@@ -6,7 +6,7 @@ import { METRIC_CHART_SAMPLE_DATA } from "@/visual-harness/chart-scenario-data";
 function MetricChartKitScenario() {
   return (
     <div
-      className="w-[760px] space-y-6 rounded-xl border border-border bg-card p-6"
+      className="border-border bg-card w-[760px] space-y-6 rounded-xl border p-6"
       data-testid="metric-chart-fixture"
     >
       <div>

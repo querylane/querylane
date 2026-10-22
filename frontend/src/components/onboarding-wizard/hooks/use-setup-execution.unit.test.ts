@@ -2,11 +2,16 @@ import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { beforeEach, describe, expect, it, rs } from "@rstest/core";
 import * as reactActual from "react" with { rstest: "importActual" };
-
 import {
   resolveSetupFailureAction,
   useSetupExecution,
 } from "@/components/onboarding-wizard/hooks/use-setup-execution";
+import {
+  EmbeddedSetupConfigSchema,
+  SetupProgressEventSchema,
+  SetupStep,
+  StepState,
+} from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 const { cleanupCallbacks, useEffectEventMock, useEffectMock, useRefMock } =
   rs.hoisted(() => ({
@@ -24,7 +29,9 @@ rs.mock("react", () => ({
 }));
 
 function flushPromises() {
-  return new Promise<void>((resolve) => queueMicrotask(resolve));
+  return new Promise<void>((resolve) => {
+    queueMicrotask(resolve);
+  });
 }
 
 function arrangeReactHooks() {
@@ -59,13 +66,6 @@ function createSetupOptions(
     ...overrides,
   };
 }
-
-import {
-  EmbeddedSetupConfigSchema,
-  SetupProgressEventSchema,
-  SetupStep,
-  StepState,
-} from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 
 describe("resolveSetupFailureAction", () => {
   it("returns fallback setup failure message for unknown errors", () => {

@@ -44,12 +44,12 @@ function renderCell(
         <span className="inline-flex items-center gap-1.5 font-mono">
           <Check
             aria-label="true"
-            className="size-3 text-positive-500 dark:text-positive-400"
+            className="text-positive-500 dark:text-positive-400 size-3"
           />
           <span>true</span>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1.5 font-mono text-muted-foreground">
+        <span className="text-muted-foreground inline-flex items-center gap-1.5 font-mono">
           <Minus aria-label="false" className="size-3" />
           <span>false</span>
         </span>
@@ -70,7 +70,7 @@ function renderCell(
       );
     case "bytes":
       return (
-        <span className="truncate text-muted-foreground">{cell.display}</span>
+        <span className="text-muted-foreground truncate">{cell.display}</span>
       );
     case "timestamp":
     case "date":

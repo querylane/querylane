@@ -20,7 +20,7 @@ const PRODUCTION_APPDB_EXPLORER_URL_RE =
 
 async function gotoCreateInstance(page: Page) {
   await test.step(
-    "Open instance creation",
+    "open instance creation",
     async () => {
       await mockReadyEmptyApp(page);
       await page.goto("/new-instance");

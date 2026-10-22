@@ -287,7 +287,7 @@ function CategoryInfiniteScrollSentinel({
 
   return (
     <div
-      className="flex h-[34px] items-center px-3 text-muted-foreground text-xs"
+      className="text-muted-foreground flex h-[34px] items-center px-3 text-xs"
       ref={ref}
     >
       {isFetchingNextPage ? "Loading more…" : "Scroll for more"}
@@ -402,7 +402,7 @@ function ObjectTreeList({
           }
           return (
             <li
-              className="transform-(--virtual-transform) absolute top-0 left-0 h-(--virtual-height) w-full"
+              className="absolute top-0 left-0 h-(--virtual-height) w-full transform-(--virtual-transform)"
               key={virtualItem.key}
               style={{
                 "--virtual-height": `${virtualItem.size}px`,
@@ -722,7 +722,7 @@ function NestedTreeRow({
   return (
     <div
       className={cn(
-        "ml-4 h-full border-border border-l",
+        "border-border ml-4 h-full border-l",
         // Resource rows sit one level deeper than their Kind header so the
         // tree reads as objects nested under the group, not siblings of it.
         indented ? "pl-5" : "pl-1"
@@ -758,7 +758,7 @@ function SchemaTreeButton({
     >
       <ChevronRight
         className={cn(
-          "size-3.5 shrink-0 text-muted-foreground transition-transform",
+          "text-muted-foreground size-3.5 shrink-0 transition-transform",
           isExpanded && "rotate-90"
         )}
       />
@@ -858,7 +858,7 @@ function ResourceListItem({
     case "empty":
       return (
         <NestedTreeRow>
-          <p className="px-3 py-1 text-muted-foreground text-xs">No objects</p>
+          <p className="text-muted-foreground px-3 py-1 text-xs">No objects</p>
         </NestedTreeRow>
       );
     default:
@@ -901,7 +901,7 @@ function CategoryListItem({
               isOpen && "rotate-90"
             )}
           />
-          <span className="font-medium text-xs uppercase tracking-wider">
+          <span className="text-xs font-medium tracking-wider uppercase">
             {meta.label}
           </span>
         </Button>
@@ -952,7 +952,7 @@ function SchemaEmptyPanel({
   }
 
   return (
-    <p className="px-3 py-6 text-center text-muted-foreground text-sm">
+    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
       {schemaEmptyMessage({ schemaSelectionError, schemasLoading })}
     </p>
   );
@@ -980,8 +980,8 @@ function SidebarResourceError({
     return null;
   }
   return (
-    <div className="mx-2 mb-2 flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm">
-      <div className="flex items-start gap-2 text-destructive">
+    <div className="border-destructive/30 bg-destructive/5 mx-2 mb-2 flex flex-col gap-2 rounded-md border p-2.5 text-sm">
+      <div className="text-destructive flex items-start gap-2">
         <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
         <span>{`Failed to load ${label}.`}</span>
       </div>
@@ -1071,9 +1071,9 @@ function ExplorerSidebar({
       aria-label="Database objects"
       className="@container/object-browser flex h-full min-h-0 w-full flex-1 flex-col"
     >
-      <div className="flex flex-col gap-1.5 @max-[14rem]/object-browser:px-2 px-2 pt-2 pb-1.5">
+      <div className="flex flex-col gap-1.5 px-2 pt-2 pb-1.5 @max-[14rem]/object-browser:px-2">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             className="h-7"
             onChange={(event) => setQuery(event.target.value)}

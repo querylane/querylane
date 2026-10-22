@@ -56,7 +56,7 @@ function ConnectionStringFeedback({
       ) : null}
       {warning ? (
         <p
-          className="text-sm text-warning-700 dark:text-warning-300"
+          className="text-warning-700 dark:text-warning-300 text-sm"
           role="status"
         >
           {warning}
@@ -167,13 +167,13 @@ function CreateInstanceConnectionFields({
   };
   return (
     <div className="space-y-4">
-      <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+      <div className="border-border/70 bg-muted/20 space-y-3 rounded-lg border p-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-md border border-border/70 bg-background p-2 text-muted-foreground">
+          <div className="border-border/70 bg-background text-muted-foreground mt-0.5 rounded-md border p-2">
             <Link2 className="size-4" />
           </div>
           <div className="space-y-1">
-            <div className="font-medium text-sm">Paste a DSN to prefill</div>
+            <div className="text-sm font-medium">Paste a DSN to prefill</div>
             <p className="text-muted-foreground text-sm">
               Querylane will fill the host, port, database, username, password,
               and SSL mode from your PostgreSQL connection string.
@@ -321,7 +321,7 @@ function CreateInstanceSslModeField({
         >
           <SslModeSelectValue value={formState.sslMode} />
         </SelectTrigger>
-        <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
+        <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
           <SslModeSelectItems />
         </SelectContent>
       </Select>
@@ -369,7 +369,7 @@ function CreateInstanceSslNegotiationField({
         >
           <SslNegotiationSelectValue value={formState.sslNegotiation} />
         </SelectTrigger>
-        <SelectContent className="w-[22rem] min-w-0 max-w-[var(--available-width)]">
+        <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
           <SslNegotiationSelectItems />
         </SelectContent>
       </Select>

@@ -37,7 +37,7 @@ export function PaginationFooter({
   return (
     <div
       className={cn(
-        "flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-muted-foreground text-xs",
+        "text-muted-foreground flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs",
         className
       )}
       data-slot="pagination-footer"

@@ -5,7 +5,7 @@ import "../index.css";
 
 // Test-only entry. rsbuild adds it only when QUERYLANE_VISUAL_HARNESS=1, so the
 // production bundle never ships it.
-const rootElement = document.getElementById("root");
+const rootElement = document.querySelector("#root");
 
 if (rootElement) {
   const scenario =

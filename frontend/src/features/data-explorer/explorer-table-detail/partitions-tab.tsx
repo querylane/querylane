@@ -68,11 +68,11 @@ function PartitionSummaryItem({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border bg-card/60 p-3">
-      <p className="text-(length:--text-label-sm) text-muted-foreground uppercase tracking-wider">
+    <div className="bg-card/60 rounded-lg border p-3">
+      <p className="text-muted-foreground tracking-wider text-(length:--text-label-sm) uppercase">
         {label}
       </p>
-      <p className="mt-1 break-words font-mono text-foreground text-xs">
+      <p className="text-foreground mt-1 font-mono text-xs wrap-break-word">
         {value}
       </p>
     </div>
@@ -93,7 +93,7 @@ function PartitionsToolbar({
       <div className="relative w-52 max-w-full shrink-0">
         <Search
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
         />
         <Input
           aria-label="Search partitions…"
@@ -106,9 +106,9 @@ function PartitionsToolbar({
         />
       </div>
       {partitionKey ? (
-        <p className="ml-auto min-w-0 truncate text-muted-foreground text-xs">
+        <p className="text-muted-foreground ml-auto min-w-0 truncate text-xs">
           Partitioned by{" "}
-          <span className="font-mono text-foreground">{partitionKey}</span>
+          <span className="text-foreground font-mono">{partitionKey}</span>
         </p>
       ) : null}
     </div>
@@ -127,7 +127,7 @@ function PartitionRowsTable({
   totalSizeLabel: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
+    <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
       <Table>
         <TableHeader>
           <TableRow>
@@ -143,7 +143,7 @@ function PartitionRowsTable({
             <TableRow key={row.table}>
               <TableCell presentation="inset">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-medium font-mono text-sm">
+                  <span className="truncate font-mono text-sm font-medium">
                     {row.name}
                   </span>
                   {row.isCurrent ? (
@@ -155,7 +155,7 @@ function PartitionRowsTable({
                 </div>
               </TableCell>
               <TableCell
-                className="max-w-[28rem] whitespace-normal break-words"
+                className="max-w-[28rem] wrap-break-word whitespace-normal"
                 presentation="identifier-muted-small"
                 title={row.partitionBound}
               >
@@ -169,7 +169,7 @@ function PartitionRowsTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
                     <div
                       className={cn(
                         "h-full rounded-full",
@@ -178,7 +178,7 @@ function PartitionRowsTable({
                       )}
                     />
                   </div>
-                  <span className="w-9 text-right font-mono text-muted-foreground text-xs">
+                  <span className="text-muted-foreground w-9 text-right font-mono text-xs">
                     {row.shareLabel}
                   </span>
                 </div>
@@ -229,7 +229,7 @@ function PartitionPaginationFooter({
   const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
 
   return (
-    <div className="flex h-8 items-center gap-2 text-muted-foreground text-xs">
+    <div className="text-muted-foreground flex h-8 items-center gap-2 text-xs">
       <span className="text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
@@ -420,10 +420,10 @@ function PartitionsTab({
         totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
       />
       {defaultPartition && defaultPartition.estimatedRows > 0 ? (
-        <div className="flex items-start gap-2 rounded-lg bg-warning-500/10 p-3 text-sm leading-relaxed">
+        <div className="bg-warning-500/10 flex items-start gap-2 rounded-lg p-3 text-sm leading-relaxed">
           <AlertTriangle
             aria-hidden="true"
-            className="mt-0.5 size-4 shrink-0 text-warning-600 dark:text-warning-300"
+            className="text-warning-600 dark:text-warning-300 mt-0.5 size-4 shrink-0"
           />
           <span>
             The DEFAULT partition holds {defaultPartition.shareLabel} of

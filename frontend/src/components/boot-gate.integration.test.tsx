@@ -44,7 +44,7 @@ afterEach(() => {
   useSetupStore.setState(initialSetupState, true);
 });
 
-describe("BootGate", () => {
+describe("boot gate", () => {
   test("renders the verifying state with a real ellipsis character", () => {
     render(
       <ThemeProvider>
