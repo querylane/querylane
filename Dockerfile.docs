@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM oven/bun:1.4.0-alpine AS builder
+FROM --platform=$BUILDPLATFORM oven/bun:1.4.4-alpine AS builder
 
 WORKDIR /app
 
@@ -38,7 +38,7 @@ COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=builder /app /app
 RUN bun run docs:test:runtime
 
-FROM oven/bun:1.4.0-alpine AS runtime-deps
+FROM oven/bun:1.4.4-alpine AS runtime-deps
 
 WORKDIR /app
 
