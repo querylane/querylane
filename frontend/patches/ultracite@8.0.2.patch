@@ -1,8 +1,8 @@
 diff --git a/config/biome/core/biome.jsonc b/config/biome/core/biome.jsonc
-index cfcef622192ca54af7db77896c6356b7cc97ceeb..ee9a8838ef6407bf7ac7fa55263230eedcb5b471 100644
+index d3d6546d3d9b4fb8f001e474801a1bc5a3f7eb4a..fbc25e7b56dac0258eb02cb9c886ee4850cdaaaf 100644
 --- a/config/biome/core/biome.jsonc
 +++ b/config/biome/core/biome.jsonc
-@@ -294,13 +294,8 @@
+@@ -308,13 +308,8 @@
        "nursery": {
          // Typically we don't enable nursery rules anymore (https://github.com/haydenbleasel/ultracite/issues/457)
          // but this was requested specifically by a lot of people.
