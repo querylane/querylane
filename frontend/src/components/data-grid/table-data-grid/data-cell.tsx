@@ -81,6 +81,8 @@ function renderCell(
           </span>
         </span>
       );
+    case "null":
+    case "text":
     default:
       if (
         cell.isTruncated ||

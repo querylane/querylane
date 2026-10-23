@@ -1,24 +1,22 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 
 import {
   createReactRootErrorHandlers,
   reportReactRootError,
 } from "@/lib/react-root-errors";
+import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError, AppUiErrorContext } from "@/lib/ui-error-types";
 
 function createDependencies() {
   const normalizedErrors: AppUiError[] = [];
-  const reportCalls: Array<{
+  const reportCalls: {
     error: AppUiError;
     tags?: Record<string, string> | undefined;
-  }> = [];
+  }[] = [];
 
   const dependencies = {
     normalizeAppUiError: (error: unknown, context?: AppUiErrorContext) => {
-      const normalizedError = {
-        context: context ?? {},
-        originalError: error,
-      } as AppUiError;
+      const normalizedError = normalizeAppUiError(error, context);
       normalizedErrors.push(normalizedError);
       return normalizedError;
     },
@@ -34,7 +32,7 @@ function createDependencies() {
 }
 
 describe("react root error handlers", () => {
-  it("reports uncaught React root errors with runtime context", () => {
+  test("reports uncaught React root errors with runtime context", () => {
     const { dependencies, normalizedErrors, reportCalls } =
       createDependencies();
     const error = new Error("render failed");
@@ -70,7 +68,7 @@ describe("react root error handlers", () => {
     ]);
   });
 
-  it("wires React 19 createRoot caught and recoverable callbacks", () => {
+  test("wires React 19 createRoot caught and recoverable callbacks", () => {
     const { dependencies, normalizedErrors, reportCalls } =
       createDependencies();
     const handlers = createReactRootErrorHandlers(dependencies);

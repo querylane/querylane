@@ -372,7 +372,14 @@ function connectionsThresholds(
   series: Map<number, MetricSeries>,
   connectionsLimit: number | undefined
 ): ChartThreshold[] | undefined {
-  if (!connectionsLimit || connectionsLimit <= 0) {
+  if (
+    !(
+      typeof connectionsLimit === "number" &&
+      connectionsLimit !== 0 &&
+      !Number.isNaN(connectionsLimit)
+    ) ||
+    connectionsLimit <= 0
+  ) {
     return;
   }
 
@@ -409,11 +416,9 @@ export function InstanceMetricsPanel({
 }: InstanceMetricsPanelProps) {
   const series = seriesByMetric(response);
   const previousSeries = seriesByMetric(previousResponse);
-  const tabThresholds = new Map<string, ChartThreshold[] | undefined>();
-  tabThresholds.set(
-    "connections",
-    connectionsThresholds(series, connectionsLimit)
-  );
+  const tabThresholds = new Map<string, ChartThreshold[] | undefined>([
+    ["connections", connectionsThresholds(series, connectionsLimit)],
+  ]);
 
   if (isPending && !response) {
     return (
@@ -450,7 +455,7 @@ export function InstanceMetricsPanel({
     return (
       <Card presentation="bordered-flush">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
-        <div className="divide-border border-border grid w-full grid-cols-2 divide-x divide-y border-b sm:grid-cols-4 sm:divide-y-0">
+        <div className="divide-border border-border grid w-full grid-cols-2 divide-y border-b sm:grid-cols-4 sm:divide-y-0">
           {METRIC_TABS.map((tab) => (
             <CollectingStat key={tab.key} series={series} tab={tab} />
           ))}

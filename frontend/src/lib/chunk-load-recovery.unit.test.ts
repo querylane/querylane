@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, rs } from "@rstest/core";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 
 import {
   isChunkLoadError,
@@ -15,10 +15,10 @@ const NATIVE_DYNAMIC_IMPORT_ERROR = new Error(
 
 describe("chunk load recovery", () => {
   afterEach(() => {
-    window.sessionStorage.clear();
+    globalThis.window.sessionStorage.clear();
   });
 
-  it("recognizes TanStack native dynamic import failures and Rspack chunk failures", () => {
+  test("recognizes TanStack native dynamic import failures and Rspack chunk failures", () => {
     expect(isChunkLoadError(NATIVE_DYNAMIC_IMPORT_ERROR)).toBe(true);
     expect(isChunkLoadError(RSPACK_CHUNK_ERROR)).toBe(true);
     expect(isChunkLoadError(new Error("database connection failed"))).toBe(
@@ -26,35 +26,35 @@ describe("chunk load recovery", () => {
     );
   });
 
-  it("reserves one automatic reload per missing module message", () => {
+  test("reserves one automatic reload per missing module message", () => {
     expect(
       reserveChunkLoadReloadAttempt({
         error: RSPACK_CHUNK_ERROR,
-        storage: window.sessionStorage,
+        storage: globalThis.window.sessionStorage,
       })
     ).toBe(true);
     expect(
       reserveChunkLoadReloadAttempt({
         error: RSPACK_CHUNK_ERROR,
-        storage: window.sessionStorage,
+        storage: globalThis.window.sessionStorage,
       })
     ).toBe(false);
     expect(
       reserveChunkLoadReloadAttempt({
         error: NATIVE_DYNAMIC_IMPORT_ERROR,
-        storage: window.sessionStorage,
+        storage: globalThis.window.sessionStorage,
       })
     ).toBe(true);
   });
 
-  it("reloads once and then returns false so callers can render loop-safe copy", () => {
+  test("reloads once and then returns false so callers can render loop-safe copy", () => {
     const reloadPage = rs.fn();
 
     expect(
       reloadChunkLoadErrorOnce({
         error: RSPACK_CHUNK_ERROR,
         reloadPage,
-        storage: window.sessionStorage,
+        storage: globalThis.window.sessionStorage,
       })
     ).toBe(true);
     expect(reloadPage).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ describe("chunk load recovery", () => {
       reloadChunkLoadErrorOnce({
         error: RSPACK_CHUNK_ERROR,
         reloadPage,
-        storage: window.sessionStorage,
+        storage: globalThis.window.sessionStorage,
       })
     ).toBe(false);
     expect(reloadPage).toHaveBeenCalledTimes(1);

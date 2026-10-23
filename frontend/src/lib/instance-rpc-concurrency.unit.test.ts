@@ -4,7 +4,7 @@ import {
   type UnaryRequest,
   type UnaryResponse,
 } from "@connectrpc/connect";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   createInstanceRpcConcurrencyInterceptor,
   createKeyedRpcSemaphore,
@@ -72,7 +72,7 @@ function createConsoleConfigRequest(): UnaryRequest<
 }
 
 describe("extractInstanceScopeKey", () => {
-  it("returns null for non-instance resources and invalid messages", () => {
+  test("returns null for non-instance resources and invalid messages", () => {
     expect(extractInstanceScopeKey({ name: "users/1" })).toBe(null);
     expect(extractInstanceScopeKey({ parent: 42 })).toBe(null);
     expect(extractInstanceScopeKey({})).toBe(null);
@@ -82,7 +82,7 @@ describe("extractInstanceScopeKey", () => {
 });
 
 describe("createKeyedRpcSemaphore", () => {
-  it("runs requests immediately below the limit and queues beyond it", async () => {
+  test("runs requests immediately below the limit and queues beyond it", async () => {
     const semaphore = createKeyedRpcSemaphore(2);
 
     const releaseFirst = await semaphore.acquire("instances/a");
@@ -105,7 +105,7 @@ describe("createKeyedRpcSemaphore", () => {
     releaseThird();
   });
 
-  it("drains the queue in order as slots free up", async () => {
+  test("drains the queue in order as slots free up", async () => {
     const semaphore = createKeyedRpcSemaphore(1);
     const order: number[] = [];
 
@@ -128,7 +128,7 @@ describe("createKeyedRpcSemaphore", () => {
     expect(order).toEqual([2, 3]);
   });
 
-  it("rejects queued acquisitions when their signal aborts", async () => {
+  test("rejects queued acquisitions when their signal aborts", async () => {
     const semaphore = createKeyedRpcSemaphore(1);
     const controller = new AbortController();
     const abortReason = new Error("aborted while queued");
@@ -145,7 +145,7 @@ describe("createKeyedRpcSemaphore", () => {
     releaseNext();
   });
 
-  it("rejects immediately when the signal is already aborted", async () => {
+  test("rejects immediately when the signal is already aborted", async () => {
     const semaphore = createKeyedRpcSemaphore(1);
     const controller = new AbortController();
     const abortReason = new Error("already aborted");
@@ -158,11 +158,11 @@ describe("createKeyedRpcSemaphore", () => {
 });
 
 describe("createInstanceRpcConcurrencyInterceptor", () => {
-  it("does not gate requests for different instances against each other", async () => {
+  test("does not gate requests for different instances against each other", async () => {
     const interceptor = createInstanceRpcConcurrencyInterceptor(1);
     let inFlight = 0;
     let maxInFlight = 0;
-    const releases: Array<() => void> = [];
+    const releases: (() => void)[] = [];
     const next = () => {
       inFlight += 1;
       maxInFlight = Math.max(maxInFlight, inFlight);
@@ -192,7 +192,7 @@ describe("createInstanceRpcConcurrencyInterceptor", () => {
     await Promise.all([first, second]);
   });
 
-  it("bypasses meta-database services entirely", async () => {
+  test("bypasses meta-database services entirely", async () => {
     const interceptor = createInstanceRpcConcurrencyInterceptor(0);
     let called = 0;
     const next = () => {
@@ -205,4 +205,15 @@ describe("createInstanceRpcConcurrencyInterceptor", () => {
     await interceptor(next)(createConsoleConfigRequest());
     expect(called).toBe(1);
   });
+});
+
+test("normalizes non-Error abort reasons without admitting an aborted request", async () => {
+  const semaphore = createKeyedRpcSemaphore(1);
+  const controller = new AbortController();
+  controller.abort("request cancelled");
+  const aborted = semaphore.acquire("instances/a", controller.signal);
+  await expect(aborted).rejects.toBeInstanceOf(Error);
+  await expect(aborted).rejects.toThrow("request cancelled");
+  const release = await semaphore.acquire("instances/a");
+  release();
 });

@@ -1,8 +1,8 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { pageIndexForPageSizeChange } from "@/lib/pagination";
 
 describe("pageIndexForPageSizeChange", () => {
-  it("keeps the first currently visible row on the resized page", () => {
+  test("keeps the first currently visible row on the resized page", () => {
     expect(
       pageIndexForPageSizeChange({
         nextPageSize: 10,

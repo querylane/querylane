@@ -78,9 +78,13 @@ export function ExplorerDetailPane({
         hasMoreTables={hasMoreTables}
         hasMoreViews={hasMoreViews}
         instanceId={instanceId}
-        onSelectTable={(name) => onSelectResource("tables", name)}
+        onSelectTable={(name) => {
+          onSelectResource("tables", name);
+        }}
         onSelectTableInSchema={onSelectTableInSchema}
-        onSelectView={(name) => onSelectResource("views", name)}
+        onSelectView={(name) => {
+          onSelectResource("views", name);
+        }}
         onTabChange={onSchemaTabChange}
         owner={activeSchema.owner}
         schemaName={activeSchema.name}
@@ -111,7 +115,7 @@ export function ExplorerDetailPane({
             selection.name
         )
       : undefined;
-  if (selectedResourceError && !(selectedTable || selectedView)) {
+  if (Boolean(selectedResourceError) && !(selectedTable || selectedView)) {
     return <ExplorerEmptyState hasError={true} />;
   }
   return (

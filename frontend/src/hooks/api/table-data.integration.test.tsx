@@ -18,7 +18,7 @@ import { createTestRouterTransport } from "@/test/router-transport";
 const activeQueryClients: QueryClient[] = [];
 
 function createWrapper(transport: Transport, queryClient: QueryClient) {
-  return function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TransportProvider transport={transport}>
         <QueryClientProvider client={queryClient}>
@@ -26,7 +26,8 @@ function createWrapper(transport: Transport, queryClient: QueryClient) {
         </QueryClientProvider>
       </TransportProvider>
     );
-  };
+  }
+  return Wrapper;
 }
 
 afterEach(async () => {

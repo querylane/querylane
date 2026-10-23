@@ -16,6 +16,7 @@ import { RetryActionButton } from "@/components/retry-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { handleAsyncAction } from "@/lib/ui-action";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -25,8 +26,12 @@ function useDebouncedValue(value: string, delayMs: number): string {
   const [debounced, setDebounced] = useState(value);
   useEffect(
     function syncDebouncedValue() {
-      const timer = setTimeout(() => setDebounced(value), delayMs);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        setDebounced(value);
+      }, delayMs);
+      return () => {
+        clearTimeout(timer);
+      };
     },
     [value, delayMs]
   );
@@ -79,7 +84,9 @@ function BrowseDialogShell({
         </DialogHeader>
         <Input
           aria-label={`Search ${label.toLowerCase()} by name`}
-          onChange={(event) => onSearchChange(event.target.value)}
+          onChange={(event) => {
+            onSearchChange(event.target.value);
+          }}
           placeholder="Search by name…"
           value={search}
         />
@@ -191,7 +198,7 @@ function CategoryBrowseDialog({
           <Button
             className="mt-3 w-full"
             disabled={browse.isFetchingNextPage}
-            onClick={() => browse.fetchNextPage()}
+            onClick={handleAsyncAction(() => browse.fetchNextPage())}
             size="sm"
             type="button"
             variant="outline"

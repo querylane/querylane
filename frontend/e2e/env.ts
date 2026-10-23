@@ -21,13 +21,13 @@ export const e2eEnv = createEnv({
   isServer: true,
   runtimeEnv: processEnv,
   server: {
-    BASE_URL: z.string().url().optional(),
+    BASE_URL: z.url().optional(),
     CI: booleanFlag,
-    DOCS_BASE_URL: z.string().url().optional(),
-    PLAYWRIGHT_BASE_URL: z.string().url().optional(),
+    DOCS_BASE_URL: z.url().optional(),
+    PLAYWRIGHT_BASE_URL: z.url().optional(),
     PLAYWRIGHT_PORT: optionalPort,
     PORT: optionalPort,
-    QUERYLANE_API_URL: z.string().url().optional(),
+    QUERYLANE_API_URL: z.url().optional(),
     QUERYLANE_E2E_SKIP_BUILD: booleanFlag,
   },
 });

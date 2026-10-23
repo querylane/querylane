@@ -85,8 +85,9 @@ function getDefaultAdminPageForScope(
       return "instance.overview";
     case "database":
       return "database.overview";
+    case "none":
     default:
-      return;
+      return undefined;
   }
 }
 
@@ -126,7 +127,9 @@ const DATABASE_PAGE_BY_SEGMENT: Record<string, AdminPageId> = {
 function resolveDatabasePageFromSegment(
   segment: string | undefined
 ): AdminPageId {
-  return (segment && DATABASE_PAGE_BY_SEGMENT[segment]) || "database.overview";
+  return segment === undefined
+    ? "database.overview"
+    : (DATABASE_PAGE_BY_SEGMENT[segment] ?? "database.overview");
 }
 
 function resolveImplicitAdminPageFromPathname(
@@ -180,8 +183,9 @@ function resolveImplicitAdminPageFromRouteId(
     case "/instances/$instanceId":
     case "/instances/$instanceId/":
       return "instance.overview";
+    case undefined:
     default:
-      return;
+      return undefined;
   }
 }
 

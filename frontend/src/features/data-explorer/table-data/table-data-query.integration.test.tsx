@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { act, renderHook } from "@testing-library/react";
 import { useTableDataQuery } from "@/features/data-explorer/table-data/table-data-query";
+import type { useReadRowsQuery } from "@/hooks/api/table-data";
 import type { ReadRowsRequest } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   ColumnSchema,
@@ -11,7 +12,8 @@ import {
 const { useListTableColumnsQueryMock, useReadRowsQueryMock } = rs.hoisted(
   () => ({
     useListTableColumnsQueryMock: rs.fn(),
-    useReadRowsQueryMock: rs.fn(),
+    useReadRowsQueryMock:
+      rs.fn<(...args: Parameters<typeof useReadRowsQuery>) => unknown>(),
   })
 );
 
@@ -56,7 +58,7 @@ function latestReadRowsCall(): [
     throw new Error("expected read rows query request");
   }
   if (typeof options?.enabled !== "boolean") {
-    throw new Error("expected read rows query options.enabled");
+    throw new TypeError("expected read rows query options.enabled");
   }
   return [
     request,

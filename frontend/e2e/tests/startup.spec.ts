@@ -3,7 +3,7 @@ import { expect, test } from "./base";
 import { mockReadyEmptyApp } from "./helpers";
 
 const SCRIPT_CSP = "script-src 'self'; object-src 'none'; base-uri 'self'";
-const PRIMARY_FONT = /\/geist-latin-wght-normal\.[\w]+\.woff2$/;
+const PRIMARY_FONT = /\/geist-latin-wght-normal\.[\w]+\.woff2$/u;
 
 // Exercise the emitted HTML before any React bundle can execute. A latch,
 // rather than a timed delay, also lets the same page prove the React handoff.
@@ -57,7 +57,7 @@ for (const viewport of [
   for (const theme of ["light", "dark"] as const) {
     test(`startup: saved ${theme}, ${viewport.name}, CSP and React handoff`, async ({
       page,
-      makeAxeBuilder,
+      checkAccessibility,
     }) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({
@@ -78,7 +78,9 @@ for (const viewport of [
         await expect(logo).toHaveAttribute("src", `/icon-${theme}.svg`);
         await expect(logo).toHaveJSProperty("complete", true);
         await expect(logo).toHaveJSProperty("naturalWidth", 32);
-        await expect(status.locator("span")).toHaveClass("sr-only");
+        await expect(status.getByRole("heading", { level: 1 })).toHaveClass(
+          "sr-only"
+        );
         const bounds = await logo.boundingBox();
         expect(bounds).toEqual({
           height: 40,
@@ -104,7 +106,7 @@ for (const viewport of [
           },
           maxDiffPixels: 0,
         });
-        expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+        await checkAccessibility();
       } finally {
         startup.release();
       }
@@ -154,7 +156,7 @@ for (const scenario of [
         localStorage.setItem("querylane-ui-theme", stored);
       }
       if (name === "blocked storage") {
-        Object.defineProperty(window, "localStorage", {
+        Object.defineProperty(globalThis, "localStorage", {
           get() {
             throw new DOMException("Storage blocked", "SecurityError");
           },
@@ -187,7 +189,7 @@ for (const scenario of [
 test("startup falls back to light without matchMedia", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.addInitScript(() => {
-    Object.defineProperty(window, "matchMedia", { value: undefined });
+    Object.defineProperty(globalThis, "matchMedia", { value: undefined });
   });
   // Only the pre-React fallback supports this environment; third-party UI
   // code requires matchMedia. Do not run that unrelated code in this test.

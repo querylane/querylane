@@ -5,7 +5,6 @@ import {
   beforeEach,
   describe,
   expect,
-  it,
   rs,
   test,
 } from "@rstest/core";
@@ -33,6 +32,7 @@ import {
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settings";
 import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
+import type { useReadRowsQuery } from "@/hooks/api/table-data";
 import {
   type ReadRowsResponse,
   ReadRowsResponseSchema,
@@ -49,18 +49,51 @@ import {
   DataType,
   ListTableColumnsResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import type { writeClipboardDeferred } from "./grid-clipboard";
+
+function clipboardEvent(
+  currentTarget: HTMLElement
+): ReactClipboardEvent<HTMLElement> {
+  const clipboardData = new DataTransfer();
+  const nativeEvent = new ClipboardEvent("copy", { clipboardData });
+  let propagationStopped = false;
+  return {
+    clipboardData,
+    currentTarget,
+    target: currentTarget,
+    nativeEvent,
+    bubbles: nativeEvent.bubbles,
+    cancelable: nativeEvent.cancelable,
+    defaultPrevented: nativeEvent.defaultPrevented,
+    eventPhase: nativeEvent.eventPhase,
+    isTrusted: nativeEvent.isTrusted,
+    timeStamp: nativeEvent.timeStamp,
+    type: nativeEvent.type,
+    preventDefault: () => {
+      nativeEvent.preventDefault();
+    },
+    stopPropagation: () => {
+      propagationStopped = true;
+      nativeEvent.stopPropagation();
+    },
+    isDefaultPrevented: () => nativeEvent.defaultPrevented,
+    isPropagationStopped: () => propagationStopped,
+    persist: () => undefined,
+  };
+}
 
 const restoreRealTimers = rs.useRealTimers;
 
-const RETRY_BUTTON_RE = /retry/i;
+const RETRY_BUTTON_RE = /retry/iu;
 
 const tableApi = rs.hoisted(() => ({
-  useListTableColumnsQuery: rs.fn(),
+  useListTableColumnsQuery: rs.fn<(input: { parent?: string }) => unknown>(),
 }));
 
 const tableDataApi = rs.hoisted(() => ({
   useReadCellValueMutation: rs.fn(),
-  useReadRowsQuery: rs.fn(),
+  useReadRowsQuery:
+    rs.fn<(...args: Parameters<typeof useReadRowsQuery>) => unknown>(),
   useReadRowsQueryActions: rs.fn(() => ({
     fetch: rs.fn(() => Promise.resolve()),
     getState: rs.fn(() => ({ fetchStatus: "idle", status: "success" })),
@@ -101,7 +134,7 @@ interface MockGridProps {
   ) => void;
   onCellCopy?: (
     args: { column: MockGridColumn; row: GridRow },
-    event: ReactClipboardEvent<HTMLDivElement>
+    event: ReactClipboardEvent<HTMLElement>
   ) => void;
   onCellKeyDown?: (
     args: {
@@ -194,10 +227,8 @@ function openCellContextMenu(
 }
 
 rs.mock("react-data-grid", () => ({
-  ...Object.fromEntries([
-    ["DataGrid", reactDataGrid.dataGrid],
-    ["SelectColumn", { columnName: "", key: "__select" }],
-  ]),
+  DataGrid: reactDataGrid.dataGrid,
+  SelectColumn: { columnName: "", key: "__select" },
   SELECT_COLUMN_KEY: "__select",
 }));
 
@@ -218,7 +249,9 @@ rs.mock("@/lib/download-blob", () => ({
 rs.mock("sonner", () => ({ toast: toastMock }));
 
 const writeClipboardMock = rs.hoisted(() => rs.fn());
-const writeClipboardDeferredMock = rs.hoisted(() => rs.fn());
+const writeClipboardDeferredMock = rs.hoisted(() =>
+  rs.fn<typeof writeClipboardDeferred>()
+);
 
 rs.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
   writeClipboard: writeClipboardMock,
@@ -226,7 +259,12 @@ rs.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
 }));
 
 function seedRowsQuery(
-  rows: number | readonly { rowKey: string; value: string }[] = 1,
+  rows:
+    | number
+    | readonly {
+        rowKey: string;
+        value: string;
+      }[] = 1,
   overrides: {
     dataUpdatedAt?: number;
     isFetching?: boolean;
@@ -537,8 +575,8 @@ function seedRowsQueryWithTruncatedCell(mutateAsync: ReturnType<typeof rs.fn>) {
 
 function seedRowsQueryError(
   error: Error,
-  retainedData?: ReadRowsResponse | undefined,
-  lastSuccessfulData?: ReadRowsResponse | undefined
+  retainedData?: ReadRowsResponse,
+  lastSuccessfulData?: ReadRowsResponse
 ) {
   tableApi.useListTableColumnsQuery.mockReturnValue({
     data: create(ListTableColumnsResponseSchema, { columns: [] }),
@@ -595,7 +633,7 @@ describe("table data grid query setup", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("keeps prior rows visible with a refreshing pill while placeholder data is shown", () => {
+  test("keeps prior rows visible with a refreshing pill while placeholder data is shown", () => {
     seedRowsQuery(1, { isFetching: true, isPlaceholderData: true });
 
     render(
@@ -610,11 +648,28 @@ describe("table data grid query setup", () => {
   });
 });
 
+function referencedRowQueryResult(
+  state: "error" | "paused" | "success",
+  data: ReadRowsResponse
+) {
+  return {
+    data: state === "paused" ? undefined : data,
+    dataUpdatedAt: 0,
+    error: state === "error" ? new Error("target read failed") : null,
+    fetchStatus: state === "paused" ? "paused" : "idle",
+    isError: state === "error",
+    isFetching: false,
+    isLoading: false,
+    isPending: state === "paused",
+    refetch: rs.fn(),
+  };
+}
+
 describe("table data grid foreign key references", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("opens a compact referenced-row preview from a foreign key cell", async () => {
+  test("opens a compact referenced-row preview from a foreign key cell", async () => {
     const user = userEvent.setup();
     let targetQueryState: "error" | "paused" | "success" = "success";
     const shipmentsName =
@@ -685,20 +740,7 @@ describe("table data grid foreign key references", () => {
             ],
           }),
         });
-        return {
-          data: targetQueryState === "paused" ? undefined : targetData,
-          dataUpdatedAt: 0,
-          error:
-            targetQueryState === "error"
-              ? new Error("target read failed")
-              : null,
-          fetchStatus: targetQueryState === "paused" ? "paused" : "idle",
-          isError: targetQueryState === "error",
-          isFetching: false,
-          isLoading: false,
-          isPending: targetQueryState === "paused",
-          refetch: rs.fn(),
-        };
+        return referencedRowQueryResult(targetQueryState, targetData);
       }
       return {
         data: create(ReadRowsResponseSchema, {
@@ -842,7 +884,7 @@ describe("table data grid row interactions", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("keeps the row drawer number field digit-only without inline steppers", async () => {
+  test("keeps the row drawer number field digit-only without inline steppers", async () => {
     const user = userEvent.setup();
     seedRowsQuery(12);
 
@@ -869,11 +911,14 @@ describe("table data grid row interactions", () => {
     await user.clear(rowNumber);
     await user.type(rowNumber, "a6b{Enter}");
 
-    expect((rowNumber as HTMLInputElement).value).toBe("6");
+    if (!(rowNumber instanceof HTMLInputElement)) {
+      throw new TypeError("Expected row-number input");
+    }
+    expect(rowNumber.value).toBe("6");
     expect(screen.getByText("user-5", { selector: "pre" })).toBeTruthy();
   });
 
-  it("auto refreshes on the global interval and resets after manual refresh", async () => {
+  test("auto refreshes on the global interval and resets after manual refresh", async () => {
     rs.useFakeTimers();
     const refetch = rs.fn().mockResolvedValue(undefined);
     useRefreshSettingsStore.getState().setRefreshIntervalMs(60_000);
@@ -902,7 +947,7 @@ describe("table data grid row interactions", () => {
     expect(refetch).toHaveBeenCalledTimes(3);
   });
 
-  it("does not overwrite an active text selection when copying from the grid", () => {
+  test("does not overwrite an active text selection when copying from the grid", () => {
     const writeText = rs.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -917,7 +962,7 @@ describe("table data grid row interactions", () => {
     const selectedText = screen.getByText("user-0");
     const range = document.createRange();
     range.selectNodeContents(selectedText);
-    const selection = window.getSelection();
+    const selection = globalThis.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(range);
 
@@ -929,9 +974,10 @@ describe("table data grid row interactions", () => {
     if (!(gridProps?.onCellCopy && copiedRow && copiedColumn)) {
       throw new Error("Expected grid copy props.");
     }
-    gridProps.onCellCopy({ column: copiedColumn, row: copiedRow }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
+    gridProps.onCellCopy(
+      { column: copiedColumn, row: copiedRow },
+      clipboardEvent(screen.getByTestId("data-grid"))
+    );
 
     expect(writeText).not.toHaveBeenCalled();
     selection?.removeAllRanges();
@@ -942,7 +988,7 @@ describe("table data grid cell selection", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("extends cell selection with Shift+Arrow and clears it with Escape", () => {
+  test("extends cell selection with Shift+Arrow and clears it with Escape", () => {
     seedRowsQueryWithCellSelectionValues();
 
     render(
@@ -1001,9 +1047,10 @@ describe("table data grid cell selection", () => {
         shiftKey: true,
       }
     );
-    gridProps.onCellCopy({ column: firstNameColumn, row: secondRow }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
+    gridProps.onCellCopy(
+      { column: firstNameColumn, row: secondRow },
+      clipboardEvent(screen.getByTestId("data-grid"))
+    );
 
     expect(writeClipboardMock).toHaveBeenLastCalledWith("Ada\nGrace");
     expect(setActivePosition).toHaveBeenCalledWith(
@@ -1029,9 +1076,10 @@ describe("table data grid cell selection", () => {
         shiftKey: false,
       }
     );
-    gridProps.onCellCopy({ column: firstNameColumn, row: secondRow }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
+    gridProps.onCellCopy(
+      { column: firstNameColumn, row: secondRow },
+      clipboardEvent(screen.getByTestId("data-grid"))
+    );
 
     expect(writeClipboardMock).toHaveBeenLastCalledWith("Grace");
   });
@@ -1041,7 +1089,7 @@ describe("table data grid cell selection navigation", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("navigates cell selection to row and grid edges", () => {
+  test("navigates cell selection to row and grid edges", () => {
     seedRowsQueryWithCellSelectionValues();
 
     render(
@@ -1121,9 +1169,10 @@ describe("table data grid cell selection navigation", () => {
         shiftKey: true,
       }
     );
-    gridProps.onCellCopy({ column: lastNameColumn, row: secondRow }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
+    gridProps.onCellCopy(
+      { column: lastNameColumn, row: secondRow },
+      clipboardEvent(screen.getByTestId("data-grid"))
+    );
 
     expect(writeClipboardMock).toHaveBeenLastCalledWith("Lovelace\nHopper");
 
@@ -1143,7 +1192,7 @@ describe("table data grid cell selection navigation", () => {
     );
   });
 
-  it("extends cell selection by one visible viewport with PageDown", () => {
+  test("extends cell selection by one visible viewport with PageDown", () => {
     seedRowsQuery(25);
 
     render(
@@ -1216,7 +1265,7 @@ describe("table data grid cell selection full values", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("resolves truncated values before copying selected cells", async () => {
+  test("resolves truncated values before copying selected cells", async () => {
     const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
         value: create(TableValueSchema, {
@@ -1256,11 +1305,15 @@ describe("table data grid cell selection full values", () => {
         shiftKey: false,
       }
     );
-    gridProps.onCellCopy({ column: notesColumn, row }, {
-      currentTarget: screen.getByTestId("data-grid"),
-    } as ReactClipboardEvent<HTMLDivElement>);
+    gridProps.onCellCopy(
+      { column: notesColumn, row },
+      clipboardEvent(screen.getByTestId("data-grid"))
+    );
 
     const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    if (getText === undefined) {
+      throw new Error("Expected deferred clipboard text callback");
+    }
     await expect(getText()).resolves.toBe("the complete text");
   });
 });
@@ -1269,7 +1322,7 @@ describe("table data grid truncated-cell copy", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("resolves truncated cells when copying a row as INSERT", async () => {
+  test("resolves truncated cells when copying a row as INSERT", async () => {
     const user = userEvent.setup();
     const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
@@ -1291,6 +1344,9 @@ describe("table data grid truncated-cell copy", () => {
 
     expect(writeClipboardDeferredMock).toHaveBeenCalledTimes(1);
     const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    if (getText === undefined) {
+      throw new Error("Expected deferred clipboard text callback");
+    }
     await expect(getText()).resolves.toBe(
       `INSERT INTO "public"."customers" ("notes") VALUES\n  ('the complete text');\n`
     );
@@ -1305,7 +1361,7 @@ describe("table data grid value dialogs", () => {
     useRefreshSettingsStore.getState().setRefreshIntervalMs(null);
   });
 
-  it("keeps expanded grid data value expansion to one dialog at a time", async () => {
+  test("keeps expanded grid data value expansion to one dialog at a time", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithExpandableValues();
 
@@ -1346,7 +1402,7 @@ describe("table data grid column layout", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  it("clears a no-op layout after opting back out of column projection", async () => {
+  test("clears a no-op layout after opting back out of column projection", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     seedMeasurementColumnCatalog();
@@ -1364,11 +1420,9 @@ describe("table data grid column layout", () => {
 
     await waitFor(() => {
       expect(
-        (
-          screen.getByRole("button", {
-            name: "Reset columns",
-          }) as HTMLButtonElement
-        ).disabled
+        screen.getByRole<HTMLButtonElement>("button", {
+          name: "Reset columns",
+        }).disabled
       ).toBe(true);
     });
     expect(
@@ -1378,7 +1432,7 @@ describe("table data grid column layout", () => {
     ).toBeUndefined();
   });
 
-  it("reorders and persists columns dragged by their grid headers", async () => {
+  test("reorders and persists columns dragged by their grid headers", async () => {
     const tableName =
       "instances/prod/databases/app/schemas/public/tables/measurements";
     seedRowsQueryWithRawClipboardValues();
@@ -1406,7 +1460,7 @@ describe("table data grid column layout", () => {
     ).toEqual(["observed_at", "measurement"]);
   });
 
-  it("resets visibility and order to the database layout", async () => {
+  test("resets visibility and order to the database layout", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     render(
@@ -1429,7 +1483,7 @@ describe("table data grid column layout", () => {
     });
   });
 
-  it("keeps hidden values in row copy output", async () => {
+  test("keeps hidden values in row copy output", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     render(
@@ -1447,7 +1501,7 @@ describe("table data grid column layout", () => {
     );
   });
 
-  it("keeps hidden columns available to filters and sorts", async () => {
+  test("keeps hidden columns available to filters and sorts", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     render(
@@ -1470,7 +1524,7 @@ describe("table data grid column layout", () => {
     expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
   });
 
-  it("keeps actions frozen and restores a data column's frozen state after hide and show", async () => {
+  test("keeps actions frozen and restores a data column's frozen state after hide and show", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     render(
@@ -1514,7 +1568,7 @@ describe("table data grid local state", () => {
     rs.clearAllMocks();
   });
 
-  it("clears local selection and the row drawer after navigation", async () => {
+  test("clears local selection and the row drawer after navigation", async () => {
     const user = userEvent.setup();
     seedRowsQuery(3);
 
@@ -1555,7 +1609,7 @@ describe("table data grid local state", () => {
     });
   });
 
-  it("keeps filters and sorting local to the grid", async () => {
+  test("keeps filters and sorting local to the grid", async () => {
     const user = userEvent.setup();
     seedRowsQuery(3);
     tableApi.useListTableColumnsQuery.mockReturnValue({
@@ -1587,8 +1641,8 @@ describe("table data grid local state", () => {
 
     await waitFor(() => {
       const request = tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0];
-      expect(request.filter?.node.case).toBe("group");
-      expect(request.filter?.node.value).toMatchObject({
+      expect(request?.filter?.node.case).toBe("group");
+      expect(request?.filter?.node.value).toMatchObject({
         children: [
           {
             node: {
@@ -1609,7 +1663,7 @@ describe("table data grid local state", () => {
           },
         ],
       });
-      expect(request.orderBy).toMatchObject([
+      expect(request?.orderBy).toMatchObject([
         { column: "email", direction: RowOrder_Direction.ASC },
       ]);
     });

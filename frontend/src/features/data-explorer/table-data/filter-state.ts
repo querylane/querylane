@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { z } from "zod";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type RowFilter,
   RowFilterGroup_Logic,
@@ -16,12 +17,12 @@ import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 const MAX_FILTER_RULES = 64;
 const DEFAULT_FILTER_LOGIC = "and" as const;
 const FILTER_LOGICS = ["and", "or"] as const;
-const FLOAT_LITERAL_PATTERN = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
-const INTEGER_LITERAL_PATTERN = /^-?\d+$/;
+const FLOAT_LITERAL_PATTERN = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u;
+const INTEGER_LITERAL_PATTERN = /^-?\d+$/u;
 // Postgres uuid_in also accepts upper-case digits, surrounding braces, and a
 // hyphen after any group of four digits (or no hyphens at all) — not just the
 // canonical 8-4-4-4-12 form.
-const UUID_LITERAL_PATTERN = /^(?:[0-9a-f]{4}-?){7}[0-9a-f]{4}$/i;
+const UUID_LITERAL_PATTERN = /^(?:[0-9a-f]{4}-?){7}[0-9a-f]{4}$/iu;
 
 const FILTER_OPERATORS = [
   "eq",
@@ -317,7 +318,7 @@ function emptyFilterState(): TableFilterState {
 function parseTableFilterSearchResult(
   value: string | undefined
 ): TableFilterSearchParseResult {
-  if (!value) {
+  if (!isNonEmptyString(value)) {
     return { error: null, ok: true, state: emptyFilterState() };
   }
 
@@ -371,7 +372,7 @@ function serializeTableFilterSearch(
       c: rule.column,
       i: rule.id,
       ...(rule.logic === undefined ? {} : { l: rule.logic }),
-      ...(rule.negated ? { n: true } : {}),
+      ...(rule.negated === true ? { n: true } : {}),
       o: rule.operator,
       v: rule.value,
       ...(rule.value2 === undefined ? {} : { v2: rule.value2 }),
@@ -433,6 +434,12 @@ function expectedFilterValueDescription(
       return "a timestamp, like 2026-05-01 13:30:00";
     case DataType.UUID:
       return "a UUID, like 1b4e28ba-2fa1-11d2-883f-0016d3cca427";
+    case DataType.UNSPECIFIED:
+    case DataType.STRING:
+    case DataType.BINARY:
+    case DataType.ARRAY:
+    case DataType.GEOMETRY:
+    case DataType.UNKNOWN:
     default:
       return "a valid value";
   }
@@ -489,7 +496,7 @@ function buildFilterLabel(rule: TableFilterRule): string {
   } else {
     label = `${rule.column} ${operator.label} ${rule.value}`;
   }
-  return rule.negated ? `not (${label})` : label;
+  return rule.negated === true ? `not (${label})` : label;
 }
 
 // Text-like columns (including enums and other types Postgres can compare as
@@ -574,6 +581,10 @@ function getOperatorsForColumn(
   if (!column) {
     return FILTER_OPERATORS;
   }
+  // Arrays, bytea, and geometry values are written as Postgres text literals
+  // and compared with the column's own operators server-side, so they keep
+  // the orderable set too; types without an ordering surface a server error
+  // instead of being blocked client-side.
   switch (column.dataType) {
     case DataType.JSON:
       return column.rawType?.trim().toLowerCase() === "jsonb"
@@ -587,17 +598,16 @@ function getOperatorsForColumn(
     case DataType.TIME:
     case DataType.TIMESTAMP:
     case DataType.UUID:
-    // Arrays, bytea, and geometry values are written as Postgres text literals
-    // and compared with the column's own operators server-side, so they keep
-    // the orderable set too; types without an ordering surface a server error
-    // instead of being blocked client-side.
     case DataType.BINARY:
     case DataType.GEOMETRY:
       return ORDERABLE_OPERATORS;
     case DataType.ARRAY:
-      return column.rawType?.trim().toLowerCase().startsWith("json[")
+      return column.rawType?.trim().toLowerCase().startsWith("json[") === true
         ? LEGACY_JSON_ARRAY_OPERATORS
         : ORDERABLE_OPERATORS;
+    case DataType.UNSPECIFIED:
+    case DataType.STRING:
+    case DataType.UNKNOWN:
     default:
       return TEXT_OPERATORS;
   }
@@ -786,20 +796,20 @@ function parseTableValue(
     return parseJsonTableValue(value);
   }
   switch (dataType) {
-    case DataType.BOOLEAN: {
+    case DataType.BOOLEAN:
       return parseBooleanTableValue(value);
-    }
-    case DataType.FLOAT: {
+
+    case DataType.FLOAT:
       return parseFloatTableValue(rawValue, value);
-    }
-    case DataType.INTEGER: {
+
+    case DataType.INTEGER:
       return parseIntegerTableValue(value);
-    }
-    case DataType.UUID: {
+
+    case DataType.UUID:
       return isUuidLiteral(value)
         ? create(TableValueSchema, { kind: { case: "stringValue", value } })
         : undefined;
-    }
+
     case DataType.TIME:
     case DataType.DATE:
     case DataType.TIMESTAMP:
@@ -810,6 +820,12 @@ function parseTableValue(
       return create(TableValueSchema, {
         kind: { case: "timestampValue", value },
       });
+    case DataType.UNSPECIFIED:
+    case DataType.STRING:
+    case DataType.BINARY:
+    case DataType.ARRAY:
+    case DataType.GEOMETRY:
+    case DataType.UNKNOWN:
     default:
       return create(TableValueSchema, { kind: { case: "stringValue", value } });
   }

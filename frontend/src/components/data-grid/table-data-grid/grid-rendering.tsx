@@ -172,7 +172,7 @@ function extendCellSelectionToElement({
   }
   const focus = cellSelectionStore.getState().ranges.at(-1)?.focus;
   if (focus && !cellCoordinatesEqual(focus, coordinate)) {
-    window.getSelection()?.removeAllRanges();
+    globalThis.getSelection()?.removeAllRanges();
   }
   cellSelectionStore.extendTo(coordinate);
 }
@@ -241,7 +241,7 @@ function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
       activeRange.focus.columnIndex !== coordinate.columnIndex ||
       activeRange.focus.rowIndex !== coordinate.rowIndex
     ) {
-      window.getSelection()?.removeAllRanges();
+      globalThis.getSelection()?.removeAllRanges();
     }
     cellSelectionStore.extendTo(coordinate);
   }
@@ -484,9 +484,7 @@ function GridBody({
       }
 
       function scheduleAutoScroll() {
-        if (animationFrameId === undefined) {
-          animationFrameId = requestAnimationFrame(autoScrollCellSelection);
-        }
+        animationFrameId ??= requestAnimationFrame(autoScrollCellSelection);
       }
 
       function beginPointerSelection(event: PointerEvent) {
@@ -540,12 +538,12 @@ function GridBody({
         beginPointerSelection,
         true
       );
-      window.addEventListener("blur", finishSelection);
-      window.addEventListener("pointercancel", finishPointerSelection);
-      window.addEventListener("pointermove", continuePointerSelection, {
+      globalThis.addEventListener("blur", finishSelection);
+      globalThis.addEventListener("pointercancel", finishPointerSelection);
+      globalThis.addEventListener("pointermove", continuePointerSelection, {
         passive: true,
       });
-      window.addEventListener("pointerup", finishPointerSelection);
+      globalThis.addEventListener("pointerup", finishPointerSelection);
       return () => {
         finishSelection();
         activeGridRoot.removeEventListener(
@@ -553,10 +551,10 @@ function GridBody({
           beginPointerSelection,
           true
         );
-        window.removeEventListener("blur", finishSelection);
-        window.removeEventListener("pointercancel", finishPointerSelection);
-        window.removeEventListener("pointermove", continuePointerSelection);
-        window.removeEventListener("pointerup", finishPointerSelection);
+        globalThis.removeEventListener("blur", finishSelection);
+        globalThis.removeEventListener("pointercancel", finishPointerSelection);
+        globalThis.removeEventListener("pointermove", continuePointerSelection);
+        globalThis.removeEventListener("pointerup", finishPointerSelection);
       };
     },
     [cellSelectionStore, isLoading]

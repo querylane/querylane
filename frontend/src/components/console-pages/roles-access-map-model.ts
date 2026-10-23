@@ -5,6 +5,7 @@ import type {
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import { deriveRoleKind, type RoleKind, roleIdOf } from "@/lib/role-display";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type {
   ObjectGrant,
   Role,
@@ -361,7 +362,7 @@ function addOwnedObjectEdges({
       objectType: object.objectType,
       schemaName: object.schemaName,
     });
-    if (target) {
+    if (isNonEmptyString(target)) {
       mergeEdge({
         edgesById,
         privilege: "OWNER",
@@ -398,7 +399,7 @@ function addGrantEdges({
       objectType: grant.objectType,
       schemaName: grant.schemaName,
     });
-    if (target) {
+    if (isNonEmptyString(target)) {
       mergeEdge({
         edgesById,
         privilege: grant.privilege,
@@ -469,7 +470,7 @@ function addDefaultPrivilegeEdges({
       defaultPrivilege,
       objectsById,
     });
-    if (target) {
+    if (isNonEmptyString(target)) {
       mergeEdge({
         edgesById,
         privilege: defaultPrivilegeLabel({

@@ -15,6 +15,7 @@ import type {
 } from "@/features/data-explorer/table-data/filter-state";
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 interface DataGridToolbarProps {
@@ -84,7 +85,7 @@ function DataGridExpandToggle({
 }
 
 function ActiveSortSummary({ summary }: { summary: string | null }) {
-  if (!summary) {
+  if (!isNonEmptyString(summary)) {
     return null;
   }
   return (

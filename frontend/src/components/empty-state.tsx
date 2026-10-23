@@ -39,7 +39,7 @@ export function EmptyState({
         <h2 className="text-lg font-medium tracking-tight">{title}</h2>
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
-      {action ? <EmptyContent>{action}</EmptyContent> : null}
+      {Boolean(action) ? <EmptyContent>{action}</EmptyContent> : null}
     </Empty>
   );
 }

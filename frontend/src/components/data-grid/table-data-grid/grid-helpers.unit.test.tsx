@@ -1,6 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { isValidElement } from "react";
+import type { CalculatedColumn, Column } from "react-data-grid";
 import { renderToStaticMarkup } from "react-dom/server";
 import { toast } from "sonner";
 import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
@@ -8,7 +9,10 @@ import {
   buildColumn,
   buildPageLabel,
 } from "@/components/data-grid/table-data-grid/grid-helpers";
-import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
+import {
+  type GridRow,
+  ROW_KEY_FIELD,
+} from "@/components/data-grid/table-data-grid/grid-row-model";
 import * as tableDataActual from "@/hooks/api/table-data" with {
   rstest: "importActual",
 };
@@ -40,6 +44,42 @@ rs.mock("sonner", () => ({
     success: rs.fn(),
   },
 }));
+
+function calculatedColumn(column: Column<GridRow>): CalculatedColumn<GridRow> {
+  return {
+    ...column,
+    parent: undefined,
+    idx: 0,
+    level: 0,
+    width: column.width ?? 100,
+    minWidth: column.minWidth ?? 10,
+    maxWidth: column.maxWidth ?? undefined,
+    resizable: column.resizable ?? false,
+    sortable: column.sortable ?? false,
+    draggable: column.draggable ?? false,
+    frozen: column.frozen ?? false,
+    renderCell: column.renderCell ?? (() => null),
+    renderHeaderCell: column.renderHeaderCell ?? (() => null),
+  };
+}
+function renderTestCell(column: Column<GridRow>, row: GridRow) {
+  return column.renderCell?.({
+    column: calculatedColumn(column),
+    row,
+    rowIdx: 0,
+    isCellEditable: false,
+    tabIndex: 0,
+    onRowChange: () => undefined,
+  });
+}
+function renderTestHeader(column: Column<GridRow>) {
+  return column.renderHeaderCell?.({
+    column: calculatedColumn(column),
+    priority: undefined,
+    sortDirection: undefined,
+    tabIndex: 0,
+  });
+}
 
 function testColumn(
   columnName = "email",
@@ -126,15 +166,13 @@ describe("grid helpers", () => {
       resultColumns: [carrierColumn, tenantColumn],
     });
 
-    const rendered = column.renderCell?.({
-      row: {
-        [ROW_KEY_FIELD]: "row-1",
-        cells: new Map([
-          ["carrier_id", testValueCell({ case: "int64Value", value: 214n })],
-          ["tenant_id", testValueCell({ case: "nullValue", value: 0 })],
-        ]),
-      },
-    } as never);
+    const rendered = renderTestCell(column, {
+      [ROW_KEY_FIELD]: "row-1",
+      cells: new Map([
+        ["carrier_id", testValueCell({ case: "int64Value", value: 214n })],
+        ["tenant_id", testValueCell({ case: "nullValue", value: 0 })],
+      ]),
+    });
     const markup = renderToStaticMarkup(<span>{rendered}</span>);
 
     expect(markup).toContain("214");
@@ -184,17 +222,15 @@ describe("grid helpers", () => {
 
     const truncatedMarkup = renderToStaticMarkup(
       <span>
-        {truncatedTextColumn.renderCell?.({
-          row: {
-            [ROW_KEY_FIELD]: "row-1",
-            cells: new Map([
-              [
-                "external_id",
-                testValueCell({ case: "stringValue", value: "prefix" }, true),
-              ],
-            ]),
-          },
-        } as never)}
+        {renderTestCell(truncatedTextColumn, {
+          [ROW_KEY_FIELD]: "row-1",
+          cells: new Map([
+            [
+              "external_id",
+              testValueCell({ case: "stringValue", value: "prefix" }, true),
+            ],
+          ]),
+        })}
       </span>
     );
     const bytesRow = {
@@ -209,12 +245,8 @@ describe("grid helpers", () => {
         ],
       ]),
     };
-    const firstBytesCell = bytesForeignKeyColumn.renderCell?.({
-      row: bytesRow,
-    } as never);
-    const secondBytesCell = bytesForeignKeyColumn.renderCell?.({
-      row: bytesRow,
-    } as never);
+    const firstBytesCell = renderTestCell(bytesForeignKeyColumn, bytesRow);
+    const secondBytesCell = renderTestCell(bytesForeignKeyColumn, bytesRow);
     if (
       !(
         isValidElement<{ preview: unknown }>(firstBytesCell) &&
@@ -277,32 +309,25 @@ describe("grid helpers", () => {
 
     const whitespaceMarkup = renderToStaticMarkup(
       <span>
-        {whitespaceColumn.renderCell?.({
-          row: {
-            [ROW_KEY_FIELD]: "row-1",
-            cells: new Map([
-              [
-                "external_id",
-                testValueCell({ case: "stringValue", value: " " }),
-              ],
-            ]),
-          },
-        } as never)}
+        {renderTestCell(whitespaceColumn, {
+          [ROW_KEY_FIELD]: "row-1",
+          cells: new Map([
+            ["external_id", testValueCell({ case: "stringValue", value: " " })],
+          ]),
+        })}
       </span>
     );
     const nonFiniteMarkup = renderToStaticMarkup(
       <span>
-        {nonFiniteColumn.renderCell?.({
-          row: {
-            [ROW_KEY_FIELD]: "row-2",
-            cells: new Map([
-              [
-                "weight",
-                testValueCell({ case: "doubleValue", value: Number.NaN }),
-              ],
-            ]),
-          },
-        } as never)}
+        {renderTestCell(nonFiniteColumn, {
+          [ROW_KEY_FIELD]: "row-2",
+          cells: new Map([
+            [
+              "weight",
+              testValueCell({ case: "doubleValue", value: Number.NaN }),
+            ],
+          ]),
+        })}
       </span>
     );
 
@@ -323,7 +348,7 @@ describe("grid helpers", () => {
       pkColumnSet: new Set(),
     });
 
-    const rendered = column.renderHeaderCell?.({} as never);
+    const rendered = renderTestHeader(column);
 
     expect(renderToStaticMarkup(<span>{rendered}</span>)).toContain(
       "Frozen column"
@@ -336,7 +361,9 @@ describe("grid helpers", () => {
       value: undefined,
     });
 
-    expect(() => writeClipboard("copy me")).not.toThrow();
+    expect(() => {
+      writeClipboard("copy me");
+    }).not.toThrow();
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith(
       "Clipboard isn't available in this browser"
@@ -351,7 +378,9 @@ describe("grid helpers", () => {
     });
 
     writeClipboard("copy me");
-    await rs.waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    await rs.waitFor(() => {
+      expect(toast.success).toHaveBeenCalledTimes(1);
+    });
 
     expect(writeText).toHaveBeenCalledWith("copy me");
     expect(toast.success).toHaveBeenCalledWith("Copied", { duration: 1500 });
@@ -366,7 +395,9 @@ describe("grid helpers", () => {
     });
 
     writeClipboard("copy me");
-    await rs.waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    await rs.waitFor(() => {
+      expect(toast.error).toHaveBeenCalledTimes(1);
+    });
 
     expect(toast.error).toHaveBeenCalledWith("Couldn't copy to clipboard");
     expect(toast.success).not.toHaveBeenCalled();

@@ -44,6 +44,7 @@ import {
   shouldEnableDatabaseSelectionQuery,
 } from "@/lib/db-selection-utils";
 import { useCurrentRouteIds } from "@/lib/route-ids";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const EMPTY_DB_ARRAY: PostgresDatabase[] = [];
 const EMPTY_INSTANCE_ARRAY: PostgresInstance[] = [];
@@ -89,7 +90,9 @@ function useSelectedInstanceResource({
   routeInstanceId?: string | undefined;
 }) {
   const selectedInstanceQuery = useGetInstanceQuery(
-    routeInstanceId ? { name: buildInstanceName(routeInstanceId) } : undefined,
+    isNonEmptyString(routeInstanceId)
+      ? { name: buildInstanceName(routeInstanceId) }
+      : undefined,
     {
       enabled: Boolean(routeInstanceId),
       refetchOnReconnect: true,
@@ -97,12 +100,9 @@ function useSelectedInstanceResource({
   );
   const queryInstance = selectedInstanceQuery.data?.instance;
 
-  let selectedInstance: PostgresInstance | null;
-  if (queryInstance) {
-    selectedInstance = mapInstance(queryInstance);
-  } else {
-    selectedInstance = pickSelectedResource(instances, effectiveInstanceId);
-  }
+  const selectedInstance = queryInstance
+    ? mapInstance(queryInstance)
+    : pickSelectedResource(instances, effectiveInstanceId);
 
   return {
     selectedInstance,
@@ -129,7 +129,9 @@ function useSelectedDatabase({
     hydrateSelectedDatabaseFromQuery,
   });
   const selectedDatabaseQuery = useGetDatabaseQuery(
-    effectiveInstanceId && effectiveDatabaseId
+    isNonEmptyString(effectiveInstanceId) &&
+      typeof effectiveDatabaseId === "string" &&
+      effectiveDatabaseId.length > 0
       ? {
           name: buildDatabaseName(effectiveInstanceId, effectiveDatabaseId),
         }
@@ -143,8 +145,10 @@ function useSelectedDatabase({
   const databaseFallback =
     !databaseQueryEnabled &&
     selectedInstanceResolved &&
-    effectiveInstanceId &&
-    effectiveDatabaseId
+    typeof effectiveInstanceId === "string" &&
+    effectiveInstanceId.length > 0 &&
+    typeof effectiveDatabaseId === "string" &&
+    effectiveDatabaseId.length > 0
       ? createFallbackDatabase(effectiveInstanceId, effectiveDatabaseId)
       : null;
   const selectedDatabase = resolveSelectedResource({
@@ -185,7 +189,7 @@ function shouldHydrateSelectedDatabase(
   effectiveDatabaseId: string | undefined,
   databases: PostgresDatabase[]
 ): boolean {
-  if (routeDatabaseId || !effectiveDatabaseId) {
+  if ((routeDatabaseId ?? "") || !isNonEmptyString(effectiveDatabaseId)) {
     return false;
   }
   return !databases.some((database) => database.id === effectiveDatabaseId);
@@ -196,7 +200,7 @@ function usePersistedNavigationSelections() {
     () => readPersistedNavigationSelectionStore()
   );
   const persistSelection = (ids: RouteSelectionIds) => {
-    if (!ids.instanceId) {
+    if (!isNonEmptyString(ids.instanceId)) {
       return;
     }
     const nextSelection: PersistedNavigationSelection = {
@@ -220,7 +224,7 @@ function getPersistedSelection(
   store: PersistedNavigationSelectionStore,
   instanceId: string | undefined
 ): PersistedNavigationSelection {
-  return instanceId ? (store[instanceId] ?? {}) : {};
+  return isNonEmptyString(instanceId) ? (store[instanceId] ?? {}) : {};
 }
 
 function deriveInstanceQueryPolicy({
@@ -236,18 +240,17 @@ function deriveInstanceQueryPolicy({
 }) {
   const selectedInstanceResolved =
     selectedInstanceStatus !== undefined ||
-    !routeInstanceId ||
+    !isNonEmptyString(routeInstanceId) ||
     !selectedInstancePending;
   const suppressChildAutoQueries =
     selectedInstanceResolved && selectedInstanceStatus !== "connected";
   return {
-    databasesQueryEnabled: Boolean(
-      effectiveInstanceId && selectedInstanceStatus === "connected"
-    ),
+    databasesQueryEnabled:
+      isNonEmptyString(effectiveInstanceId) &&
+      selectedInstanceStatus === "connected",
     selectedInstanceResolved,
-    suppressDatabasesQuery: Boolean(
-      effectiveInstanceId && suppressChildAutoQueries
-    ),
+    suppressDatabasesQuery:
+      isNonEmptyString(effectiveInstanceId) && suppressChildAutoQueries,
   };
 }
 
@@ -309,7 +312,7 @@ function useDbProviderValue() {
     selectedInstanceStatus,
   });
   const databasesQuery = useListAllDatabasesQuery(
-    effectiveInstanceId
+    isNonEmptyString(effectiveInstanceId)
       ? databasesForInstanceQueryInput(effectiveInstanceId)
       : undefined,
     {
@@ -324,7 +327,7 @@ function useDbProviderValue() {
     persistedSelection.databaseId,
     databases
   );
-  const effectiveDatabaseId = effectiveInstanceId
+  const effectiveDatabaseId = isNonEmptyString(effectiveInstanceId)
     ? resolveValidSelectionId({
         candidateId: databaseCandidate,
         items: databases,
@@ -337,11 +340,11 @@ function useDbProviderValue() {
     instanceId: effectiveInstanceId,
   };
   const persistSelectionRef = React.useRef(persistSelection);
-  // allow-useEffect: keep ref in sync with latest persistSelection
+  // keep ref in sync with latest persistSelection
   React.useEffect(function syncPersistSelectionRef() {
     persistSelectionRef.current = persistSelection;
   });
-  // allow-useEffect: persist selection to URL on change
+  // persist selection to URL on change
   React.useEffect(
     function persistEffectiveSelection() {
       persistSelectionRef.current({

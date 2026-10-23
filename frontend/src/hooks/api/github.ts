@@ -1,6 +1,7 @@
-// allow-direct-query: GitHub REST API, not a ConnectRPC service
+// GitHub REST API, not a ConnectRPC service
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
+import { isRecord } from "@/lib/value-guards";
 
 const ONE_SECOND_IN_MILLISECONDS = 1000;
 const ONE_MINUTE_IN_SECONDS = 60;
@@ -8,10 +9,6 @@ const SIXTY_MINUTES = 60;
 const STAR_COUNT_THOUSAND = 1000;
 const GITHUB_STARS_GC_TIME_MS =
   SIXTY_MINUTES * ONE_MINUTE_IN_SECONDS * ONE_SECOND_IN_MILLISECONDS;
-
-interface GitHubRepoResponse {
-  stargazers_count?: unknown;
-}
 
 export function formatGithubStarCount(starCount: number): string {
   if (starCount >= STAR_COUNT_THOUSAND) {
@@ -34,10 +31,13 @@ export async function fetchGithubRepoStars(
       return null;
     }
 
-    const payload = (await response.json()) as GitHubRepoResponse;
+    const payload: unknown = await response.json();
+    if (!isRecord(payload)) {
+      return null;
+    }
     const stars =
-      typeof payload.stargazers_count === "number"
-        ? payload.stargazers_count
+      typeof payload["stargazers_count"] === "number"
+        ? payload["stargazers_count"]
         : null;
     if (stars === null) {
       return null;

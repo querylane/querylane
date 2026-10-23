@@ -1,27 +1,30 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import { brotliCompressSync, gzipSync } from "node:zlib";
+import { z } from "zod";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const BYTES_PER_KIB = 1024;
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const SCRIPT_DIR = import.meta.dirname;
 const DIST_DIR = join(SCRIPT_DIR, "..", "dist");
 const INDEX_HTML_PATH = join(DIST_DIR, "index.html");
-const BUILD_ASSET_EXTENSION_PATTERN = /\.(?:html|css|js)$/;
-const LEADING_SLASH_PATTERN = /^\//;
+const BUILD_ASSET_EXTENSION_PATTERN = /\.(?:html|css|js)$/u;
+const LEADING_SLASH_PATTERN = /^\//u;
 // Monitoring charts use SVG and compact numeric scales. Adding another
 // capability requires an intentional budget/contract update, not an implicit
 // dependency from a barrel or adapter import. D3 used by React Flow is separate.
 const UNUSED_CHART_CAPABILITY_PATTERN =
-  /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/;
+  /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/u;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
-const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 200;
+// 203 (was 200): align CodeMirror/Lezer singletons after the security lock refresh.
+// Measured with Bun 1.4.3: 201.3 KiB. Initial/largest-chunk caps are unchanged.
+const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 203;
 // TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
@@ -46,7 +49,9 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // Measured core: 1013.6 KiB; initial: 334.4 KiB (+0.5, budget unchanged).
 // 1018 (was 1015): accessible SQL tabs and complete, row-linked label errors.
 // Measured core: 1013.8 -> 1016.6 KiB; initial remains 334.3 KiB.
-const MAX_TOTAL_GZIP_KIB = 1018;
+// 1024 (was 1018): validated persisted drafts, fail-closed forms and explicit
+// runtime guards. Measured with Bun 1.4.3: 1022.5 KiB, keeping similar headroom.
+const MAX_TOTAL_GZIP_KIB = 1024;
 
 interface BundleBudgetAsset {
   brotli: number;
@@ -142,10 +147,10 @@ function allBuildAssets(directory: string, prefix = ""): string[] {
 function initialAssetPaths(indexHtml: string): string[] {
   const files: string[] = [];
   for (const match of indexHtml.matchAll(
-    /<(?:script|link)\b[^>]+(?:src|href)="([^"]+)"/g
+    /<(?:script|link)\b[^>]+(?:src|href)="(?<capture1>[^"]+)"/gu
   )) {
     const [, assetPath] = match;
-    if (!assetPath) {
+    if (!isNonEmptyString(assetPath)) {
       continue;
     }
     if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
@@ -167,15 +172,10 @@ function sourceMapSources(distDir: string, relativePath: string): string[] {
   if (!existsSync(sourceMapPath)) {
     return [];
   }
-  const sourceMap = JSON.parse(readFileSync(sourceMapPath, "utf8")) as {
-    sources?: unknown;
-  };
-  if (!Array.isArray(sourceMap.sources)) {
-    return [];
-  }
-  return sourceMap.sources.filter(
-    (source): source is string => typeof source === "string"
-  );
+  const sourceMap = z
+    .looseObject({ sources: z.array(z.string()) })
+    .parse(JSON.parse(readFileSync(sourceMapPath, "utf-8")));
+  return sourceMap.sources;
 }
 
 function isDeferredVisualizationAsset(distDir: string, relativePath: string) {
@@ -235,7 +235,7 @@ function collectBundleBudgetStats({
     throw new Error("Missing dist/index.html. Run `bun run build` first.");
   }
 
-  const indexHtml = readFileSync(indexHtmlPath, "utf8");
+  const indexHtml = readFileSync(indexHtmlPath, "utf-8");
   const files = initialAssetPaths(indexHtml);
   const initialAssets = files.map((path) => ({
     path,
@@ -514,8 +514,8 @@ function runBundleBudgetCheck() {
 
 function isMainModule() {
   const [, entryPath] = process.argv;
-  return entryPath
-    ? resolve(entryPath) === fileURLToPath(import.meta.url)
+  return isNonEmptyString(entryPath)
+    ? resolve(entryPath) === import.meta.filename
     : false;
 }
 

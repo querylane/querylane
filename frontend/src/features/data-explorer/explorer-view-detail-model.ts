@@ -1,23 +1,25 @@
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { View } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import { View_ViewType } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
 // Best-effort UI hints only. These regexes intentionally avoid becoming a SQL
 // parser, so comments/string literals can still produce false positives.
 const SQL_SOURCE_PATTERN =
-  /\b(?:from|join)\s+((?:"[^"]+"|[a-zA-Z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|[a-zA-Z_][\w$]*))?)/gi;
-const SQL_IDENTIFIER_DOT_PATTERN = /\s*\.\s*/g;
-const SQL_AGGREGATE_PATTERN = /\bgroup\s+by\b|\b(count|sum|avg|min|max)\s*\(/i;
-const SQL_FILTER_PATTERN = /\bwhere\b|\bhaving\b/i;
-const SQL_JOIN_PATTERN = /\bjoin\b/i;
-const SQL_DISTINCT_PATTERN = /\bdistinct\b/i;
-const SQL_SET_OPERATION_PATTERN = /\b(union|intersect|except)\b/i;
-const SQL_TRAILING_SEMICOLON_PATTERN = /;+\s*$/;
+  /\b(?:from|join)\s+(?<capture1>(?:"[^"]+"|[a-zA-Z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|[a-zA-Z_][\w$]*))?)/giu;
+const SQL_IDENTIFIER_DOT_PATTERN = /\s*\.\s*/gu;
+const SQL_AGGREGATE_PATTERN =
+  /\bgroup\s+by\b|\b(?<capture1>count|sum|avg|min|max)\s*\(/iu;
+const SQL_FILTER_PATTERN = /\bwhere\b|\bhaving\b/iu;
+const SQL_JOIN_PATTERN = /\bjoin\b/iu;
+const SQL_DISTINCT_PATTERN = /\bdistinct\b/iu;
+const SQL_SET_OPERATION_PATTERN = /\b(?<capture1>union|intersect|except)\b/iu;
+const SQL_TRAILING_SEMICOLON_PATTERN = /;+\s*$/u;
 const RUNNABLE_VIEW_DEFINITION_PATTERN =
-  /^\s*create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\b/i;
+  /^\s*create\s+(?:or\s+replace\s+)?(?:materialized\s+)?view\b/iu;
 const VIEW_RESOURCE_NAME_PATTERN =
-  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/views\/([^/]+)$/;
+  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/(?<capture1>[^/]+)\/views\/(?<capture2>[^/]+)$/u;
 const VIEW_DATABASE_RESOURCE_NAME_PATTERN =
-  /^(instances\/[^/]+\/databases\/[^/]+)\/schemas\/[^/]+\/views\/[^/]+$/;
+  /^(?<capture1>instances\/[^/]+\/databases\/[^/]+)\/schemas\/[^/]+\/views\/[^/]+$/u;
 const MAX_SOURCE_RELATIONS = 8;
 
 function decodeResourceSegment(segment: string) {
@@ -34,7 +36,13 @@ function quoteSqlIdentifier(identifier: string) {
 
 function formatViewSqlIdentifier(view: View, fallbackViewName: string) {
   const match = VIEW_RESOURCE_NAME_PATTERN.exec(view.name);
-  if (!(match?.[1] && match[2])) {
+  if (
+    !(
+      isNonEmptyString(match?.[1]) &&
+      typeof match[2] === "string" &&
+      match[2].length > 0
+    )
+  ) {
     return quoteSqlIdentifier(fallbackViewName);
   }
   return `${quoteSqlIdentifier(decodeResourceSegment(match[1]))}.${quoteSqlIdentifier(
@@ -80,14 +88,14 @@ function runnableViewDefinition({
 function cleanSqlIdentifier(identifier: string) {
   return identifier
     .replaceAll('"', "")
-    .replace(SQL_IDENTIFIER_DOT_PATTERN, ".");
+    .replaceAll(SQL_IDENTIFIER_DOT_PATTERN, ".");
 }
 
 function sourceRelationsFromDefinition(definition: string) {
   const sources = new Set<string>();
   for (const match of definition.matchAll(SQL_SOURCE_PATTERN)) {
     const [, source] = match;
-    if (!source) {
+    if (!isNonEmptyString(source)) {
       continue;
     }
     sources.add(cleanSqlIdentifier(source));
@@ -95,7 +103,7 @@ function sourceRelationsFromDefinition(definition: string) {
       break;
     }
   }
-  return Array.from(sources);
+  return [...sources];
 }
 
 function queryShapeFromDefinition(definition: string) {

@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 
 import {
   fetchGithubRepoStars,
@@ -6,7 +13,12 @@ import {
 } from "@/hooks/api/github";
 
 const { useQueryMock } = rs.hoisted(() => ({
-  useQueryMock: rs.fn(),
+  useQueryMock:
+    rs.fn<
+      (options: {
+        queryFn: (context: { signal: AbortSignal }) => Promise<string | null>;
+      }) => unknown
+    >(),
 }));
 
 rs.mock("@tanstack/react-query", () => ({
@@ -28,12 +40,15 @@ afterEach(() => {
 });
 
 describe("github api helpers", () => {
-  it("returns formatted stars on successful response", async () => {
+  test("returns formatted stars on successful response", async () => {
     rs.stubGlobal("fetch", () =>
       Promise.resolve(
-        new Response(JSON.stringify({ stargazers_count: STAR_COUNT_3210 }), {
-          status: 200,
-        })
+        Response.json(
+          { stargazers_count: STAR_COUNT_3210 },
+          {
+            status: 200,
+          }
+        )
       )
     );
 
@@ -42,7 +57,7 @@ describe("github api helpers", () => {
     );
   });
 
-  it("returns null when response is not successful", async () => {
+  test("returns null when response is not successful", async () => {
     rs.stubGlobal("fetch", () =>
       Promise.resolve(
         new Response(null, {
@@ -56,7 +71,7 @@ describe("github api helpers", () => {
     ).resolves.toBeNull();
   });
 
-  it("returns null when GitHub payload has no numeric star count", async () => {
+  test("returns null when GitHub payload has no numeric star count", async () => {
     rs.stubGlobal("fetch", () =>
       Promise.resolve(Response.json({ stargazers_count: "321" }))
     );
@@ -68,14 +83,15 @@ describe("github api helpers", () => {
 });
 
 describe("useGithubRepoStarsQuery", () => {
-  it("passes abort signal through to decorative GitHub fetches", async () => {
+  test("passes abort signal through to decorative GitHub fetches", async () => {
     useGithubRepoStarsQuery(" querylane/querylane ");
     const options = useQueryMock.mock.calls[0]?.[0];
+    if (!options) {
+      throw new Error("Expected query options");
+    }
     const { signal } = new AbortController();
     const fetchMock = rs.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ stargazers_count: 42 }), { status: 200 })
-      )
+      Promise.resolve(Response.json({ stargazers_count: 42 }, { status: 200 }))
     );
     rs.stubGlobal("fetch", fetchMock);
 

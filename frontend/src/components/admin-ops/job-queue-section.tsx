@@ -27,6 +27,8 @@ import {
   formatRelativeTimestamp,
   KNOWN_RUNNER_NAMES,
 } from "@/lib/admin-ops";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { AdminRunnerExecution } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
 const JOB_QUEUE_COLUMNS: DataTableColumnDef<AdminRunnerExecution>[] = [
@@ -84,7 +86,7 @@ function RunnerFilterSelect({
   return (
     <Select
       onValueChange={(next) => {
-        if (next) {
+        if (isNonEmptyString(next)) {
           onChange(next);
         }
       }}
@@ -92,7 +94,7 @@ function RunnerFilterSelect({
     >
       <SelectTrigger aria-label="Filter by runner" className="h-8 w-56">
         <SelectValue>
-          {value === ALL_RUNNERS_FILTER_VALUE ? "All runners" : String(value)}
+          {value === ALL_RUNNERS_FILTER_VALUE ? "All runners" : value}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -156,7 +158,7 @@ export function JobQueueSection() {
             {hasNextPage ? (
               <Button
                 disabled={isFetchingNextPage}
-                onClick={() => fetchNextPage()}
+                onClick={handleAsyncAction(() => fetchNextPage())}
                 size="sm"
                 variant="outline"
               >

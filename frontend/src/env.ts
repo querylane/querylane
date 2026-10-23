@@ -11,7 +11,7 @@ export const env = createEnv({
   },
   clientPrefix: "PUBLIC_",
   runtimeEnv: {
-    PUBLIC_API_BASE_URL: import.meta.env.PUBLIC_API_BASE_URL,
-    PUBLIC_GITHUB_REPO: import.meta.env.PUBLIC_GITHUB_REPO,
+    PUBLIC_API_BASE_URL: import.meta.env["PUBLIC_API_BASE_URL"],
+    PUBLIC_GITHUB_REPO: import.meta.env["PUBLIC_GITHUB_REPO"],
   },
 });

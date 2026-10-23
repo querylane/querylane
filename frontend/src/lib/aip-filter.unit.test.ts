@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   buildGrantFilter,
   buildOwnedFilter,
@@ -6,7 +6,7 @@ import {
 } from "@/lib/aip-filter";
 
 describe("AIP filter builders", () => {
-  it("combines owned-object kind and escaped name filters", () => {
+  test("combines owned-object kind and escaped name filters", () => {
     expect(
       buildOwnedFilter({ objectType: "TABLE", search: 'order"items' })
     ).toBe(
@@ -14,7 +14,7 @@ describe("AIP filter builders", () => {
     );
   });
 
-  it("scopes direct grants while keeping facets and search composable", () => {
+  test("scopes direct grants while keeping facets and search composable", () => {
     expect(
       buildGrantFilter({
         objectType: "VIEW",
@@ -26,13 +26,13 @@ describe("AIP filter builders", () => {
     );
   });
 
-  it("keeps the empty database-scope schema", () => {
+  test("keeps the empty database-scope schema", () => {
     expect(buildGrantFilter({ schemaName: "", search: "" })).toBe(
       'schema_name = ""'
     );
   });
 
-  it("maps role kinds to the backend role classification fields", () => {
+  test("maps role kinds to the backend role classification fields", () => {
     expect(buildRoleFilter({ query: " report ", type: "super" })).toBe(
       'role_name:"report" AND is_system_role = false AND attributes.is_superuser = true'
     );

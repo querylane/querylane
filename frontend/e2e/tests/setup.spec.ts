@@ -5,9 +5,9 @@ import {
   mockOnboardingUnavailableScenario,
 } from "./querylane-scenarios";
 
-const CONFIGURE_VIA_UI_RE = /Configure via UI/;
-const CONFIGURE_YAML_MANUALLY_RE = /Configure YAML manually/;
-const NEW_INSTANCE_URL_RE = /\/new-instance$/;
+const CONFIGURE_VIA_UI_RE = /Configure via UI/u;
+const CONFIGURE_YAML_MANUALLY_RE = /Configure YAML manually/u;
+const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
 
 test("onboarding entrypoint renders setup choices from mocked RPC state", {
   tag: ["@smoke", "@feat:onboarding", "@flow:create"],
@@ -55,21 +55,16 @@ test("onboarding boot error renders retryable error state from mocked RPC failur
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 
-test("onboarding entrypoint has no serious accessibility violations", {
+test("onboarding entrypoint has no accessibility violations", {
   tag: ["@feat:onboarding", "@a11y"],
-}, async ({ makeAxeBuilder, page }) => {
+}, async ({ checkAccessibility, page }) => {
   await mockOnboardingRequiredScenario(page);
   await page.goto("/setup");
   await expect(
     page.getByRole("heading", { name: "How would you like to get started?" })
   ).toBeVisible();
 
-  const results = await makeAxeBuilder().analyze();
-  const seriousViolations = results.violations.filter((violation) =>
-    ["critical", "serious"].includes(violation.impact ?? "")
-  );
-
-  expect(seriousViolations).toEqual([]);
+  await checkAccessibility();
 });
 
 test("onboarding UI setup choice opens internal storage form and can go back", {

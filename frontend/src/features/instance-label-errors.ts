@@ -3,12 +3,16 @@ import { mapEntryCriteriaPrefix } from "@/lib/protobuf-provider/map-error-target
 
 /** Read all messages, including resolver/server criteria, without walking DOM refs. */
 function formErrorMessages(error: unknown): string[] {
-  if (!error || typeof error !== "object") {
+  if (error === null || typeof error !== "object") {
     return [];
   }
   if ("message" in error && typeof error.message === "string") {
     let messages: string[] = [];
-    if ("types" in error && error.types && typeof error.types === "object") {
+    if (
+      "types" in error &&
+      error.types !== null &&
+      typeof error.types === "object"
+    ) {
       messages = Object.values(error.types).flatMap(errorCriteriaMessages);
     }
     return [...new Set([error.message, ...messages])];
@@ -22,14 +26,21 @@ function formErrorMessages(error: unknown): string[] {
 
 function labelRowErrors(
   error: unknown,
-  labels: readonly { id: string; key: string }[],
+  labels: readonly {
+    id: string;
+    key: string;
+  }[],
   blankKeyError?: string
 ): Record<string, string[]> {
   return Object.fromEntries(
     labels.flatMap((label) => {
       const key = label.key.trim();
       let messages = labelEntryMessages(error, key);
-      if (!key && blankKeyError) {
+      if (
+        !key &&
+        typeof blankKeyError === "string" &&
+        blankKeyError.length > 0
+      ) {
         messages = [blankKeyError];
       }
       return messages.length > 0 ? [[label.id, messages]] : [];
@@ -39,16 +50,16 @@ function labelRowErrors(
 
 function labelEntryMessages(error: unknown, key: string): string[] {
   if (
-    error &&
+    error !== null &&
     typeof error === "object" &&
     "types" in error &&
-    error.types &&
+    error.types !== null &&
     typeof error.types === "object"
   ) {
     const prefix = mapEntryCriteriaPrefix([key]);
-    return Object.entries(error.types)
-      .filter(([criterion]) => criterion.startsWith(prefix))
-      .flatMap(([, value]) => errorCriteriaMessages(value));
+    return Object.entries(error.types).flatMap(([criterion, value]) =>
+      criterion.startsWith(prefix) ? errorCriteriaMessages(value) : []
+    );
   }
   return formErrorMessages(get(error, key));
 }

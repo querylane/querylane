@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   resolveRunnableStatements,
   splitSqlStatements,
@@ -6,7 +6,7 @@ import {
 } from "@/features/sql-workbench/sql-statements";
 
 describe("splitSqlStatements", () => {
-  it("splits on top-level semicolons and trims each statement", () => {
+  test("splits on top-level semicolons and trims each statement", () => {
     const statements = splitSqlStatements(
       "  select 1;\n\nselect 2 ;\nselect 3"
     );
@@ -18,7 +18,7 @@ describe("splitSqlStatements", () => {
     expect(statements[0]).toMatchObject({ from: 2, to: 10 });
   });
 
-  it("ignores semicolons inside string literals and quoted identifiers", () => {
+  test("ignores semicolons inside string literals and quoted identifiers", () => {
     const statements = splitSqlStatements(
       `select 'a;b', "weird;name" from t; select 'it''s;fine'`
     );
@@ -28,7 +28,7 @@ describe("splitSqlStatements", () => {
     ]);
   });
 
-  it("ignores semicolons inside dollar-quoted strings", () => {
+  test("ignores semicolons inside dollar-quoted strings", () => {
     const statements = splitSqlStatements(
       "select $$a;b$$; select $fn$ x; y $fn$; select $1"
     );
@@ -39,7 +39,7 @@ describe("splitSqlStatements", () => {
     ]);
   });
 
-  it("ignores semicolons inside comments and drops comment-only chunks", () => {
+  test("ignores semicolons inside comments and drops comment-only chunks", () => {
     const statements = splitSqlStatements(
       "-- leading; comment\nselect /* a; b */ 1; /* trailing; */\n-- done;"
     );
@@ -48,7 +48,7 @@ describe("splitSqlStatements", () => {
     ]);
   });
 
-  it("handles escape strings with backslash-escaped quotes", () => {
+  test("handles escape strings with backslash-escaped quotes", () => {
     const statements = splitSqlStatements(
       String.raw`select E'a\';b'; select 2`
     );
@@ -58,7 +58,7 @@ describe("splitSqlStatements", () => {
     ]);
   });
 
-  it("returns no statements for blank input", () => {
+  test("returns no statements for blank input", () => {
     expect(splitSqlStatements("   \n;;\n")).toEqual([]);
   });
 });
@@ -66,27 +66,27 @@ describe("splitSqlStatements", () => {
 describe("statementAtCursor", () => {
   const statements = splitSqlStatements("select 1;\n\nselect 2;\n\nselect 3");
 
-  it("returns the statement containing the cursor", () => {
+  test("returns the statement containing the cursor", () => {
     expect(statementAtCursor(statements, 13)?.text).toBe("select 2");
   });
 
-  it("returns the preceding statement when the cursor sits in whitespace", () => {
+  test("returns the preceding statement when the cursor sits in whitespace", () => {
     expect(statementAtCursor(statements, 10)?.text).toBe("select 1");
   });
 
-  it("falls back to the first statement before any text", () => {
+  test("falls back to the first statement before any text", () => {
     expect(statementAtCursor(splitSqlStatements("\n\nselect 9"), 0)?.text).toBe(
       "select 9"
     );
   });
 
-  it("returns undefined without statements", () => {
+  test("returns undefined without statements", () => {
     expect(statementAtCursor([], 0)).toBeUndefined();
   });
 });
 
 describe("resolveRunnableStatements", () => {
-  it("prefers a non-empty selection and strips its trailing semicolon", () => {
+  test("prefers a non-empty selection and strips its trailing semicolon", () => {
     const text = "select 1;\nselect 2;";
     expect(
       resolveRunnableStatements({
@@ -97,7 +97,7 @@ describe("resolveRunnableStatements", () => {
     ).toMatchObject([{ text: "select 2" }]);
   });
 
-  it("splits a multi-statement selection so each runs on its own", () => {
+  test("splits a multi-statement selection so each runs on its own", () => {
     const text = "select 0;\nset search_path = x; select 1;";
     expect(
       resolveRunnableStatements({
@@ -111,7 +111,7 @@ describe("resolveRunnableStatements", () => {
     ]);
   });
 
-  it("returns nothing for a comment-only selection", () => {
+  test("returns nothing for a comment-only selection", () => {
     const text = "-- note\nselect 1";
     expect(
       resolveRunnableStatements({
@@ -122,7 +122,7 @@ describe("resolveRunnableStatements", () => {
     ).toEqual([]);
   });
 
-  it("uses the statement at the cursor when nothing is selected", () => {
+  test("uses the statement at the cursor when nothing is selected", () => {
     const text = "select 1;\nselect 2;";
     expect(
       resolveRunnableStatements({

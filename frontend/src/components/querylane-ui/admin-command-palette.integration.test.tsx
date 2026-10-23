@@ -112,6 +112,12 @@ test("Cmd+K searches and jumps to a table", async () => {
   const user = userEvent.setup();
   renderAdminCommandPalette();
 
+  expect(
+    screen.queryByText(
+      "Search tables, screens, and roles in the current Querylane scope."
+    )
+  ).toBeNull();
+
   await user.keyboard("{Meta>}k{/Meta}");
   await user.type(
     await screen.findByRole("combobox", {

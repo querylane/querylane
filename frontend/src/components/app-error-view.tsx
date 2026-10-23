@@ -15,8 +15,10 @@ import { Textarea } from "@/components/querylane-ui/textarea";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
+import { handleAsyncAction } from "@/lib/ui-action";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type AppErrorViewVariant = "inline" | "page";
 type CopyFeedback = "error" | "idle" | "success";
@@ -44,10 +46,10 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
   return (
     <div className="flex items-center gap-2">
       <Button
-        onClick={async () => {
+        onClick={handleAsyncAction(async () => {
           setFeedback("idle");
           try {
-            if (!navigator.clipboard) {
+            if (!Boolean(navigator.clipboard)) {
               throw new Error("Clipboard unavailable");
             }
             await navigator.clipboard.writeText(error.technicalDetails);
@@ -55,7 +57,7 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
           } catch {
             setFeedback("error");
           }
-        }}
+        })}
         size="sm"
         variant="outline"
       >
@@ -74,7 +76,7 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
 }
 
 function ErrorBadge({ label, value }: { label: string; value: string | null }) {
-  if (!value) {
+  if (!isNonEmptyString(value)) {
     return null;
   }
 
@@ -232,7 +234,7 @@ function AppPageError({
               {error.title}
             </h2>
             <p className="text-muted-foreground text-sm">{error.summary}</p>
-            {error.retryGuidance ? (
+            {isNonEmptyString(error.retryGuidance) ? (
               <p className="text-sm">{error.retryGuidance}</p>
             ) : null}
           </div>
@@ -241,7 +243,7 @@ function AppPageError({
               <RetryActionButton label={retryLabel} onRetry={onRetry} />
             ) : null}
             {actions}
-            {onRetry || actions || reportBug === false ? null : (
+            {onRetry || Boolean(actions) || reportBug === false ? null : (
               <ReportBugLink error={error} variant="default" />
             )}
             <ErrorDetailsDialog
@@ -281,7 +283,7 @@ function AppCompactError({
             <p className="text-muted-foreground line-clamp-3 text-xs wrap-break-word">
               {error.summary}
             </p>
-            {error.retryGuidance ? (
+            {isNonEmptyString(error.retryGuidance) ? (
               <p className="text-xs">{error.retryGuidance}</p>
             ) : null}
             <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
@@ -294,13 +296,19 @@ function AppCompactError({
                 />
               ) : null}
               {actions}
-              {onRetry || actions || reportBug === false ? null : (
+              {onRetry || Boolean(actions) || reportBug === false ? null : (
                 <ReportBugLink error={error} variant="default" />
               )}
               <ErrorDetailsDialog
                 error={error}
                 retryAvailable={Boolean(onRetry)}
-                standalone={!(onRetry || actions || reportBug === false)}
+                standalone={
+                  !(
+                    typeof onRetry === "function" ||
+                    Boolean(actions) ||
+                    reportBug === false
+                  )
+                }
                 triggerVariant="ghost"
               />
             </div>

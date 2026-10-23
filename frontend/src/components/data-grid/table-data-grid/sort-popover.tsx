@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { MAX_SORT_COLUMNS } from "@/features/data-explorer/table-data/use-table-data-controller";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 const DRAG_DATA_KEY = "application/x-querylane-sort-index";
@@ -75,12 +76,12 @@ function SortPopover({
     "--sort-column-select-width": `${columnSelectWidthCh}ch`,
   };
   function updateAt(index: number, next: SortColumn) {
-    const updated = sortColumns.slice();
+    const updated = [...sortColumns];
     updated[index] = next;
     onChange(updated);
   }
   function removeAt(index: number) {
-    const updated = sortColumns.slice();
+    const updated = [...sortColumns];
     updated.splice(index, 1);
     onChange(updated);
   }
@@ -88,7 +89,7 @@ function SortPopover({
     if (from === to || from < 0 || to < 0) {
       return;
     }
-    const next = sortColumns.slice();
+    const next = [...sortColumns];
     const [item] = next.splice(from, 1);
     if (!item) {
       return;
@@ -97,7 +98,7 @@ function SortPopover({
     onChange(next);
   }
   function addColumn(columnKey: string | null) {
-    if (!columnKey) {
+    if (!isNonEmptyString(columnKey)) {
       return;
     }
     onChange([
@@ -169,7 +170,9 @@ function SortPopover({
           <span className="font-medium">Sort by</span>
           {sortColumns.length > 0 ? (
             <Button
-              onClick={() => onChange([])}
+              onClick={() => {
+                onChange([]);
+              }}
               presentation="muted"
               size="xs"
               type="button"
@@ -195,11 +198,21 @@ function SortPopover({
                 index={index}
                 isDragging={draggingIndex === index}
                 key={sort.columnKey}
-                onChange={(next) => updateAt(index, next)}
-                onDragEnd={() => setDraggingIndex(null)}
-                onDragStart={() => setDraggingIndex(index)}
-                onDrop={(fromIndex) => moveAt(fromIndex, index)}
-                onRemove={() => removeAt(index)}
+                onChange={(next) => {
+                  updateAt(index, next);
+                }}
+                onDragEnd={() => {
+                  setDraggingIndex(null);
+                }}
+                onDragStart={() => {
+                  setDraggingIndex(index);
+                }}
+                onDrop={(fromIndex) => {
+                  moveAt(fromIndex, index);
+                }}
+                onRemove={() => {
+                  removeAt(index);
+                }}
                 sort={sort}
                 usedKeys={usedKeys}
               />
@@ -253,7 +266,7 @@ function SortRow({
   usedKeys,
 }: SortRowProps) {
   const swapColumn = (next: string | null) => {
-    if (!next) {
+    if (!isNonEmptyString(next)) {
       return;
     }
     onChange({

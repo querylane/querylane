@@ -25,7 +25,7 @@ export function useRetainedRetryError<Value>({
     })
   );
 
-  // allow-useEffect: keep retry handlers synced with latest error prop
+  // keep retry handlers synced with latest error prop
   useEffect(
     function syncLatestRetryError() {
       latestErrorRef.current = latestError;

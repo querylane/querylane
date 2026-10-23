@@ -22,15 +22,13 @@ describe("instance configuration labels", () => {
     );
 
     expect(
-      (screen.getByRole("textbox", { name: "Label key 1" }) as HTMLInputElement)
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Label key 1" })
         .value
     ).toBe("env");
     expect(
-      (
-        screen.getByRole("textbox", {
-          name: "Label value 2",
-        }) as HTMLInputElement
-      ).value
+      screen.getByRole<HTMLInputElement>("textbox", {
+        name: "Label value 2",
+      }).value
     ).toBe("analytics");
 
     const removeButtons = screen.getAllByRole("button", {

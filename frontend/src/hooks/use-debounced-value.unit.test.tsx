@@ -6,7 +6,7 @@ afterEach(() => {
   rs.useRealTimers();
 });
 
-test("publishes the latest value only after the quiet period", () => {
+test("publishes the latest value only after the quiet period", async () => {
   rs.useFakeTimers();
   const { rerender, result } = renderHook(
     ({ value }) => useDebouncedValue(value, 200),
@@ -16,9 +16,13 @@ test("publishes the latest value only after the quiet period", () => {
   rerender({ value: "ab" });
   expect(result.current).toBe("a");
 
-  act(() => rs.advanceTimersByTime(199));
+  await act(async () => {
+    rs.advanceTimersByTime(199);
+  });
   expect(result.current).toBe("a");
 
-  act(() => rs.advanceTimersByTime(1));
+  await act(async () => {
+    rs.advanceTimersByTime(1);
+  });
   expect(result.current).toBe("ab");
 });

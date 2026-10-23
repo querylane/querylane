@@ -1,11 +1,11 @@
 import { fromBinary } from "@bufbuild/protobuf";
 import { Code, type ConnectError } from "@connectrpc/connect";
-
 import type {
   AppUiErrorDetail,
   AppUiErrorPostgres,
 } from "@/lib/ui-error-types";
 import { isRecord } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PostgreSqlErrorDetailSchema,
   PostgreSqlErrorKind,
@@ -48,7 +48,7 @@ function getCodeLabel(code: Code | null): string | null {
 
 function normalizeMetadata(metadata: Headers): Record<string, string[]> {
   const entries = new Map<string, string[]>();
-  metadata.forEach((value, key) => {
+  for (const [key, value] of metadata.entries()) {
     const normalizedKey = key.toLowerCase();
     const normalizedValue = REDACTED_METADATA_KEYS.has(normalizedKey)
       ? "[REDACTED]"
@@ -57,7 +57,7 @@ function normalizeMetadata(metadata: Headers): Record<string, string[]> {
       ...(entries.get(normalizedKey) ?? []),
       normalizedValue,
     ]);
-  });
+  }
   return Object.fromEntries(entries.entries());
 }
 
@@ -116,14 +116,21 @@ function normalizePostgresRecord(
       record["sqlstateClass"] ?? record["sqlstate_class"],
       SQLSTATE_CLASS_PATTERN,
       (input) => input.toUpperCase()
-    ) ?? (sqlstate ? sqlstate.slice(0, 2) : null);
+    ) ?? (isNonEmptyString(sqlstate) ? sqlstate.slice(0, 2) : null);
   const conditionName = normalizeSafeString(
     record["conditionName"] ?? record["condition_name"],
     SAFE_IDENTIFIER_PATTERN
   );
   const operation = normalizeSafeString(record["operation"], OPERATION_PATTERN);
 
-  if (!(typedDetail || sqlstate || sqlstateClass || conditionName)) {
+  if (
+    !(
+      typedDetail ||
+      isNonEmptyString(sqlstate) ||
+      isNonEmptyString(sqlstateClass) ||
+      isNonEmptyString(conditionName)
+    )
+  ) {
     return null;
   }
 
@@ -185,7 +192,7 @@ function decodePostgresBinary(value: Uint8Array): AppUiErrorPostgres | null {
 }
 
 function extractPostgresDetail(input: {
-  debug?: unknown | undefined;
+  debug?: unknown;
   type: string;
   value?: Uint8Array | undefined;
 }): AppUiErrorPostgres | null {
@@ -208,13 +215,17 @@ function extractPostgresDetail(input: {
 }
 
 function summarizePostgres(postgres: AppUiErrorPostgres): string {
-  if (postgres.sqlstate && postgres.conditionName) {
+  if (
+    isNonEmptyString(postgres.sqlstate) &&
+    typeof postgres.conditionName === "string" &&
+    postgres.conditionName.length > 0
+  ) {
     return `SQLSTATE ${postgres.sqlstate} ${postgres.conditionName}`;
   }
-  if (postgres.sqlstate) {
+  if (isNonEmptyString(postgres.sqlstate)) {
     return `SQLSTATE ${postgres.sqlstate}`;
   }
-  if (postgres.conditionName) {
+  if (isNonEmptyString(postgres.conditionName)) {
     return `PostgreSQL ${postgres.conditionName}`;
   }
   return "PostgreSQL error detail available";

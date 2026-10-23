@@ -7,7 +7,9 @@ import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { captureException } from "@/lib/diagnostics";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 import styles from "./progress-phase.module.css";
@@ -29,7 +31,9 @@ function WaitingForConfigBody({
     try {
       await navigator.clipboard.writeText(configFilePath);
       setPathCopied(true);
-      window.setTimeout(() => setPathCopied(false), COPY_RESET_MS);
+      globalThis.window.setTimeout(() => {
+        setPathCopied(false);
+      }, COPY_RESET_MS);
     } catch {
       /* noop */
     }
@@ -50,7 +54,7 @@ function WaitingForConfigBody({
         </div>
         <Button
           className="flex h-auto max-w-full items-center whitespace-normal"
-          onClick={copyPath}
+          onClick={handleAsyncAction(copyPath)}
           presentation="onboarding-command"
           title="Click to copy path"
           type="button"
@@ -69,7 +73,9 @@ function WaitingForConfigBody({
           className="h-9"
           disabled={retryPending}
           onClick={() => {
-            onRetryWatch().catch((error) => captureException(error));
+            onRetryWatch().catch((error: unknown) => {
+              captureException(error);
+            });
           }}
           presentation="onboarding-action"
           variant="ghost"
@@ -82,7 +88,7 @@ function WaitingForConfigBody({
           {retryPending ? "Checking for config…" : "I've saved the file"}
         </Button>
       </div>
-      {watchNotice ? (
+      {isNonEmptyString(watchNotice) ? (
         <div className="border-warning-400/25 bg-warning-500/8 text-warning-50/90 rounded-xl border px-4 py-3 text-sm">
           {watchNotice}
         </div>

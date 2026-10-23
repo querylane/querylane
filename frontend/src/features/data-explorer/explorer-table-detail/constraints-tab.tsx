@@ -29,7 +29,7 @@ const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
   ConstraintType.PRIMARY_KEY,
   ConstraintType.UNIQUE,
 ]);
-const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/i;
+const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/iu;
 
 function isKeyConstraint(constraint: TableConstraint) {
   return KEY_CONSTRAINT_TYPES.has(constraint.type);

@@ -43,7 +43,9 @@ function JsonPreview({
           event.stopPropagation();
           openDialog();
         }}
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
         presentation="preview-toolbar"
         size="xs"
         type="button"

@@ -23,7 +23,7 @@ function ExplorerRailSlot() {
 function ExplorerRailFrame({ children }: { children: ReactNode }) {
   return (
     <ExplorerSidebarSlotProvider>
-      <div className="flex h-full min-h-0 w-full">
+      <div className="flex size-full min-h-0">
         <ExplorerRailSlot />
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
           {children}

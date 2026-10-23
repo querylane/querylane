@@ -71,7 +71,7 @@ function DataExplorerPage({
   const showShellWhileSchemasLoad =
     explorer.schemaPageStateProps.loading &&
     !explorer.schemaPageStateProps.hasData &&
-    !explorer.schemaPageStateProps.error;
+    !Boolean(explorer.schemaPageStateProps.error);
   const schemaPageStateProps = showShellWhileSchemasLoad
     ? {
         ...explorer.schemaPageStateProps,

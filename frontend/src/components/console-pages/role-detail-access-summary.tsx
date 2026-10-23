@@ -1,4 +1,5 @@
 "use client";
+
 import { ChevronRight, Database, ShieldOff } from "lucide-react";
 import type { ComponentType } from "react";
 import { SectionCard } from "@/components/console-pages/console-layout";
@@ -7,6 +8,7 @@ import { DatabaseSelect } from "@/components/console-pages/role-grants-tab";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface AccessSourceRow {
   active: boolean;
@@ -92,7 +94,9 @@ function AccessSummaryRow({
     return (
       <Button
         className="group flex h-auto w-full cursor-pointer items-center justify-start text-left"
-        onClick={() => onJump(jump.section)}
+        onClick={() => {
+          onJump(jump.section);
+        }}
         presentation={
           row.active ? "access-summary-active" : "access-summary-inactive"
         }
@@ -147,7 +151,10 @@ function AccessSummary({
   selectedDatabaseId,
 }: {
   databaseName: string | undefined;
-  databases: { id: string; name: string }[];
+  databases: {
+    id: string;
+    name: string;
+  }[];
   onJump: (section: Section) => void;
   onSelectDatabase: (value: string) => void;
   rlsNote: string | null;
@@ -174,7 +181,7 @@ function AccessSummary({
         <ScopeGroup label="Cluster-wide" onJump={onJump} rows={clusterRows} />
         <ScopeGroup
           label={
-            databaseName ? (
+            isNonEmptyString(databaseName) ? (
               <>
                 In
                 <Database
@@ -193,7 +200,7 @@ function AccessSummary({
           rows={databaseRows}
         />
       </div>
-      {rlsNote ? (
+      {isNonEmptyString(rlsNote) ? (
         <p className="text-muted-foreground mt-3 flex items-start gap-1.5 text-xs">
           <ShieldOff className="mt-0.5 size-3 shrink-0" />
           <span>{rlsNote}</span>

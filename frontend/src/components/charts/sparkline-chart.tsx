@@ -49,7 +49,7 @@ function finiteExtent(data: SparklineDatum[]): [number, number] {
 
 /** A bare, parent-sized trend glyph with no guides or interaction chrome. */
 function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
-  const gradientId = `spark-${useId().replaceAll(/[^a-zA-Z0-9_-]/g, "")}`;
+  const gradientId = `spark-${useId().replaceAll(/[^a-zA-Z0-9_-]/gu, "")}`;
   const trend = downsampleTrend(data, seriesKey, SPARK_MAX_POINTS).map(
     (row): SparklineDatum => ({
       time: row.time,

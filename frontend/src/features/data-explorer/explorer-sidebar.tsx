@@ -113,31 +113,37 @@ const SKELETON_MIN_VISIBLE_MS = 400;
 function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
   const [phase, setPhase] = useState<LoadingPhase>("idle");
   const shownAtRef = useRef(0);
+  const [previousLoading, setPreviousLoading] = useState(isLoading);
+  if (previousLoading !== isLoading) {
+    setPreviousLoading(isLoading);
+    if (phase !== "skeleton") {
+      setPhase(isLoading ? "pending" : "idle");
+    }
+  }
 
   useEffect(
     function paceLoadingSkeleton() {
       if (isLoading) {
-        setPhase((previous) =>
-          previous === "skeleton" ? "skeleton" : "pending"
-        );
         const timer = setTimeout(() => {
           shownAtRef.current = Date.now();
           setPhase("skeleton");
         }, SKELETON_APPEAR_DELAY_MS);
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(timer);
+        };
       }
       const remainingVisible =
         shownAtRef.current + SKELETON_MIN_VISIBLE_MS - Date.now();
-      if (shownAtRef.current > 0 && remainingVisible > 0) {
-        const timer = setTimeout(() => {
+      const timer = setTimeout(
+        () => {
           shownAtRef.current = 0;
           setPhase("idle");
-        }, remainingVisible);
-        return () => clearTimeout(timer);
-      }
-      shownAtRef.current = 0;
-      setPhase("idle");
-      return undefined;
+        },
+        Math.max(0, remainingVisible)
+      );
+      return () => {
+        clearTimeout(timer);
+      };
     },
     [isLoading]
   );
@@ -181,7 +187,7 @@ function schemaEmptyMessage({
   if (schemasLoading) {
     return "Loading schemas…";
   }
-  if (schemaSelectionError) {
+  if (Boolean(schemaSelectionError)) {
     return "Schema not found.";
   }
   return "No schemas";
@@ -276,7 +282,9 @@ function CategoryInfiniteScrollSentinel({
         { root: scrollRoot ?? null }
       );
       observer.observe(element);
-      return () => observer.disconnect();
+      return () => {
+        observer.disconnect();
+      };
     },
     [hasNextPage, isFetchingNextPage, onLoadMore, scrollRoot]
   );
@@ -437,8 +445,7 @@ function useResourceListVirtualizer({
   totalSize: number;
   virtualItems: VirtualItem[];
 } {
-  "use no memo";
-  const [{ virtualizer }, rerender] = useReducer(
+  const [virtualizerState, rerender] = useReducer(
     (state: { virtualizer: Virtualizer<HTMLDivElement, Element> }) => ({
       ...state,
     }),
@@ -454,6 +461,7 @@ function useResourceListVirtualizer({
       }),
     })
   );
+  const { virtualizer } = virtualizerState;
   virtualizer.setOptions({
     count: items.length,
     estimateSize: (index) => estimateResourceListItemSize(items[index]),
@@ -496,7 +504,21 @@ function useResourceListVirtualizer({
     virtualizer.measure();
   }, [virtualizer, items.length, totalSize]);
 
-  return { totalSize, virtualItems: virtualizer.getVirtualItems() };
+  return {
+    totalSize,
+    virtualItems: readResourceVirtualItems(virtualizerState, items),
+  };
+}
+
+function readResourceVirtualItems(
+  state: { virtualizer: Virtualizer<HTMLDivElement, Element> },
+  items: readonly VirtualResourceListItem[]
+) {
+  // The reducer's new state identity invalidates compiler caching after an
+  // imperative virtualizer notification; items also invalidate on filtering.
+  return state.virtualizer
+    .getVirtualItems()
+    .filter((item) => items[item.index] !== undefined);
 }
 
 function observeResourceListRect(
@@ -725,7 +747,7 @@ function NestedTreeRow({
         "border-border ml-4 h-full border-l",
         // Resource rows sit one level deeper than their Kind header so the
         // tree reads as objects nested under the group, not siblings of it.
-        indented ? "pl-5" : "pl-1"
+        indented === true ? "pl-5" : "pl-1"
       )}
     >
       {children}
@@ -747,11 +769,13 @@ function SchemaTreeButton({
       aria-expanded={isExpanded}
       className="h-7 w-full justify-start"
       data-active={isActive}
-      onClick={() =>
-        isActive
-          ? controls.onToggleActiveSchema()
-          : controls.onSelectSchema(schema)
-      }
+      onClick={() => {
+        if (isActive) {
+          controls.onToggleActiveSchema();
+        } else {
+          controls.onSelectSchema(schema);
+        }
+      }}
       presentation="tree-row"
       title={schema.name}
       variant="ghost"
@@ -861,6 +885,9 @@ function ResourceListItem({
           <p className="text-muted-foreground px-3 py-1 text-xs">No objects</p>
         </NestedTreeRow>
       );
+    case "category":
+    case "resource":
+    case "sentinel":
     default:
       return (
         <NestedTreeRow indented={item.kind !== "category"}>
@@ -891,7 +918,9 @@ function CategoryListItem({
           // (per the concept design), so they read differently from the
           // background-highlighted object rows around them.
           className="h-6 w-full justify-start"
-          onClick={() => controls.toggleCategory(item.category)}
+          onClick={() => {
+            controls.toggleCategory(item.category);
+          }}
           presentation="tree-disclosure"
           variant="ghost"
         >
@@ -925,7 +954,9 @@ function CategoryListItem({
         <CategoryInfiniteScrollSentinel
           hasNextPage={item.hasNextPage}
           isFetchingNextPage={item.isFetchingNextPage}
-          onLoadMore={() => controls.onLoadMoreCategory(item.category)}
+          onLoadMore={() => {
+            controls.onLoadMoreCategory(item.category);
+          }}
           scrollRoot={controls.scrollRoot}
         />
       );
@@ -976,7 +1007,7 @@ function SidebarResourceError({
   label: string;
   onRetry: () => Promise<unknown>;
 }) {
-  if (!(activeSchema && error)) {
+  if (!(activeSchema && Boolean(error))) {
     return null;
   }
   return (
@@ -1069,14 +1100,16 @@ function ExplorerSidebar({
   return (
     <aside
       aria-label="Database objects"
-      className="@container/object-browser flex h-full min-h-0 w-full flex-1 flex-col"
+      className="@container/object-browser flex size-full min-h-0 flex-1 flex-col"
     >
       <div className="flex flex-col gap-1.5 px-2 pt-2 pb-1.5 @max-[14rem]/object-browser:px-2">
         <div className="relative">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             className="h-7"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
             placeholder="Filter…"
             presentation="search-clearable"
             value={query}
@@ -1085,7 +1118,9 @@ function ExplorerSidebar({
             <Button
               aria-label="Clear filter"
               className="absolute top-1/2 right-1.5 size-5 -translate-y-1/2"
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("");
+              }}
               presentation="unpadded"
               size="icon"
               variant="ghost"

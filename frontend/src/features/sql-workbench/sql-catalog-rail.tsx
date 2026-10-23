@@ -82,7 +82,10 @@ function relationIcon(relation: SqlRelation) {
 function LoadingRows({
   rows,
 }: {
-  rows: readonly { id: string; width: string }[];
+  rows: readonly {
+    id: string;
+    width: string;
+  }[];
 }) {
   return (
     <div aria-busy="true" className="space-y-1.5 px-2 py-1">
@@ -220,7 +223,9 @@ function RelationColumns({
             <span className="absolute inset-y-0 left-2 flex items-center opacity-0 transition-opacity group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
               <InsertAction
                 label={`Insert ${column.name} at the cursor`}
-                onInsert={() => actions.onInsert(identifier)}
+                onInsert={() => {
+                  actions.onInsert(identifier);
+                }}
               />
             </span>
             {column.isPrimaryKey ? (
@@ -294,7 +299,9 @@ function RelationRow({
         >
           <InsertAction
             label={`Insert ${qualified} at the cursor`}
-            onInsert={() => actions.onInsert(qualified)}
+            onInsert={() => {
+              actions.onInsert(qualified);
+            }}
           />
           <Tooltip>
             <TooltipTrigger
@@ -302,7 +309,9 @@ function RelationRow({
                 <Button
                   aria-label={`Query ${qualified}`}
                   className="size-6"
-                  onClick={() => actions.onQueryRelation(relation)}
+                  onClick={() => {
+                    actions.onQueryRelation(relation);
+                  }}
                   presentation="muted"
                   size="icon-xs"
                   variant="ghost"
@@ -415,7 +424,9 @@ function SchemaSection({
                 actions={actions}
                 expanded={expandedRelations.has(key)}
                 key={key}
-                onToggle={() => onToggleRelation(key)}
+                onToggle={() => {
+                  onToggleRelation(key);
+                }}
                 query={query}
                 relation={relation}
               />
@@ -490,12 +501,12 @@ function SqlCatalogRail(actions: CatalogRailActions) {
             expanded={filtering || expandedSchemas.has(schema.id)}
             expandedRelations={expandedRelations}
             key={schema.id}
-            onToggle={() =>
-              setExpandedSchemas((current) => toggled(current, schema.id))
-            }
-            onToggleRelation={(key) =>
-              setExpandedRelations((current) => toggled(current, key))
-            }
+            onToggle={() => {
+              setExpandedSchemas((current) => toggled(current, schema.id));
+            }}
+            onToggleRelation={(key) => {
+              setExpandedRelations((current) => toggled(current, key));
+            }}
             query={query}
             schema={schema}
           />
@@ -507,7 +518,7 @@ function SqlCatalogRail(actions: CatalogRailActions) {
   return (
     <aside
       aria-label="Database objects"
-      className="flex h-full min-h-0 w-full flex-1 flex-col"
+      className="flex size-full min-h-0 flex-1 flex-col"
     >
       <div className="px-2 pt-2 pb-1.5">
         <div className="relative">
@@ -515,7 +526,9 @@ function SqlCatalogRail(actions: CatalogRailActions) {
           <Input
             aria-label="Filter tables and views"
             className="h-7"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
             placeholder="Filter…"
             presentation="search-clearable"
             value={query}
@@ -524,7 +537,9 @@ function SqlCatalogRail(actions: CatalogRailActions) {
             <Button
               aria-label="Clear filter"
               className="absolute top-1/2 right-1.5 size-5 -translate-y-1/2"
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("");
+              }}
               presentation="unpadded"
               size="icon"
               variant="ghost"
@@ -535,7 +550,7 @@ function SqlCatalogRail(actions: CatalogRailActions) {
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-        {catalog.data?.coverage.isPartial ? (
+        {catalog.data?.coverage.isPartial === true ? (
           <p className="text-muted-foreground px-2 pb-1.5 text-xs">
             Showing the first {catalog.data.coverage.objectLimit} objects.
           </p>

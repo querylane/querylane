@@ -111,24 +111,23 @@ function lowerBoundStat(formatted: string, hasMore: boolean): string {
   return hasMore ? `≥ ${formatted}` : formatted;
 }
 
-function schemaObjectIcon(row: SchemaObjectRow) {
+const SCHEMA_OBJECT_ICON_CLASS = "size-3.5 shrink-0 text-muted-foreground";
+
+function SchemaObjectIcon({ row }: { row: SchemaObjectRow }) {
   if (row.kind === "view") {
-    return Eye;
+    return <Eye aria-hidden="true" className={SCHEMA_OBJECT_ICON_CLASS} />;
   }
-  if (row.tableType === Table_TableType.PARTITIONED) {
-    return FolderTree;
-  }
-  return Table2;
+  return row.tableType === Table_TableType.PARTITIONED ? (
+    <FolderTree aria-hidden="true" className={SCHEMA_OBJECT_ICON_CLASS} />
+  ) : (
+    <Table2 aria-hidden="true" className={SCHEMA_OBJECT_ICON_CLASS} />
+  );
 }
 
 function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
-  const Icon = schemaObjectIcon(row);
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <Icon
-        aria-hidden="true"
-        className="text-muted-foreground size-3.5 shrink-0"
-      />
+      <SchemaObjectIcon row={row} />
       <span className="truncate font-mono text-(length:--text-caption)">
         {row.displayName}
       </span>
@@ -239,8 +238,8 @@ function ownerFilterLabel(owner: string): string {
 }
 
 function presentOwnerOptions(rows: SchemaObjectRow[]): FacetedFilterOption[] {
-  return Array.from(new Set(rows.map((row) => row.owner)))
-    .sort((left, right) =>
+  return [...new Set(rows.map((row) => row.owner))]
+    .toSorted((left, right) =>
       ownerFilterLabel(left).localeCompare(ownerFilterLabel(right))
     )
     .map((owner) => ({ label: ownerFilterLabel(owner), value: owner }));
@@ -331,11 +330,13 @@ function SchemaObjectsTable({
         filterValue={deferredSearch}
         initialSorting={[{ desc: true, id: "size" }]}
         onFilterChange={setSearch}
-        onRowClick={(row) =>
-          row.kind === "table"
-            ? onSelectTable(row.resourceName)
-            : onSelectView(row.resourceName)
-        }
+        onRowClick={(row) => {
+          if (row.kind === "table") {
+            onSelectTable(row.resourceName);
+          } else {
+            onSelectView(row.resourceName);
+          }
+        }}
         tableKey="schema-objects"
       />
     </div>
@@ -386,7 +387,7 @@ function isSchemaDetailLoading({
     (tablesLoading || viewsLoading) &&
     tableCount === 0 &&
     viewCount === 0 &&
-    !(tablesError || viewsError)
+    !(Boolean(tablesError) || Boolean(viewsError))
   );
 }
 
@@ -394,7 +395,7 @@ function hasSchemaLoadError(
   tablesError: unknown,
   viewsError: unknown
 ): boolean {
-  return Boolean(tablesError || viewsError);
+  return Boolean(Boolean(tablesError) || viewsError);
 }
 
 function SchemaDetailNotices({
@@ -490,7 +491,9 @@ function SchemaDetail({
   ];
   const handleSelectTableInSchema =
     onSelectTableInSchema ??
-    ((_schemaName: string, name: string) => onSelectTable(name));
+    ((_schemaName: string, name: string) => {
+      onSelectTable(name);
+    });
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -533,7 +536,7 @@ function SchemaDetail({
 
       <Tabs
         className="min-h-0 flex-1 flex-col"
-        onValueChange={(next) => {
+        onValueChange={(next: string) => {
           if (next === "objects" || next === "map") {
             onTabChange(next);
           }

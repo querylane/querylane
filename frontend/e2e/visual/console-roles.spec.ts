@@ -11,7 +11,7 @@ import { mockRolesScreen } from "./role-fixtures";
 const ROLES_URL = "/instances/production/roles";
 const ACCESS_MAP_URL = `${ROLES_URL}?tab=map`;
 const ROLE_DETAIL_URL = `${ROLES_URL}/app_user`;
-const VIEW_BUTTON_NAME_RE = /^View/;
+const VIEW_BUTTON_NAME_RE = /^View/u;
 
 // Page content only: the app shell has its own visual coverage.
 function pageContent(page: Page) {
@@ -107,8 +107,9 @@ test.describe("roles access map", () => {
     const filtersBox = await filters.boundingBox();
     const switches = filters.getByRole("switch");
     await expect(switches.first()).toBeVisible();
+    const awaitedResult1 = await switches.all();
     const switchBoxes = await Promise.all(
-      (await switches.all()).map((filterSwitch) => filterSwitch.boundingBox())
+      awaitedResult1.map((filterSwitch) => filterSwitch.boundingBox())
     );
 
     expect(filtersBox).not.toBeNull();

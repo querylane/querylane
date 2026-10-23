@@ -1,5 +1,6 @@
 import { DangerZoneSection } from "@/components/danger-zone-section";
 import { InlineCode } from "@/components/querylane-ui/inline-code";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 export function InstanceDangerZoneSection({
   deleteDisabledReason = null,
@@ -22,7 +23,7 @@ export function InstanceDangerZoneSection({
             <>
               Permanently remove <InlineCode>{instanceDisplayName}</InlineCode>
               from Querylane. This action cannot be undone.
-              {deleteDisabledReason ? (
+              {isNonEmptyString(deleteDisabledReason) ? (
                 <span className="text-destructive mt-2 block">
                   {deleteDisabledReason}
                 </span>

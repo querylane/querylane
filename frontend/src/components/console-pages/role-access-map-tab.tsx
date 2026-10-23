@@ -57,6 +57,7 @@ import type {
 } from "@/features/database-visualization/graph-model";
 import { assertNever } from "@/lib/assert-never";
 import { parseResourceLeafId } from "@/lib/console-resources";
+import { handleAsyncAction } from "@/lib/ui-action";
 import {
   DefaultPrivilegeObjectType,
   GrantObjectType,
@@ -486,8 +487,12 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       direction={direction}
       hiddenFacetCount={hiddenFacetCount}
       isExpanded={false}
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onLoadFullMap={loadFullRolesMap}
       onToggleDirection={toggleDirection}
       onToggleFacet={setVisibleFacet}
@@ -499,8 +504,12 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       direction={direction}
       hiddenFacetCount={hiddenFacetCount}
       isExpanded={true}
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onLoadFullMap={loadFullRolesMap}
       onToggleDirection={toggleDirection}
       onToggleFacet={setVisibleFacet}
@@ -520,35 +529,51 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
   }
 
   function loadFullRolesMap() {
-    navigate({
-      params: { instanceId: props.instanceId },
-      search: { tab: "map" },
-      to: "/instances/$instanceId/roles",
-    });
+    handleAsyncAction(() =>
+      navigate({
+        params: { instanceId: props.instanceId },
+        search: { tab: "map" },
+        to: "/instances/$instanceId/roles",
+      })
+    )();
   }
 
   function handleNavigate(navigation: VisualizationNavigation) {
-    if (navigation.to === "role" && navigation.roleId) {
-      navigate({
-        params: { instanceId: props.instanceId, roleId: navigation.roleId },
-        search: { tab: "access-map" },
-        to: "/instances/$instanceId/roles/$roleId",
-      });
+    if (
+      navigation.to === "role" &&
+      typeof navigation.roleId === "string" &&
+      navigation.roleId.length > 0
+    ) {
+      const { roleId } = navigation;
+      handleAsyncAction(() =>
+        navigate({
+          params: { instanceId: props.instanceId, roleId },
+          search: { tab: "access-map" },
+          to: "/instances/$instanceId/roles/$roleId",
+        })
+      )();
       return;
     }
-    if (navigation.to === "explorer" && props.effectiveDbId) {
-      navigate({
-        params: {
-          databaseId: props.effectiveDbId,
-          instanceId: props.instanceId,
-        },
-        search: {
-          category: navigation.category,
-          name: navigation.name,
-          schema: navigation.schema,
-        },
-        to: "/instances/$instanceId/databases/$databaseId/explorer",
-      });
+    if (
+      navigation.to === "explorer" &&
+      typeof props.effectiveDbId === "string" &&
+      props.effectiveDbId.length > 0
+    ) {
+      const databaseId = props.effectiveDbId;
+      handleAsyncAction(() =>
+        navigate({
+          params: {
+            databaseId,
+            instanceId: props.instanceId,
+          },
+          search: {
+            category: navigation.category,
+            name: navigation.name,
+            schema: navigation.schema,
+          },
+          to: "/instances/$instanceId/databases/$databaseId/explorer",
+        })
+      )();
     }
   }
 
@@ -637,7 +662,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         />
       ) : null}
 
-      {props.grantsError ? (
+      {Boolean(props.grantsError) ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Access data failed to load</AlertTitle>

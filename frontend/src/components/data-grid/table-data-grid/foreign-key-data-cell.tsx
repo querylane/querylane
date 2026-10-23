@@ -23,6 +23,7 @@ import {
   useReadRowsQueryActions,
 } from "@/hooks/api/table-data";
 import { INTENT_PREFETCH_POLICY } from "@/lib/query-policy";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   CellValueMode,
@@ -126,7 +127,7 @@ function ForeignKeyReferenceQueryState({
           </p>
           <Button
             className="mt-3"
-            onClick={onRetry}
+            onClick={handleAsyncAction(onRetry)}
             size="sm"
             type="button"
             variant="outline"
@@ -295,10 +296,15 @@ function ForeignKeyDataCell({
     if (rowsQueryActions.getState()?.fetchStatus === "paused") {
       finishOpenIntent(intent);
     }
-    fetchPromise.then(
-      () => finishOpenIntent(intent),
-      () => finishOpenIntent(intent)
-    );
+    fetchPromise
+      .then(() => {
+        finishOpenIntent(intent);
+
+        return undefined;
+      })
+      .catch(() => {
+        finishOpenIntent(intent);
+      });
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -314,7 +320,7 @@ function ForeignKeyDataCell({
     clearHoverPrefetchTimer();
     hoverPrefetchTimerRef.current = globalThis.setTimeout(() => {
       hoverPrefetchTimerRef.current = undefined;
-      rowsQueryActions.prefetch();
+      handleAsyncAction(() => rowsQueryActions.prefetch())();
     }, INTENT_PREFETCH_POLICY.delayMs);
   }
 
@@ -324,7 +330,7 @@ function ForeignKeyDataCell({
 
   function prefetchReferencedRowOnFocus() {
     clearHoverPrefetchTimer();
-    rowsQueryActions.prefetch();
+    handleAsyncAction(() => rowsQueryActions.prefetch())();
   }
 
   function cancelPendingOpenOnBlur() {
@@ -350,7 +356,7 @@ function ForeignKeyDataCell({
       function cancelIfOutsideTrigger(event: PointerEvent) {
         if (
           event.target instanceof Node &&
-          triggerRef.current?.contains(event.target)
+          triggerRef.current?.contains(event.target) === true
         ) {
           return;
         }
@@ -374,7 +380,9 @@ function ForeignKeyDataCell({
             aria-label={`Open ${column.columnName} reference ${formatted.display}`}
             className="h-auto max-w-full justify-start"
             onBlur={cancelPendingOpenOnBlur}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
             onFocus={prefetchReferencedRowOnFocus}
             onPointerEnter={scheduleReferencedRowPrefetch}
             onPointerLeave={cancelPendingHoverPrefetch}
@@ -396,7 +404,9 @@ function ForeignKeyDataCell({
           sideOffset={6}
         >
           <ForeignKeyReferenceContent
-            onNavigate={() => setOpen(false)}
+            onNavigate={() => {
+              setOpen(false);
+            }}
             preview={preview}
             renderOpenReferencedTableLink={renderOpenReferencedTableLink}
             request={request}

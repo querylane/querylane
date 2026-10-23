@@ -1,5 +1,12 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -16,89 +23,170 @@ import {
   useExplorerSidebarSlotRegistration,
 } from "@/lib/explorer-sidebar-slot";
 
-const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/i;
+const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/iu;
 
 function ExplorerRailSlotTarget() {
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return <div data-testid="explorer-rail-slot" ref={registerSlotTarget} />;
 }
 
-const mocks = rs.hoisted(() => ({
-  getSchemaQuery: {
-    data: undefined as
-      | {
-          schema: {
-            displayName: string;
-            name: string;
-            owner: string;
-          };
-        }
-      | undefined,
-    error: null as Error | null,
-    isFetching: false,
-    isLoading: false,
-  },
-  navigate: rs.fn(),
-  schemasQuery: {
-    data: undefined as
-      | {
-          pages: Array<{
-            schemas: Array<{
+const mocks = rs.hoisted(
+  (): {
+    getSchemaQuery: {
+      data:
+        | {
+            schema: {
               displayName: string;
               name: string;
               owner: string;
-            }>;
-          }>;
-        }
-      | undefined,
-    error: new Error("schema rpc failed") as Error | null,
-    fetchNextPage: rs.fn(() => Promise.resolve()),
-    hasNextPage: false,
-    isFetching: false,
-    isFetchingNextPage: false,
-    isPending: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  },
-  tablesQuery: {
-    data: undefined as
-      | {
-          pages: Array<{
-            syncMetadata?: undefined;
-            tables: Array<{
-              displayName: string;
-              name: string;
-              rowCount: bigint;
-              sizeBytes: bigint;
-            }>;
-          }>;
-        }
-      | undefined,
-    error: null,
-    isLoading: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  },
-  viewsQuery: {
-    data: {
-      pages: [
-        {
-          views: [] as Array<{
+            };
+          }
+        | undefined;
+      error: Error | null;
+      isFetching: boolean;
+      isLoading: boolean;
+    };
+    navigate: ReturnType<
+      typeof rs.fn<
+        (options: {
+          search: (previous: Record<string, unknown>) => unknown;
+        }) => unknown
+      >
+    >;
+    schemasQuery: {
+      data:
+        | {
+            pages: {
+              schemas: {
+                displayName: string;
+                name: string;
+                owner: string;
+              }[];
+            }[];
+          }
+        | undefined;
+      error: Error | null;
+      fetchNextPage: ReturnType<typeof rs.fn>;
+      hasNextPage: boolean;
+      isFetching: boolean;
+      isFetchingNextPage: boolean;
+      isPending: boolean;
+      refetch: ReturnType<typeof rs.fn>;
+    };
+    tablesQuery: {
+      data:
+        | {
+            pages: {
+              syncMetadata?: undefined;
+              tables: {
+                displayName: string;
+                name: string;
+                rowCount: bigint;
+                sizeBytes: bigint;
+              }[];
+            }[];
+          }
+        | undefined;
+      error: null;
+      isLoading: boolean;
+      refetch: ReturnType<typeof rs.fn>;
+    };
+    viewsQuery: {
+      data: {
+        pages: {
+          views: {
             displayName: string;
             name: string;
             rowCount: bigint;
             sizeBytes: bigint;
             viewType: number;
-          }>,
-        },
-      ],
+          }[];
+        }[];
+      };
+      error: null;
+      fetchNextPage: ReturnType<typeof rs.fn>;
+      hasNextPage: boolean;
+      isFetchingNextPage: boolean;
+      isLoading: boolean;
+      refetch: ReturnType<typeof rs.fn>;
+    };
+  } => ({
+    getSchemaQuery: {
+      data: undefined as
+        | {
+            schema: {
+              displayName: string;
+              name: string;
+              owner: string;
+            };
+          }
+        | undefined,
+      error: null as Error | null,
+      isFetching: false,
+      isLoading: false,
     },
-    error: null,
-    fetchNextPage: rs.fn(() => Promise.resolve()),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isLoading: false,
-    refetch: rs.fn(() => Promise.resolve()),
-  },
-}));
+    navigate: rs.fn(),
+    schemasQuery: {
+      data: undefined as
+        | {
+            pages: {
+              schemas: {
+                displayName: string;
+                name: string;
+                owner: string;
+              }[];
+            }[];
+          }
+        | undefined,
+      error: new Error("schema rpc failed"),
+      fetchNextPage: rs.fn(() => Promise.resolve()),
+      hasNextPage: false,
+      isFetching: false,
+      isFetchingNextPage: false,
+      isPending: false,
+      refetch: rs.fn(() => Promise.resolve()),
+    },
+    tablesQuery: {
+      data: undefined as
+        | {
+            pages: {
+              syncMetadata?: undefined;
+              tables: {
+                displayName: string;
+                name: string;
+                rowCount: bigint;
+                sizeBytes: bigint;
+              }[];
+            }[];
+          }
+        | undefined,
+      error: null,
+      isLoading: false,
+      refetch: rs.fn(() => Promise.resolve()),
+    },
+    viewsQuery: {
+      data: {
+        pages: [
+          {
+            views: [] as {
+              displayName: string;
+              name: string;
+              rowCount: bigint;
+              sizeBytes: bigint;
+              viewType: number;
+            }[],
+          },
+        ],
+      },
+      error: null,
+      fetchNextPage: rs.fn(() => Promise.resolve()),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      refetch: rs.fn(() => Promise.resolve()),
+    },
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -114,7 +202,7 @@ rs.mock("@connectrpc/connect-query", () => ({
 }));
 
 rs.mock("@/hooks/api/schema", () => ({
-  schemasForDatabaseQueryInput: rs.fn((input) => input),
+  schemasForDatabaseQueryInput: rs.fn((input: unknown) => input),
   useGetSchemaQuery: () => mocks.getSchemaQuery,
   useListSchemasInfiniteQuery: () => mocks.schemasQuery,
 }));
@@ -129,7 +217,7 @@ rs.mock("@/hooks/api/table", () => ({
     { queryKey: ["triggers"], staleTime: 1 },
     { queryKey: ["partition-metadata"], staleTime: 1 },
   ]),
-  tablesForSchemaQueryInput: rs.fn((input) => input),
+  tablesForSchemaQueryInput: rs.fn((input: unknown) => input),
   useGetTablePartitionMetadataQuery: () => ({
     data: {
       partitionMetadata: {
@@ -153,7 +241,7 @@ rs.mock("@/hooks/api/table", () => ({
 rs.mock("@/hooks/api/view", () => ({
   useGetViewQuery: () => ({ data: undefined }),
   useListViewsInfiniteQuery: () => mocks.viewsQuery,
-  viewsForSchemaQueryInput: rs.fn((input) => input),
+  viewsForSchemaQueryInput: rs.fn((input: unknown) => input),
 }));
 
 rs.mock("@/lib/db-context", () => ({
@@ -204,7 +292,7 @@ afterEach(() => {
 });
 
 describe("data explorer page", () => {
-  it("keeps the explorer shell visible while schemas are loading", () => {
+  test("keeps the explorer shell visible while schemas are loading", () => {
     mocks.schemasQuery.data = undefined;
     mocks.schemasQuery.error = null;
     mocks.schemasQuery.isFetching = true;
@@ -223,7 +311,7 @@ describe("data explorer page", () => {
     ).toBeNull();
   });
 
-  it("shows a retryable page error when schema listing fails even if cached schema data is empty", () => {
+  test("shows a retryable page error when schema listing fails even if cached schema data is empty", () => {
     renderExplorer();
 
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
@@ -232,7 +320,7 @@ describe("data explorer page", () => {
     expect(screen.queryByRole("heading", { name: "Data Explorer" })).toBeNull();
   });
 
-  it("portals the object browser into the sidebar rail slot", () => {
+  test("portals the object browser into the sidebar rail slot", () => {
     mocks.schemasQuery.data = {
       pages: [
         {
@@ -258,7 +346,7 @@ describe("data explorer page", () => {
     ).toBe(true);
   });
 
-  it("replaces stale schema search with a schema from the current database", async () => {
+  test("replaces stale schema search with a schema from the current database", async () => {
     mocks.getSchemaQuery.error = new ConnectError(
       "schema not found",
       Code.NotFound
@@ -287,8 +375,13 @@ describe("data explorer page", () => {
     ).toBeNull();
     expect(screen.getByRole("heading", { name: "public" })).toBeTruthy();
 
-    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledTimes(1));
+    await waitFor(() => {
+      expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    });
     const navigation = mocks.navigate.mock.calls[0]?.[0];
+    if (!navigation) {
+      throw new Error("Expected navigation call");
+    }
     expect(navigation).toMatchObject({
       params: { databaseId: "db-1", instanceId: "inst-1" },
       replace: true,
@@ -305,7 +398,7 @@ describe("data explorer page", () => {
     });
   });
 
-  it("does not fetch table details on hover or focus", async () => {
+  test("does not fetch table details on hover or focus", async () => {
     rs.useFakeTimers();
     const prefetch = rs
       .spyOn(QueryClient.prototype, "query")

@@ -24,15 +24,21 @@ interface QueryState<T> {
   refetch?: () => Promise<unknown>;
 }
 
-const state = rs.hoisted(() => ({
-  extensionsQuery: {} as QueryState<ListExtensionsResponse>,
-  tableSearch: "",
-  updateTableSearch: rs.fn(),
-}));
-const INSTALL_EXTENSION_BUTTON_NAME = /install extension/i;
-const PG_TRGM_BUTTON_NAME = /^pg_trgm$/;
-const INSTALLED_PG_TRGM_TEXT = /Installed · 1\.6/;
-const SCHEMA_PUBLIC_TEXT = /schema public/;
+const state = rs.hoisted(
+  (): {
+    extensionsQuery: QueryState<ListExtensionsResponse>;
+    tableSearch: string;
+    updateTableSearch: ReturnType<typeof rs.fn>;
+  } => ({
+    extensionsQuery: {} as QueryState<ListExtensionsResponse>,
+    tableSearch: "",
+    updateTableSearch: rs.fn(),
+  })
+);
+const INSTALL_EXTENSION_BUTTON_NAME = /install extension/iu;
+const PG_TRGM_BUTTON_NAME = /^pg_trgm$/u;
+const INSTALLED_PG_TRGM_TEXT = /Installed · 1\.6/u;
+const SCHEMA_PUBLIC_TEXT = /schema public/u;
 
 rs.mock("@/hooks/api/extension", () => ({
   extensionsForDatabaseQueryInput: ({

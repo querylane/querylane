@@ -8,7 +8,7 @@ import * as actualTransport from "@/lib/transport" with {
 import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import { createTestRouterTransport } from "@/test/router-transport";
 
-const sqlTransport = rs.hoisted(() => ({
+const sqlTransport = rs.hoisted((): { current: Transport | undefined } => ({
   current: undefined as Transport | undefined,
 }));
 

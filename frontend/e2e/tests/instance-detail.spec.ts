@@ -9,6 +9,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithDeletableInstance,
   mockReadyAppWithInstance,
   mockReadyOnboarding,
@@ -18,19 +19,20 @@ import {
   sampleDatabase,
   sampleInstance,
 } from "./helpers";
+import { readRpcRequestBody } from "./read-rpc-request-body";
 
-const NEW_INSTANCE_URL_RE = /\/new-instance$/;
-const REPLICATOR_ROLE_RE = /replicator/;
-const AUDITOR_ROLE_RE = /auditor/;
+const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
+const REPLICATOR_ROLE_RE = /replicator/u;
+const AUDITOR_ROLE_RE = /auditor/u;
 const PRODUCTION_CONFIGURATION_URL_RE =
-  /\/instances\/production\/configuration\/?$/;
-const APPDB_DATABASE_URL_RE = /\/instances\/production\/databases\/appdb\/?$/;
+  /\/instances\/production\/configuration\/?$/u;
+const APPDB_DATABASE_URL_RE = /\/instances\/production\/databases\/appdb\/?$/u;
 const MISSING_DATABASE_URL_RE =
-  /\/instances\/production\/databases\/missing\/?$/;
+  /\/instances\/production\/databases\/missing\/?$/u;
 const APPDB_EXPLORER_URL_RE =
-  /\/instances\/production\/databases\/appdb\/explorer/;
-const LAST_REFRESHED_LABEL_RE = /Last refreshed/;
-const BUG_REPORT_URL_RE = /issues\/new\?.*template=bug_report\.yml/;
+  /\/instances\/production\/databases\/appdb\/explorer/u;
+const LAST_REFRESHED_LABEL_RE = /Last refreshed/u;
+const BUG_REPORT_URL_RE = /issues\/new\?.*template=bug_report\.yml/u;
 
 const INSTANCE_HEALTH_CHECK_TIME = "2026-05-21T10:15:00Z";
 const METRIC_UNAVAILABLE_ERROR_CODE = 14;
@@ -67,10 +69,14 @@ async function routeSuccessfulUpdateInstance(
   onBody: (body: Record<string, unknown>) => void
 ) {
   await routeRpcMethod(page, "UpdateInstance", async (route) => {
-    onBody(route.request().postDataJSON());
+    onBody(readRpcRequestBody(route.request().postDataJSON()));
     await fulfillJson(route, { instance: sampleInstance });
   });
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("database overview: renders backend metadata for selected database", {
   tag: ["@smoke", "@feat:database", "@flow:query"],
@@ -606,9 +612,9 @@ test("instance configuration: delete removes instance and navigates to empty cre
   await mockReadyAppWithDeletableInstance(page);
   await page.goto("/instances/production/configuration");
 
-  await routeRpcMethod(page, "DeleteInstance", async (route) =>
-    fulfillJson(route, {})
-  );
+  await routeRpcMethod(page, "DeleteInstance", async (route) => {
+    await fulfillJson(route, {});
+  });
   await expect(
     page.getByRole("button", { name: "Delete instance" }).first()
   ).toBeEnabled();

@@ -75,45 +75,80 @@ interface InstanceUpdateInput {
   updateMask: { paths: string[] };
 }
 
-const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/;
-const LOCK_WAIT_HINT_PATTERN = /held by another session/;
-const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/;
+const BLOCKED_ACTIVITY_TABLE_ROW_NAME = /4302/u;
+const LOCK_WAIT_HINT_PATTERN = /held by another session/u;
+const REPLICATION_WARNING_ROW_NAME = /Warning: Replication/u;
 
-const state = rs.hoisted(() => ({
-  activityQueryOptions: undefined as Record<string, unknown> | undefined,
-  databases: [] as PostgresDatabase[],
-  deleteInstance: rs.fn(async () => undefined),
-  extensionData: undefined as ListExtensionsResponse | undefined,
-  extensionInput: undefined as
-    | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
-    | undefined,
-  healthData: undefined as CheckInstanceHealthResponse | undefined,
-  healthQueryOptions: undefined as Record<string, unknown> | undefined,
-  instanceCatalogError: null as unknown,
-  instanceCatalogHasData: true,
-  instanceCatalogHasResolved: true,
-  instanceCatalogIsPending: false,
-  instanceData: undefined as GetInstanceResponse | undefined,
-  instanceQueryError: null as unknown,
-  instances: [] as PostgresInstance[],
-  navigate: rs.fn(async (_options: Record<string, unknown>) => undefined),
-  navigateToDatabase: rs.fn(),
-  overviewData: undefined as GetInstanceOverviewResponse | undefined,
-  queryClient: {
-    getQueryState: rs.fn(() => undefined),
-    query: rs.fn(async () => undefined),
-    tag: "query-client",
-  },
-  refetchExtensions: rs.fn(async () => ({})),
-  refetchInstance: rs.fn(async () => ({})),
-  retryInstanceCatalog: rs.fn(async () => undefined),
-  selectedInstanceStatus: "disconnected" as
-    | "connected"
-    | "disconnected"
-    | "error",
-  transport: { tag: "transport" },
-  updateInstance: rs.fn(async (_input: InstanceUpdateInput) => undefined),
-}));
+const state = rs.hoisted(
+  (): {
+    activityQueryOptions: Record<string, unknown> | undefined;
+    databases: PostgresDatabase[];
+    deleteInstance: ReturnType<typeof rs.fn>;
+    extensionData: ListExtensionsResponse | undefined;
+    extensionInput:
+      | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
+      | undefined;
+    healthData: CheckInstanceHealthResponse | undefined;
+    healthQueryOptions: Record<string, unknown> | undefined;
+    instanceCatalogError: unknown;
+    instanceCatalogHasData: boolean;
+    instanceCatalogHasResolved: boolean;
+    instanceCatalogIsPending: boolean;
+    instanceData: GetInstanceResponse | undefined;
+    instanceQueryError: unknown;
+    instances: PostgresInstance[];
+    navigate: ReturnType<typeof rs.fn>;
+    navigateToDatabase: ReturnType<typeof rs.fn>;
+    overviewData: GetInstanceOverviewResponse | undefined;
+    queryClient: {
+      getQueryState: ReturnType<typeof rs.fn>;
+      query: ReturnType<typeof rs.fn>;
+      tag: string;
+    };
+    refetchExtensions: ReturnType<typeof rs.fn>;
+    refetchInstance: ReturnType<typeof rs.fn>;
+    retryInstanceCatalog: ReturnType<typeof rs.fn>;
+    selectedInstanceStatus: "connected" | "disconnected" | "error";
+    transport: { tag: string };
+    updateInstance: ReturnType<
+      typeof rs.fn<(input: InstanceUpdateInput) => Promise<void>>
+    >;
+  } => ({
+    activityQueryOptions: undefined as Record<string, unknown> | undefined,
+    databases: [] as PostgresDatabase[],
+    deleteInstance: rs.fn(async () => undefined),
+    extensionData: undefined as ListExtensionsResponse | undefined,
+    extensionInput: undefined as
+      | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
+      | undefined,
+    healthData: undefined as CheckInstanceHealthResponse | undefined,
+    healthQueryOptions: undefined as Record<string, unknown> | undefined,
+    instanceCatalogError: null as unknown,
+    instanceCatalogHasData: true,
+    instanceCatalogHasResolved: true,
+    instanceCatalogIsPending: false,
+    instanceData: undefined as GetInstanceResponse | undefined,
+    instanceQueryError: null as unknown,
+    instances: [] as PostgresInstance[],
+    navigate: rs.fn(async (_options: Record<string, unknown>) => undefined),
+    navigateToDatabase: rs.fn(),
+    overviewData: undefined as GetInstanceOverviewResponse | undefined,
+    queryClient: {
+      getQueryState: rs.fn(() => undefined),
+      query: rs.fn(async () => undefined),
+      tag: "query-client",
+    },
+    refetchExtensions: rs.fn(async () => ({})),
+    refetchInstance: rs.fn(async () => ({})),
+    retryInstanceCatalog: rs.fn(async () => undefined),
+    selectedInstanceStatus: "disconnected" as
+      | "connected"
+      | "disconnected"
+      | "error",
+    transport: { tag: "transport" },
+    updateInstance: rs.fn(async (_input: InstanceUpdateInput) => undefined),
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   ...Object.fromEntries([

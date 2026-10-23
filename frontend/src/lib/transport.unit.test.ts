@@ -7,6 +7,7 @@ import {
   type UnaryResponse,
 } from "@connectrpc/connect";
 import { describe, expect, rs, test } from "@rstest/core";
+import { logger } from "@/lib/diagnostics";
 
 import {
   createSetupInterceptor,
@@ -34,14 +35,7 @@ function createFakeLogger() {
     debug: () => undefined,
     error: () => undefined,
     fatal: () => undefined,
-    fmt: (
-      strings: TemplateStringsArray | ArrayLike<string>,
-      ...values: unknown[]
-    ) =>
-      Array.from(strings).reduce(
-        (result, part, index) => result + part + String(values[index] ?? ""),
-        ""
-      ),
+    fmt: logger.fmt,
     info: () => undefined,
     trace: () => undefined,
     warn: () => undefined,
@@ -93,10 +87,10 @@ function createTestInstanceConnectionRequest(): UnaryRequest<
 }
 
 function createTestInterceptor() {
-  const blockingErrors: Array<{
+  const blockingErrors: {
     error: AppUiError;
     returnTo?: string | null | undefined;
-  }> = [];
+  }[] = [];
   let setupRequiredCalls = 0;
   const dependencies: SetupInterceptorDependencies = {
     getCurrentHref: () => "/instances/prod-us-east",

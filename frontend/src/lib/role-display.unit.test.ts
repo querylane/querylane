@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   buildInverseMembershipIndex,
   buildRoleSql,
@@ -39,7 +39,10 @@ function makeRole({
     validUntil: ReturnType<typeof timestampFromDate>;
   }>;
   isSystemRole?: boolean;
-  memberOf?: { roleName: string; adminOption?: boolean }[];
+  memberOf?: {
+    roleName: string;
+    adminOption?: boolean;
+  }[];
   roleName: string;
 }) {
   return create(RoleSchema, {
@@ -58,7 +61,7 @@ function makeRole({
 }
 
 describe("deriveRoleKind", () => {
-  it("classifies a replicating login role as repl", () => {
+  test("classifies a replicating login role as repl", () => {
     expect(
       deriveRoleKind(
         makeRole({
@@ -69,7 +72,7 @@ describe("deriveRoleKind", () => {
     ).toBe("repl");
   });
 
-  it("classifies a non-login role as group", () => {
+  test("classifies a non-login role as group", () => {
     expect(
       deriveRoleKind(
         makeRole({ attributes: { canLogin: false }, roleName: "anon" })
@@ -79,7 +82,7 @@ describe("deriveRoleKind", () => {
 });
 
 describe("categorizeRoles", () => {
-  it("treats system roles as system even when they can log in", () => {
+  test("treats system roles as system even when they can log in", () => {
     const result = categorizeRoles([
       makeRole({
         attributes: { canLogin: true },
@@ -91,7 +94,7 @@ describe("categorizeRoles", () => {
     expect(result.login).toHaveLength(0);
   });
 
-  it("splits login users from group roles", () => {
+  test("splits login users from group roles", () => {
     const result = categorizeRoles([
       makeRole({ attributes: { canLogin: true }, roleName: "app_user" }),
       makeRole({ attributes: { canLogin: false }, roleName: "analysts" }),
@@ -102,7 +105,7 @@ describe("categorizeRoles", () => {
 });
 
 describe("buildInverseMembershipIndex", () => {
-  it("indexes each child under every parent it belongs to", () => {
+  test("indexes each child under every parent it belongs to", () => {
     const roles = [
       makeRole({
         memberOf: [{ adminOption: true, roleName: "analysts" }],
@@ -120,18 +123,18 @@ describe("buildInverseMembershipIndex", () => {
 });
 
 describe("passwordExpiryStatus", () => {
-  it("reports no expiry when unset", () => {
+  test("reports no expiry when unset", () => {
     expect(passwordExpiryStatus(undefined, NOW).state).toBe("none");
   });
 
-  it("treats far-future expiry as valid", () => {
+  test("treats far-future expiry as valid", () => {
     const later = timestampFromDate(new Date("2026-12-01T00:00:00Z"));
     expect(passwordExpiryStatus(later, NOW).state).toBe("valid");
   });
 });
 
 describe("computeRoleRisk", () => {
-  it("counts expired and expiring login passwords", () => {
+  test("counts expired and expiring login passwords", () => {
     const risk = computeRoleRisk(
       [
         makeRole({
@@ -156,7 +159,7 @@ describe("computeRoleRisk", () => {
     expect(risk.severity).toBe("destructive");
   });
 
-  it("stays default for a single benign superuser", () => {
+  test("stays default for a single benign superuser", () => {
     const risk = computeRoleRisk(
       [makeRole({ attributes: { isSuperuser: true }, roleName: "postgres" })],
       NOW
@@ -166,7 +169,7 @@ describe("computeRoleRisk", () => {
 });
 
 describe("describeRoleRisk", () => {
-  it("produces plural-aware clauses and hides zero counts", () => {
+  test("produces plural-aware clauses and hides zero counts", () => {
     const clauses = describeRoleRisk({
       bypassesRls: 0,
       canCreateDatabase: 0,
@@ -181,7 +184,7 @@ describe("describeRoleRisk", () => {
 });
 
 describe("roleCapabilityMatrix", () => {
-  it("marks every power not granted for a plain role", () => {
+  test("marks every power not granted for a plain role", () => {
     const matrix = roleCapabilityMatrix(makeRole({ roleName: "plain" }));
     expect(matrix.every((c) => !c.granted)).toBe(true);
     expect(matrix).toHaveLength(5);
@@ -189,27 +192,27 @@ describe("roleCapabilityMatrix", () => {
 });
 
 describe("roleRiskNotice", () => {
-  it("flags superusers", () => {
+  test("flags superusers", () => {
     const notice = roleRiskNotice(
       makeRole({ attributes: { isSuperuser: true }, roleName: "postgres" })
     );
     expect(notice?.title).toBe("Full administrative access");
   });
 
-  it("flags RLS-bypassing roles", () => {
+  test("flags RLS-bypassing roles", () => {
     const notice = roleRiskNotice(
       makeRole({ attributes: { bypassesRls: true }, roleName: "rls" })
     );
     expect(notice?.title).toBe("Bypasses row-level security");
   });
 
-  it("returns null for an ordinary role", () => {
+  test("returns null for an ordinary role", () => {
     expect(roleRiskNotice(makeRole({ roleName: "app" }))).toBeNull();
   });
 });
 
 describe("buildRoleSql", () => {
-  it("reconstructs CREATE ROLE with attribute keywords", () => {
+  test("reconstructs CREATE ROLE with attribute keywords", () => {
     const sql = buildRoleSql(
       makeRole({
         attributes: {
@@ -228,7 +231,7 @@ describe("buildRoleSql", () => {
     );
   });
 
-  it("emits NOLOGIN and NOINHERIT and GRANT statements", () => {
+  test("emits NOLOGIN and NOINHERIT and GRANT statements", () => {
     const sql = buildRoleSql(
       makeRole({
         attributes: {
@@ -248,7 +251,7 @@ describe("buildRoleSql", () => {
 });
 
 describe("formatConnectionLimit", () => {
-  it("formats unlimited, zero, and positive limits", () => {
+  test("formats unlimited, zero, and positive limits", () => {
     expect(formatConnectionLimit(-1)).toBe("Unlimited");
     expect(formatConnectionLimit(0)).toBe("No connections allowed (0)");
     expect(formatConnectionLimit(1)).toBe("1 concurrent connection");

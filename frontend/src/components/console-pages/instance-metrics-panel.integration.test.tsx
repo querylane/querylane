@@ -21,8 +21,8 @@ const DAY_INTERVAL = {
   startTime: { nanos: 0, seconds: 0n },
 };
 
-const CONNECTIONS_TAB_PATTERN = /Connections/;
-const COMPARE_TOGGLE_PATTERN = /compare to previous/i;
+const CONNECTIONS_TAB_PATTERN = /Connections/u;
+const COMPARE_TOGGLE_PATTERN = /compare to previous/iu;
 
 /**
  * Two finite connection samples ending 5 minutes before the window edge — below

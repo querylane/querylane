@@ -1,16 +1,16 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   describeCommandOutcome,
   gridEmptyState,
 } from "@/features/sql-workbench/sql-command-outcome";
 
 describe("gridEmptyState", () => {
-  it("stays hidden while rows may still arrive or once rows exist", () => {
+  test("stays hidden while rows may still arrive or once rows exist", () => {
     expect(gridEmptyState({ rowCount: 0, status: "running" })).toBeUndefined();
     expect(gridEmptyState({ rowCount: 3, status: "success" })).toBeUndefined();
   });
 
-  it("distinguishes an empty result from a cancelled one", () => {
+  test("distinguishes an empty result from a cancelled one", () => {
     expect(gridEmptyState({ rowCount: 0, status: "success" })?.title).toBe(
       "No rows returned"
     );
@@ -21,7 +21,7 @@ describe("gridEmptyState", () => {
 });
 
 describe("describeCommandOutcome", () => {
-  it("uses the command tag as the title for utility commands", () => {
+  test("uses the command tag as the title for utility commands", () => {
     const outcome = describeCommandOutcome({
       commandTag: "DO",
       rowsAffected: 0,
@@ -33,7 +33,7 @@ describe("describeCommandOutcome", () => {
     );
   });
 
-  it("warns that session settings do not carry over to the next statement", () => {
+  test("warns that session settings do not carry over to the next statement", () => {
     const outcome = describeCommandOutcome({
       commandTag: "SET",
       rowsAffected: 0,
@@ -42,7 +42,7 @@ describe("describeCommandOutcome", () => {
     expect(outcome.description).toContain("does not carry over");
   });
 
-  it("reports affected rows when the tag carries a count", () => {
+  test("reports affected rows when the tag carries a count", () => {
     const outcome = describeCommandOutcome({
       commandTag: "UPDATE 1200",
       rowsAffected: 1200,
@@ -53,7 +53,7 @@ describe("describeCommandOutcome", () => {
     );
   });
 
-  it("singularises a single affected row", () => {
+  test("singularises a single affected row", () => {
     const outcome = describeCommandOutcome({
       commandTag: "DELETE 1",
       rowsAffected: 1,
@@ -63,7 +63,7 @@ describe("describeCommandOutcome", () => {
     );
   });
 
-  it("falls back to a generic title when the driver reported no tag", () => {
+  test("falls back to a generic title when the driver reported no tag", () => {
     const outcome = describeCommandOutcome({
       commandTag: "",
       rowsAffected: undefined,

@@ -15,7 +15,7 @@ interface CatalogSchemaNode {
 }
 
 const SAMPLE_ROW_LIMIT = 100;
-const PLAIN_IDENTIFIER = /^[a-z_][a-z0-9_$]*$/;
+const PLAIN_IDENTIFIER = /^[a-z_][a-z0-9_$]*$/u;
 // PostgreSQL keywords that cannot be used as a bare table or column name.
 // Quoting them keeps an inserted `"user"` or `"order"` runnable as typed.
 const RESERVED_WORDS = new Set([
@@ -208,9 +208,9 @@ function buildCatalogTree(
   }
   const tree = [...nodes.values()];
   for (const node of tree) {
-    node.relations.sort(compareRelations);
+    node.relations = node.relations.toSorted(compareRelations);
   }
-  return tree.sort(compareSchemas);
+  return tree.toSorted(compareSchemas);
 }
 
 function matches(value: string, query: string): boolean {

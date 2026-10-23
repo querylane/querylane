@@ -50,6 +50,7 @@ import { resolveBreadcrumbTail } from "@/lib/page-breadcrumb";
 import { roleIdOf } from "@/lib/role-display";
 import { useCurrentRouteIds } from "@/lib/route-ids";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { useTheme } from "@/theme-provider";
 
 type ConnectionStatus = "connected" | "disconnected" | "error";
@@ -296,7 +297,9 @@ function BreadcrumbDropdown({
       </Tooltip>
     );
   }
-  const close = () => setOpen(false);
+  const close = () => {
+    setOpen(false);
+  };
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
@@ -384,11 +387,11 @@ function InstanceCommandItem({
       navigate({
         params: { instanceId: instance.id },
         to: "/instances/$instanceId/configuration",
-      }).catch((error: unknown) =>
+      }).catch((error: unknown) => {
         handleNavigationError(error, {
           area: "admin-header.recover-instance-credentials",
-        })
-      );
+        });
+      });
       close();
       return;
     }
@@ -489,11 +492,11 @@ function RegisterInstanceCommand({
   return (
     <CommandItem
       onSelect={() => {
-        navigate({ to: "/new-instance" }).catch((error: unknown) =>
+        navigate({ to: "/new-instance" }).catch((error: unknown) => {
           handleNavigationError(error, {
             area: "admin-header.register-instance",
-          })
-        );
+          });
+        });
         close();
       }}
       value="register new instance"
@@ -583,7 +586,13 @@ function DatabaseSelector({
   // The database selector is only part of the path inside database scope.
   // Instance-scoped pages (overview, roles, configuration) have no database in
   // their route, so it would otherwise show a misleading "Select database".
-  if (!(selectedInstance && databaseId)) {
+  if (
+    !(
+      selectedInstance &&
+      typeof databaseId === "string" &&
+      databaseId.length > 0
+    )
+  ) {
     return null;
   }
   const breadcrumbState = getBreadcrumbQueryState(queryState);
@@ -784,7 +793,7 @@ export function AdminHeader() {
   const githubRepo = env.PUBLIC_GITHUB_REPO?.trim();
   const { data: starsResult } = useGithubRepoStarsQuery(githubRepo);
   const stars = starsResult ?? null;
-  const githubUrl = githubRepo
+  const githubUrl = isNonEmptyString(githubRepo)
     ? `https://github.com/${githubRepo}`
     : "https://github.com/querylane/querylane";
   return (

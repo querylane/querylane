@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { isConcurrentRefreshReady } from "@/features/data-explorer/explorer-materialized-view-model";
 import {
   type TableIndex,
@@ -15,7 +15,7 @@ function index(
 }
 
 describe("isConcurrentRefreshReady", () => {
-  it("requires a populated view and a valid plain unique index", () => {
+  test("requires a populated view and a valid plain unique index", () => {
     const qualifyingIndex = index({ isUnique: true, isValid: true });
 
     expect(isConcurrentRefreshReady(true, [qualifyingIndex])).toBe(true);

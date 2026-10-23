@@ -22,7 +22,10 @@ test("renders the select-all indeterminate state without a tooltip layer", async
     name: "Select All",
   });
   expect(checkboxElement.classList).toContain("rdg-checkbox-input");
-  expect((checkboxElement as HTMLInputElement).indeterminate).toBe(true);
+  if (!(checkboxElement instanceof HTMLInputElement)) {
+    throw new TypeError("Expected checkbox input");
+  }
+  expect(checkboxElement.indeterminate).toBe(true);
   await expect.element(checkbox).toHaveAttribute("title", "Clear selection");
   await expect.element(page.getByRole("tooltip")).toBeDetached();
 });

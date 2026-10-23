@@ -6,10 +6,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/theme-provider";
 
 function getBrowserVisualTheme() {
-  if (
-    typeof document !== "undefined" &&
-    document.documentElement.dataset["visualTheme"] === "light"
-  ) {
+  if (document.documentElement.dataset["visualTheme"] === "light") {
     return "light";
   }
   return "dark";

@@ -25,7 +25,7 @@ function setColumnSortDirection({
     return [...sortColumns, { columnKey, direction }];
   }
 
-  const next = sortColumns.slice();
+  const next = [...sortColumns];
   next[index] = { columnKey, direction };
   return next;
 }

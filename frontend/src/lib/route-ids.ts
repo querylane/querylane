@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocation } from "@tanstack/react-router";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface RouteIds {
   databaseId?: string;
@@ -22,7 +23,7 @@ function parseRouteIdsFromPathname(pathname: string): RouteIds {
   }
 
   const [, instanceId] = segments;
-  if (!instanceId) {
+  if (!isNonEmptyString(instanceId)) {
     return {};
   }
 
@@ -34,8 +35,8 @@ function parseRouteIdsFromPathname(pathname: string): RouteIds {
     return routeIds;
   }
 
-  const [, , , databaseId] = segments;
-  if (!databaseId) {
+  const { 3: databaseId } = segments;
+  if (!isNonEmptyString(databaseId)) {
     return routeIds;
   }
   routeIds.databaseId = decodePathSegment(databaseId);

@@ -35,6 +35,7 @@ import { Button } from "@/components/querylane-ui/button";
 import { Input } from "@/components/querylane-ui/input";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 function GrantRowName({ object }: { object: GrantedObject }) {
@@ -71,7 +72,9 @@ function ObjectRow({
       <Button
         aria-expanded={open}
         className="h-auto w-full items-center justify-start"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+        }}
         presentation="grant-group"
         type="button"
         variant="ghost"
@@ -159,7 +162,9 @@ function SchemaFilterBar({
           aria-label={`Filter ${unit}s in ${schema}`}
           className="h-7"
           name={`grant-filter-${schema}`}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => {
+            setSearch(event.target.value);
+          }}
           placeholder={`Filter ${total.toLocaleString()} ${unit}s in ${schema}…`}
           presentation="identifier-search"
           value={search}
@@ -175,7 +180,9 @@ function SchemaFilterBar({
               active={Boolean(privFilter[name])}
               key={name}
               label={privAbbr(name)}
-              onToggle={() => onTogglePriv(name)}
+              onToggle={() => {
+                onTogglePriv(name);
+              }}
             />
           );
         })}
@@ -245,7 +252,7 @@ function SchemaSectionHeader({
         <span className="truncate font-mono leading-tight font-medium text-(length:--text-caption)">
           {schema}
         </span>
-        {grantor ? (
+        {isNonEmptyString(grantor) ? (
           <span className="text-muted-foreground truncate text-xs leading-tight">
             granted by{" "}
             <span className="text-foreground/75 font-mono text-xs">
@@ -347,7 +354,9 @@ function SchemaSectionBody({
       {hasOverflow ? (
         <Button
           className="h-auto justify-start self-start"
-          onClick={() => setShowAll(!showAll)}
+          onClick={() => {
+            setShowAll(!showAll);
+          }}
           presentation="grant-more"
           size="sm"
           type="button"
@@ -400,7 +409,7 @@ function schemaSectionReducer(
         ...state,
         privFilter: {
           ...state.privFilter,
-          [action.name]: !state.privFilter[action.name],
+          [action.name]: !(state.privFilter[action.name] === true),
         },
       };
     case "toggleGrantOnly":
@@ -444,7 +453,7 @@ function SchemaSection({
   const isLarge = objects.length > AUTO_EXPAND_THRESHOLD;
 
   const activePrivs = Object.keys(privFilter).filter(
-    (name) => privFilter[name]
+    (name) => privFilter[name] === true
   );
   const needle = search.trim().toLowerCase();
   const filterActive = needle.length > 0 || grantOnly || activePrivs.length > 0;
@@ -460,7 +469,9 @@ function SchemaSection({
         counts={counts}
         grantor={grantor}
         objects={objects}
-        onToggle={() => dispatch({ type: "toggleOpen" })}
+        onToggle={() => {
+          dispatch({ type: "toggleOpen" });
+        }}
         open={open}
         schema={schema}
         unit={unit}
@@ -474,15 +485,25 @@ function SchemaSection({
           grantOnly={grantOnly}
           isLarge={isLarge}
           objects={objects}
-          onClear={() => dispatch({ type: "clearFilters" })}
-          onToggleGrant={() => dispatch({ type: "toggleGrantOnly" })}
-          onTogglePriv={(name) => dispatch({ name, type: "togglePriv" })}
+          onClear={() => {
+            dispatch({ type: "clearFilters" });
+          }}
+          onToggleGrant={() => {
+            dispatch({ type: "toggleGrantOnly" });
+          }}
+          onTogglePriv={(name) => {
+            dispatch({ name, type: "togglePriv" });
+          }}
           privFilter={privFilter}
           sample={sample}
           schema={schema}
           search={search}
-          setSearch={(value) => dispatch({ type: "setSearch", value })}
-          setShowAll={(value) => dispatch({ type: "setShowAll", value })}
+          setSearch={(value) => {
+            dispatch({ type: "setSearch", value });
+          }}
+          setShowAll={(value) => {
+            dispatch({ type: "setShowAll", value });
+          }}
           showAll={showAll}
           unit={unit}
         />
@@ -561,7 +582,9 @@ function SchemaGroupedGroup({
           />
         }
         icon={meta.icon}
-        onToggle={() => setOpen(!open)}
+        onToggle={() => {
+          setOpen(!open);
+        }}
         open={open}
         title={title}
       />
@@ -610,7 +633,9 @@ function FlatGroup({
           />
         }
         icon={meta.icon}
-        onToggle={() => setOpen(!open)}
+        onToggle={() => {
+          setOpen(!open);
+        }}
         open={open}
         title={title}
       />

@@ -31,10 +31,13 @@ function retypeMessage<S extends DescMessage, T extends DescMessage>(
 async function firstMessage<T>(
   messages: AsyncIterable<T>
 ): Promise<T | undefined> {
-  for await (const message of messages) {
-    return message;
+  const iterator = messages[Symbol.asyncIterator]();
+  try {
+    const first = await iterator.next();
+    return first.done === true ? undefined : first.value;
+  } finally {
+    await iterator.return?.();
   }
-  return undefined;
 }
 
 type TestHandlerContext = HandlerContext & {
@@ -97,7 +100,7 @@ function createContext({
 }
 
 function throwIfAborted(signal: AbortSignal | undefined) {
-  if (signal?.aborted) {
+  if (signal?.aborted === true) {
     throw ConnectError.from(signal.reason, Code.Canceled);
   }
 }

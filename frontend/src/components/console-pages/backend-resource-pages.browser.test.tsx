@@ -25,21 +25,26 @@ import { createTestRouterTransport } from "@/test/router-transport";
 import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 const BLOCKED_ACTIVITY_ROW_NAME =
-  /4302.*api-gateway.*UPDATE shipping\.shipments/;
-const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
-const REPLICATION_ROW_NAME = /Replication/;
-const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
-const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
+  /4302.*api-gateway.*UPDATE shipping\.shipments/u;
+const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/iu;
+const REPLICATION_ROW_NAME = /Replication/u;
+const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/u;
+const TIMESCALEDB_BUTTON_NAME = /timescaledb/iu;
 const DENSE_SCHEMA_COUNT = 12;
 
 // Pixels for these pages, and every phone-width layout check, live in
 // e2e/visual/console-resources.spec.ts on the real console routes, served
 // from the same fixture.
 
-const state = rs.hoisted(() => ({
-  navigate: rs.fn(async () => undefined),
-  selectedInstanceStatus: "connected" as "connected" | "disconnected",
-}));
+const state = rs.hoisted(
+  (): {
+    navigate: ReturnType<typeof rs.fn>;
+    selectedInstanceStatus: "connected" | "disconnected";
+  } => ({
+    navigate: rs.fn(async () => undefined),
+    selectedInstanceStatus: "connected" as "connected" | "disconnected",
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -138,7 +143,7 @@ rs.mock("@/lib/db-context", () => {
 });
 
 beforeEach(() => {
-  window.localStorage.removeItem("querylane-browser-test-theme");
+  globalThis.localStorage.removeItem("querylane-browser-test-theme");
   const visualTheme =
     document.documentElement.dataset["visualTheme"] === "dark"
       ? "dark"
@@ -156,9 +161,9 @@ async function renderConsolePage(
   width = "w-[1120px] p-6"
 ) {
   const fixture = consoleResourceFixture(overrides);
-  const transport = createTestRouterTransport((router) =>
-    routeConsoleResources(router, fixture)
-  );
+  const transport = createTestRouterTransport((router) => {
+    routeConsoleResources(router, fixture);
+  });
   await render(
     <HarnessProviders transport={transport}>
       <ScreenshotFrame>
@@ -210,7 +215,7 @@ const extensionsPage = (
 function cardRect(label: string) {
   const card = screen.getByText(label).closest('[data-slot="card"]');
   if (!(card instanceof HTMLElement)) {
-    throw new Error(`Expected ${label} card`);
+    throw new TypeError(`Expected ${label} card`);
   }
   return card.getBoundingClientRect();
 }
@@ -300,6 +305,36 @@ test("instance overview keeps cached catalog visible during a meta database outa
     .element(page.getByText("Connected", { exact: true }))
     .toHaveCount(0);
 });
+
+function expectSessionTimelineMarkersCentered(dialog: HTMLElement) {
+  const timeline = dialog.querySelector("ol");
+  if (!timeline) {
+    throw new Error("Missing session timeline");
+  }
+  const timelineRect = timeline.getBoundingClientRect();
+  const timelineStyle = getComputedStyle(timeline);
+  const lineCenter =
+    timelineRect.left + Number.parseFloat(timelineStyle.borderLeftWidth) / 2;
+  for (const item of timeline.children) {
+    const marker = item.querySelector<HTMLElement>('[aria-hidden="true"]');
+    if (!marker) {
+      throw new Error("Missing session timeline marker");
+    }
+    const itemRect = item.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    expect(
+      Math.abs(markerRect.left + markerRect.width / 2 - lineCenter)
+    ).toBeLessThanOrEqual(0.1);
+    expect(
+      Math.abs(
+        markerRect.top +
+          markerRect.height / 2 -
+          (itemRect.top + itemRect.height / 2)
+      )
+    ).toBeLessThanOrEqual(0.1);
+  }
+  expect(timeline.children.length).toBeGreaterThan(0);
+}
 
 test("backend instance activity matches the live sessions redesign", async () => {
   await renderConsolePage(
@@ -407,35 +442,9 @@ test("backend instance activity matches the live sessions redesign", async () =>
   await expect.element(page.getByText("1h 0m ago")).toBeVisible();
   await expect.element(page.getByText("Lock · transactionid")).toBeVisible();
   await expect.element(page.getByText("blocked by · pid 4211")).toBeVisible();
-  const timeline = screen
-    .getByRole("dialog", { name: "Session 4302" })
-    .querySelector("ol");
-  if (!timeline) {
-    throw new Error("Missing session timeline");
-  }
-  const timelineRect = timeline.getBoundingClientRect();
-  const timelineStyle = getComputedStyle(timeline);
-  const lineCenter =
-    timelineRect.left + Number.parseFloat(timelineStyle.borderLeftWidth) / 2;
-  for (const item of timeline.children) {
-    const marker = item.querySelector<HTMLElement>('[aria-hidden="true"]');
-    if (!marker) {
-      throw new Error("Missing session timeline marker");
-    }
-    const itemRect = item.getBoundingClientRect();
-    const markerRect = marker.getBoundingClientRect();
-    expect(
-      Math.abs(markerRect.left + markerRect.width / 2 - lineCenter)
-    ).toBeLessThanOrEqual(0.1);
-    expect(
-      Math.abs(
-        markerRect.top +
-          markerRect.height / 2 -
-          (itemRect.top + itemRect.height / 2)
-      )
-    ).toBeLessThanOrEqual(0.1);
-  }
-  expect(timeline.children.length).toBeGreaterThan(0);
+  expectSessionTimelineMarkersCentered(
+    screen.getByRole("dialog", { name: "Session 4302" })
+  );
   await expect
     .element(page.getByRole("button", { name: "Terminate session…" }))
     .not.toBeAttached();
@@ -648,7 +657,7 @@ test("partial query insights use the full drawer content width", async () => {
     .getByText("Top queries by total time")
     .closest('[data-slot="card"]');
   if (!(topQueriesCard instanceof HTMLElement)) {
-    throw new Error("Expected top queries card");
+    throw new TypeError("Expected top queries card");
   }
 
   const drawerBox = screen

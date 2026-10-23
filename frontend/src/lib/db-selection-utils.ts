@@ -1,18 +1,19 @@
+import { isNonEmptyString } from "@/lib/value-guards";
 /**
  * Pure utility functions for resource selection resolution in the db-context cascade.
  * These have no side effects and are independently testable.
  */
 
-export function resolveValidSelectionId<Item extends { id: string }>({
+export function resolveValidSelectionId({
   candidateId,
   items,
   loaded,
 }: {
   candidateId?: string | undefined;
-  items: Item[];
+  items: readonly { id: string }[];
   loaded: boolean;
 }): string | undefined {
-  if (!candidateId) {
+  if (!isNonEmptyString(candidateId)) {
     return;
   }
   if (!loaded) {
@@ -27,7 +28,7 @@ export function pickSelectedResource<Item extends { id: string }>(
   items: Item[],
   selectedId?: string
 ): Item | null {
-  if (!selectedId) {
+  if (!isNonEmptyString(selectedId)) {
     return null;
   }
   return items.find((item) => item.id === selectedId) ?? null;
@@ -49,7 +50,7 @@ export function resolveSelectedResource<Item extends { id: string }>({
   );
 }
 
-export function isSelectedResourceResolved<Item>({
+export function isSelectedResourceResolved({
   queryEnabled,
   queryPending,
   selectedId,
@@ -58,13 +59,13 @@ export function isSelectedResourceResolved<Item>({
   queryEnabled: boolean;
   queryPending: boolean;
   selectedId?: string | undefined;
-  selectedResource: Item | null;
+  selectedResource: unknown;
 }) {
-  if (!selectedId) {
+  if (!isNonEmptyString(selectedId)) {
     return true;
   }
 
-  return Boolean(selectedResource || (queryEnabled && !queryPending));
+  return Boolean(selectedResource) || (queryEnabled && !queryPending);
 }
 
 export function shouldEnableDatabaseSelectionQuery({
@@ -78,7 +79,7 @@ export function shouldEnableDatabaseSelectionQuery({
 }) {
   return Boolean(
     hydrateSelectedDatabaseFromQuery &&
-      effectiveInstanceId &&
+      isNonEmptyString(effectiveInstanceId) &&
       effectiveDatabaseId
   );
 }

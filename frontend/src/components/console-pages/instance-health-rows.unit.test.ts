@@ -27,7 +27,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 const MS_PER_MINUTE = 60_000;
-const UPTIME_FACT_PATTERN = /^up /;
+const UPTIME_FACT_PATTERN = /^up /u;
 
 function instanceFixture(sslMode = PostgresConfig_SslMode.PREFER) {
   return createProto(InstanceSchema, {

@@ -15,6 +15,7 @@ const INSTANCE_ROLES_TYPES = [
   "repl",
   "super",
 ] as const satisfies readonly RoleKind[];
+const instanceRolesTypeValueSchema = z.enum(INSTANCE_ROLES_TYPES);
 const instanceRolesTypeSchema = z
   .string()
   .optional()
@@ -75,7 +76,7 @@ function isInstanceRolesTab(
 }
 
 function isInstanceRolesType(value: string | undefined): value is RoleKind {
-  return INSTANCE_ROLES_TYPES.includes(value as RoleKind);
+  return instanceRolesTypeValueSchema.safeParse(value).success;
 }
 
 export type { InstanceRolesSearch, InstanceRolesTab };

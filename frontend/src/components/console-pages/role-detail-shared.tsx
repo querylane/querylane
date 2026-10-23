@@ -1,4 +1,5 @@
 "use client";
+
 import { Link } from "@tanstack/react-router";
 import {
   Check,
@@ -28,6 +29,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 function KpiCard({
@@ -46,7 +48,7 @@ function KpiCard({
           {label}
         </div>
         <div className="text-lg font-semibold tabular-nums">{value}</div>
-        {sub ? (
+        {isNonEmptyString(sub) ? (
           <div className="text-muted-foreground text-xs">{sub}</div>
         ) : null}
       </CardContent>
@@ -70,8 +72,8 @@ function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
 function capabilityTileClass(cap: Capability): string {
   return cn(
     "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-    cap.on && cap.danger && "border-warning-500/30 bg-warning-500/5",
-    cap.on && !cap.danger && "border-border bg-muted/30",
+    cap.on && cap.danger === true && "border-warning-500/30 bg-warning-500/5",
+    cap.on && !(cap.danger === true) && "border-border bg-muted/30",
     !cap.on && "border-border/50 border-dashed"
   );
 }
@@ -80,10 +82,10 @@ function capabilityIconClass(cap: Capability): string {
   return cn(
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     cap.on &&
-      cap.danger &&
+      cap.danger === true &&
       "bg-warning-500/15 text-warning-600 dark:text-warning-400",
     cap.on &&
-      !cap.danger &&
+      !(cap.danger === true) &&
       "bg-positive-500/15 text-positive-600 dark:text-positive-400",
     !cap.on && "bg-muted text-muted-foreground/40"
   );
@@ -92,7 +94,7 @@ function capabilityIconClass(cap: Capability): string {
 function capabilityKeywordClass(cap: Capability): string {
   return cn(
     "font-mono text-xs font-medium",
-    cap.on && cap.danger && "text-warning-700 dark:text-warning-400",
+    cap.on && cap.danger === true && "text-warning-700 dark:text-warning-400",
     !cap.on && "text-muted-foreground"
   );
 }
@@ -101,7 +103,7 @@ function capabilityValueClass(cap: Capability): string {
   if (!cap.on) {
     return "text-muted-foreground/60";
   }
-  return cap.danger
+  return cap.danger === true
     ? "text-warning-700 dark:text-warning-400"
     : "text-foreground";
 }
@@ -123,7 +125,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
       <Check
         className={cn(
           "size-4 shrink-0",
-          cap.danger
+          cap.danger === true
             ? "text-warning-600 dark:text-warning-400"
             : "text-positive-600 dark:text-positive-400"
         )}
@@ -205,14 +207,16 @@ function AccessItem({
         <ItemTitle className="break-all" presentation="identifier">
           {related.roleName}
         </ItemTitle>
-        {related.options.length > 0 || related.grantor ? (
+        {related.options.length > 0 || isNonEmptyString(related.grantor) ? (
           <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
             {related.options.map((option) => (
               <Badge key={option.key} variant="secondary">
                 {option.label}
               </Badge>
             ))}
-            {related.grantor ? <span>by {related.grantor}</span> : null}
+            {isNonEmptyString(related.grantor) ? (
+              <span>by {related.grantor}</span>
+            ) : null}
           </div>
         ) : null}
       </ItemContent>

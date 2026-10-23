@@ -1,6 +1,13 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { TransportProvider } from "@connectrpc/connect-query";
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -42,27 +49,29 @@ import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 import { ThemeProvider } from "@/theme-provider";
 
-const CONFIGURE_UI_RE = /Configure via UI/;
-const EMBEDDED_RE = /Use embedded database/;
-const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/;
-const DIRECT_SSL_NEGOTIATION_OPTION_RE = /^direct /i;
-const INVALID_CONNECTION_STRING_RE = /Invalid connection string/i;
-const REQUIRE_SSL_MODE_OPTION_RE = /^require /i;
-const BACK_RE = /back/i;
+const CONFIGURE_UI_RE = /Configure via UI/u;
+const EMBEDDED_RE = /Use embedded database/u;
+const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/u;
+const DIRECT_SSL_NEGOTIATION_OPTION_RE = /^direct /iu;
+const INVALID_CONNECTION_STRING_RE = /Invalid connection string/iu;
+const REQUIRE_SSL_MODE_OPTION_RE = /^require /iu;
+const BACK_RE = /back/iu;
 
 let restoreLocalStorage: (() => void) | undefined;
 const renderedQueryClients: QueryClient[] = [];
 
 function installLocalStorageStub() {
   const originalDescriptor = Object.getOwnPropertyDescriptor(
-    window,
+    globalThis.window,
     "localStorage"
   );
   const storage = new Map<string, string>();
-  Object.defineProperty(window, "localStorage", {
+  Object.defineProperty(globalThis.window, "localStorage", {
     configurable: true,
     value: {
-      clear: () => storage.clear(),
+      clear: () => {
+        storage.clear();
+      },
       getItem: (key: string) => storage.get(key) ?? null,
       removeItem: (key: string) => storage.delete(key),
       setItem: (key: string, value: string) => storage.set(key, value),
@@ -71,11 +80,15 @@ function installLocalStorageStub() {
 
   return () => {
     if (originalDescriptor) {
-      Object.defineProperty(window, "localStorage", originalDescriptor);
+      Object.defineProperty(
+        globalThis.window,
+        "localStorage",
+        originalDescriptor
+      );
       return;
     }
 
-    Reflect.deleteProperty(window, "localStorage");
+    Reflect.deleteProperty(globalThis.window, "localStorage");
   };
 }
 
@@ -218,7 +231,7 @@ afterEach(() => {
 });
 
 describe("onboarding wizard content integration", () => {
-  it("validates and applies a pasted metadata database connection string", async () => {
+  test("validates and applies a pasted metadata database connection string", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
 
@@ -251,7 +264,7 @@ describe("onboarding wizard content integration", () => {
     ).toContain("direct");
   });
 
-  it("clears stale field errors when applying a connection string", async () => {
+  test("clears stale field errors when applying a connection string", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
 
@@ -282,7 +295,7 @@ describe("onboarding wizard content integration", () => {
     });
   });
 
-  it("renders embedded setup defaults from onboarding state", async () => {
+  test("renders embedded setup defaults from onboarding state", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
 
@@ -303,7 +316,7 @@ describe("onboarding wizard content integration", () => {
 });
 
 describe("onboarding wizard connection testing", () => {
-  it("validates required fields before testing the connection", async () => {
+  test("validates required fields before testing the connection", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
 
@@ -320,7 +333,7 @@ describe("onboarding wizard connection testing", () => {
     expect(testInstanceConnection).not.toHaveBeenCalled();
   });
 
-  it("clears stale connection failures after the configuration changes", async () => {
+  test("clears stale connection failures after the configuration changes", async () => {
     const user = userEvent.setup();
     const testInstanceConnection = rs.fn(() =>
       Promise.reject(new Error("connection refused"))
@@ -345,7 +358,7 @@ describe("onboarding wizard connection testing", () => {
 });
 
 describe("onboarding wizard setup progression", () => {
-  it("submits direct SSL negotiation from advanced connection options", async () => {
+  test("submits direct SSL negotiation from advanced connection options", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_ui", "ui_configured");
 
@@ -387,7 +400,7 @@ describe("onboarding wizard setup progression", () => {
     );
   });
 
-  it("starts file-watch progress from manual YAML setup", async () => {
+  test("starts file-watch progress from manual YAML setup", async () => {
     const user = userEvent.setup();
     seedWizardPhase("configure_yaml", "manual_yaml");
 
@@ -403,7 +416,7 @@ describe("onboarding wizard setup progression", () => {
     ).toBeTruthy();
   });
 
-  it("renders successful setup completion and calls finish action", async () => {
+  test("renders successful setup completion and calls finish action", async () => {
     const user = userEvent.setup();
     const finishWizard = rs.fn();
     seedOnboardingState();
@@ -428,7 +441,7 @@ describe("onboarding wizard setup progression", () => {
     expect(finishWizard).toHaveBeenCalledTimes(1);
   });
 
-  it("classifies connection setup failures as reconfigurable", async () => {
+  test("classifies connection setup failures as reconfigurable", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
     useOnboardingWizardStore.setState({
@@ -470,7 +483,7 @@ describe("onboarding wizard setup progression", () => {
     });
   });
 
-  it("explains how to recover when embedded setup runs out of disk space", async () => {
+  test("explains how to recover when embedded setup runs out of disk space", async () => {
     const user = userEvent.setup();
     const error =
       "write /Users/alice/.querylane/postgres/base/16384/2600: no space left on device";
@@ -512,7 +525,7 @@ describe("onboarding wizard setup progression", () => {
     ).not.toHaveLength(0);
   });
 
-  it("deep links to the configure phase via initialMethod", async () => {
+  test("deep links to the configure phase via initialMethod", async () => {
     const user = userEvent.setup();
     seedOnboardingState();
 

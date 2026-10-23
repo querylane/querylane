@@ -6,6 +6,7 @@ import {
 } from "@/components/config-managed-guidance";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { handleAsyncAction } from "@/lib/ui-action";
 
 const COPY_FEEDBACK_RESET_MS = 2000;
 
@@ -27,10 +28,12 @@ export function ConfigManagedEmptyState({
       if (copyState === "idle") {
         return;
       }
-      const resetTimer = window.setTimeout(() => {
+      const resetTimer = globalThis.window.setTimeout(() => {
         setCopyState("idle");
       }, COPY_FEEDBACK_RESET_MS);
-      return () => window.clearTimeout(resetTimer);
+      return () => {
+        globalThis.window.clearTimeout(resetTimer);
+      };
     },
     [copyState]
   );
@@ -42,8 +45,8 @@ export function ConfigManagedEmptyState({
             {configFilePath}
           </code>
           <Button
-            onClick={async () => {
-              if (!navigator.clipboard) {
+            onClick={handleAsyncAction(async () => {
+              if (!Boolean(navigator.clipboard)) {
                 setCopyState("error");
                 return;
               }
@@ -54,7 +57,7 @@ export function ConfigManagedEmptyState({
               } catch {
                 setCopyState("error");
               }
-            }}
+            })}
             size="sm"
             type="button"
             variant="outline"

@@ -19,13 +19,21 @@ const {
   capturedEdges,
   capturedNodes,
   fitViewMock,
-} = rs.hoisted(() => ({
-  capturedControlsClassNames: [] as (string | undefined)[],
-  capturedControlsStyles: [] as CapturedControlsStyle[],
-  capturedEdges: [] as unknown[],
-  capturedNodes: [] as unknown[],
-  fitViewMock: rs.fn(),
-}));
+} = rs.hoisted(
+  (): {
+    capturedControlsClassNames: (string | undefined)[];
+    capturedControlsStyles: CapturedControlsStyle[];
+    capturedEdges: unknown[];
+    capturedNodes: unknown[];
+    fitViewMock: ReturnType<typeof rs.fn>;
+  } => ({
+    capturedControlsClassNames: [] as (string | undefined)[],
+    capturedControlsStyles: [] as CapturedControlsStyle[],
+    capturedEdges: [] as unknown[],
+    capturedNodes: [] as unknown[],
+    fitViewMock: rs.fn(),
+  })
+);
 
 rs.mock("@xyflow/react", () => ({
   Background: () => <div data-testid="flow-background" />,

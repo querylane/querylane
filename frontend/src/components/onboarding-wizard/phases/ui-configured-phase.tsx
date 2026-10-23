@@ -45,7 +45,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type UseProtoFormReturn, useProtoForm } from "@/hooks/use-proto-form";
+import {
+  type UseProtoFormReturn,
+  useProtoForm,
+} from "@/hooks/use-proto-form/use-proto-form";
 import {
   formatUnsupportedPostgresConnectionParameters,
   parsePostgresConnectionString,
@@ -56,6 +59,8 @@ import {
   toSslMode,
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
@@ -73,6 +78,7 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
       return <Check className="text-positive-400 size-4" />;
     case "error":
       return <X className="text-negative-400 size-4" />;
+    case "idle":
     default:
       return <Unplug className="size-4" />;
   }
@@ -85,6 +91,7 @@ function getTestButtonLabel(status: ConnectionTestStatus) {
       return "Connected";
     case "error":
       return "Test failed";
+    case "idle":
     default:
       return "Test connection";
   }
@@ -153,7 +160,11 @@ function ConnectionTestResult({
     );
   }
 
-  if (status === "error" && errorMessage) {
+  if (
+    status === "error" &&
+    typeof errorMessage === "string" &&
+    errorMessage.length > 0
+  ) {
     return (
       <div
         className="border-negative-400/20 bg-negative-500/8 text-negative-100/92 rounded-xl border px-4 py-3 text-sm"
@@ -211,7 +222,7 @@ function InternalStorageSslOptions({
         </CollapsibleTrigger>
         <Select
           onValueChange={(nextValue) => {
-            if (!nextValue) {
+            if (!isNonEmptyString(nextValue)) {
               return;
             }
             onSslModeChange(nextValue);
@@ -249,7 +260,7 @@ function InternalStorageSslOptions({
                 </label>
                 <Select
                   onValueChange={(nextValue) => {
-                    if (!nextValue) {
+                    if (!isNonEmptyString(nextValue)) {
                       return;
                     }
                     onSslNegotiationChange(nextValue);
@@ -310,9 +321,13 @@ function ConnectionStringPasteForm({
         <div className="flex gap-3">
           <Input
             aria-describedby={
-              connectionStringError ? connectionStringErrorId : undefined
+              isNonEmptyString(connectionStringError)
+                ? connectionStringErrorId
+                : undefined
             }
-            aria-invalid={connectionStringError ? true : undefined}
+            aria-invalid={
+              isNonEmptyString(connectionStringError) ? true : undefined
+            }
             autoComplete="off"
             className="h-9 flex-1"
             id={connectionStringId}
@@ -340,7 +355,7 @@ function ConnectionStringPasteForm({
             Apply
           </Button>
         </div>
-        {connectionStringError ? (
+        {isNonEmptyString(connectionStringError) ? (
           <p
             className="text-negative-300/90 text-sm"
             id={connectionStringErrorId}
@@ -573,7 +588,7 @@ export function UiConfiguredPhase() {
           </Button>
           <div className="flex items-center gap-3">
             <ConnectionTestButton
-              onClick={handleTestConnection}
+              onClick={handleAsyncAction(handleTestConnection)}
               status={displayedConnectionTestStatus}
             />
             <UiConfiguredContinueAction
@@ -659,18 +674,18 @@ export function UiConfiguredPhase() {
               contentId={advancedConnectionOptionsId}
               modeId={sslModeId}
               onOpenChange={setAdvancedConnectionOptionsOpen}
-              onSslModeChange={(value) =>
+              onSslModeChange={(value) => {
                 setValue("sslMode", toSslMode(value), {
                   shouldDirty: true,
                   shouldValidate: true,
-                })
-              }
-              onSslNegotiationChange={(value) =>
+                });
+              }}
+              onSslNegotiationChange={(value) => {
                 setValue("sslNegotiation", toSslNegotiation(value), {
                   shouldDirty: true,
                   shouldValidate: true,
-                })
-              }
+                });
+              }}
               open={advancedConnectionOptionsOpen}
               sslModeValue={sslModeValue}
               sslNegotiationId={sslNegotiationId}
@@ -685,12 +700,12 @@ export function UiConfiguredPhase() {
               connectionStringInputRef={connectionStringInputRef}
               connectionStringValue={connectionStringValue}
               onApply={handleConnectionStringApply}
-              onErrorReset={() =>
+              onErrorReset={() => {
                 setConnectionStringFeedback((current) => ({
                   ...current,
                   error: null,
-                }))
-              }
+                }));
+              }}
               onValueChange={(value) => {
                 setConnectionStringValue(value);
               }}
@@ -698,7 +713,7 @@ export function UiConfiguredPhase() {
           </TabsContent>
         </Tabs>
 
-        {connectionStringFeedback.warning ? (
+        {isNonEmptyString(connectionStringFeedback.warning) ? (
           <p
             className="border-warning-300/20 bg-warning-300/7 text-warning-100/90 rounded-xl border px-4 py-3 text-sm"
             role="status"

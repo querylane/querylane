@@ -4,20 +4,17 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - frontend/**
-      - .github/workflows/frontend-ci.yml
 
 concurrency:
   group: frontend-ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  ACTION_CHECKOUT: &action_checkout actions/checkout@v7.0.0
-  ACTION_SETUP_BUN: &action_setup_bun oven-sh/setup-bun@v2.2.0
-  ACTION_CACHE: &action_cache actions/cache@v6.1.0
-  ACTION_SETUP_NODE: &action_setup_node actions/setup-node@v6.4.0
-  ACTION_UPLOAD_ARTIFACT: &action_upload_artifact actions/upload-artifact@v7.0.1
+  ACTION_CHECKOUT: &action_checkout actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+  ACTION_SETUP_BUN: &action_setup_bun oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+  ACTION_CACHE: &action_cache actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+  ACTION_SETUP_NODE: &action_setup_node actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+  ACTION_UPLOAD_ARTIFACT: &action_upload_artifact actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
   BUN_VERSION: &bun_version 1.4.4
   NODE_VERSION: &node_version 24
   # Keep in sync with the `playwright` version in frontend/package.json. The
@@ -28,9 +25,43 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Frontend Change Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      frontend: ${{ steps.paths.outputs.frontend }}
+    steps:
+      - uses: *action_checkout
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect UI and quality-policy changes
+        id: paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths="$RUNNER_TEMP/frontend-paths"
+          git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" > "$paths"
+          frontend=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              frontend/*|.github/workflows/frontend-ci.yml)
+                frontend=true
+                ;;
+              */*) ;;
+              *) frontend=true ;;
+            esac
+          done < "$paths"
+          printf 'frontend=%s\n' "$frontend" >> "$GITHUB_OUTPUT"
+
   static:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Static
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -55,10 +86,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Run Biome and shadcn lint
+      - name: Run full frontend lint and policy checks
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        run: bun run lint:changed
+        run: bun run lint
       - name: Run React Doctor dead-code analysis
         run: bun run doctor:dead-code
       - name: Type check
@@ -67,8 +98,9 @@ jobs:
         run: bun run scripts/check-shadcn-registry-sync.ts
 
   unit:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Unit
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -94,21 +126,12 @@ jobs:
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run unit tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(doctor\.config\.ts|react-doctor\.config\.json|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/(console-issue-guard|react-doctor-policy)\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:unit
-          else
-            bun run test:unit:changed
-          fi
+        run: bun run test:unit:ci
 
   integration:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Integration
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 4
     defaults:
@@ -134,21 +157,12 @@ jobs:
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - name: Run integration tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:integration
-          else
-            bun run test:integration:changed
-          fi
+        run: bun run test:integration:ci
 
   browser:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Browser
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -188,21 +202,66 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium
       - name: Run browser tests
-        env:
-          QUALITY_BASE_REF: origin/${{ github.base_ref }}
+        run: bun run test:browser:ci
+
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    name: Frontend E2E
+    runs-on: ubuntu-latest
+    container:
+      image: *playwright_image
+      options: --ipc=host
+    timeout-minutes: 8
+    env:
+      HOME: /root
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
+      # The canonical image has Node, but lacks setup-bun's unzip dependency.
+      - name: Install Bun
+        run: npm install --global bun@${{ env.BUN_VERSION }}
+      - name: Restore Bun package cache
+        uses: *action_cache
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check Playwright image matches the installed version
         shell: bash
         run: |
           set -euo pipefail
-          changed_files="$(git diff --name-only "$QUALITY_BASE_REF"...HEAD)"
-          if grep -Eq '^(\.github/workflows/frontend-ci\.yml|frontend/(browser-test\.setup\.css|package\.json|bun\.lock|rstest[^/]*\.ts|test\.console-guard\.ts|scripts/console-issue-guard\.unit\.test\.ts))$' <<<"$changed_files"; then
-            bun run test:browser:ci
-          else
-            bun run test:browser:changed
-          fi
+          installed="$(bun -e 'console.log(require("playwright/package.json").version)')"
+          case "$PLAYWRIGHT_IMAGE" in
+            *":v${installed}-"*) ;;
+            *) echo "::error::PLAYWRIGHT_IMAGE ($PLAYWRIGHT_IMAGE) does not match playwright ${installed}"; exit 1 ;;
+          esac
+      - name: Run all E2E and accessibility tests without worker contention
+        run: bun run test:e2e:ci
+      - name: Upload E2E failure reports
+        if: failure()
+        uses: *action_upload_artifact
+        with:
+          name: e2e-failure-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 3
+          if-no-files-found: ignore
 
   visual:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Visual (${{ matrix.shard }}/3)
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Each Playwright test loads a full route; one 4-vCPU runner is CPU-bound,
@@ -251,15 +310,16 @@ jobs:
         with:
           name: playwright-visual-report-${{ matrix.shard }}
           path: |
-            frontend/e2e/playwright-report
-            frontend/e2e/test-results
+            frontend/playwright-report
+            frontend/test-results
           retention-days: 3
           overwrite: true
           if-no-files-found: ignore
 
   build:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend Build
-    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 6
     permissions:
@@ -307,8 +367,26 @@ jobs:
         run: bun run build
       - name: Verify emitted bundle contracts
         run: bun run build:profile
-      - name: Run React Doctor on changed files
+      - name: Run full React Doctor analysis
         env:
           GITHUB_TOKEN: ${{ github.token }}
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
         run: bun run scripts/run-react-doctor-ci.ts
+
+  gate:
+    name: Frontend Quality Gate
+    if: always()
+    needs: [changes, static, unit, integration, browser, e2e, visual, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_bun
+        with:
+          bun-version: *bun_version
+      - name: Require complete frontend results
+        env:
+          FRONTEND_CI_NEEDS: ${{ toJSON(needs) }}
+        run: bun frontend/scripts/check-ci-gate.ts "$FRONTEND_CI_NEEDS"

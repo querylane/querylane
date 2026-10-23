@@ -57,7 +57,7 @@ function RoleGrantsTableStatus({
           Loading results…
         </p>
       ) : null}
-      {error ? (
+      {Boolean(error) ? (
         <p className="text-destructive text-sm" role="alert">
           Could not load filtered results.
         </p>
@@ -185,7 +185,9 @@ function KindFilteredTable<T extends RowData>({
         facets={[
           {
             label: "Kind",
-            onChange: (values) => onKindChange(values.at(-1) ?? "all"),
+            onChange: (values) => {
+              onKindChange(values.at(-1) ?? "all");
+            },
             options: kindOptions,
             selected: activeKind === "all" ? [] : [activeKind],
             singleSelect: true,

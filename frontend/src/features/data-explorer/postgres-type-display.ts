@@ -1,3 +1,4 @@
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Column } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -90,10 +91,10 @@ const INTEGER_META: Record<
   },
 };
 
-const ARRAY_TYPE_PATTERN = /^(.+)\[\]$/;
-const LENGTH_PATTERN = /\(\s*(\d+)\s*\)/;
-const TYPE_MODIFIER_PATTERN = /\s*\(\s*-?\d+(?:\s*,\s*-?\d+)?\s*\)/g;
-const WHITESPACE_PATTERN = /\s+/g;
+const ARRAY_TYPE_PATTERN = /^(?<capture1>.+)\[\]$/u;
+const LENGTH_PATTERN = /\(\s*(?<capture1>\d+)\s*\)/u;
+const TYPE_MODIFIER_PATTERN = /\s*\(\s*-?\d+(?:\s*,\s*-?\d+)?\s*\)/gu;
+const WHITESPACE_PATTERN = /\s+/gu;
 
 const FIXED_CHARACTER_TYPES = new Set(["bpchar", "char", "character"]);
 const VARIABLE_CHARACTER_TYPES = new Set(["varchar", "character varying"]);
@@ -334,23 +335,23 @@ const STATIC_TYPE_META: Record<string, TypeDisplayMeta> = {
 };
 
 function uniqueBadges(badges: readonly string[]): string[] {
-  return Array.from(new Set(badges.filter(Boolean)));
+  return [...new Set(badges.filter(Boolean))];
 }
 
 function normalizeRawType(rawType: string): string {
   return rawType
     .trim()
     .toLowerCase()
-    .replace(WHITESPACE_PATTERN, " ")
-    .replace(TYPE_MODIFIER_PATTERN, "");
+    .replaceAll(WHITESPACE_PATTERN, " ")
+    .replaceAll(TYPE_MODIFIER_PATTERN, "");
 }
 
 function parseTypeLength(rawType: string, characterMaximumLength: number) {
   if (characterMaximumLength > 0) {
     return characterMaximumLength;
   }
-  const match = rawType.match(LENGTH_PATTERN);
-  if (!match?.[1]) {
+  const match = LENGTH_PATTERN.exec(rawType);
+  if (!isNonEmptyString(match?.[1])) {
     return 0;
   }
   return Number.parseInt(match[1], 10);
@@ -468,8 +469,8 @@ function describeArrayType(
   column: ColumnTypeInput,
   normalized: string
 ): PostgresTypeDisplay | undefined {
-  const arrayMatch = normalized.match(ARRAY_TYPE_PATTERN);
-  if (!arrayMatch?.[1]) {
+  const arrayMatch = ARRAY_TYPE_PATTERN.exec(normalized);
+  if (!isNonEmptyString(arrayMatch?.[1])) {
     return;
   }
   return withDisplay(column, {
@@ -491,7 +492,7 @@ function describeIntegerType(
     badges: [
       integerMeta.bits,
       integerMeta.bytes,
-      integerMeta.serial ? "serial" : "integer",
+      integerMeta.serial === true ? "serial" : "integer",
     ],
     category: "Integer",
     summary: integerMeta.summary,

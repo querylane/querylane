@@ -28,21 +28,25 @@ const ThemeProviderContext = React.createContext<
 
 function subscribeToSystemTheme(onStoreChange: () => void) {
   if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
+    globalThis.window === undefined ||
+    typeof globalThis.window.matchMedia !== "function"
   ) {
     return () => undefined;
   }
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const mediaQuery = globalThis.window.matchMedia(
+    "(prefers-color-scheme: dark)"
+  );
   mediaQuery.addEventListener("change", onStoreChange);
-  return () => mediaQuery.removeEventListener("change", onStoreChange);
+  return () => {
+    mediaQuery.removeEventListener("change", onStoreChange);
+  };
 }
 
 function getSystemTheme(): ResolvedTheme {
   if (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+    globalThis.window !== undefined &&
+    typeof globalThis.window.matchMedia === "function" &&
+    globalThis.window.matchMedia("(prefers-color-scheme: dark)").matches
   ) {
     return "dark";
   }
@@ -50,12 +54,12 @@ function getSystemTheme(): ResolvedTheme {
 }
 
 function getThemeStorage(): Storage | null {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return null;
   }
 
   try {
-    return window.localStorage ?? null;
+    return globalThis.window.localStorage ?? null;
   } catch {
     return null;
   }
@@ -83,10 +87,10 @@ function ThemeProvider({
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
-  // allow-useEffect: sync theme with system/DOM
+  // sync theme with system/DOM
   useEffect(
     function applyThemeToDom() {
-      const root = window.document.documentElement;
+      const root = globalThis.window.document.documentElement;
 
       root.classList.remove("light", "dark");
       root.classList.add(resolvedTheme);

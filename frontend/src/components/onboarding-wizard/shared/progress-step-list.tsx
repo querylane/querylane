@@ -1,6 +1,7 @@
 import { Check, Circle, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type SetupProgressEvent,
   SetupStep,
@@ -145,7 +146,7 @@ function ProgressStepItem({
           <div className="text-sm font-medium text-white">
             {event.displayName}
           </div>
-          {detail ? (
+          {isNonEmptyString(detail) ? (
             <p className="max-w-3xl text-sm leading-6 text-white/58">
               {detail}
             </p>

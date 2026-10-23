@@ -31,7 +31,7 @@ function DangerZoneSection({
           <h2 className="text-destructive text-base font-medium">
             Danger zone
           </h2>
-          {description ? (
+          {Boolean(description) ? (
             <p className="text-muted-foreground max-w-3xl text-sm">
               {description}
             </p>

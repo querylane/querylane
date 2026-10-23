@@ -1,5 +1,5 @@
 import { Code } from "@connectrpc/connect";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import type { AppUiError, BlockingErrorReason } from "@/lib/ui-error-types";
 import {
   decideBlockingAppRedirect,
@@ -34,7 +34,7 @@ function createAppUiError(
 }
 
 describe("blocking app state policy", () => {
-  it("turns permission errors into access blockers without setup state", () => {
+  test("turns permission errors into access blockers without setup state", () => {
     const error = createAppUiError("permission_denied");
 
     expect(decideBlockingAppState({ currentHref: null, error })).toEqual({
@@ -45,7 +45,7 @@ describe("blocking app state policy", () => {
     });
   });
 
-  it("gives explicit blocking errors precedence over onboarding redirects", () => {
+  test("gives explicit blocking errors precedence over onboarding redirects", () => {
     expect(
       decideBlockingAppRedirect({
         blockingReason: "permission_denied",
@@ -62,7 +62,7 @@ describe("blocking app state policy", () => {
     });
   });
 
-  it("returns null when no route redirect is needed", () => {
+  test("returns null when no route redirect is needed", () => {
     expect(
       decideBlockingAppRedirect({
         blockingReason: null,
@@ -73,7 +73,7 @@ describe("blocking app state policy", () => {
     ).toBeNull();
   });
 
-  it("redirects onboarding state to setup when there is no blocking error", () => {
+  test("redirects onboarding state to setup when there is no blocking error", () => {
     expect(
       decideBlockingAppRedirect({
         blockingReason: null,

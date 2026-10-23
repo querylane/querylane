@@ -13,7 +13,7 @@ const TABLE_DETAIL_TAB_VALUES = [
 type TableDetailTab = (typeof TABLE_DETAIL_TAB_VALUES)[number];
 
 function isTableDetailTab(value: string | undefined): value is TableDetailTab {
-  return TABLE_DETAIL_TAB_VALUES.includes(value as TableDetailTab);
+  return TABLE_DETAIL_TAB_VALUES.some((tab) => tab === value);
 }
 
 export type { TableDetailTab };

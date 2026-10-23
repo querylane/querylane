@@ -15,27 +15,27 @@ interface InstanceConnectionErrorPresentation {
 }
 
 const AUTHENTICATION_ERROR_PATTERNS = [
-  /authentication failed/i,
-  /password authentication failed/i,
-  /invalid_password/i,
-  /sqlstate\s*28[0-9a-z]{3}/i,
-  /postgresql authentication failed/i,
+  /authentication failed/iu,
+  /password authentication failed/iu,
+  /invalid_password/iu,
+  /sqlstate\s*28[0-9a-z]{3}/iu,
+  /postgresql authentication failed/iu,
 ];
 const REACHABILITY_ERROR_PATTERNS = [
-  /connection refused/i,
-  /connection reset/i,
-  /could not connect/i,
-  /host not found/i,
-  /name resolution/i,
-  /network is unreachable/i,
-  /no route to host/i,
-  /postgresql instance is unreachable/i,
+  /connection refused/iu,
+  /connection reset/iu,
+  /could not connect/iu,
+  /host not found/iu,
+  /name resolution/iu,
+  /network is unreachable/iu,
+  /no route to host/iu,
+  /postgresql instance is unreachable/iu,
 ];
 const TIMEOUT_ERROR_PATTERNS = [
-  /context deadline exceeded/i,
-  /i\/o timeout/i,
-  /timed? out/i,
-  /postgresql connection timed out/i,
+  /context deadline exceeded/iu,
+  /i\/o timeout/iu,
+  /timed? out/iu,
+  /postgresql connection timed out/iu,
 ];
 
 function matchesAny(value: string, patterns: RegExp[]): boolean {

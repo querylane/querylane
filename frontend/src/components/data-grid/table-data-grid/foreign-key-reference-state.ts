@@ -94,21 +94,29 @@ function buildForeignKeyRequiredFilter({
   row: GridRow;
 }) {
   const children: RowFilter[] = [];
+  const resultColumnsByName = Map.groupBy(
+    resultColumns,
+    (column) => column.columnName
+  );
 
-  reference.sourceColumns.forEach((sourceColumn, index) => {
+  for (const [index, sourceColumn] of reference.sourceColumns.entries()) {
     const targetColumn = reference.targetColumns[index];
-    const resultColumn = resultColumns.find(
-      (column) => column.columnName === sourceColumn
-    );
-    if (!(resultColumn && targetColumn)) {
-      return;
+    const resultColumn = resultColumnsByName.get(sourceColumn)?.[0];
+    if (
+      !(
+        resultColumn &&
+        typeof targetColumn === "string" &&
+        targetColumn.length > 0
+      )
+    ) {
+      continue;
     }
 
     const filterValue = tableCellValueToFilterValue(
       getGridCell(row, resultColumn)
     );
     if (!filterValue) {
-      return;
+      continue;
     }
 
     children.push(
@@ -123,7 +131,7 @@ function buildForeignKeyRequiredFilter({
         },
       })
     );
-  });
+  }
 
   if (
     children.length !== reference.sourceColumns.length ||

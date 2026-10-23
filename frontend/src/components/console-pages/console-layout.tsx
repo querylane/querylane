@@ -24,6 +24,7 @@ import {
 import { useRetainedRetryError } from "@/components/use-retained-retry-error";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface SummaryCardProps {
   label: string;
@@ -42,7 +43,7 @@ interface SectionCardProps {
 interface ResourcePageStateProps {
   area: string;
   children: React.ReactNode;
-  error?: unknown | undefined;
+  error?: unknown;
   hasData: boolean;
   loading: boolean;
   notFoundState?: React.ReactNode | undefined;
@@ -73,11 +74,11 @@ export function SummaryCountValue({
   isUnavailable = false,
 }: {
   count: number;
-  error?: unknown | undefined;
+  error?: unknown;
   isPending: boolean;
   isUnavailable?: boolean | undefined;
 }) {
-  if (error || isUnavailable) {
+  if (Boolean(error) || isUnavailable) {
     return "—";
   }
   if (isPending) {
@@ -125,7 +126,7 @@ export function InstanceStatItem({
   return (
     <div className="relative flex min-h-24 flex-col px-4 pt-3.5 pb-8">
       <div className="relative flex flex-col gap-1">
-        {hint ? (
+        {isNonEmptyString(hint) ? (
           <Tooltip>
             <TooltipTrigger
               render={
@@ -142,7 +143,7 @@ export function InstanceStatItem({
         )}
         <div className="flex min-h-7 items-baseline gap-1.5">
           {children}
-          {suffix ? (
+          {isNonEmptyString(suffix) ? (
             <span className="text-muted-foreground font-mono text-xs tabular-nums">
               {suffix}
             </span>
@@ -156,7 +157,10 @@ export function InstanceStatItem({
   );
 }
 export function CopyableHost({ host, port }: { host: string; port?: number }) {
-  const fullHost = port ? `${host}:${port}` : host;
+  const fullHost =
+    typeof port === "number" && port !== 0 && !Number.isNaN(port)
+      ? `${host}:${port}`
+      : host;
   return (
     <span className="inline-flex max-w-full min-w-0 items-center gap-1">
       <OverflowTooltip
@@ -193,7 +197,7 @@ export function PageHeader({
         <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] wrap-break-word sm:text-3xl">
           {title}
         </h1>
-        {description ? (
+        {isNonEmptyString(description) ? (
           <p className="text-muted-foreground max-w-3xl">{description}</p>
         ) : null}
       </div>
@@ -214,7 +218,7 @@ export function SectionCard({
       >
         <div className="min-w-0 space-y-1">
           <CardTitle>{title}</CardTitle>
-          {description ? (
+          {isNonEmptyString(description) ? (
             <p className="text-muted-foreground text-sm">{description}</p>
           ) : null}
         </div>

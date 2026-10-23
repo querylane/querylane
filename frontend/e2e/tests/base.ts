@@ -7,55 +7,54 @@
  * falls through is treated as an unmocked backend dependency and fails the test.
  */
 
-import AxeBuilder from "@axe-core/playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import {
   test as base,
   type Page,
   expect as playwrightExpect,
 } from "playwright/test";
+import { shouldGuardApiRequest } from "../../src/test/api-request-policy";
 import { e2eEnv } from "../env";
 
 interface Fixtures {
-  makeAxeBuilder: () => AxeBuilder;
+  checkAccessibility: () => Promise<void>;
   unmockedGuard: undefined;
 }
 
 const expect = playwrightExpect;
 
-function isApiRequest(url: string) {
-  const parsedUrl = new URL(url);
-  const apiBaseUrl = new URL(
-    e2eEnv.QUERYLANE_API_URL ?? "http://localhost:8080"
-  );
-
-  return (
-    parsedUrl.origin === apiBaseUrl.origin ||
-    (parsedUrl.hostname === "localhost" && parsedUrl.port === "8080")
-  );
-}
-
 const test = base.extend<Fixtures>({
-  makeAxeBuilder: async ({ page }, use) => {
-    await use(() =>
-      new AxeBuilder({ page }).withTags([
-        "wcag2a",
-        "wcag2aa",
-        "wcag21a",
-        "wcag21aa",
-      ])
-    );
+  checkAccessibility: async ({ page }, provideFixture, testInfo) => {
+    await provideFixture(async () => {
+      const results = await new AxeBuilder({ page })
+        .withTags([
+          "wcag2a",
+          "wcag2aa",
+          "wcag21a",
+          "wcag21aa",
+          "wcag22aa",
+          "best-practice",
+        ])
+        .analyze();
+      await testInfo.attach("accessibility-scan", {
+        body: JSON.stringify(results, null, 2),
+        contentType: "application/json",
+      });
+      expect(results.violations).toEqual([]);
+    });
   },
   unmockedGuard: [
-    async ({ page }, use) => {
+    async ({ page }, provideFixture) => {
       const unmockedCalls: string[] = [];
 
       await page.route("**/*", async (route) => {
         const request = route.request();
-        const contentType = request.headers()["content-type"] ?? "";
-        const shouldGuard =
-          request.method() === "POST" &&
-          contentType.includes("json") &&
-          isApiRequest(request.url());
+        const shouldGuard = shouldGuardApiRequest({
+          apiBaseUrl: e2eEnv.QUERYLANE_API_URL ?? "http://localhost:8080",
+          headers: request.headers(),
+          method: request.method(),
+          url: request.url(),
+        });
 
         if (shouldGuard) {
           unmockedCalls.push(request.url());
@@ -73,7 +72,7 @@ const test = base.extend<Fixtures>({
         await route.continue();
       });
 
-      await use(undefined);
+      await provideFixture(undefined);
 
       if (unmockedCalls.length > 0) {
         throw new Error(

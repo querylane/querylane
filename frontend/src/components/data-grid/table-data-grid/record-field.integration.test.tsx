@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { afterEach, describe, expect, it, rs } from "@rstest/core";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
@@ -9,12 +9,15 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import type { writeClipboardDeferred } from "./grid-clipboard";
 
 const tableDataApi = rs.hoisted(() => ({
   useReadCellValueMutation: rs.fn(),
 }));
 const writeClipboardMock = rs.hoisted(() => rs.fn());
-const writeClipboardDeferredMock = rs.hoisted(() => rs.fn());
+const writeClipboardDeferredMock = rs.hoisted(() =>
+  rs.fn<typeof writeClipboardDeferred>()
+);
 const downloadBlobMock = rs.hoisted(() => rs.fn());
 
 rs.mock("@/components/data-grid/table-data-grid/grid-clipboard", () => ({
@@ -36,7 +39,7 @@ describe("record field", () => {
     rs.clearAllMocks();
   });
 
-  it("renders PostgreSQL arrays as indexed values in the detail drawer", () => {
+  test("renders PostgreSQL arrays as indexed values in the detail drawer", () => {
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
       isPending: false,
@@ -70,7 +73,7 @@ describe("record field", () => {
     expect(screen.getByText("SQL NULL")).toBeTruthy();
   });
 
-  it("keeps timestamp timezone context visible and copies the raw value", async () => {
+  test("keeps timestamp timezone context visible and copies the raw value", async () => {
     const user = userEvent.setup();
     tableDataApi.useReadCellValueMutation.mockReturnValue({
       isError: false,
@@ -108,7 +111,7 @@ describe("record field", () => {
     );
   });
 
-  it("downloads a truncated bytea value after fetching it in full", async () => {
+  test("downloads a truncated bytea value after fetching it in full", async () => {
     const user = userEvent.setup();
     const fullBytes = new Uint8Array([1, 2, 3, 4]);
     const mutateAsync = rs.fn().mockResolvedValue({
@@ -161,7 +164,7 @@ describe("record field", () => {
     );
   });
 
-  it("fetches the full value before copying a truncated cell", async () => {
+  test("fetches the full value before copying a truncated cell", async () => {
     const user = userEvent.setup();
     const mutateAsync = rs.fn().mockResolvedValue({
       value: create(TableCellSchema, {
@@ -204,6 +207,9 @@ describe("record field", () => {
     expect(writeClipboardMock).not.toHaveBeenCalled();
     expect(writeClipboardDeferredMock).toHaveBeenCalledTimes(1);
     const getText = writeClipboardDeferredMock.mock.calls[0]?.[0];
+    if (getText === undefined) {
+      throw new Error("Expected deferred clipboard text callback");
+    }
     await expect(getText()).resolves.toBe("the complete text");
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ fullValueToken: "token-2" })

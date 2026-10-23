@@ -1,6 +1,6 @@
 import type { RootOptions } from "react-dom/client";
-
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type ReactRootErrorLifecycle =
   | "caught-error"
@@ -26,7 +26,9 @@ function getComponentStack(errorInfo: {
   componentStack?: string | undefined;
 }): string | null {
   const componentStack = errorInfo.componentStack?.trim();
-  return componentStack && componentStack.length > 0 ? componentStack : null;
+  return isNonEmptyString(componentStack) && componentStack.length > 0
+    ? componentStack
+    : null;
 }
 
 function reportReactRootError({
@@ -52,7 +54,9 @@ function reportReactRootError({
   dependencies.reportAppUiError(appError, {
     tags: {
       react_error_lifecycle: lifecycle,
-      react_has_component_stack: componentStack ? "true" : "false",
+      react_has_component_stack: isNonEmptyString(componentStack)
+        ? "true"
+        : "false",
     },
   });
 }

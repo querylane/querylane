@@ -7,13 +7,14 @@ import type {
   CreateInstanceFormState,
   CreateInstanceLabel,
 } from "@/features/new-instance-workflow";
-import type { UseProtoFormReturn } from "@/hooks/use-proto-form";
+import type { UseProtoFormReturn } from "@/hooks/use-proto-form/use-proto-form";
 import {
   formatSslMode,
   formatSslNegotiation,
   toSslMode,
   toSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CreateInstanceSpecSchema,
   PostgresConfigSchema,
@@ -85,7 +86,12 @@ function readCreateInstanceFormState({
     instanceId,
     labels,
     password: values.config?.password ?? "",
-    port: values.config?.port ? String(values.config.port) : "",
+    port:
+      typeof values.config?.port === "number" &&
+      values.config?.port !== 0 &&
+      !Number.isNaN(values.config?.port)
+        ? String(values.config.port)
+        : "",
     sslMode: formatSslMode(values.config?.sslMode ?? 0),
     sslNegotiation: formatSslNegotiation(values.config?.sslNegotiation ?? 0),
     username: values.config?.username ?? "",
@@ -131,7 +137,9 @@ function setCreateInstanceProtoField(
       break;
     default: {
       const unsupportedField: never = field;
-      throw new Error(`Unsupported create-instance field: ${unsupportedField}`);
+      throw new Error(
+        `Unsupported create-instance field: ${String(unsupportedField)}`
+      );
     }
   }
 }
@@ -169,7 +177,9 @@ function clearCreateInstanceProtoError(
       break;
     default: {
       const unsupportedField: never = field;
-      throw new Error(`Unsupported create-instance field: ${unsupportedField}`);
+      throw new Error(
+        `Unsupported create-instance field: ${String(unsupportedField)}`
+      );
     }
   }
 }
@@ -197,7 +207,7 @@ function getCreateInstanceProtoErrors(
   const protoErrors: CreateInstanceFormErrors = {};
   for (const [field, path] of PROTO_FIELDS) {
     const message = errorMessage(form.getFieldState(path).error);
-    if (message) {
+    if (isNonEmptyString(message)) {
       protoErrors[field] = message;
     }
   }
@@ -238,7 +248,8 @@ async function validateCreateInstanceProtoForm(
   );
   return {
     errors,
-    firstInvalidField: FOCUS_ORDER.find((field) => errors[field]) ?? null,
+    firstInvalidField:
+      FOCUS_ORDER.find((field) => isNonEmptyString(errors[field])) ?? null,
   };
 }
 

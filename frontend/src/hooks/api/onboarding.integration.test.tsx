@@ -39,24 +39,18 @@ import { createTestRouterTransport } from "@/test/router-transport";
 rs.mock("@connectrpc/connect", () => {
   const clientsByTransport = new WeakMap<
     Transport,
-    Map<DescService, unknown>
+    Client<typeof OnboardingService>
   >();
-
-  function createClient<T extends DescService>(
-    service: T,
-    transport: Transport
-  ): Client<T> {
-    let clientsByService = clientsByTransport.get(transport);
-    if (!clientsByService) {
-      clientsByService = new Map();
-      clientsByTransport.set(transport, clientsByService);
+  function createClient(service: DescService, transport: Transport) {
+    if (service.typeName !== OnboardingService.typeName) {
+      throw new Error("Unexpected service in onboarding fixture");
     }
-    let client = clientsByService.get(service);
-    if (client === undefined) {
-      client = connectActual.createClient(service, transport);
-      clientsByService.set(service, client);
+    let client = clientsByTransport.get(transport);
+    if (!client) {
+      client = connectActual.createClient(OnboardingService, transport);
+      clientsByTransport.set(transport, client);
     }
-    return client as Client<T>;
+    return client;
   }
 
   return { ...connectActual, createClient };
@@ -78,7 +72,7 @@ function createWrapper(transport: Transport) {
   const queryClient = createTestQueryClient();
   activeQueryClients.push(queryClient);
 
-  return function Wrapper({ children }: { children: ReactNode }) {
+  function Wrapper({ children }: { children: ReactNode }) {
     return (
       <TransportProvider transport={transport}>
         <QueryClientProvider client={queryClient}>
@@ -86,7 +80,8 @@ function createWrapper(transport: Transport) {
         </QueryClientProvider>
       </TransportProvider>
     );
-  };
+  }
+  return Wrapper;
 }
 
 function connectingEvent() {
@@ -291,7 +286,7 @@ describe("useWatchConfigChanges", () => {
     await act(async () => {
       await retryPromise;
     });
-    await flushUntil(() => result.current.isRunning === false);
+    await flushUntil(() => !result.current.isRunning);
 
     expect(attempts).toBe(5);
     expect(onComplete).toHaveBeenCalledTimes(1);

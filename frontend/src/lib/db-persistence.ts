@@ -1,3 +1,5 @@
+import { isNonEmptyString, isRecord } from "@/lib/value-guards";
+
 const NAVIGATION_SELECTION_STORAGE_KEY = "querylane.navigation-selection.v1";
 
 interface PersistedNavigationSelection {
@@ -24,13 +26,11 @@ function readSearchString(
 function normalizePersistedNavigationSelection(
   value: unknown
 ): PersistedNavigationSelection {
-  if (typeof value !== "object" || value === null) {
+  if (!isRecord(value)) {
     return {};
   }
 
-  // allow-type-assertion: narrowing validated non-null object for property access after typeof guard
-  const candidate = value as Record<string, unknown>;
-  const databaseId = readSearchString(candidate, "databaseId");
+  const databaseId = readSearchString(value, "databaseId");
 
   return {
     databaseId,
@@ -38,26 +38,25 @@ function normalizePersistedNavigationSelection(
 }
 
 function readPersistedNavigationSelectionStore(): PersistedNavigationSelectionStore {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return {};
   }
 
   try {
-    const rawValue = window.sessionStorage.getItem(
+    const rawValue = globalThis.window.sessionStorage.getItem(
       NAVIGATION_SELECTION_STORAGE_KEY
     );
-    if (!rawValue) {
+    if (!isNonEmptyString(rawValue)) {
       return {};
     }
 
-    const parsed = JSON.parse(rawValue);
-    if (typeof parsed !== "object" || parsed === null) {
+    const parsed: unknown = JSON.parse(rawValue);
+    if (!isRecord(parsed)) {
       return {};
     }
 
     return Object.fromEntries(
-      // allow-type-assertion: parsing untyped JSON from sessionStorage after null/object guard
-      Object.entries(parsed as Record<string, unknown>).map(([key, value]) => [
+      Object.entries(parsed).map(([key, value]) => [
         key,
         normalizePersistedNavigationSelection(value),
       ])
@@ -70,12 +69,12 @@ function readPersistedNavigationSelectionStore(): PersistedNavigationSelectionSt
 function writePersistedNavigationSelectionStore(
   store: PersistedNavigationSelectionStore
 ) {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return;
   }
 
   try {
-    window.sessionStorage.setItem(
+    globalThis.window.sessionStorage.setItem(
       NAVIGATION_SELECTION_STORAGE_KEY,
       JSON.stringify(store)
     );

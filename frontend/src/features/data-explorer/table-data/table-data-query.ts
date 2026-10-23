@@ -14,6 +14,7 @@ import { useTableDataController } from "@/features/data-explorer/table-data/use-
 import { useListTableColumnsQuery } from "@/hooks/api/table";
 import { useReadRowsQuery } from "@/hooks/api/table-data";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface TableDataSearchState {
   filterSearch?: string | undefined;
@@ -29,16 +30,16 @@ interface UseTableDataQueryArgs extends TableDataSearchState {
   selectedColumns?: readonly string[] | undefined;
 }
 
-const SORT_COLUMN_KEY_QUERY_META_PATTERN = /[&=+]/g;
+const SORT_COLUMN_KEY_QUERY_META_PATTERN = /[&=+]/gu;
 const HEX_RADIX = 16;
 const FILTER_SEARCH_ERROR_ID = "filter-search";
 
 function encodeQueryMetaCharacter(value: string): string {
-  return `%${value.charCodeAt(0).toString(HEX_RADIX).toUpperCase()}`;
+  return `%${(value.codePointAt(0) ?? 0).toString(HEX_RADIX).toUpperCase()}`;
 }
 
 function decodeSortColumnKey(value: string): string {
-  const querySafeValue = value.replace(
+  const querySafeValue = value.replaceAll(
     SORT_COLUMN_KEY_QUERY_META_PATTERN,
     encodeQueryMetaCharacter
   );
@@ -50,7 +51,7 @@ function hasInvalidSortSeparator(separator: number, valueLength: number) {
 }
 
 function parseSortSearch(value: string | undefined): SortColumn[] {
-  if (!value) {
+  if (!isNonEmptyString(value)) {
     return [];
   }
 
@@ -140,7 +141,10 @@ function resolveTableDataQueryState({
   filterColumns: FilterColumnMeta[];
   filterLogic: TableFilterLogic;
   filterRules: TableFilterRule[];
-  invalidFilterRules: Array<{ id: string; message: string }>;
+  invalidFilterRules: {
+    id: string;
+    message: string;
+  }[];
   normalizedFilterSearch?: string | undefined;
   normalizedSortSearch?: string | undefined;
   selectedColumns: string[];
@@ -240,8 +244,9 @@ function useTableDataQuery({
     filter,
     name,
     onPageSizeChange,
-    onSortColumnsChange: (next) =>
-      onSortSearchChange(serializeSortSearch(next)),
+    onSortColumnsChange: (next) => {
+      onSortSearchChange(serializeSortSearch(next));
+    },
     pageSize,
     selectedColumns: queryState.selectedColumns,
     sortColumns: queryState.sortColumns,

@@ -19,6 +19,7 @@ import * as actualTransport from "@/lib/transport" with {
   rstest: "importActual",
 };
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { CatalogSyncMetadataSchema } from "@/protogen/querylane/console/v1alpha1/catalog_sync_pb";
 import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
@@ -84,50 +85,50 @@ rs.mock("@tanstack/react-router", () => {
   };
 });
 
-const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
-const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
-const KIND_FILTER_RE = /^Kind$/;
-const OWNER_FILTER_RE = /^Owner$/;
+const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/u;
+const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/u;
+const KIND_FILTER_RE = /^Kind$/u;
+const OWNER_FILTER_RE = /^Owner$/u;
 // The Objects tab's accessible name includes its count badge.
-const OBJECTS_TAB_RE = /^Objects/;
-const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/;
-const SCHEMA_MAP_FILTER_RE = /^Schema$/;
-const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/;
-const SCHEMA_MAP_CATALOG_OPTION_RE = /^catalog\b/;
-const MATERIALIZED_VIEWS_OPTION_RE = /^Materialized views\b/;
-const ANALYTICS_OWNER_OPTION_RE = /^analytics_owner\b/;
-const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/;
+const OBJECTS_TAB_RE = /^Objects/u;
+const SCHEMA_MAP_ALL_CHIP_RE = /^All 7$/u;
+const SCHEMA_MAP_FILTER_RE = /^Schema$/u;
+const SCHEMA_MAP_ACTIVE_FILTER_RE = /^Schema.*catalog/u;
+const SCHEMA_MAP_CATALOG_OPTION_RE = /^catalog\b/u;
+const MATERIALIZED_VIEWS_OPTION_RE = /^Materialized views\b/u;
+const ANALYTICS_OWNER_OPTION_RE = /^analytics_owner\b/u;
+const SCHEMA_MAP_KEY_ABBREVIATION_RE = /\b(?:FK|IDX|PK)\b/u;
 
-const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/;
-const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/;
-const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/;
-const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/;
-const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/;
-const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/;
-const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/;
-const PARTITION_Q1_ROW_RE = /change_log_2026_q1.*1\.02M/;
-const PARTITION_Q2_ROW_RE = /change_log_2026_q2.*1\.18M/;
-const PARTITION_Q3_ROW_RE = /change_log_2026_q3 CURRENT.*48k/;
-const PARTITION_DEFAULT_ROW_RE = /change_log_archive DEFAULT.*1\.94M/;
-const PARTITION_PAGE_ONE_RE = /Showing 1–10 of 12/;
-const PARTITION_PAGE_TWO_RE = /Showing 11–12 of 12/;
-const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/;
+const APP_READER_SUPPORT_AGENT_RE = /app_reader, support_agent/u;
+const GENERATED_GENERATION_FILTER_RE = /Generation.*Generated/u;
+const BIGINT_TYPE_TITLE_RE = /Integer.*64-bit/u;
+const ID_PRIMARY_KEY_CELL_RE = /id\s+Primary key\s+Surrogate key/u;
+const JSONB_TYPE_TITLE_RE = /JSON.*binary JSON/u;
+const NUMERIC_TYPE_TITLE_RE = /Decimal.*Exact decimal/u;
+const PARTITION_2024_BOUND_RE = /FOR VALUES FROM \('2024-01-01'\)/u;
+const PARTITION_Q1_ROW_RE = /change_log_2026_q1.*1\.02M/u;
+const PARTITION_Q2_ROW_RE = /change_log_2026_q2.*1\.18M/u;
+const PARTITION_Q3_ROW_RE = /change_log_2026_q3 CURRENT.*48k/u;
+const PARTITION_DEFAULT_ROW_RE = /change_log_archive DEFAULT.*1\.94M/u;
+const PARTITION_PAGE_ONE_RE = /Showing 1–10 of 12/u;
+const PARTITION_PAGE_TWO_RE = /Showing 11–12 of 12/u;
+const PARTITION_PAGE_ALL_RE = /Showing 1–12 of 12/u;
 // Queries stamp their fetch time from Date.now(). 2024-01-01T23:00:00Z renders
 // as "Last fetched 11:00:00 PM" under the pinned TZ=GMT this runner uses,
 // matching the mocked data grid label below.
 const FETCHED_AT = Date.parse("2024-01-01T23:00:00Z");
 // Falls inside change_log_2026_q3, so that partition reads as current.
 const PARTITION_REDESIGN_FETCHED_AT = Date.parse("2026-07-07T22:51:48Z");
-const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/;
-const POLICIES_ONE_TAB_RE = /^Policies\s+1$/;
-const TABLE_COLUMNS_LAST_FETCHED_RE = /base table · 11 columns · Last fetched/;
+const LAST_FETCHED_11_PM_RE = /Last fetched 11:00:00 PM/u;
+const POLICIES_ONE_TAB_RE = /^Policies\s+1$/u;
+const TABLE_COLUMNS_LAST_FETCHED_RE = /base table · 11 columns · Last fetched/u;
 const TIMESTAMPTZ_TYPE_TITLE_RE =
-  /Timestamp.*timestamptz.*UTC-normalized instant/;
-const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/;
+  /Timestamp.*timestamptz.*UTC-normalized instant/u;
+const TRIGGERS_ONE_TAB_RE = /^Triggers\s+1$/u;
 const CACHE_HIT_HEADER_LABEL =
   "Cache hit. PostgreSQL shared-buffer hit ratio; operating-system cache reads count as reads.";
 
-const explainTransport = rs.hoisted(() => ({
+const explainTransport = rs.hoisted((): { current: Transport | undefined } => ({
   current: undefined as Transport | undefined,
 }));
 
@@ -217,14 +218,14 @@ function requireIndexSummaryStrip() {
 }
 
 function requireColumnTypeTitle(displayType: string) {
-  const typeCell = Array.from(
-    document.querySelectorAll<HTMLElement>("td")
-  ).find((cell) => cell.textContent?.trim().startsWith(displayType));
+  const typeCell = [...document.querySelectorAll<HTMLElement>("td")].find(
+    (cell) => cell.textContent?.trim().startsWith(displayType)
+  );
   const title = typeCell
     ?.querySelector<HTMLElement>("[title]")
     ?.getAttribute("title");
 
-  if (!title) {
+  if (!isNonEmptyString(title)) {
     throw new Error(`Expected ${displayType} type metadata.`);
   }
 
@@ -638,11 +639,11 @@ test("data explorer schema map selection does not move nodes", async () => {
     .element(page.getByRole("button", { name: "catalog.routes" }))
     .toBeVisible();
   const captureNodeLayout = () =>
-    Array.from(
-      document.querySelectorAll<SVGElement>(
+    [
+      ...document.querySelectorAll<SVGElement>(
         'svg[data-testid="schema-map-canvas"] foreignObject'
-      )
-    ).flatMap((boundary) => {
+      ),
+    ].flatMap((boundary) => {
       const button = boundary.querySelector("button[aria-label]");
       return button
         ? [
@@ -701,7 +702,9 @@ test("data explorer schema map keeps schema labels clear of group borders", asyn
       shippingLabel instanceof SVGGraphicsElement
     )
   ) {
-    throw new Error("Expected the shipping schema label and hull to render.");
+    throw new TypeError(
+      "Expected the shipping schema label and hull to render."
+    );
   }
 
   const labelBox = shippingLabel.getBBox();
@@ -729,7 +732,7 @@ test("data explorer schema map does not clip table card decoration", async () =>
   });
   const cardBoundary = tableCard.closest("foreignObject");
   if (!(cardBoundary instanceof SVGElement)) {
-    throw new Error("Expected the table card SVG boundary to render.");
+    throw new TypeError("Expected the table card SVG boundary to render.");
   }
 
   expect(getComputedStyle(cardBoundary).overflow).toBe("visible");
@@ -744,7 +747,7 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
   const relationshipPath = (label: string) => {
     const path = document.querySelector(`svg[aria-label="${label}"] path`);
     if (!(path instanceof SVGPathElement)) {
-      throw new Error(`Expected the ${label} relationship to render.`);
+      throw new TypeError(`Expected the ${label} relationship to render.`);
     }
     return path;
   };
@@ -1664,7 +1667,7 @@ test("data explorer index table stays inside narrow surfaces", async () => {
   const tableContainer = columnsCell.closest('[data-slot="table-container"]');
   const frame = screen.getByTestId("screenshot-frame");
 
-  if (!(tableContainer && frame)) {
+  if (!(tableContainer && Boolean(frame))) {
     throw new Error("Expected the index table to render inside the frame.");
   }
 

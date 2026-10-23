@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { createTestQueryClient } from "@/test/query-client";
 
 interface HarnessProvidersProps {
@@ -46,7 +47,7 @@ function HarnessProviders({
   transport,
 }: HarnessProvidersProps) {
   const [queryClient] = useState(createTestQueryClient);
-  const routed = routerPath ? (
+  const routed = isNonEmptyString(routerPath) ? (
     <HarnessRouter path={routerPath}>{children}</HarnessRouter>
   ) : (
     children

@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import {
   Command as BaseCommand,
-  CommandDialog as BaseCommandDialog,
+  type CommandDialog as BaseCommandDialog,
   CommandEmpty as BaseCommandEmpty,
   CommandGroup as BaseCommandGroup,
   CommandInput as BaseCommandInput,
@@ -11,6 +11,13 @@ import {
   CommandSeparator as BaseCommandSeparator,
   CommandShortcut as BaseCommandShortcut,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const commandEmptyPresentations = cva("", {
@@ -83,8 +90,33 @@ function CommandItem({
 function Command(props: ComponentProps<typeof BaseCommand>) {
   return <BaseCommand {...props} />;
 }
-function CommandDialog(props: ComponentProps<typeof BaseCommandDialog>) {
-  return <BaseCommandDialog {...props} />;
+function CommandDialog({
+  title = "Command palette",
+  description = "Search for a command to run…",
+  children,
+  className,
+  showCloseButton = false,
+  ...props
+}: ComponentProps<typeof BaseCommandDialog>) {
+  // Keep naming content inside the portal: the registry implementation renders
+  // it beside the dialog, exposing a closed palette's text to screen readers.
+  return (
+    <Dialog {...props}>
+      <DialogContent
+        className={cn(
+          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
+          className
+        )}
+        showCloseButton={showCloseButton}
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
 }
 function CommandGroup(props: ComponentProps<typeof BaseCommandGroup>) {
   return <BaseCommandGroup {...props} />;

@@ -290,7 +290,9 @@ function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
           <Button
             className="h-9"
             onClick={() => {
-              onRefresh().catch((error) => captureException(error));
+              onRefresh().catch((error: unknown) => {
+                captureException(error);
+              });
             }}
             presentation="onboarding-primary"
           >
@@ -432,8 +434,8 @@ export function OnboardingWizardContent() {
           >
             <CardContent presentation="flush">
               <div className="grid grid-cols-1 lg:min-h-[460px] lg:grid-cols-[minmax(0,1.2fr)_minmax(250px,0.8fr)]">
-                <section className="bg-onboarding-card flex flex-col px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
-                  <div className="mx-auto flex h-full w-full max-w-4xl flex-1 flex-col">
+                <section className="bg-onboarding-card flex flex-col p-5 sm:p-6 lg:p-7">
+                  <div className="mx-auto flex size-full max-w-4xl flex-1 flex-col">
                     <div className="mb-5 flex items-center justify-between gap-4 text-white/62">
                       <Logo className="text-white" size={22} />
                       <div className="tracking-display rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs font-medium text-white/62">

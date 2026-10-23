@@ -65,7 +65,10 @@ const DEFAULT_PAGE_SIZE = 50;
 // renders while data is undefined, so the React Compiler can memoize
 // everything downstream of them.
 const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
-const EMPTY_RESULT_ROWS: Array<{ rowKey: string; values: TableCell[] }> = [];
+const EMPTY_RESULT_ROWS: {
+  rowKey: string;
+  values: TableCell[];
+}[] = [];
 
 function reportAutoRefreshError(error: unknown) {
   toast.error("Auto refresh failed", {
@@ -102,11 +105,13 @@ function useAutoRefresh({
       }
       const startAt = timerEpochMs > 0 ? timerEpochMs : Date.now();
       const remaining = Math.max(0, startAt + intervalMs - Date.now());
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = globalThis.window.setTimeout(() => {
         setManualRefreshAt(Date.now());
         Promise.resolve(refreshRef.current()).catch(reportAutoRefreshError);
       }, remaining);
-      return () => window.clearTimeout(timeoutId);
+      return () => {
+        globalThis.window.clearTimeout(timeoutId);
+      };
     },
     [intervalMs, isFetching, timerEpochMs]
   );
@@ -172,16 +177,16 @@ function navigationStateKey({
 /** Truncated previews resolve through ReadCellValue on this table. */
 function useReadCellValueFetcher(name: string): FetchFullCell {
   const readCellValue = useReadCellValueMutation();
-  return async (fullValueToken) =>
-    (
-      await readCellValue.mutateAsync(
-        create(ReadCellValueRequestSchema, {
-          fullValueToken,
-          maxBytes: READ_CELL_MAX_BYTES,
-          name,
-        })
-      )
-    ).value;
+  return async (fullValueToken) => {
+    const awaitedResult1 = await readCellValue.mutateAsync(
+      create(ReadCellValueRequestSchema, {
+        fullValueToken,
+        maxBytes: READ_CELL_MAX_BYTES,
+        name,
+      })
+    );
+    return awaitedResult1.value;
+  };
 }
 
 function TableDataGridAlerts({
@@ -192,7 +197,10 @@ function TableDataGridAlerts({
   queryError,
 }: {
   hasStaleRows: boolean;
-  invalidFilterRules: Array<{ id: string; message: string }>;
+  invalidFilterRules: {
+    id: string;
+    message: string;
+  }[];
   onClearFilters: () => void;
   onRetry: () => Promise<unknown> | undefined;
   queryError: Error | null;
@@ -280,7 +288,7 @@ function availableNextPageToken({
   isFetching: boolean;
   response: ReadRowsResponse | undefined;
 }): string {
-  if (error || isFetching) {
+  if (Boolean(error) || isFetching) {
     return "";
   }
   return response?.nextPageToken ?? "";
@@ -295,11 +303,11 @@ function resolveReadRowsVisibility({
   error: unknown;
   lastSuccessful: ReadRowsResponse | undefined;
 }) {
-  const data = current ?? (error ? lastSuccessful : undefined);
+  const data = current ?? (Boolean(error) ? lastSuccessful : undefined);
   return {
     data,
-    hasStaleRows: Boolean(error && data),
-    isPreviousRequestFallback: Boolean(error && !current && data),
+    hasStaleRows: Boolean(Boolean(error) && data),
+    isPreviousRequestFallback: Boolean(Boolean(error) && !current && data),
   };
 }
 
@@ -312,7 +320,7 @@ function shouldSuppressStatusAndPagination({
   isPreviousRequestFallback: boolean;
   rowCount: number;
 }): boolean {
-  return Boolean(isPreviousRequestFallback || (error && rowCount === 0));
+  return isPreviousRequestFallback || (Boolean(error) && rowCount === 0);
 }
 function TableDataGrid({
   allowSqlExport = true,
@@ -349,7 +357,7 @@ function TableDataGrid({
   });
   const {
     data,
-    dataUpdatedAt = 0,
+    dataUpdatedAt,
     error,
     isFetching,
     isLoading,
@@ -384,11 +392,20 @@ function TableDataGrid({
   // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
 
-  const resultColumns = visibleData?.resultSet?.columns ?? EMPTY_RESULT_COLUMNS;
-  const availableColumns = buildAvailableColumns(columnCatalog, resultColumns);
-  const resultRows = visibleData?.resultSet?.rows ?? EMPTY_RESULT_ROWS;
-  const rowCount = visibleData?.resultSet?.rowCount;
+  const resultSet = visibleData?.resultSet ?? {
+    columns: EMPTY_RESULT_COLUMNS,
+    rows: EMPTY_RESULT_ROWS,
+    rowCount: undefined,
+    rowIdentity: undefined,
+  };
+  const {
+    columns: resultColumns,
+    rows: resultRows,
+    rowCount,
+    rowIdentity,
+  } = resultSet;
 
+  const availableColumns = buildAvailableColumns(columnCatalog, resultColumns);
   const columnLayout = useTableColumnLayout({
     availableColumns,
     columns: resultColumns,
@@ -425,14 +442,18 @@ function TableDataGrid({
   const handleFilterChange = (
     next: TableFilterRule[],
     nextLogic: TableFilterLogic = filterLogic
-  ) =>
+  ) => {
     setFilterSearch(
       serializeTableFilterSearch({ logic: nextLogic, rules: next })
     );
-  const clearFilters = () => setFilterSearch(undefined);
+  };
+  const clearFilters = () => {
+    setFilterSearch(undefined);
+  };
   const handleRefresh = () => refreshState.refreshNow();
-  const handleSortChange = (next: SortColumn[]) =>
+  const handleSortChange = (next: SortColumn[]) => {
     controller.setSortColumns(next);
+  };
 
   const grid = (
     <ResultDataGrid
@@ -490,7 +511,7 @@ function TableDataGrid({
       resourceName={name}
       resultColumns={resultColumns}
       resultRows={resultRows}
-      rowIdentity={visibleData?.resultSet?.rowIdentity}
+      rowIdentity={rowIdentity}
       sortColumns={controller.sortColumns}
       statusItems={statusItems}
       suppressStatusAndPagination={shouldSuppressStatusAndPagination({

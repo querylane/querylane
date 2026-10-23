@@ -27,8 +27,12 @@ function DeferredToaster() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(function deferToasterMount() {
-    const timeout = globalThis.setTimeout(() => setMounted(true), 0);
-    return () => globalThis.clearTimeout(timeout);
+    const timeout = globalThis.setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => {
+      globalThis.clearTimeout(timeout);
+    };
   }, []);
 
   if (!mounted) {

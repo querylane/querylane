@@ -1,5 +1,6 @@
 import { QuerylaneLogoAnimated } from "@/components/branding/querylane-logo";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface BrandedLoadingStateProps {
   description?: string;
@@ -44,7 +45,7 @@ function BrandedLoadingState({
         />
         <div className="space-y-1">
           <h1 className={TITLE_CLASS_BY_VARIANT[variant]}>{title}</h1>
-          {description ? (
+          {isNonEmptyString(description) ? (
             <p className="text-muted-foreground text-sm">{description}</p>
           ) : null}
         </div>

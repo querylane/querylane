@@ -46,7 +46,9 @@ const Y_AXIS_SEGMENTS = 4;
  * ladder, where 500 -> 1024 is not a factor of 2).
  */
 function nearestRungIndex(
-  ladder: { mantissa: number }[],
+  ladder: {
+    mantissa: number;
+  }[],
   error: number
 ): number {
   const index = ladder.findIndex((rung) => rung.mantissa >= error);

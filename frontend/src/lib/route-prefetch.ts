@@ -1,6 +1,6 @@
 import type {
-  FetchQueryOptions,
   QueryClient,
+  QueryExecuteOptions,
   QueryKey,
 } from "@tanstack/react-query";
 
@@ -16,9 +16,10 @@ async function prefetchRouteQuery<
   PrefetchQueryKey extends QueryKey,
 >(
   queryClient: RoutePrefetchClient,
-  options: FetchQueryOptions<
+  options: QueryExecuteOptions<
     QueryFnData,
     QueryError,
+    QueryData,
     QueryData,
     PrefetchQueryKey
   >

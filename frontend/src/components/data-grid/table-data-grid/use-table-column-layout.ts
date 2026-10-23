@@ -143,7 +143,9 @@ function useTableColumnLayout({
     hiddenColumnKeys,
     isCustomized: Boolean(layout.fetchVisibleColumns) || hasColumnCustomization,
     reorderColumns,
-    reset: () => resetLayout(tableName),
+    reset: () => {
+      resetLayout(tableName);
+    },
     setColumnOrder,
     setColumnVisibility,
     setFetchVisibleColumns,

@@ -304,7 +304,10 @@ function DataTableSurface({
   initialSorting,
 }: {
   filterValue?: string;
-  initialSorting?: Array<{ desc: boolean; id: string }>;
+  initialSorting?: {
+    desc: boolean;
+    id: string;
+  }[];
 }) {
   const controlledFilterProps =
     filterValue === undefined

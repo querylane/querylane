@@ -1,3 +1,5 @@
+import "react";
+
 declare global {
   interface RsbuildTypeOptions {
     strictImportMetaEnv: true;
@@ -9,5 +11,3 @@ declare global {
     readonly PUBLIC_TEST_BROWSER_THEME?: string;
   }
 }
-
-export {};

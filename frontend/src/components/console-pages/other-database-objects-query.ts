@@ -14,6 +14,7 @@ import {
 } from "@/components/console-pages/other-database-objects-sql";
 import { buildDatabaseName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import type {
   TableResultRow,
@@ -77,13 +78,13 @@ function assertNeverTableValueKind(_kind: never): never {
 
 function rowToRecord(columns: string[], row: TableResultRow): QueryRow {
   const record: QueryRow = {};
-  row.values.forEach((cell, index) => {
+  for (const [index, cell] of row.values.entries()) {
     const column = columns[index];
-    if (!column) {
-      return;
+    if (!isNonEmptyString(column)) {
+      continue;
     }
     record[column] = tableValueToText(cell.value);
-  });
+  }
   return record;
 }
 
@@ -249,7 +250,7 @@ async function fetchCronJobsSummaryRows({
   if (!(await hasCronJobsTable({ execute, parent }))) {
     return [];
   }
-  return execute({
+  return await execute({
     parent,
     rowLimit: SUMMARY_ROW_LIMIT,
     statement: buildCronJobsSummaryStatement(),

@@ -11,6 +11,9 @@ import {
   RetryInfoSchema,
 } from "@buf/googleapis_googleapis.bufbuild_es/google/rpc/error_details_pb.js";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { isNonEmptyString } from "@/lib/value-guards";
+
+const NANOSECONDS_PER_SECOND = 1_000_000_000;
 
 const CODE_LABELS: Record<number, string> = {
   [Code.Canceled]: "canceled",
@@ -31,11 +34,11 @@ const CODE_LABELS: Record<number, string> = {
   [Code.Unauthenticated]: "unauthenticated",
 };
 
-export function grpcCodeLabel(code: number): string {
+function grpcCodeLabel(code: number): string {
   return CODE_LABELS[code] ?? `code_${code}`;
 }
 
-export function formatConnectError(error: unknown): string {
+function formatConnectError(error: unknown): string {
   if (error instanceof ConnectError) {
     const violations = extractFieldViolations(error);
     const { code, rawMessage } = error;
@@ -46,7 +49,9 @@ export function formatConnectError(error: unknown): string {
       parts.push(rawMessage);
     }
     if (violations.length > 0) {
-      parts.push(violations.map((v) => `${v.field}: ${v.description}`).join("; "));
+      parts.push(
+        violations.map((v) => `${v.field}: ${v.description}`).join("; ")
+      );
     }
     if (parts.length === 0) {
       return codeLabel;
@@ -59,12 +64,12 @@ export function formatConnectError(error: unknown): string {
   return String(error);
 }
 
-export interface FieldViolation {
+interface FieldViolation {
   description: string;
   field: string;
 }
 
-export function extractFieldViolations(error: ConnectError): FieldViolation[] {
+function extractFieldViolations(error: ConnectError): FieldViolation[] {
   const violations: FieldViolation[] = [];
   try {
     for (const badRequest of error.findDetails(BadRequestSchema)) {
@@ -78,7 +83,7 @@ export function extractFieldViolations(error: ConnectError): FieldViolation[] {
   return violations;
 }
 
-export function formatToastErrorMessage({
+function formatToastErrorMessage({
   action,
   entity,
   error,
@@ -90,23 +95,23 @@ export function formatToastErrorMessage({
   return `Failed to ${action} ${entity}: ${formatConnectError(error)}`;
 }
 
-export interface HelpLink {
+interface HelpLink {
   description: string;
   url: string;
 }
 
-export interface PreconditionViolation {
+interface PreconditionViolation {
   description: string;
   subject: string;
   type: string;
 }
 
-export interface QuotaViolation {
+interface QuotaViolation {
   description: string;
   subject: string;
 }
 
-export interface ConnectErrorContext {
+interface ConnectErrorContext {
   code?: string;
   debug?: { detail?: string; stackEntries?: string[] };
   domain?: string;
@@ -140,14 +145,132 @@ const MAPPED_DETAIL_TYPES: ReadonlySet<string> = new Set([
   RetryInfoSchema.typeName,
 ]);
 
-function connectDetailTypeName(detail: ConnectError["details"][number]): string | undefined {
+function connectDetailTypeName(
+  detail: ConnectError["details"][number]
+): string | undefined {
   if ("desc" in detail) {
     return detail.desc.typeName;
   }
   return detail.type || undefined;
 }
 
-export function extractConnectErrorContext(error: unknown): ConnectErrorContext {
+function applyLocalizedDetails(
+  error: ConnectError,
+  context: ConnectErrorContext
+) {
+  for (const localized of error.findDetails(LocalizedMessageSchema)) {
+    if (localized.message) {
+      context.message = localized.message;
+      if (localized.locale) {
+        context.messageLocale = localized.locale;
+      }
+    }
+  }
+}
+
+function appendHelpLinks(error: ConnectError, context: ConnectErrorContext) {
+  for (const help of error.findDetails(HelpSchema)) {
+    for (const link of help.links) {
+      if (link.url) {
+        context.helpLinks.push({
+          description: link.description || link.url,
+          url: link.url,
+        });
+      }
+    }
+  }
+}
+
+function applyErrorInfo(error: ConnectError, context: ConnectErrorContext) {
+  for (const info of error.findDetails(ErrorInfoSchema)) {
+    if (info.reason) {
+      context.reason = info.reason;
+    }
+    if (info.domain) {
+      context.domain = info.domain;
+    }
+    applyErrorMetadata(info.metadata, context);
+  }
+}
+
+function applyErrorMetadata(
+  metadata: Record<string, string>,
+  context: ConnectErrorContext
+) {
+  const metaKeys = Object.keys(metadata);
+  if (metaKeys.length > 0) {
+    context.metadata = { ...metadata };
+    const metaReq = metadata["request_id"] ?? metadata["requestId"];
+    if (
+      isNonEmptyString(metaReq) &&
+      !(context.requestId !== undefined && context.requestId !== "")
+    ) {
+      context.requestId = metaReq;
+    }
+  }
+}
+
+function applyRequestMetadata(
+  error: ConnectError,
+  context: ConnectErrorContext
+) {
+  for (const req of error.findDetails(RequestInfoSchema)) {
+    if (req.requestId) {
+      context.requestId = req.requestId;
+    }
+  }
+
+  for (const retry of error.findDetails(RetryInfoSchema)) {
+    if (retry.retryDelay) {
+      const { nanos, seconds: retrySeconds } = retry.retryDelay;
+      const seconds = Number(retrySeconds);
+      context.retryAfterSeconds = seconds + nanos / NANOSECONDS_PER_SECOND;
+    }
+  }
+
+  for (const dbg of error.findDetails(DebugInfoSchema)) {
+    context.debug = { detail: dbg.detail, stackEntries: dbg.stackEntries };
+  }
+}
+
+function appendViolationDetails(
+  error: ConnectError,
+  context: ConnectErrorContext
+) {
+  for (const pre of error.findDetails(PreconditionFailureSchema)) {
+    for (const v of pre.violations) {
+      context.preconditionViolations.push({
+        description: v.description,
+        subject: v.subject,
+        type: v.type,
+      });
+    }
+  }
+
+  for (const quota of error.findDetails(QuotaFailureSchema)) {
+    for (const v of quota.violations) {
+      context.quotaViolations.push({
+        description: v.description,
+        subject: v.subject,
+      });
+    }
+  }
+}
+
+function applyResourceDetails(
+  error: ConnectError,
+  context: ConnectErrorContext
+) {
+  for (const resource of error.findDetails(ResourceInfoSchema)) {
+    context.resource = {
+      description: resource.description || undefined,
+      name: resource.resourceName || undefined,
+      type: resource.resourceType || undefined,
+    };
+  }
+}
+
+function extractConnectErrorContext(error: unknown): ConnectErrorContext {
   const context: ConnectErrorContext = {
     helpLinks: [],
     preconditionViolations: [],
@@ -167,96 +290,38 @@ export function extractConnectErrorContext(error: unknown): ConnectErrorContext 
     ...new Set(
       error.details.flatMap((detail) => {
         const typeName = connectDetailTypeName(detail);
-        return typeName !== undefined && typeName !== "" && !MAPPED_DETAIL_TYPES.has(typeName) ? [typeName] : [];
+        return typeName !== undefined &&
+          typeName !== "" &&
+          !MAPPED_DETAIL_TYPES.has(typeName)
+          ? [typeName]
+          : [];
       })
     ),
   ];
 
   try {
-    for (const localized of error.findDetails(LocalizedMessageSchema)) {
-      if (localized.message) {
-        context.message = localized.message;
-        if (localized.locale) {
-          context.messageLocale = localized.locale;
-        }
-      }
-    }
-
-    for (const help of error.findDetails(HelpSchema)) {
-      for (const link of help.links) {
-        if (link.url) {
-          context.helpLinks.push({
-            description: link.description || link.url,
-            url: link.url,
-          });
-        }
-      }
-    }
-
-    for (const info of error.findDetails(ErrorInfoSchema)) {
-      if (info.reason) {
-        context.reason = info.reason;
-      }
-      if (info.domain) {
-        context.domain = info.domain;
-      }
-      const metaKeys = Object.keys(info.metadata);
-      if (metaKeys.length > 0) {
-        context.metadata = { ...info.metadata };
-        const metaReq = info.metadata["request_id"] ?? info.metadata["requestId"];
-        if (metaReq && !(context.requestId !== undefined && context.requestId !== "")) {
-          context.requestId = metaReq;
-        }
-      }
-    }
-
-    for (const req of error.findDetails(RequestInfoSchema)) {
-      if (req.requestId) {
-        context.requestId = req.requestId;
-      }
-    }
-
-    for (const retry of error.findDetails(RetryInfoSchema)) {
-      if (retry.retryDelay) {
-        const { nanos, seconds: retrySeconds } = retry.retryDelay;
-        const seconds = Number(retrySeconds);
-        context.retryAfterSeconds = seconds + nanos / 1e9;
-      }
-    }
-
-    for (const dbg of error.findDetails(DebugInfoSchema)) {
-      context.debug = { detail: dbg.detail, stackEntries: dbg.stackEntries };
-    }
-
-    for (const pre of error.findDetails(PreconditionFailureSchema)) {
-      for (const v of pre.violations) {
-        context.preconditionViolations.push({
-          description: v.description,
-          subject: v.subject,
-          type: v.type,
-        });
-      }
-    }
-
-    for (const quota of error.findDetails(QuotaFailureSchema)) {
-      for (const v of quota.violations) {
-        context.quotaViolations.push({
-          description: v.description,
-          subject: v.subject,
-        });
-      }
-    }
-
-    for (const resource of error.findDetails(ResourceInfoSchema)) {
-      context.resource = {
-        description: resource.description || undefined,
-        name: resource.resourceName || undefined,
-        type: resource.resourceType || undefined,
-      };
-    }
+    applyLocalizedDetails(error, context);
+    appendHelpLinks(error, context);
+    applyErrorInfo(error, context);
+    applyRequestMetadata(error, context);
+    appendViolationDetails(error, context);
+    applyResourceDetails(error, context);
   } catch {
     return context;
   }
 
   return context;
 }
+
+export {
+  type ConnectErrorContext,
+  extractConnectErrorContext,
+  extractFieldViolations,
+  type FieldViolation,
+  formatConnectError,
+  formatToastErrorMessage,
+  grpcCodeLabel,
+  type HelpLink,
+  type PreconditionViolation,
+  type QuotaViolation,
+};

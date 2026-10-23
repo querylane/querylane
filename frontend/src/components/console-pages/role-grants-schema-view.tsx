@@ -28,6 +28,7 @@ import type {
 import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { buildGrantFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function isGrantsType(slug: string): slug is GrantsType {
   return slug in SLUG_TO_OBJECT_TYPE;
@@ -82,7 +83,7 @@ function SchemaGrantBody({
   }
   return (
     <>
-      {grantor ? (
+      {isNonEmptyString(grantor) ? (
         <div className="text-muted-foreground -mt-3.5 pb-3.5 text-xs">
           granted by{" "}
           <span className="text-foreground/75 font-mono">{grantor}</span>
@@ -118,12 +119,11 @@ function resolveSchemaGrantSelection({
   type: GrantsType | undefined;
 }) {
   const requestedType = type ? SLUG_TO_OBJECT_TYPE[type] : undefined;
-  const partialTypeMissing = Boolean(
+  const partialTypeMissing =
     partial &&
-      !allowMissingType &&
-      requestedType !== undefined &&
-      !group.byType.has(requestedType)
-  );
+    !allowMissingType &&
+    requestedType !== undefined &&
+    !group.byType.has(requestedType);
   const activeType =
     requestedType !== undefined &&
     (allowMissingType || group.byType.has(requestedType))
@@ -167,7 +167,7 @@ function useSchemaGrantTableState({
 
   useEffect(
     function syncServerFilter() {
-      if (filter) {
+      if (isNonEmptyString(filter)) {
         onTableFilterChange?.({ filter, source: "direct" });
       }
     },

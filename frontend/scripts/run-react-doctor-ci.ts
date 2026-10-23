@@ -3,48 +3,53 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { env, exit, stderr, stdout } from "node:process";
-import { requiresFullStaticAnalysisFromBase } from "./lint-changed";
+import { z } from "zod";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
-interface DoctorDiagnostic {
-  category?: string;
-  filePath?: string;
-  line?: number;
-  message?: string;
-  rule?: string;
-  severity?: string;
-  tags?: string[];
-  title?: string;
-}
-
-interface DoctorReport {
-  diagnostics?: DoctorDiagnostic[];
-  error?: string | null;
-  ok?: boolean;
-  projects?: Array<{
-    score?: {
-      label?: string;
-      score?: number;
-    };
-  }>;
-  summary?: {
-    affectedFileCount?: number;
-    errorCount?: number;
-    score?: number;
-    scoreLabel?: string;
-    totalDiagnosticCount?: number;
-    warningCount?: number;
-  };
-  version?: string;
-}
-
-interface PullRequestEvent {
-  pull_request?: {
-    head?: {
-      sha?: string;
-    };
-    number?: number;
-  };
-}
+const doctorDiagnosticSchema = z.looseObject({
+  category: z.string().optional(),
+  filePath: z.string().optional(),
+  line: z.number().int().optional(),
+  message: z.string().optional(),
+  rule: z.string().optional(),
+  severity: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  title: z.string().optional(),
+});
+const doctorReportSchema = z.looseObject({
+  ok: z.boolean(),
+  error: z.string().nullable(),
+  diagnostics: z.array(doctorDiagnosticSchema),
+  summary: z.looseObject({
+    errorCount: z.number().int().nonnegative(),
+    warningCount: z.number().int().nonnegative(),
+    affectedFileCount: z.number().int().nonnegative(),
+    totalDiagnosticCount: z.number().int().nonnegative(),
+    score: z.number().nullable().optional(),
+    scoreLabel: z.string().nullable().optional(),
+  }),
+  projects: z
+    .array(
+      z.looseObject({
+        score: z
+          .looseObject({ label: z.string(), score: z.number() })
+          .nullable()
+          .optional(),
+      })
+    )
+    .optional(),
+  version: z.string().optional(),
+});
+const pullRequestEventSchema = z.looseObject({
+  pull_request: z
+    .looseObject({
+      head: z.looseObject({ sha: z.string() }).optional(),
+      number: z.number().int().positive(),
+    })
+    .optional(),
+});
+type DoctorReport = z.infer<typeof doctorReportSchema>;
+type DoctorDiagnostic = z.infer<typeof doctorDiagnosticSchema>;
 
 const COMMENT_MARKER = "<!-- react-doctor:summary -->";
 const GITHUB_API_VERSION = "2022-11-28";
@@ -59,13 +64,13 @@ function getEnv(name: string) {
 
 function readPullRequestEvent() {
   const eventPath = getEnv("GITHUB_EVENT_PATH");
-  if (!eventPath) {
+  if (!isNonEmptyString(eventPath)) {
     return null;
   }
   try {
-    return JSON.parse(
-      readFileSync(eventPath, "utf8")
-    ) as PullRequestEvent | null;
+    return pullRequestEventSchema.parse(
+      JSON.parse(readFileSync(eventPath, "utf8"))
+    );
   } catch (error) {
     stderr.write(`Could not read GitHub event payload: ${String(error)}\n`);
     return null;
@@ -74,7 +79,7 @@ function readPullRequestEvent() {
 
 function readReport(rawOutput: string) {
   try {
-    return JSON.parse(rawOutput) as DoctorReport;
+    return doctorReportSchema.parse(JSON.parse(rawOutput));
   } catch (error) {
     stderr.write(
       `Could not parse React Doctor JSON output: ${String(error)}\n`
@@ -109,8 +114,13 @@ function escapeTableCell(value: string) {
 }
 
 function renderDiagnostic(diagnostic: DoctorDiagnostic) {
-  const lineSuffix = diagnostic.line ? `:${diagnostic.line}` : "";
-  const location = diagnostic.filePath
+  const lineSuffix =
+    typeof diagnostic.line === "number" &&
+    diagnostic.line !== 0 &&
+    !Number.isNaN(diagnostic.line)
+      ? `:${diagnostic.line}`
+      : "";
+  const location = isNonEmptyString(diagnostic.filePath)
     ? `${diagnostic.filePath}${lineSuffix}`
     : "unknown";
   const tags =
@@ -152,7 +162,7 @@ function renderMarkdown(report: DoctorReport, commitSha: string | undefined) {
     }
   }
 
-  const commitSuffix = commitSha
+  const commitSuffix = isNonEmptyString(commitSha)
     ? ` for commit \`${commitSha.slice(0, SHORT_SHA_LENGTH)}\``
     : "";
   lines.push(
@@ -181,7 +191,7 @@ function buildHeaders(token: string) {
   return headers;
 }
 
-async function githubRequest<T>(
+async function githubRequest(
   path: string,
   options: {
     body?: unknown;
@@ -194,7 +204,7 @@ async function githubRequest<T>(
     headers: buildHeaders(options.token),
     method: options.method ?? "GET",
   };
-  if (options.body) {
+  if (Boolean(options.body)) {
     requestInit.body = JSON.stringify(options.body);
   }
   const response = await fetch(`${apiUrl}${path}`, requestInit);
@@ -203,13 +213,16 @@ async function githubRequest<T>(
       `GitHub API ${options.method ?? "GET"} ${path} failed: ${response.status} ${await response.text()}`
     );
   }
-  return (await response.json()) as T;
+  const payload: unknown = await response.json();
+  return payload;
 }
 
 function buildRunUrl(repository: string) {
   const serverUrl = getEnv("GITHUB_SERVER_URL");
   const runId = getEnv("GITHUB_RUN_ID");
-  return serverUrl && runId
+  return isNonEmptyString(serverUrl) &&
+    typeof runId === "string" &&
+    runId.length > 0
     ? `${serverUrl}/${repository}/actions/runs/${runId}`
     : undefined;
 }
@@ -221,44 +234,53 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
   const pullNumber = event?.pull_request?.number;
   const commitSha = event?.pull_request?.head?.sha ?? getEnv("GITHUB_SHA");
 
-  if (!(token && repository && pullNumber)) {
+  if (
+    !(
+      isNonEmptyString(token) &&
+      typeof repository === "string" &&
+      repository.length > 0 &&
+      typeof pullNumber === "number" &&
+      pullNumber !== 0 &&
+      !Number.isNaN(pullNumber)
+    )
+  ) {
     return;
   }
 
   const [owner, repo] = repository.split("/");
-  const comments = await githubRequest<Array<{ body?: string; id: number }>>(
-    `/repos/${owner}/${repo}/issues/${pullNumber}/comments?per_page=100`,
-    { token }
-  );
-  const existingComment = comments.find((comment) =>
-    comment.body?.includes(COMMENT_MARKER)
-  );
-  if (existingComment) {
-    await githubRequest(
-      `/repos/${owner}/${repo}/issues/comments/${existingComment.id}`,
-      {
-        body: { body: markdown },
-        method: "PATCH",
-        token,
-      }
+  const comments = z
+    .array(
+      z.looseObject({
+        body: z.string().optional(),
+        id: z.number().int().positive(),
+      })
+    )
+    .parse(
+      await githubRequest(
+        `/repos/${owner}/${repo}/issues/${pullNumber}/comments?per_page=100`,
+        { token }
+      )
     );
-  } else {
-    await githubRequest(
-      `/repos/${owner}/${repo}/issues/${pullNumber}/comments`,
-      {
-        body: { body: markdown },
-        method: "POST",
-        token,
-      }
-    );
-  }
+  const existingComment = comments.find(
+    (comment) => comment.body?.includes(COMMENT_MARKER) === true
+  );
+  await githubRequest(
+    existingComment
+      ? `/repos/${owner}/${repo}/issues/comments/${existingComment.id}`
+      : `/repos/${owner}/${repo}/issues/${pullNumber}/comments`,
+    {
+      body: { body: markdown },
+      method: existingComment ? "PATCH" : "POST",
+      token,
+    }
+  );
 
-  if (commitSha) {
+  if (isNonEmptyString(commitSha)) {
     await githubRequest(`/repos/${owner}/${repo}/statuses/${commitSha}`, {
       body: {
         context: "React Doctor",
         description: buildStatusDescription(report),
-        state: report.ok === false ? "failure" : "success",
+        state: report.ok ? "success" : "failure",
         target_url: buildRunUrl(repository),
       },
       method: "POST",
@@ -267,9 +289,7 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
   }
 }
 
-const qualityBaseRef = getEnv("QUALITY_BASE_REF") ?? "origin/main";
-const fullScanRequired = requiresFullStaticAnalysisFromBase(qualityBaseRef);
-const analysisScope = fullScanRequired ? "full" : "changed";
+const analysisScope = "full";
 
 const result = spawnSync(
   "bun",
@@ -279,7 +299,6 @@ const result = spawnSync(
     "-y",
     "--scope",
     analysisScope,
-    ...(fullScanRequired ? [] : ["--base", qualityBaseRef]),
     "--blocking",
     "warning",
     "--no-respect-inline-disables",
@@ -289,7 +308,7 @@ const result = spawnSync(
     "--json-compact",
   ],
   {
-    encoding: "utf8",
+    encoding: "utf-8",
   }
 );
 
@@ -300,14 +319,14 @@ if (result.stderr) {
 const doctorReport = readReport(result.stdout);
 if (!doctorReport) {
   stdout.write(result.stdout);
-  exit(result.status ?? 1);
+  exit(1);
 }
 
 const event = readPullRequestEvent();
 const headCommitSha = event?.pull_request?.head?.sha ?? getEnv("GITHUB_SHA");
 const summaryMarkdown = renderMarkdown(doctorReport, headCommitSha);
 const stepSummaryPath = getEnv("GITHUB_STEP_SUMMARY");
-if (stepSummaryPath) {
+if (isNonEmptyString(stepSummaryPath)) {
   appendFileSync(stepSummaryPath, summaryMarkdown);
 }
 stdout.write(summaryMarkdown);
@@ -321,4 +340,6 @@ try {
   exit(1);
 }
 
-exit(result.status ?? (doctorReport.ok === false ? 1 : 0));
+exit(
+  result.status !== 0 || !doctorReport.ok || doctorReport.error !== null ? 1 : 0
+);

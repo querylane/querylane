@@ -10,7 +10,9 @@ function VisualHarness({ scenario }: { scenario: string }) {
     return (
       <main className="text-foreground p-6">
         <h1 className="text-lg font-semibold">Unknown visual scenario</h1>
-        <p>Open one of: {Object.keys(VISUAL_SCENARIOS).sort().join(", ")}.</p>
+        <p>
+          Open one of: {Object.keys(VISUAL_SCENARIOS).toSorted().join(", ")}.
+        </p>
       </main>
     );
   }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import process from "node:process";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const BYTES_PER_KIB = 1024;
 const BUILD_REAL_TIME_BUDGET_MS = 5500;
@@ -89,7 +90,7 @@ function formatPerformanceBudgetResult(
 }
 
 function parseActual(value: string | undefined): number | null {
-  if (!value) {
+  if (!isNonEmptyString(value)) {
     return null;
   }
   const parsed = Number(value);
@@ -100,7 +101,7 @@ function performanceBudgetArgs(
   argv: readonly string[]
 ): readonly [string | undefined, string | undefined] {
   const [firstArg, secondArg, thirdArg, fourthArg] = argv;
-  if (firstArg && isPerformanceMetricName(firstArg)) {
+  if (isNonEmptyString(firstArg) && isPerformanceMetricName(firstArg)) {
     return [firstArg, secondArg];
   }
 
@@ -115,7 +116,10 @@ function runPerformanceBudgetCli({
   const [metricArg, actualArg] = performanceBudgetArgs(argv);
   const actual = parseActual(actualArg);
 
-  if (!(metricArg && isPerformanceMetricName(metricArg)) || actual === null) {
+  if (
+    !(isNonEmptyString(metricArg) && isPerformanceMetricName(metricArg)) ||
+    actual === null
+  ) {
     stderr(
       `Usage: bun run scripts/perf-budgets.ts <${Object.keys(FRONTEND_PERF_BUDGETS).join("|")}> <actual>`
     );
@@ -136,8 +140,12 @@ if (import.meta.main) {
   process.exit(
     runPerformanceBudgetCli({
       argv: process.argv,
-      stderr: (line) => console.error(line),
-      stdout: (line) => console.log(line),
+      stderr: (line) => {
+        console.error(line);
+      },
+      stdout: (line) => {
+        console.log(line);
+      },
     })
   );
 }

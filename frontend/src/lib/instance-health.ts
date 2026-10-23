@@ -30,7 +30,7 @@ function getMetricKeyFromDetail(
 }
 
 function getMetricFromMessage(message: string): MetricKey | undefined {
-  const normalizedMessage = message.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+  const normalizedMessage = message.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
   return METRIC_KEYS.find((key) => normalizedMessage.includes(key));
 }
 

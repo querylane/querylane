@@ -1,4 +1,5 @@
 "use client";
+
 import { Plus } from "lucide-react";
 
 import { useId } from "react";
@@ -10,9 +11,11 @@ import { InstanceLabelRow } from "@/components/instance-label-row";
 import { Button } from "@/components/ui/button";
 import { unassignedLabelMessages } from "@/features/instance-label-errors";
 
+const EMPTY_LABEL_ERRORS: Record<string, string[]> = {};
+
 export function InstanceConfigurationLabels({
   error,
-  rowErrors = {},
+  rowErrors = EMPTY_LABEL_ERRORS,
   isConfigManaged,
   labels,
   onChange,
@@ -39,7 +42,9 @@ export function InstanceConfigurationLabels({
             data-instance-config-field={
               labels.length === 0 ? "labels" : undefined
             }
-            onClick={() => onChange([...labels, createLabelEntry()])}
+            onClick={() => {
+              onChange([...labels, createLabelEntry()]);
+            }}
             size="sm"
             type="button"
             variant="outline"
@@ -60,18 +65,19 @@ export function InstanceConfigurationLabels({
               key={label.id}
               label={label}
               messages={rowErrors[label.id]}
-              onChange={(updated) =>
+              onChange={(updated) => {
                 onChange(
                   labels.map((entry) =>
                     entry.id === label.id ? updated : entry
                   )
-                )
-              }
+                );
+              }}
               onRemove={
                 isConfigManaged
                   ? undefined
-                  : () =>
-                      onChange(labels.filter((entry) => entry.id !== label.id))
+                  : () => {
+                      onChange(labels.filter((entry) => entry.id !== label.id));
+                    }
               }
             />
           ))}

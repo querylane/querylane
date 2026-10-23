@@ -6,6 +6,7 @@ import {
   MAX_SORT_COLUMNS,
   useTableDataController,
 } from "@/features/data-explorer/table-data/use-table-data-controller";
+import { isRecord } from "@/lib/value-guards";
 import {
   CellValueMode,
   RowCountMode,
@@ -16,10 +17,17 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-const { setStateMocks, useStateMock } = rs.hoisted(() => ({
-  setStateMocks: [] as ReturnType<typeof rs.fn>[],
-  useStateMock: rs.fn(),
-}));
+const { setStateMocks, useStateMock } = rs.hoisted(
+  (): {
+    setStateMocks: ReturnType<typeof rs.fn<(value: unknown) => void>>[];
+    useStateMock: ReturnType<
+      typeof rs.fn<(initial: unknown) => readonly unknown[]>
+    >;
+  } => ({
+    setStateMocks: [] as ReturnType<typeof rs.fn<(value: unknown) => void>>[],
+    useStateMock: rs.fn(),
+  })
+);
 
 interface PageTokenState {
   currentPageIndex: number;
@@ -35,8 +43,11 @@ rs.mock("react", () => ({
 function arrangeUseState() {
   setStateMocks.length = 0;
   useStateMock.mockImplementation((initial: unknown) => {
-    const value = typeof initial === "function" ? initial() : initial;
-    const setter = rs.fn();
+    const value =
+      typeof initial === "function"
+        ? (Reflect.apply(initial, undefined, []) as unknown)
+        : initial;
+    const setter = rs.fn<(value: unknown) => void>();
     setStateMocks.push(setter);
     return [value, setter];
   });
@@ -46,7 +57,7 @@ function expectPageTokenUpdater(
   value: unknown
 ): asserts value is (prev: PageTokenState) => PageTokenState {
   if (typeof value !== "function") {
-    throw new Error("expected page token updater");
+    throw new TypeError("expected page token updater");
   }
 }
 
@@ -116,7 +127,7 @@ describe("useTableDataController", () => {
     controller.setPageSize(50);
     expect(setStateMocks[0]).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryShapeKey: expect.stringContaining('["id","email"]'),
+        queryShapeKey: expect.stringContaining('["id","email"]') as unknown,
       })
     );
   });
@@ -145,7 +156,14 @@ describe("useTableDataController", () => {
         tokens: [""],
       })
     );
-    const filteredShape = setStateMocks[0]?.mock.calls[0]?.[0].queryShapeKey;
+    const filteredState = setStateMocks[0]?.mock.calls[0]?.[0];
+    if (
+      !isRecord(filteredState) ||
+      typeof filteredState["queryShapeKey"] !== "string"
+    ) {
+      throw new Error("Expected filtered query state");
+    }
+    const filteredShape = filteredState["queryShapeKey"];
     expect(filteredShape).not.toBe("table-a\u0000\u0000\u000025");
 
     useStateMock.mockReset();

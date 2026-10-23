@@ -1,6 +1,8 @@
 import path from "node:path";
 import { pluginReact } from "@rsbuild/plugin-react";
 
+export const RSTEST_MAX_WORKERS = 4;
+
 export const RSTEST_TIMEOUTS = {
   browser: 10_000,
   integration: 5000,

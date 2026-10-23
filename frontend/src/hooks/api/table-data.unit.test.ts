@@ -13,7 +13,21 @@ const { useMutationMock, useQueryClientMock, useQueryMock, useTransportMock } =
   rs.hoisted(() => ({
     useMutationMock: rs.fn(),
     useQueryClientMock: rs.fn(),
-    useQueryMock: rs.fn(),
+    useQueryMock:
+      rs.fn<
+        (
+          descriptor: unknown,
+          input: unknown,
+          options: {
+            enabled?: boolean;
+            staleTime?: number;
+            placeholderData?: (
+              previous: unknown,
+              query: { queryKey: unknown[] }
+            ) => unknown;
+          }
+        ) => unknown
+      >(),
     useTransportMock: rs.fn(),
   }));
 
@@ -51,7 +65,7 @@ describe("useReadRowsQuery", () => {
 
     const options = useQueryMock.mock.calls[0]?.[2];
     expect(options).toMatchObject(RESOURCE_QUERY_OPTIONS.tableRows);
-    expect(options.staleTime).toBe(0);
+    expect(options?.staleTime).toBe(0);
   });
 
   test("keeps previous rows when explicitly requested for the same table", () => {
@@ -62,6 +76,9 @@ describe("useReadRowsQuery", () => {
 
     const options = useQueryMock.mock.calls[0]?.[2];
     expect(options).toMatchObject({ enabled: true });
+    if (!options?.placeholderData) {
+      throw new Error("Expected placeholder-data policy");
+    }
     expect(
       options.placeholderData("previous-page", {
         queryKey: [{ name: tableName }],
@@ -99,8 +116,7 @@ describe("useReadRowsQueryActions", () => {
 
     expect(actions.getState()).toBe(queryState);
     await actions.fetch();
-    actions.prefetch();
-    await Promise.resolve();
+    await actions.prefetch();
 
     const fetchOptions = queryClient.query.mock.calls[0]?.[0];
     const prefetchOptions = queryClient.query.mock.calls[1]?.[0];

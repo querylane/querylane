@@ -1,3 +1,5 @@
+import { isNonEmptyString } from "@/lib/value-guards";
+
 interface TableDetailPreloadSearch {
   category?: string | undefined;
   name?: string | undefined;
@@ -8,7 +10,9 @@ let tableDetailPreloadPromise: Promise<unknown> | undefined;
 
 function shouldPreloadTableDetail(search: TableDetailPreloadSearch) {
   return Boolean(
-    search.category === "tables" && search.name?.trim() && search.schema?.trim()
+    search.category === "tables" &&
+      isNonEmptyString(search.name?.trim()) &&
+      search.schema?.trim()
   );
 }
 

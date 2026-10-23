@@ -23,7 +23,8 @@ export const queryClient = new QueryClient({
     },
   },
   mutationCache: new MutationCache({
-    onError: (error, _, __, mutation) => {
+    onError: (error, ...context) => {
+      const { 2: mutation } = context;
       const surface = getErrorSurface(mutation.meta);
       if (surface === "silent") {
         return;

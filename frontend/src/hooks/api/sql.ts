@@ -8,7 +8,7 @@ import { longRunningTransport } from "@/lib/transport";
 import { explainQuery } from "@/protogen/querylane/console/v1alpha1/sql-SQLService_connectquery";
 
 function useExplainQuery(
-  input?: MessageInitShape<(typeof explainQuery)["input"]> | undefined,
+  input?: MessageInitShape<(typeof explainQuery)["input"]>,
   options?: ConnectUseQueryOptions<(typeof explainQuery)["output"]>
 ) {
   const parent = typeof input?.parent === "string" ? input.parent.trim() : "";
@@ -18,7 +18,7 @@ function useExplainQuery(
   return useConnectQuery(explainQuery, input, {
     ...RESOURCE_QUERY_OPTIONS.explainPlan,
     ...options,
-    enabled: (options?.enabled ?? true) && Boolean(parent && statement),
+    enabled: Boolean(options?.enabled ?? true) && Boolean(parent && statement),
     // EXPLAIN ANALYZE may legitimately run up to the backend's 60s cap.
     transport: longRunningTransport,
   });

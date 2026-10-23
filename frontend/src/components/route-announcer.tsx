@@ -1,9 +1,10 @@
 "use client";
 
 import { useLocation } from "@tanstack/react-router";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function databasePageName(segments: string[]): string {
-  if (!segments[3]) {
+  if (!isNonEmptyString(segments[3])) {
     return "Instance overview";
   }
   if (segments[4] === "explorer") {
@@ -19,15 +20,15 @@ function databasePageName(segments: string[]): string {
 }
 
 function instancePageName(segments: string[]): string {
-  const [, , sub] = segments;
-  if (!sub) {
+  const { 2: sub } = segments;
+  if (!isNonEmptyString(sub)) {
     return "Instance overview";
   }
   if (sub === "configuration") {
     return "Instance configuration";
   }
   if (sub === "roles") {
-    return segments[3] ? "Role detail" : "Roles";
+    return isNonEmptyString(segments[3]) ? "Role detail" : "Roles";
   }
   if (sub === "databases") {
     return databasePageName(segments);
@@ -56,6 +57,7 @@ function pathnameToPageName(pathname: string): string {
       return "Access denied";
     case "instances":
       return instancePageName(segments);
+    case undefined:
     default:
       return "Querylane";
   }

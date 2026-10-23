@@ -1,4 +1,5 @@
 import { formatBytes, parseTableQualifiedName } from "@/lib/console-resources";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type {
   TablePartition,
   TablePartitionMetadata,
@@ -53,10 +54,10 @@ const PARTITION_SHARE_WIDTH_CLASSES = [
 ] as const;
 // Range bounds may carry a time-of-day suffix, e.g. FROM ('2026-01-01 00:00:00+00').
 const RANGE_BOUNDS_PATTERN =
-  /FROM \('(\d{4}-\d{2}-\d{2})[^']*'\) TO \('(\d{4}-\d{2}-\d{2})[^']*'\)/i;
-const FOR_VALUES_PREFIX_PATTERN = /^FOR VALUES\s+/i;
-const TRAILING_ZERO_DECIMAL = /\.0+$/;
-const TRAILING_DECIMAL_ZEROES = /(\.\d*?)0+$/;
+  /FROM \('(?<capture1>\d{4}-\d{2}-\d{2})[^']*'\) TO \('(?<capture2>\d{4}-\d{2}-\d{2})[^']*'\)/iu;
+const FOR_VALUES_PREFIX_PATTERN = /^FOR VALUES\s+/iu;
+const TRAILING_ZERO_DECIMAL = /\.0+$/u;
+const TRAILING_DECIMAL_ZEROES = /(?<capture1>\.\d*?)0+$/u;
 const THOUSAND = 1000;
 const MILLION = 1_000_000;
 const BILLION = 1_000_000_000;
@@ -227,7 +228,7 @@ function rangeBoundDayLabels(partitionBound: string) {
   const bounds = RANGE_BOUNDS_PATTERN.exec(partitionBound);
   const start = bounds?.[1];
   const end = bounds?.[2];
-  if (!(start && end)) {
+  if (!(isNonEmptyString(start) && typeof end === "string" && end.length > 0)) {
     return;
   }
   return { end, start };

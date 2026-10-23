@@ -2,7 +2,7 @@ import { buildContainsFilter } from "@/lib/aip-filter";
 import { parseResourceLeafId } from "@/lib/console-resources";
 
 function resourceDisplayName(resource: { displayName?: string; name: string }) {
-  return resource.displayName || parseResourceLeafId(resource.name);
+  return (resource.displayName ?? "") || parseResourceLeafId(resource.name);
 }
 
 function matchesNameFilter(name: string, query: string) {

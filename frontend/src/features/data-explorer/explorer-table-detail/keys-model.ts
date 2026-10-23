@@ -121,7 +121,7 @@ function createSecondaryIndexKeyRow(index: TableIndex): TableKeyRow {
   };
 }
 function sortTableKeyRows(keyRows: TableKeyRow[]) {
-  return keyRows.sort((left, right) => {
+  return keyRows.toSorted((left, right) => {
     if (left.sortRank !== right.sortRank) {
       return left.sortRank - right.sortRank;
     }

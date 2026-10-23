@@ -34,4 +34,4 @@ describe("niceAxisTicks (binary)", () => {
   });
 });
 
-const DECIMAL_LABEL_PATTERN = /[.,]\d/;
+const DECIMAL_LABEL_PATTERN = /[.,]\d/u;

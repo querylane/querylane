@@ -11,6 +11,7 @@ import {
   isFilterOperator,
   type TableFilterRule,
 } from "@/features/data-explorer/table-data/filter-state";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -86,10 +87,12 @@ function useDebouncedRuleValue(
       if (draft === committedValue) {
         return;
       }
-      const timeoutId = window.setTimeout(() => {
+      const timeoutId = globalThis.window.setTimeout(() => {
         commitDraft(draft);
       }, FILTER_VALUE_DEBOUNCE_MS);
-      return () => window.clearTimeout(timeoutId);
+      return () => {
+        globalThis.window.clearTimeout(timeoutId);
+      };
     },
     [committedValue, draft]
   );
@@ -107,7 +110,7 @@ function BooleanValueSelect({
   return (
     <Select
       onValueChange={(next) => {
-        if (next) {
+        if (isNonEmptyString(next)) {
           onChange(next);
         }
       }}
@@ -156,20 +159,24 @@ function FilterRow({
   const value2ResetKey = `${rule.column}\u0000${rule.operator}\u0000value2`;
   const [draftValue, setDraftValue] = useDebouncedRuleValue(
     rule.value,
-    (next) => onChange({ value: next }),
+    (next) => {
+      onChange({ value: next });
+    },
     valueResetKey
   );
   const [draftValue2, setDraftValue2] = useDebouncedRuleValue(
     rule.value2 ?? "",
-    (next) => onChange({ value2: next }),
+    (next) => {
+      onChange({ value2: next });
+    },
     value2ResetKey
   );
-  const invalidInputProps = invalidMessage
+  const invalidInputProps = isNonEmptyString(invalidMessage)
     ? ({ "aria-describedby": messageId, "aria-invalid": true } as const)
     : {};
 
   function changeColumn(nextColumn: string | null) {
-    if (!nextColumn) {
+    if (!isNonEmptyString(nextColumn)) {
       return;
     }
     const nextMeta = columns.find(
@@ -183,7 +190,7 @@ function FilterRow({
   }
 
   function changeOperator(nextOperator: string | null) {
-    if (!(nextOperator && isFilterOperator(nextOperator))) {
+    if (!(isNonEmptyString(nextOperator) && isFilterOperator(nextOperator))) {
       return;
     }
     onChange({
@@ -232,7 +239,9 @@ function FilterRow({
     ) {
       return (
         <BooleanValueSelect
-          onChange={(next) => onChange({ value: next })}
+          onChange={(next) => {
+            onChange({ value: next });
+          }}
           value={rule.value}
         />
       );
@@ -246,8 +255,12 @@ function FilterRow({
           aria-label="Filter value"
           className="h-8 min-w-0"
           onBlur={commitValueDraft}
-          onChange={(event) => setDraftValue(event.target.value)}
-          onKeyDown={(event) => applyOnEnter(event, commitValueDraft)}
+          onChange={(event) => {
+            setDraftValue(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            applyOnEnter(event, commitValueDraft);
+          }}
           placeholder={getValuePlaceholder(rule, column)}
           presentation="identifier"
           value={draftValue}
@@ -258,8 +271,12 @@ function FilterRow({
             aria-label="Filter end value"
             className="h-8 min-w-0"
             onBlur={commitValue2Draft}
-            onChange={(event) => setDraftValue2(event.target.value)}
-            onKeyDown={(event) => applyOnEnter(event, commitValue2Draft)}
+            onChange={(event) => {
+              setDraftValue2(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              applyOnEnter(event, commitValue2Draft);
+            }}
             placeholder="And"
             presentation="identifier"
             value={draftValue2}
@@ -310,10 +327,12 @@ function FilterRow({
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}
             className="h-8"
-            onClick={() => onChange({ negated: !rule.negated })}
+            onClick={() => {
+              onChange({ negated: !(rule.negated === true) });
+            }}
             presentation="compact"
             type="button"
-            variant={rule.negated ? "secondary" : "outline"}
+            variant={rule.negated === true ? "secondary" : "outline"}
           >
             NOT
           </Button>
@@ -355,7 +374,7 @@ function FilterRow({
           <X />
         </Button>
       </div>
-      {invalidMessage ? (
+      {isNonEmptyString(invalidMessage) ? (
         <p className="text-destructive pl-1 text-xs" id={messageId}>
           {invalidMessage}
         </p>

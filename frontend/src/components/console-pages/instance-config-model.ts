@@ -27,7 +27,7 @@ function labelsToEntries(labels: Record<string, string>): InstanceLabelEntry[] {
 function sortLabels(labels: InstanceLabelEntry[]) {
   return labels
     .map(({ key, value }) => ({ key, value }))
-    .sort(
+    .toSorted(
       (left, right) =>
         left.key.localeCompare(right.key) ||
         left.value.localeCompare(right.value)

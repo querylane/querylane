@@ -1,8 +1,8 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import { buildConfigPreview } from "./manual-yaml-config-preview";
 
 describe("buildConfigPreview", () => {
-  it("uses the backend database config shape", () => {
+  test("uses the backend database config shape", () => {
     const preview = buildConfigPreview("/tmp/querylane.yaml");
 
     expect(preview).toContain("database:\n");

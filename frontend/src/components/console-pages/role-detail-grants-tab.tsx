@@ -3,6 +3,7 @@
 import type { RoleDetailViewProps } from "@/components/console-pages/role-detail-model";
 import { GrantsSection } from "@/components/console-pages/role-grants-tab";
 import { parseResourceLeafId } from "@/lib/console-resources";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function RoleGrantsTab({
   builtinInfo,
@@ -47,7 +48,7 @@ function RoleGrantsTab({
       ownedPartial={ownedPartial}
       publicGrants={publicGrants}
       publicGrantsPartial={publicGrantsPartial}
-      {...(effectiveDbId
+      {...(isNonEmptyString(effectiveDbId)
         ? {
             queryScope: {
               databaseId: effectiveDbId,

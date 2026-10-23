@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@rstest/core";
+import { describe, expect, rs, test } from "@rstest/core";
 import type { useNavigate } from "@tanstack/react-router";
 import { renderHook } from "@testing-library/react";
 import type { AdminPageId } from "@/lib/admin-page";
@@ -45,7 +45,7 @@ function renderNavigationCallbacks({
   currentPage?: AdminPageId;
   effDatabaseId?: string;
   instanceId?: string;
-  navigationError?: unknown;
+  navigationError?: Error;
 } = {}) {
   const persisted: RouteSelectionIds[] = [];
   const navigations: unknown[] = [];
@@ -81,7 +81,10 @@ function applySearchUpdater(
     "search" in navigation &&
     typeof navigation.search === "function"
   ) {
-    return navigation.search(previous);
+    const updated: unknown = Reflect.apply(navigation.search, undefined, [
+      previous,
+    ]);
+    return updated;
   }
   throw new Error("expected navigation to receive a search updater");
 }
@@ -93,7 +96,9 @@ describe("useNavigationCallbacks", () => {
       navigationError: new Error("navigation failed"),
     });
 
-    callbacks.navigateToInstance(buildInstance("staging"));
+    const navigateToInstance = rs.fn(callbacks.navigateToInstance);
+    navigateToInstance(buildInstance("staging"));
+    expect(navigateToInstance).toHaveReturnedWith(undefined);
     await Promise.resolve();
     await Promise.resolve();
   });

@@ -18,7 +18,7 @@ export function collectQueryErrors(
   ...queries: QueryErrorDescriptor[]
 ): QueryErrorResult[] {
   return queries.flatMap(({ endpoint, label, query }) =>
-    query.error ? [{ endpoint, error: query.error, label }] : []
+    Boolean(query.error) ? [{ endpoint, error: query.error, label }] : []
   );
 }
 

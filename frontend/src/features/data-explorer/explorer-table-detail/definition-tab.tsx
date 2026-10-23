@@ -37,6 +37,7 @@ import type {
   useListTableTriggersQuery,
 } from "@/hooks/api/table";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { cn } from "@/lib/utils";
 import type {
   Table_TableType,
@@ -83,7 +84,7 @@ function DefinitionSideCard({
           <Icon aria-hidden="true" className="text-muted-foreground size-4" />
           {title}
         </h2>
-        {action ? <CardAction>{action}</CardAction> : null}
+        {Boolean(action) ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       <CardContent presentation="compact">{children}</CardContent>
     </Card>
@@ -301,7 +302,7 @@ function shellSingleQuote(value: string) {
 // For values interpolated inside a double-quoted shell word, where $, ", \
 // and backticks keep their special meaning.
 function shellDoubleQuoteEscape(value: string) {
-  return value.replace(/([\\"$`])/g, "\\$1");
+  return value.replaceAll(/(?<capture1>[\\"$`])/gu, "\\$1");
 }
 
 function DefinitionTab({
@@ -329,24 +330,32 @@ function DefinitionTab({
   tableType: Table_TableType;
   triggersQuery: ReturnType<typeof useListTableTriggersQuery>;
 }) {
+  const { refetch: refetchColumns } = columnsQuery;
+  const { refetch: refetchConstraints } = constraintsQuery;
+  const { refetch: refetchIndexes } = indexesQuery;
+  const { refetch: refetchPartitionMetadata } = partitionMetadataQuery;
+  const { refetch: refetchPolicies } = policiesQuery;
+  const { refetch: refetchTriggers } = triggersQuery;
   useEffect(
     function refreshDefinitionOnOpen() {
-      Promise.all([
-        columnsQuery.refetch(),
-        constraintsQuery.refetch(),
-        indexesQuery.refetch(),
-        partitionMetadataQuery.refetch(),
-        policiesQuery.refetch(),
-        triggersQuery.refetch(),
-      ]);
+      handleAsyncAction(() =>
+        Promise.all([
+          refetchColumns(),
+          refetchConstraints(),
+          refetchIndexes(),
+          refetchPartitionMetadata(),
+          refetchPolicies(),
+          refetchTriggers(),
+        ])
+      )();
     },
     [
-      columnsQuery.refetch,
-      constraintsQuery.refetch,
-      indexesQuery.refetch,
-      partitionMetadataQuery.refetch,
-      policiesQuery.refetch,
-      triggersQuery.refetch,
+      refetchColumns,
+      refetchConstraints,
+      refetchIndexes,
+      refetchPartitionMetadata,
+      refetchPolicies,
+      refetchTriggers,
     ]
   );
   const toolbar = deriveMetadataToolbar([
@@ -450,7 +459,7 @@ function DefinitionTab({
         <div className="ml-auto shrink-0">
           <Button
             disabled={toolbar.isRefreshing}
-            onClick={toolbar.handleRefresh}
+            onClick={handleAsyncAction(toolbar.handleRefresh)}
             size="sm"
             type="button"
             variant="outline"

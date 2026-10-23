@@ -1,5 +1,6 @@
 import type { GridEmptyMessage } from "@/components/data-grid/table-data-grid/result-data-grid-types";
 import { formatCount } from "@/features/sql-workbench/sql-workbench-format";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * Copy for a result grid that has columns but no rows. Nothing while rows may
@@ -65,9 +66,10 @@ function describeCommandOutcome({
   commandTag: string | undefined;
   rowsAffected: number | undefined;
 }): CommandOutcome {
-  const tag = commandTag && commandTag.length > 0 ? commandTag : null;
+  const tag =
+    isNonEmptyString(commandTag) && commandTag.length > 0 ? commandTag : null;
   const affected = rowsAffected ?? 0;
-  if (tag && SESSION_STATE_TAGS.has(tag)) {
+  if (isNonEmptyString(tag) && SESSION_STATE_TAGS.has(tag)) {
     return {
       description:
         "This only changed session state, and it does not carry over: every statement runs in its own read-only transaction. Schema-qualify names (schema.table) instead of setting search_path.",

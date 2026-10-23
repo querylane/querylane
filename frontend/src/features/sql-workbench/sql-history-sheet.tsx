@@ -24,6 +24,7 @@ import type {
   SqlHistoryEntry,
 } from "@/features/sql-workbench/sql-workbench-store";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type HistorySheetTab = "history" | "saved";
 
@@ -40,6 +41,7 @@ function statusTone(status: SqlHistoryEntry["status"]): string {
       return "text-success";
     case "error":
       return "text-destructive";
+    case "cancelled":
     default:
       return "text-muted-foreground";
   }
@@ -67,7 +69,9 @@ function HistoryRow({
     <li>
       <Button
         className="h-auto w-full flex-col items-start text-left whitespace-normal"
-        onClick={() => onOpen(entry.statement)}
+        onClick={() => {
+          onOpen(entry.statement);
+        }}
         presentation="sql-list-row"
         type="button"
         variant="ghost"
@@ -82,7 +86,7 @@ function HistoryRow({
           {historyMeta(entry).map((part) => (
             <span key={part}>{part}</span>
           ))}
-          {entry.errorSummary ? (
+          {isNonEmptyString(entry.errorSummary) ? (
             <span className="text-destructive/80 line-clamp-1 w-full">
               {entry.errorSummary}
             </span>
@@ -106,7 +110,9 @@ function SavedRow({
     <li className="group flex items-start gap-1">
       <Button
         className="h-auto min-w-0 flex-1 flex-col items-start text-left whitespace-normal"
-        onClick={() => onOpen(query.id)}
+        onClick={() => {
+          onOpen(query.id);
+        }}
         presentation="sql-list-row"
         type="button"
         variant="ghost"
@@ -121,7 +127,9 @@ function SavedRow({
       <Button
         aria-label={`Delete saved query ${query.name}`}
         className="mt-1"
-        onClick={() => onDelete(query.id)}
+        onClick={() => {
+          onDelete(query.id);
+        }}
         presentation="sql-row-delete"
         size="icon-xs"
         type="button"
@@ -233,9 +241,9 @@ function SheetTabs({
 }) {
   return (
     <Tabs
-      onValueChange={(value) =>
-        onChange(value === "saved" ? "saved" : "history")
-      }
+      onValueChange={(value) => {
+        onChange(value === "saved" ? "saved" : "history");
+      }}
       value={tab}
     >
       <TabsList className="h-8">
@@ -304,7 +312,9 @@ function SqlHistorySheet({
           <Input
             aria-label="Filter queries"
             className="h-8 flex-1"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
             placeholder="Filter…"
             presentation="compact"
             value={search}

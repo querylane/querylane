@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
@@ -34,7 +34,7 @@ function buildProgressEvent({
 }
 
 describe("onboarding-wizard-store", () => {
-  it("applyProgressEvent keeps first-seen order and upserts by step id", () => {
+  test("applyProgressEvent keeps first-seen order and upserts by step id", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().applyProgressEvent(
@@ -67,7 +67,7 @@ describe("onboarding-wizard-store", () => {
     expect(events[0]?.state).toBe(StepState.SUCCEEDED);
   });
 
-  it("retryFromErrorSummary returns to the selected progress phase", () => {
+  test("retryFromErrorSummary returns to the selected progress phase", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().selectMethod("manual_yaml");
@@ -82,7 +82,7 @@ describe("onboarding-wizard-store", () => {
     expect(useStore.getState().streamError).toBeNull();
   });
 
-  it("goToConfigure returns to the path-specific phase", () => {
+  test("goToConfigure returns to the path-specific phase", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().selectMethod("embedded");
@@ -94,7 +94,7 @@ describe("onboarding-wizard-store", () => {
     expect(useStore.getState().phase).toBe("configure_embedded");
   });
 
-  it("markSetupSuccess switches to the success phase", () => {
+  test("markSetupSuccess switches to the success phase", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().markSetupSuccess();
@@ -102,7 +102,7 @@ describe("onboarding-wizard-store", () => {
     expect(useStore.getState().phase).toBe("progress_success");
   });
 
-  it("resetSession restores default wizard session state", () => {
+  test("resetSession restores default wizard session state", () => {
     const useStore = createOnboardingWizardStore();
 
     useStore.getState().selectMethod("ui_configured");
@@ -128,7 +128,7 @@ describe("onboarding-wizard-store", () => {
   });
 });
 
-it("covers configure navigation and direct setters", () => {
+test("covers configure navigation and direct setters", () => {
   const useStore = createOnboardingWizardStore();
   const configureError = normalizeAppUiError(new Error("bad config"), {
     source: "setup",
@@ -166,7 +166,7 @@ it("covers configure navigation and direct setters", () => {
   expect(useStore.getState().submittedPostgresConfig).toBe(postgresConfig);
 });
 
-it("records failed progress event and clears stale progress on retry", () => {
+test("records failed progress event and clears stale progress on retry", () => {
   const useStore = createOnboardingWizardStore();
   const failed = buildProgressEvent({
     displayName: "Migrate",

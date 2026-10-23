@@ -19,9 +19,10 @@ import { parseResourceLeafId } from "@/lib/console-resources";
 import { resolveCreateInstanceSuccessTarget } from "@/lib/create-instance-navigation";
 import { logger } from "@/lib/diagnostics";
 import { isNavigationCancellationError } from "@/lib/navigation-errors";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface CreateInstanceSubmissionOutcome {
-  error: unknown | null;
+  error: unknown;
   notice: InlineNotice | null;
 }
 
@@ -90,7 +91,7 @@ async function fetchCreatedInstanceDatabases({
   queryClient: ReturnType<typeof useQueryClient>;
   transport: ReturnType<typeof useTransport>;
 }) {
-  if (!instanceId) {
+  if (!isNonEmptyString(instanceId)) {
     return [];
   }
 
@@ -100,7 +101,7 @@ async function fetchCreatedInstanceDatabases({
         input: databasesForInstanceQueryInput(instanceId),
         transport,
       }),
-      // allow: cache-tier a newly created instance must bypass cached discovery.
+      // a newly created instance must bypass cached discovery.
       staleTime: 0,
     });
     return response.databases;
@@ -114,7 +115,9 @@ function settleImmediate<T>(promise: Promise<T>, fallback: T): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((resolve) => {
-      setTimeout(() => resolve(fallback), CREATE_INSTANCE_DISCOVERY_GRACE_MS);
+      setTimeout(() => {
+        resolve(fallback);
+      }, CREATE_INSTANCE_DISCOVERY_GRACE_MS);
     }),
   ]);
 }

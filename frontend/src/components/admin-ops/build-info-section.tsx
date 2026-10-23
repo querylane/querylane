@@ -33,6 +33,8 @@ function MetaDatabaseValue({
       );
     case AppDatabaseStatus_State.NOT_CONFIGURED:
       return <StatusIndicator label="Not configured" status="disconnected" />;
+    case undefined:
+    case AppDatabaseStatus_State.UNSPECIFIED:
     default:
       return <StatusIndicator label="Unknown" status="disconnected" />;
   }
@@ -57,7 +59,7 @@ export function BuildInfoSection() {
         { label: "Built at", value: aboutMetadata.builtAt },
         {
           label: "Config file",
-          value: data?.configFilePath || "—",
+          value: (data?.configFilePath ?? "") || "—",
         },
         {
           label: "Meta database",

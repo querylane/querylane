@@ -275,7 +275,9 @@ function BackendDatabasePage({
   const metricSeries = metricsQuery.data?.series;
   const params = { databaseId, instanceId };
   const overviewGrid = overviewGridLayout(catalog?.schemas.length ?? 0);
-  const openQueryInsights = () => setQueryInsightsDatabaseName(databaseName);
+  const openQueryInsights = () => {
+    setQueryInsightsDatabaseName(databaseName);
+  };
   const handleCatalogRetry = () => {
     setMetricsAnchorMs(quantizedMetricsAnchor());
     return catalogQuery.refetch();

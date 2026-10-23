@@ -1,3 +1,5 @@
+import { isNonEmptyString } from "@/lib/value-guards";
+
 type ContainsFilterField =
   | "display_name"
   | "name"
@@ -26,7 +28,7 @@ function buildContainsFilter(
 }
 
 function joinFilterConditions(
-  conditions: Array<string | undefined>
+  conditions: (string | undefined)[]
 ): string | undefined {
   const present = conditions.filter((condition) => condition !== undefined);
   return present.length === 0 ? undefined : present.join(" AND ");
@@ -40,14 +42,16 @@ function buildOwnedFilter({
   search: string;
 }): string | undefined {
   return joinFilterConditions([
-    objectType ? `object_type = ${quoteFilterValue(objectType)}` : undefined,
+    isNonEmptyString(objectType)
+      ? `object_type = ${quoteFilterValue(objectType)}`
+      : undefined,
     buildGrantSearchFilter(search),
   ]);
 }
 
 function buildGrantSearchFilter(search: string): string | undefined {
   const objectName = buildContainsFilter("object_name", search);
-  if (!objectName) {
+  if (!isNonEmptyString(objectName)) {
     return;
   }
   const schemaName = buildContainsFilter("schema_name", search);
@@ -67,7 +71,9 @@ function buildGrantFilter({
     schemaName === undefined
       ? undefined
       : `schema_name = ${quoteFilterValue(schemaName)}`,
-    objectType ? `object_type = ${quoteFilterValue(objectType)}` : undefined,
+    isNonEmptyString(objectType)
+      ? `object_type = ${quoteFilterValue(objectType)}`
+      : undefined,
     buildGrantSearchFilter(search),
   ]);
 }

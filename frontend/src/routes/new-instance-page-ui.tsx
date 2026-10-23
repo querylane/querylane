@@ -21,7 +21,9 @@ import {
   createInstanceLabel,
   type InlineNotice,
 } from "@/features/new-instance-workflow";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type {
   CreateInstanceFieldName,
   CreateInstanceFormErrors,
@@ -29,7 +31,7 @@ import type {
 
 function LabelsEditor({
   error,
-  rowErrors = {},
+  rowErrors = EMPTY_LABEL_ERRORS,
   labels,
   onChange,
 }: {
@@ -45,7 +47,9 @@ function LabelsEditor({
       <div className="flex items-center justify-between">
         <span className="text-sm">Labels</span>
         <Button
-          onClick={() => onChange([...labels, createInstanceLabel()])}
+          onClick={() => {
+            onChange([...labels, createInstanceLabel()]);
+          }}
           size="sm"
           type="button"
           variant="outline"
@@ -63,16 +67,16 @@ function LabelsEditor({
               key={label.id}
               label={label}
               messages={rowErrors[label.id]}
-              onChange={(updated) =>
+              onChange={(updated) => {
                 onChange(
                   labels.map((entry) =>
                     entry.id === label.id ? updated : entry
                   )
-                )
-              }
-              onRemove={() =>
-                onChange(labels.filter((entry) => entry.id !== label.id))
-              }
+                );
+              }}
+              onRemove={() => {
+                onChange(labels.filter((entry) => entry.id !== label.id));
+              }}
             />
           ))}
         </div>
@@ -93,6 +97,8 @@ function LabelsEditor({
     </div>
   );
 }
+const EMPTY_LABEL_ERRORS: Record<string, string[]> = {};
+
 export function CreateInstancePageHeader({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex items-center gap-3">
@@ -153,13 +159,17 @@ export function CreateInstanceAdvancedSection({
             </label>
             <Input
               aria-describedby={`${instanceIdInputId}-help${
-                formErrors.instanceId ? ` ${instanceIdInputId}-error` : ""
+                isNonEmptyString(formErrors.instanceId)
+                  ? ` ${instanceIdInputId}-error`
+                  : ""
               }`}
-              aria-invalid={formErrors.instanceId ? true : undefined}
-              id={instanceIdInputId}
-              onChange={(event) =>
-                updateField("instanceId", event.target.value)
+              aria-invalid={
+                isNonEmptyString(formErrors.instanceId) ? true : undefined
               }
+              id={instanceIdInputId}
+              onChange={(event) => {
+                updateField("instanceId", event.target.value);
+              }}
               placeholder="Auto-generated if left blank"
               value={formState.instanceId}
             />
@@ -170,7 +180,7 @@ export function CreateInstanceAdvancedSection({
               Must start with a letter, may contain letters, digits, hyphens,
               and underscores.
             </p>
-            {formErrors.instanceId ? (
+            {isNonEmptyString(formErrors.instanceId) ? (
               <p
                 className="text-destructive text-sm"
                 id={`${instanceIdInputId}-error`}
@@ -233,7 +243,7 @@ export function CreateInstanceActions({
     <Button
       aria-describedby={canCreate ? undefined : createInstanceTestHintId}
       disabled={isPending || isTesting || !canCreate}
-      onClick={handleCreate}
+      onClick={handleAsyncAction(handleCreate)}
     >
       {isPending ? (
         <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
@@ -247,7 +257,7 @@ export function CreateInstanceActions({
     <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
       <Button
         disabled={isTesting || isPending}
-        onClick={handleTestConnection}
+        onClick={handleAsyncAction(handleTestConnection)}
         variant="outline"
       >
         {isTesting ? (

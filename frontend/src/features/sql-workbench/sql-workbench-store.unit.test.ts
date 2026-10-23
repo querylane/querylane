@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "@rstest/core";
+import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import {
   MAX_HISTORY_ENTRIES,
   scopeKey,
@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 describe("tabs", () => {
-  it("creates a numbered tab and activates it", () => {
+  test("creates a numbered tab and activates it", () => {
     const first = store().addTab(SCOPE);
     const second = store().addTab(SCOPE);
     const workspace = store().workspaces[SCOPE];
@@ -34,7 +34,7 @@ describe("tabs", () => {
     expect(first).not.toBe(second);
   });
 
-  it("keeps drafts per tab and per scope", () => {
+  test("keeps drafts per tab and per scope", () => {
     const tabId = store().addTab(SCOPE);
     store().updateTabText(SCOPE, tabId, "select 1");
     const otherScope = scopeKey("local", "analytics");
@@ -50,7 +50,7 @@ describe("tabs", () => {
     ).toBe("select 2");
   });
 
-  it("activates the neighbour when the active tab closes and never leaves zero tabs", () => {
+  test("activates the neighbour when the active tab closes and never leaves zero tabs", () => {
     const a = store().addTab(SCOPE);
     const b = store().addTab(SCOPE);
     store().setActiveTab(SCOPE, a);
@@ -68,7 +68,7 @@ describe("tabs", () => {
 });
 
 describe("history", () => {
-  it("prepends entries and caps the list", () => {
+  test("prepends entries and caps the list", () => {
     for (let index = 0; index < MAX_HISTORY_ENTRIES + 5; index += 1) {
       store().recordHistory(SCOPE, {
         durationMs: index,
@@ -82,7 +82,7 @@ describe("history", () => {
     expect(history[0]?.statement).toBe(`select ${MAX_HISTORY_ENTRIES + 4}`);
   });
 
-  it("clears history for one scope only", () => {
+  test("clears history for one scope only", () => {
     const otherScope = scopeKey("local", "analytics");
     store().recordHistory(SCOPE, {
       durationMs: 1,
@@ -103,7 +103,7 @@ describe("history", () => {
 });
 
 describe("saved queries", () => {
-  it("saves a query, links the tab and reopens it without duplicating tabs", () => {
+  test("saves a query, links the tab and reopens it without duplicating tabs", () => {
     const tabId = store().addTab(SCOPE);
     store().updateTabText(SCOPE, tabId, "select now()");
     const savedId = store().saveQuery(SCOPE, {
@@ -124,7 +124,7 @@ describe("saved queries", () => {
     expect(store().workspaces[SCOPE]?.tabs).toHaveLength(3);
   });
 
-  it("unlinks tabs when a saved query is deleted", () => {
+  test("unlinks tabs when a saved query is deleted", () => {
     const tabId = store().addTab(SCOPE);
     const savedId = store().saveQuery(SCOPE, {
       name: "x",
@@ -136,5 +136,50 @@ describe("saved queries", () => {
     expect(
       store().workspaces[SCOPE]?.tabs.find((t) => t.id === tabId)?.savedQueryId
     ).toBeUndefined();
+  });
+});
+
+describe("persisted workbench validation", () => {
+  test("does not overwrite rejected work if its recovery copy exceeds storage quota", async () => {
+    const key = "querylane.sql-workbench.v1";
+    const raw = JSON.stringify({ version: 0, state: { workspaces: "broken" } });
+    localStorage.setItem(key, raw);
+    const write = localStorage.setItem.bind(localStorage);
+    const storageWrite = rs
+      .spyOn(localStorage, "setItem")
+      .mockImplementation((name, value) => {
+        if (name.endsWith(".recovery")) {
+          throw new DOMException(
+            "Storage quota exceeded",
+            "QuotaExceededError"
+          );
+        }
+        write(name, value);
+      });
+    try {
+      await useSqlWorkbenchStore.persist.rehydrate();
+      store().ensureWorkspace(SCOPE);
+      globalThis.dispatchEvent(new Event("pagehide"));
+      expect(localStorage.getItem(key)).toBe(raw);
+    } finally {
+      storageWrite.mockRestore();
+      localStorage.clear();
+      await useSqlWorkbenchStore.persist.rehydrate();
+    }
+  });
+  test("rejects malformed stored data without replacing drafts or deleting recovery bytes", async () => {
+    const tabId = store().addTab(SCOPE);
+    store().updateTabText(SCOPE, tabId, "SELECT 'keep this draft'");
+    const before = store().workspaces;
+    const raw = JSON.stringify({
+      version: 0,
+      state: { history: {}, savedQueries: {}, workspaces: "broken" },
+    });
+    localStorage.setItem("querylane.sql-workbench.v1", raw);
+
+    await useSqlWorkbenchStore.persist.rehydrate();
+
+    expect(store().workspaces).toEqual(before);
+    expect(localStorage.getItem("querylane.sql-workbench.v1")).toBe(raw);
   });
 });

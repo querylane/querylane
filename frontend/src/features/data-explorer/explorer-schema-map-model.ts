@@ -31,7 +31,7 @@ const MAX_VISIBLE_COLUMNS = 8;
 const MIN_SCHEMA_HULL_CONTENT_HEIGHT = 120;
 const SCHEMA_ROW_GAP_Y = 76;
 const EDGE_MIN_CONTROL_OFFSET = 72;
-const TYPE_MODIFIER_PATTERN = /\(.+\)/;
+const TYPE_MODIFIER_PATTERN = /\(.+\)/u;
 
 const SCHEMA_TONES = [
   "chart-1",
@@ -210,7 +210,7 @@ function buildSchemaOrder(
   for (const view of views) {
     ordered.add(viewSchemaName(view));
   }
-  return Array.from(ordered);
+  return [...ordered];
 }
 
 function buildSchemaOptions(
@@ -263,7 +263,7 @@ function tableInfo(
 function viewInfo(view: View) {
   return {
     definitionLabel: view.definition
-      ? view.definition.replace(/\s+/g, " ").trim()
+      ? view.definition.replaceAll(/\s+/gu, " ").trim()
       : "View definition",
     displayName: view.displayName || parseResourceLeafId(view.name),
     id: view.name,
@@ -279,7 +279,11 @@ function viewSchemaName(view: View): string {
   const segments = view.name.split("/");
   const schemaIndex = segments.indexOf("schemas");
   const schemaSegment = segments[schemaIndex + 1];
-  if (schemaIndex >= 0 && schemaSegment) {
+  if (
+    schemaIndex !== -1 &&
+    typeof schemaSegment === "string" &&
+    schemaSegment.length > 0
+  ) {
     return decodeResourceSegment(schemaSegment);
   }
   return "public";
@@ -576,7 +580,7 @@ function tablesGroupedByDepth(
 }
 
 function sortedDepthEntries(tablesByDepth: Map<number, TableInfo[]>) {
-  return Array.from(tablesByDepth).toSorted(([left], [right]) => left - right);
+  return [...tablesByDepth].toSorted(([left], [right]) => left - right);
 }
 
 function tableColumnNodes({
@@ -794,7 +798,7 @@ function edgeAnchorY(node: SchemaMapNode, columnName: string): number {
   const columnIndex = node.columns.findIndex(
     (column) => column.name === columnName
   );
-  if (columnIndex >= 0) {
+  if (columnIndex !== -1) {
     return node.y + HEADER_HEIGHT + columnIndex * ROW_HEIGHT + ROW_HEIGHT / 2;
   }
   if (node.truncatedColumnCount > 0) {

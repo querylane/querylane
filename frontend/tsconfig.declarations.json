@@ -7,7 +7,9 @@
     "isolatedDeclarations": true,
     "noEmit": false,
     "outDir": "./node_modules/.tmp/tsconfig.declarations",
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.declarations.tsbuildinfo"
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.declarations.tsbuildinfo",
+    "allowJs": false,
+    "checkJs": false
   },
-  "include": ["scripts/perf-budgets.ts"]
+  "include": ["scripts/perf-budgets.ts", "src/lib/value-guards.ts"]
 }

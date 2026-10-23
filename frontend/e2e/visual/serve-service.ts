@@ -12,6 +12,7 @@ import {
   errorToJson,
 } from "@connectrpc/connect/protocol-connect";
 import type { Page } from "playwright/test";
+import { z } from "zod";
 
 const CONNECT_ENVELOPE_HEADER_BYTES = 5;
 const END_STREAM_FLAG = 0b10;
@@ -66,7 +67,7 @@ export async function serveService<S extends DescService>(
         async (route) => {
           const request = fromJson(
             method.input,
-            route.request().postDataJSON()
+            z.json().parse(route.request().postDataJSON())
           );
           try {
             const response = await impl(request);

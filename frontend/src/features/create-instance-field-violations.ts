@@ -1,4 +1,5 @@
 import { ConnectError } from "@connectrpc/connect";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import type {
   CreateInstanceFormErrors,
@@ -24,7 +25,7 @@ const SERVER_FIELD_FOCUS_ORDER = [
 
 // CreateInstanceRequest wraps client-settable fields in `spec` (or the legacy
 // `instance` body). Violations point at the request shape, the form does not.
-const RESOURCE_BODY_PREFIX_PATTERN = /^(?:spec|instance)\./;
+const RESOURCE_BODY_PREFIX_PATTERN = /^(?:spec|instance)\./u;
 
 type ConnectionConfigFieldName =
   | "database"
@@ -67,7 +68,7 @@ function recordFieldViolation<FieldName extends string>({
 }) {
   const formField = mapField(violation.field);
   const description = violation.description || "Invalid value.";
-  if (formField) {
+  if (isNonEmptyString(formField)) {
     fieldErrors[formField] = [fieldErrors[formField], description]
       .filter(Boolean)
       .join("\n");
@@ -98,7 +99,8 @@ function extractBadRequestFieldViolations<FieldName extends string>({
 
   return {
     fieldErrors,
-    firstInvalidField: focusOrder.find((field) => fieldErrors[field]) ?? null,
+    firstInvalidField:
+      focusOrder.find((field) => Boolean(fieldErrors[field])) ?? null,
     generalErrors,
   };
 }

@@ -6,6 +6,7 @@ import {
   mockDatabases,
   mockInstanceCatalog,
   mockInstanceDetails,
+  mockOverviewSupportData,
   mockReadyAppWithInstance,
   mockReadyOnboarding,
   sampleDatabase,
@@ -13,7 +14,7 @@ import {
 } from "./helpers";
 
 const PRODUCTION_CONFIGURATION_URL_RE =
-  /\/instances\/production\/configuration\/?$/;
+  /\/instances\/production\/configuration\/?$/u;
 const ADMIN_DRAWER_MIN_WIDTH = 280;
 const ADMIN_DRAWER_MAX_WIDTH = 292;
 
@@ -49,10 +50,10 @@ async function expectElementWidthBetween(
 
 async function expectHeaderChildrenDoNotOverlap(page: Page) {
   const overlapCount = await page.locator("header").evaluate((header) => {
-    const rects = Array.from(header.children)
+    const rects = [...header.children]
       .map((child) => child.getBoundingClientRect())
       .filter((rect) => rect.width > 0 && rect.height > 0)
-      .sort((left, right) => left.left - right.left);
+      .toSorted((left, right) => left.left - right.left);
 
     return rects.filter((rect, index) => {
       const previous = rects[index - 1];
@@ -91,6 +92,10 @@ async function mockLongAdminPath(page: Page) {
   await mockDatabases(page, [database]);
   await mockDatabaseDetails(page, database);
 }
+
+test.beforeEach(async ({ page }) => {
+  await mockOverviewSupportData(page);
+});
 
 test("admin header: phone viewport exposes sidebar navigation", async ({
   page,

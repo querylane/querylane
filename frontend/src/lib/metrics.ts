@@ -317,7 +317,10 @@ export function decodePoints(points: Points | undefined): MetricPoint[] {
  * align exactly; gaps stay null.
  */
 export function mergeSeriesData(
-  series: { key: string; points: MetricPoint[] }[]
+  series: {
+    key: string;
+    points: MetricPoint[];
+  }[]
 ): ChartRow[] {
   const rowsByTime = new Map<number, ChartRow>();
 
@@ -332,7 +335,9 @@ export function mergeSeriesData(
     }
   }
 
-  return [...rowsByTime.values()].sort((left, right) => left.time - right.time);
+  return [...rowsByTime.values()].toSorted(
+    (left, right) => left.time - right.time
+  );
 }
 
 /** Indexes a response's series by metric id for direct tab lookup. */
@@ -507,6 +512,8 @@ export function formatMetricValue(
       }
       return `${rounded}%`;
     }
+    case MetricUnit.UNSPECIFIED:
+    case MetricUnit.COUNT:
     default:
       return formatCompactNumber(value);
   }
@@ -541,6 +548,8 @@ export function formatMetricValueDetailed(
       }
       return `${rounded}%`;
     }
+    case MetricUnit.UNSPECIFIED:
+    case MetricUnit.COUNT:
     default:
       return detailedNumberFormatter.format(value);
   }
@@ -579,7 +588,9 @@ export function representativeValue(
 export function formatTrend(
   delta: TrendDelta | undefined
 ): FormattedTrend | null {
-  if (!(delta?.previousAvailable && Number.isFinite(delta.percentChange))) {
+  if (
+    !(delta?.previousAvailable === true && Number.isFinite(delta.percentChange))
+  ) {
     return null;
   }
 

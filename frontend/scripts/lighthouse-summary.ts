@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 interface LighthouseAudit {
   displayValue?: unknown;
@@ -37,7 +38,6 @@ interface LighthouseSummaryRow {
   url: string;
 }
 
-const REPORT_FILE_PATTERN = /\.report\.json$/;
 const DEFAULT_REPORT_DIR = "dist/lighthouse";
 const SCORE_SCALE = 100;
 
@@ -87,7 +87,7 @@ function formatCategoryScore(report: LighthouseReportLike, categoryId: string) {
 function formatAuditValue(report: LighthouseReportLike, auditId: string) {
   const audit = readAudit(report, auditId);
   const displayValue = getString(audit?.displayValue);
-  if (displayValue) {
+  if (isNonEmptyString(displayValue)) {
     return displayValue;
   }
 
@@ -171,14 +171,14 @@ function loadLighthouseReports(reportDir: string) {
 
   return readdirSync(reportDir, { withFileTypes: true })
     .flatMap((entry) =>
-      entry.isFile() && REPORT_FILE_PATTERN.test(entry.name)
+      entry.isFile() && entry.name.endsWith(".report.json")
         ? [join(reportDir, entry.name)]
         : []
     )
-    .sort()
+    .toSorted()
     .flatMap((path) => {
       try {
-        return [JSON.parse(readFileSync(path, "utf8")) as unknown];
+        return [JSON.parse(readFileSync(path, "utf-8")) as unknown];
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`Skipping invalid Lighthouse report ${path}: ${message}`);

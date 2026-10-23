@@ -32,13 +32,13 @@ body {
 [data-visual-test-root] {
   box-sizing: border-box;
   display: inline-block;
-  width: 1180px;
-  min-height: 820px;
+  inline-size: 1180px;
+  min-block-size: 820px;
   background: var(--background);
 }
 
 [data-create-instance-visual-surface] .min-h-screen {
-  min-height: auto;
+  min-block-size: auto;
 }
 
 [data-testid="admin-shell-visual-root"] [data-slot="sidebar-container"] {
@@ -46,7 +46,7 @@ body {
 }
 
 [data-testid="admin-shell-visual-root"] [data-slot="sidebar-wrapper"] {
-  height: 100%;
-  min-height: 100%;
-  max-height: 100%;
+  block-size: 100%;
+  min-block-size: 100%;
+  max-block-size: 100%;
 }

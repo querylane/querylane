@@ -1,10 +1,10 @@
 import { expect, test } from "playwright/test";
 import { installBrowserVoice } from "./voice";
 
-const SEARCH = /^Search/;
-const NO_RESULTS = /No results/;
-const CONFIGURE = /^Configure Querylane/;
-const INSTANCE_NAME = /^name string/;
+const SEARCH = /^Search/u;
+const NO_RESULTS = /No results/u;
+const CONFIGURE = /^Configure Querylane/u;
+const INSTANCE_NAME = /^name string/u;
 
 test.beforeEach(async ({ page }) => {
   await installBrowserVoice(page);

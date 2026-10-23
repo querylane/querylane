@@ -38,6 +38,7 @@ import {
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const METRICS = [
   {
@@ -211,7 +212,9 @@ function PlanRows(props: PlanRowsProps) {
                 aria-expanded={expanded}
                 aria-label={`${expanded ? "Collapse" : "Expand"} ${title} branch`}
                 className="shrink-0"
-                onClick={() => onToggle(node)}
+                onClick={() => {
+                  onToggle(node);
+                }}
                 presentation="muted"
                 size="icon-xs"
                 type="button"
@@ -226,14 +229,16 @@ function PlanRows(props: PlanRowsProps) {
               aria-label={`Inspect ${title}`}
               aria-pressed={node.id === selectedId}
               className="h-auto min-w-0 justify-start"
-              onClick={() => onSelect(node)}
+              onClick={() => {
+                onSelect(node);
+              }}
               presentation="sql-plan-node"
               type="button"
               variant="ghost"
             >
               <span className="flex min-w-0 flex-col items-start text-left">
                 <span className="text-xs font-medium">{node.nodeType}</span>
-                {node.relationName ? (
+                {isNonEmptyString(node.relationName) ? (
                   <span
                     className="text-muted-foreground max-w-64 truncate font-mono text-xs"
                     title={title}
@@ -342,7 +347,9 @@ function PlanMetricControls({
       </div>
       {hotspot ? (
         <Button
-          onClick={() => onSelect(hotspot)}
+          onClick={() => {
+            onSelect(hotspot);
+          }}
           presentation="muted"
           size="xs"
           type="button"
@@ -412,7 +419,7 @@ function PlanExplorer({
       const layout = layoutRef.current;
       const stacked =
         layout && getComputedStyle(layout).flexDirection === "column";
-      if (selection.inspect && stacked) {
+      if (selection.inspect && stacked === true) {
         layout.querySelector("aside")?.scrollIntoView({ block: "nearest" });
       } else if (mode === "tree") {
         tableRef.current
@@ -454,6 +461,7 @@ function PlanExplorer({
       role="region"
       value={mode}
     >
+      {!focused && <h2 className="sr-only">Query plan</h2>}
       <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
         <TabsList aria-label="Plan display" className="h-7">
           <TabsTrigger className="h-6" presentation="sql-plan-mode" value="map">
@@ -476,7 +484,9 @@ function PlanExplorer({
           </span>
         ) : (
           <Button
-            onClick={() => setFocused(true)}
+            onClick={() => {
+              setFocused(true);
+            }}
             presentation="compact"
             ref={focusButtonRef}
             size="xs"
@@ -510,7 +520,9 @@ function PlanExplorer({
         <PlanBody
           layoutRef={layoutRef}
           mode={mode}
-          onViewJson={() => setMode("raw")}
+          onViewJson={() => {
+            setMode("raw");
+          }}
           plan={plan}
           rawPlan={rawPlan}
           rows={{

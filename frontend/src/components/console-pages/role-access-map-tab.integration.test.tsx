@@ -22,7 +22,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 const navigateMock = rs.hoisted(() => rs.fn());
-const COUNT_WITH_PLUS = /\d\+/;
+const COUNT_WITH_PLUS = /\d\+/u;
 
 rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
@@ -34,7 +34,9 @@ rs.mock("@/features/database-visualization/flow-canvas", () => ({
     nodes,
   }: {
     actionPanel?: React.ReactNode | undefined;
-    nodes: { id: string }[];
+    nodes: {
+      id: string;
+    }[];
   }) => (
     <section aria-label="Access flow canvas">
       <fieldset aria-label="Access canvas controls">{actionPanel}</fieldset>
@@ -221,20 +223,13 @@ describe("role access map tab", () => {
     const ownedObjects = screen.getByText("Owned objects").parentElement;
     const publicGrants = screen.getByText("PUBLIC grants").parentElement;
 
-    expect(parents).not.toBeNull();
-    expect(directGrants).not.toBeNull();
-    expect(ownedObjects).not.toBeNull();
-    expect(publicGrants).not.toBeNull();
-    expect(within(parents as HTMLElement).queryByText("Partial")).toBeNull();
-    expect(
-      within(directGrants as HTMLElement).getByText("Partial")
-    ).toBeTruthy();
-    expect(
-      within(ownedObjects as HTMLElement).queryByText("Partial")
-    ).toBeNull();
-    expect(
-      within(publicGrants as HTMLElement).getByText("Partial")
-    ).toBeTruthy();
+    if (!(parents && directGrants && ownedObjects && publicGrants)) {
+      throw new Error("Expected all grant categories");
+    }
+    expect(within(parents).queryByText("Partial")).toBeNull();
+    expect(within(directGrants).getByText("Partial")).toBeTruthy();
+    expect(within(ownedObjects).queryByText("Partial")).toBeNull();
+    expect(within(publicGrants).getByText("Partial")).toBeTruthy();
     expect(screen.queryByText(COUNT_WITH_PLUS)).toBeNull();
   });
 

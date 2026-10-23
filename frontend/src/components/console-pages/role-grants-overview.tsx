@@ -28,6 +28,7 @@ import {
 } from "@/components/console-pages/role-grants-shared";
 import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   GrantObjectType,
   type OwnedObject,
@@ -57,7 +58,7 @@ function ownsPreview(objects: OwnedObject[]): string {
       schemas.add(object.schemaName);
     }
   }
-  const schemaList = Array.from(schemas).toSorted((a, b) => a.localeCompare(b));
+  const schemaList = [...schemas].toSorted((a, b) => a.localeCompare(b));
   if (schemaList.length === 0) {
     return breakdown;
   }
@@ -142,7 +143,7 @@ function SectionHead({
       {count === undefined ? null : (
         <CountPill partial={partial} value={count} />
       )}
-      {hint ? (
+      {isNonEmptyString(hint) ? (
         <span className="text-muted-foreground ml-auto text-xs">{hint}</span>
       ) : null}
     </div>
@@ -215,7 +216,9 @@ function SchemaListRow({
     : group.schema;
   return (
     <DrillRow
-      onClick={() => onNavigate({ kind: "schema", schema: targetSchema })}
+      onClick={() => {
+        onNavigate({ kind: "schema", schema: targetSchema });
+      }}
     >
       <Icon className="text-muted-foreground size-4 shrink-0" />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
@@ -514,7 +517,9 @@ function GrantsOverview({
             icon={Crown}
             iconClassName="text-warning-600 dark:text-warning-400"
             name="Owns"
-            onClick={() => onNavigate({ kind: "reach", reach: "owns" })}
+            onClick={() => {
+              onNavigate({ kind: "reach", reach: "owns" });
+            }}
             partial={ownedPartial}
             state={loadedFacetState(facetStates.owned)}
             unit="object"
@@ -529,7 +534,9 @@ function GrantsOverview({
             icon={Clock}
             iconClassName="text-permission-600 dark:text-permission-300"
             name="Default privileges"
-            onClick={() => onNavigate({ kind: "reach", reach: "defaults" })}
+            onClick={() => {
+              onNavigate({ kind: "reach", reach: "defaults" });
+            }}
             partial={defaultPrivilegesPartial}
             state={loadedFacetState(facetStates.defaults)}
             unit="rule"
@@ -544,7 +551,9 @@ function GrantsOverview({
             icon={Globe}
             iconClassName="text-reference-600 dark:text-reference-400"
             name="Granted to PUBLIC"
-            onClick={() => onNavigate({ kind: "reach", reach: "public" })}
+            onClick={() => {
+              onNavigate({ kind: "reach", reach: "public" });
+            }}
             partial={publicGrantsPartial}
             state={loadedFacetState(facetStates.publicGrants)}
             unit="grant"

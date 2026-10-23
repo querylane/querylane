@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
 import type { SqlTab } from "@/features/sql-workbench/sql-workbench-store";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function TabIcon({ isRunning, tab }: { isRunning: boolean; tab: SqlTab }) {
   if (isRunning) {
@@ -15,7 +16,7 @@ function TabIcon({ isRunning, tab }: { isRunning: boolean; tab: SqlTab }) {
       />
     );
   }
-  if (tab.savedQueryId) {
+  if (isNonEmptyString(tab.savedQueryId)) {
     return (
       <Bookmark
         aria-label="Saved query"
@@ -40,15 +41,15 @@ function SqlTabStrip({
   tabs: SqlTab[];
 }) {
   const activeTabRef = useRef<HTMLButtonElement>(null);
-  const focusRequested = useRef(false);
+  const focusRequestedRef = useRef(false);
   useEffect(
     function focusTabAfterCollectionChange() {
       if (
-        focusRequested.current &&
+        focusRequestedRef.current &&
         activeTabRef.current?.dataset["tabId"] === activeTabId
       ) {
         activeTabRef.current?.focus();
-        focusRequested.current = false;
+        focusRequestedRef.current = false;
       }
     },
     [activeTabId]
@@ -77,7 +78,7 @@ function SqlTabStrip({
           <Button
             aria-label={`Close ${activeTab.title}`}
             onClick={() => {
-              focusRequested.current = true;
+              focusRequestedRef.current = true;
               onClose(activeTabId);
             }}
             presentation="muted"
@@ -92,7 +93,7 @@ function SqlTabStrip({
           aria-label="New query tab"
           className="my-auto ml-1 size-7"
           onClick={() => {
-            focusRequested.current = true;
+            focusRequestedRef.current = true;
             onAdd();
           }}
           presentation="muted"

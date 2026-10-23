@@ -87,7 +87,7 @@ function rowMax(
     if (typeof value !== "number" || !Number.isFinite(value)) {
       continue;
     }
-    if (stacked && !item.dashed) {
+    if (stacked && !(item.dashed === true)) {
       stackSum += value;
     } else {
       max = Math.max(max, value);
@@ -113,7 +113,7 @@ function yAxisMax({
     max = Math.max(max, rowMax(row, series, stacked));
   }
   for (const threshold of thresholds ?? []) {
-    if (threshold.extendDomain) {
+    if (threshold.extendDomain === true) {
       max = Math.max(max, threshold.value);
     }
   }
@@ -197,12 +197,12 @@ function MetricTimeChart({
   yDomain,
   yTickBase = 10,
 }: MetricTimeChartProps) {
-  const gradientPrefix = useId().replaceAll(/[^a-zA-Z0-9_-]/g, "");
+  const gradientPrefix = useId().replaceAll(/[^a-zA-Z0-9_-]/gu, "");
   const [minMs, maxMs] = domain ?? extentOf(data);
   const spanMs = maxMs - minMs;
   const timeTicks = buildTimeTicks(minMs, maxMs);
-  const solidSeries = series.filter((item) => !item.dashed);
-  const dashedSeries = series.filter((item) => item.dashed);
+  const solidSeries = series.filter((item) => !(item.dashed === true));
+  const dashedSeries = series.filter((item) => item.dashed === true);
   const drawMode = resolveVariant(variant, solidSeries.length);
   const { domain: valueDomain, ticks: valueTicks } = resolveValueAxis({
     data,

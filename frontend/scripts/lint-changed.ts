@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { env, exit } from "node:process";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const DEFAULT_BASE_REF = "origin/main";
 const FRONTEND_PREFIX = "frontend/";
@@ -63,10 +64,10 @@ const childProcessRunner: CommandRunner = {
 function baseRefFromEnvironment(
   environment: Record<string, string | undefined>
 ) {
-  if (environment["QUALITY_BASE_REF"]) {
+  if (isNonEmptyString(environment["QUALITY_BASE_REF"])) {
     return environment["QUALITY_BASE_REF"];
   }
-  if (environment["GITHUB_BASE_REF"]) {
+  if (isNonEmptyString(environment["GITHUB_BASE_REF"])) {
     return `origin/${environment["GITHUB_BASE_REF"]}`;
   }
   return DEFAULT_BASE_REF;
@@ -82,7 +83,7 @@ function frontendRelativePath(repoPath: string): string | null {
 }
 
 function hasLintableExtension(path: string) {
-  return LINTABLE_EXTENSIONS.has(path.match(EXTENSION_PATTERN)?.[0] ?? "");
+  return LINTABLE_EXTENSIONS.has(EXTENSION_PATTERN.exec(path)?.[0] ?? "");
 }
 
 function isGeneratedOrRegistryPath(path: string) {
@@ -160,12 +161,12 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
       ? untrackedResult.stdout.split("\n").filter(Boolean)
       : [];
 
-  return Array.from(
-    new Set([
+  return [
+    ...new Set([
       ...diffResult.stdout.split("\n").filter(Boolean),
       ...untrackedFiles,
-    ])
-  );
+    ]),
+  ];
 }
 
 function runChangedLint({

@@ -50,7 +50,7 @@ const NON_FORMULA_CELL_VALUE_CASES: ReadonlySet<string> = new Set([
   "numericValue",
 ]);
 
-type CellSelectionBlocks = Array<Array<Array<TableCell | undefined>>>;
+type CellSelectionBlocks = (TableCell | undefined)[][][];
 
 function collectSelectedRows({
   resultColumns,
@@ -282,7 +282,7 @@ function hasActiveTextSelectionInsideGrid(
   if (!event) {
     return false;
   }
-  const selection = window.getSelection();
+  const selection = globalThis.getSelection();
   if (
     !selection ||
     selection.isCollapsed ||

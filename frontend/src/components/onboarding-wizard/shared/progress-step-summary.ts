@@ -64,9 +64,7 @@ export function getProgressSummary(events: SetupProgressEvent[]) {
   }
 
   const activeStep =
-    [...events]
-      .reverse()
-      .find((event) => event.state === StepState.IN_PROGRESS) ??
+    events.findLast((event) => event.state === StepState.IN_PROGRESS) ??
     events.find((event) => event.state === StepState.PENDING) ??
     events.at(-1) ??
     null;

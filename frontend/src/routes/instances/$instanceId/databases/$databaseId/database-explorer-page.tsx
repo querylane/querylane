@@ -69,11 +69,11 @@ export function DatabaseExplorerRoute() {
           params: { databaseId, instanceId },
           replace: true,
           search: () => normalizedSearch,
-        }).catch((error: unknown) =>
+        }).catch((error: unknown) => {
           handleNavigationError(error, {
             area: "data-explorer.normalize-search",
-          })
-        );
+          });
+        });
       }
     },
     [databaseId, instanceId, navigate, normalizedSearch, search]

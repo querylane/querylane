@@ -49,6 +49,7 @@ import type {
 import { downloadBlob } from "@/lib/download-blob";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const ExplainPlanView = lazy(() =>
   import("@/features/query-plan/explain-plan-view").then((module) => ({
@@ -78,7 +79,11 @@ function elapsedMs(execution: SqlExecution): number {
   if (execution.stats) {
     return execution.stats.latencyMs;
   }
-  return execution.finishedAt ? execution.finishedAt - execution.startedAt : 0;
+  return typeof execution.finishedAt === "number" &&
+    execution.finishedAt !== 0 &&
+    !Number.isNaN(execution.finishedAt)
+    ? execution.finishedAt - execution.startedAt
+    : 0;
 }
 
 function RunningStatus({ execution }: { execution: SqlExecution }) {
@@ -105,14 +110,16 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {isCommand ? (
-        <span className="font-mono font-medium">{commandTag || "Done"}</span>
+        <span className="font-mono font-medium">
+          {(commandTag ?? "") || "Done"}
+        </span>
       ) : (
         <span className="font-medium">{formatRowCount(rowCount)}</span>
       )}
       <span className="text-muted-foreground">
         {formatDurationMs(elapsedMs(execution))}
       </span>
-      {execution.stats?.truncated ? (
+      {execution.stats?.truncated === true ? (
         <span className="text-chart-4 flex items-center gap-1">
           <AlertTriangle aria-hidden="true" className="size-3.5" />
           Stopped at the {formatCount(execution.rowLimit)} row limit
@@ -149,6 +156,7 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
           {execution.error?.title ?? "Query failed"}
         </span>
       );
+    case "idle":
     default:
       return null;
   }
@@ -193,13 +201,25 @@ function ExportMenu({ execution }: { execution: SqlExecution }) {
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => exportExecution(execution, "csv")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "csv");
+          }}
+        >
           CSV
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => exportExecution(execution, "json")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "json");
+          }}
+        >
           JSON
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => exportExecution(execution, "sql")}>
+        <DropdownMenuItem
+          onClick={() => {
+            exportExecution(execution, "sql");
+          }}
+        >
           SQL inserts
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -218,7 +238,7 @@ function CommandResult({ execution }: { execution: SqlExecution }) {
       data-slot="sql-command-result"
     >
       <CircleCheck aria-hidden="true" className="text-success size-6" />
-      {outcome.tag ? (
+      {isNonEmptyString(outcome.tag) ? (
         <code className="bg-muted rounded-md px-2 py-0.5 font-mono text-sm font-medium">
           {outcome.tag}
         </code>
@@ -316,7 +336,10 @@ function ResultsBody({
   );
 }
 
-function keyedNotices(notices: string[]): Array<{ key: string; text: string }> {
+function keyedNotices(notices: string[]): {
+  key: string;
+  text: string;
+}[] {
   const seen = new Map<string, number>();
   return notices.map((text) => {
     const occurrence = seen.get(text) ?? 0;
@@ -452,7 +475,9 @@ function SqlResultsPane({
     >
       <div className="border-border flex min-h-10 flex-wrap items-center justify-between gap-2 border-b px-2">
         <Tabs
-          onValueChange={(value) => onTabChange(parseResultsTab(value))}
+          onValueChange={(value) => {
+            onTabChange(parseResultsTab(value));
+          }}
           value={activeTab}
         >
           <TabsList className="h-8" presentation="sql-results" variant="line">

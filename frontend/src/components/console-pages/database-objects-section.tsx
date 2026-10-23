@@ -86,7 +86,9 @@ function ObjectCategoryCard({
         {total > objects.length ? (
           <ViewAllButton
             label={label}
-            onOpen={() => setIsBrowseOpen(true)}
+            onOpen={() => {
+              setIsBrowseOpen(true);
+            }}
             total={total}
           />
         ) : null}
@@ -142,7 +144,9 @@ function ExtensionsCard({
         {installed.length > visible.length ? (
           <ViewAllButton
             label="Extensions"
-            onOpen={() => setIsBrowseOpen(true)}
+            onOpen={() => {
+              setIsBrowseOpen(true);
+            }}
             total={installed.length}
           />
         ) : null}
@@ -227,7 +231,7 @@ function CategoryCards({
   params: DatabaseParams;
   summary: OtherObjectsSummary;
 }) {
-  if (error) {
+  if (Boolean(error)) {
     return <ObjectsErrorCard onRetry={onRetry} />;
   }
   if (isLoading) {

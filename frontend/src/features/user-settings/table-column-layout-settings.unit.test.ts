@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "@rstest/core";
+import { beforeEach, describe, expect, test } from "@rstest/core";
 import {
   reorderVisibleTableColumns,
   resolveSelectedColumns,
@@ -12,7 +12,7 @@ describe("table column layout settings", () => {
     useTableColumnLayoutSettingsStore.setState({ layouts: {} });
   });
 
-  it("keeps at least one data column visible", () => {
+  test("keeps at least one data column visible", () => {
     expect(
       resolveTableColumnLayout(["id", "email"], {
         hiddenColumns: ["id", "email"],
@@ -24,7 +24,7 @@ describe("table column layout settings", () => {
     });
   });
 
-  it("reorders visible columns while hidden columns keep their slots", () => {
+  test("reorders visible columns while hidden columns keep their slots", () => {
     expect(
       reorderVisibleTableColumns({
         hiddenColumns: ["internal_note"],
@@ -35,7 +35,7 @@ describe("table column layout settings", () => {
     ).toEqual(["created_at", "internal_note", "id", "email"]);
   });
 
-  it("projects visible columns only after explicit opt in", () => {
+  test("projects visible columns only after explicit opt in", () => {
     expect(
       resolveSelectedColumns({
         hiddenColumns: ["internal_note"],
@@ -51,7 +51,7 @@ describe("table column layout settings", () => {
     ).toEqual(["id", "email"]);
   });
 
-  it("resets one table without changing another table", () => {
+  test("resets one table without changing another table", () => {
     const customers =
       "instances/prod/databases/app/schemas/public/tables/customers";
     const orders = "instances/prod/databases/app/schemas/public/tables/orders";
@@ -75,7 +75,7 @@ describe("table column layout settings", () => {
     });
   });
 
-  it("keeps valid persisted layouts and drops malformed entries", async () => {
+  test("keeps valid persisted layouts and drops malformed entries", async () => {
     const customers =
       "instances/prod/databases/app/schemas/public/tables/customers";
     localStorage.setItem(
@@ -104,7 +104,7 @@ describe("table column layout settings", () => {
     });
   });
 
-  it("discards stale saved columns when the table schema changes", () => {
+  test("discards stale saved columns when the table schema changes", () => {
     const customers =
       "instances/prod/databases/app/schemas/public/tables/customers";
     useTableColumnLayoutSettingsStore.getState().setLayout(customers, {

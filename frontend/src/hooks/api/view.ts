@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-query";
 import { buildSchemaName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListViewDependenciesResponse,
   type ListViewsResponse,
@@ -39,7 +40,7 @@ function fetchViewsPage(
 ) {
   const client = createClient(ViewService, transport);
   return client.listViews({
-    ...(input ?? {}),
+    ...input,
     pageToken,
   });
 }
@@ -48,10 +49,14 @@ function useGetViewQuery(
   name: string | undefined,
   view: ViewView = ViewView.BASIC
 ) {
-  return useConnectQuery(getView, name ? { name, view } : undefined, {
-    ...RESOURCE_QUERY_OPTIONS.tableMetadata,
-    enabled: Boolean(name),
-  });
+  return useConnectQuery(
+    getView,
+    isNonEmptyString(name) ? { name, view } : undefined,
+    {
+      ...RESOURCE_QUERY_OPTIONS.tableMetadata,
+      enabled: Boolean(name),
+    }
+  );
 }
 
 function useListViewDependenciesQuery(parent: string | undefined) {
@@ -158,7 +163,7 @@ function viewsForSchemaQueryInput({
   schemaId: string;
 }) {
   return {
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "name asc",
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,
     parent: buildSchemaName(instanceId, databaseId, schemaId),

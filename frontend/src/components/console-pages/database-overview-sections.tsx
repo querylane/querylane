@@ -60,7 +60,7 @@ function Eyebrow({
       <span className="text-muted-foreground tracking-heading font-medium text-(length:--text-label-sm) uppercase">
         {children}
       </span>
-      {right ? (
+      {Boolean(right) ? (
         <span className="text-muted-foreground font-mono text-xs">{right}</span>
       ) : null}
     </div>
@@ -241,7 +241,7 @@ function SlowQueriesBody({
   insights: DatabaseQueryInsights | undefined;
   onOpenInsights: () => void;
 }) {
-  if (!insights?.queryStatsAvailable) {
+  if (!(insights?.queryStatsAvailable === true)) {
     return <SlowQueriesEmptyState />;
   }
   return (
@@ -273,7 +273,7 @@ function SlowQueriesCard({
       <CardHeader>
         <Eyebrow
           right={
-            insights?.queryStatsAvailable
+            insights?.queryStatsAvailable === true
               ? "by total execution time"
               : undefined
           }

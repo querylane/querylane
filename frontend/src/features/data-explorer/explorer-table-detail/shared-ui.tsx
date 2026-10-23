@@ -16,6 +16,7 @@ import {
 import type { QueryErrorResult } from "@/features/data-explorer/table-detail-query-state";
 import type { TableDetailTab } from "@/features/data-explorer/table-detail-tab";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
 
@@ -86,7 +87,7 @@ function Pill({
         "inline-flex items-center rounded font-semibold tracking-wider uppercase",
         size === "md" && "h-5 px-1.5 text-(length:--text-micro)",
         size === "sm" && "h-4 px-1 font-mono text-(length:--text-micro-sm)",
-        mono && "font-mono tracking-normal normal-case",
+        mono === true && "font-mono tracking-normal normal-case",
         PILL_TONE_CLASSES[tone]
       )}
       title={title}
@@ -205,7 +206,7 @@ function TableResourceEmptyState({
           <Button
             disabled={toolbar.isRefreshing}
             onClick={() => {
-              toolbar.handleRefresh();
+              handleAsyncAction(() => toolbar.handleRefresh())();
             }}
             size="sm"
             type="button"

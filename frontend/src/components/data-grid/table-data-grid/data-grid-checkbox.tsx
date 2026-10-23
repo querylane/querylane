@@ -13,7 +13,7 @@ function DataGridCheckbox(props: RenderCheckboxProps) {
   let selectAllTitle: string | undefined;
   if (props["aria-label"] === SELECT_ALL_ARIA_LABEL) {
     selectAllTitle =
-      props.indeterminate || props.checked
+      props.indeterminate === true || props.checked === true
         ? "Clear selection"
         : "Select all rows on this page";
   }
@@ -29,15 +29,17 @@ function DataGridCheckbox(props: RenderCheckboxProps) {
         "rounded-control-sm border-input text-primary-foreground dark:bg-input/30 relative mx-auto flex size-4 shrink-0 items-center justify-center border shadow-xs transition-shadow",
         "has-focus-visible:border-ring has-focus-visible:ring-ring/50 has-focus-visible:ring-3",
         isMarked && "border-primary bg-primary dark:bg-primary",
-        props.disabled && "opacity-50"
+        props.disabled === true && "opacity-50"
       )}
       data-slot="grid-checkbox"
     >
       {renderCheckbox(checkboxProps)}
-      {props.indeterminate ? (
+      {props.indeterminate === true ? (
         <MinusIcon aria-hidden={true} className="size-3.5" />
       ) : (
-        props.checked && <CheckIcon aria-hidden={true} className="size-3.5" />
+        props.checked === true && (
+          <CheckIcon aria-hidden={true} className="size-3.5" />
+        )
       )}
     </span>
   );

@@ -11,6 +11,7 @@ import {
   isInstanceRolesTab,
   isInstanceRolesType,
 } from "@/lib/instance-roles-search";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type ScopeLevel = "none" | "instance" | "database";
 
@@ -134,7 +135,7 @@ function resolveCanonicalInstancePageTarget({
   ids: RouteSelectionIds;
   page: AdminPageId;
 }): CanonicalAdminPageTarget | null {
-  if (!ids.instanceId) {
+  if (!isNonEmptyString(ids.instanceId)) {
     return null;
   }
 
@@ -159,6 +160,11 @@ function resolveCanonicalInstancePageTarget({
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId/roles",
       };
+    case "database.explorer":
+    case "database.extensions":
+    case "database.overview":
+    case "database.sql":
+    case "database.workbench":
     default:
       return null;
   }
@@ -171,7 +177,13 @@ function resolveCanonicalDatabasePageTarget({
   ids: RouteSelectionIds;
   page: AdminPageId;
 }): CanonicalAdminPageTarget | null {
-  if (!(ids.instanceId && ids.databaseId)) {
+  if (
+    !(
+      isNonEmptyString(ids.instanceId) &&
+      typeof ids.databaseId === "string" &&
+      ids.databaseId.length > 0
+    )
+  ) {
     return null;
   }
 
@@ -216,6 +228,10 @@ function resolveCanonicalDatabasePageTarget({
         },
         to: "/instances/$instanceId/databases/$databaseId/workbench",
       };
+    case "instance.activity":
+    case "instance.configuration":
+    case "instance.overview":
+    case "instance.roles":
     default:
       return null;
   }
@@ -321,10 +337,10 @@ function navigateToCanonicalAdminTarget(
 }
 
 function resolveScopeLevelFromIds(ids: RouteSelectionIds): ScopeLevel {
-  if (ids.databaseId) {
+  if (isNonEmptyString(ids.databaseId)) {
     return "database";
   }
-  if (ids.instanceId) {
+  if (isNonEmptyString(ids.instanceId)) {
     return "instance";
   }
   return "none";
@@ -339,7 +355,7 @@ function resolveLegacyAdminPageRedirect({
   ids: RouteSelectionIds;
   search: InstanceLayoutSearch;
 }): (CanonicalAdminPageTarget & { search: InstanceLayoutSearch }) | null {
-  if (!search.page) {
+  if (!isNonEmptyString(search.page)) {
     return null;
   }
 

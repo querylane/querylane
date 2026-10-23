@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface TableColumnLayout {
   fetchVisibleColumns?: true | undefined;
@@ -23,11 +24,7 @@ function parseStringArray(value: unknown): string[] | null {
     return null;
   }
   return [
-    ...new Set(
-      value.filter(
-        (item): item is string => typeof item === "string" && item.length > 0
-      )
-    ),
+    ...new Set(value.filter((item): item is string => isNonEmptyString(item))),
   ];
 }
 
@@ -77,7 +74,7 @@ function uniqueKnownColumns(
 
 function resolveTableColumnLayout(
   columns: readonly string[],
-  savedLayout?: TableColumnLayout | undefined
+  savedLayout?: TableColumnLayout
 ): TableColumnLayout {
   const knownColumns = new Set(columns);
   const savedOrder = uniqueKnownColumns(savedLayout?.order ?? [], knownColumns);
@@ -92,7 +89,8 @@ function resolveTableColumnLayout(
   );
   const [firstColumn] = orderedColumns;
   const hiddenColumns =
-    firstColumn && savedHiddenColumns.length === orderedColumns.length
+    isNonEmptyString(firstColumn) &&
+    savedHiddenColumns.length === orderedColumns.length
       ? savedHiddenColumns.filter((column) => column !== firstColumn)
       : savedHiddenColumns;
 
@@ -144,11 +142,11 @@ function reorderVisibleTableColumns({
   const sourceIndex = visibleOrder.indexOf(sourceColumnKey);
   const targetIndex = visibleOrder.indexOf(targetColumnKey);
   if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-    return order.slice();
+    return [...order];
   }
   const [sourceColumn] = visibleOrder.splice(sourceIndex, 1);
-  if (!sourceColumn) {
-    return order.slice();
+  if (!isNonEmptyString(sourceColumn)) {
+    return [...order];
   }
   visibleOrder.splice(targetIndex, 0, sourceColumn);
 
@@ -185,7 +183,7 @@ const useTableColumnLayoutSettingsStore =
         resetLayout: (tableName) =>
           set((state) => {
             const layouts = { ...state.layouts };
-            delete layouts[tableName];
+            Reflect.deleteProperty(layouts, tableName);
             return { layouts };
           }),
         setLayout: (tableName, layout) =>

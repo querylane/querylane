@@ -35,7 +35,7 @@ type ResourceCollectionQueryStatus = "error" | "idle" | "pending" | "success";
 type ResourceCollectionSuppressedReason = "instance-not-connected";
 
 interface ResourceCollectionQueryState {
-  error: unknown | null;
+  error: unknown;
   hasData: boolean;
   hasResolved: boolean;
   isFetching: boolean;

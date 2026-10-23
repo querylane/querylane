@@ -6,11 +6,15 @@ import {
 } from "@/components/data-grid/table-data-grid/data-cell-preview-format";
 import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function ExpandedJsonPreview({ raw }: { raw: string }) {
   const pretty = maybeFormatPrettyJson(raw);
   const [mode, setMode] = useState<"raw" | "pretty">("pretty");
-  const display = mode === "pretty" && pretty ? pretty : raw;
+  const display =
+    mode === "pretty" && typeof pretty === "string" && pretty.length > 0
+      ? pretty
+      : raw;
   const title = truncateForAttribute(raw, JSON_TITLE_MAX_LENGTH);
 
   return (
@@ -18,7 +22,7 @@ function ExpandedJsonPreview({ raw }: { raw: string }) {
       <code
         className={cn(
           "text-permission-600 dark:text-permission-400 min-w-0 flex-1 font-mono text-xs",
-          mode === "pretty" && pretty
+          mode === "pretty" && typeof pretty === "string" && pretty.length > 0
             ? "max-h-20 overflow-auto text-left whitespace-pre"
             : "truncate whitespace-nowrap"
         )}
@@ -26,10 +30,12 @@ function ExpandedJsonPreview({ raw }: { raw: string }) {
       >
         {display}
       </code>
-      {pretty ? (
+      {isNonEmptyString(pretty) ? (
         <Button
           className="h-5"
-          onClick={() => setMode(mode === "pretty" ? "raw" : "pretty")}
+          onClick={() => {
+            setMode(mode === "pretty" ? "raw" : "pretty");
+          }}
           presentation="preview-mode"
           size="xs"
           type="button"

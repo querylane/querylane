@@ -26,11 +26,11 @@ import { expectActiveElement } from "./focus";
 // instance-config.browser.test.tsx.
 
 const BLOCKED_ACTIVITY_ROW_NAME =
-  /4302.*api-gateway.*UPDATE shipping\.shipments/;
-const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/i;
-const REPLICATION_ROW_NAME = /Replication/;
-const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/;
-const TIMESCALEDB_BUTTON_NAME = /timescaledb/i;
+  /4302.*api-gateway.*UPDATE shipping\.shipments/u;
+const PG_STAT_STATEMENTS_BUTTON_NAME = /pg_stat_statements/iu;
+const REPLICATION_ROW_NAME = /Replication/u;
+const SHARED_PRELOAD_LIBRARIES_TEXT = /Loaded via shared_preload_libraries/u;
+const TIMESCALEDB_BUTTON_NAME = /timescaledb/iu;
 const PHONE_VIEWPORT = { height: 844, width: 390 };
 /** Tall enough that the longest pages fit inside their scrolling main. */
 const TALL_VIEWPORT = { height: 1800, width: 1280 };

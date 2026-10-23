@@ -47,6 +47,7 @@ for (const scenario of [
       }
       if (request.resourceType() === "script") {
         scripts.push(request.url());
+        pending.add(request);
       }
     });
     page.on("requestfinished", (request) => pending.delete(request));
@@ -57,7 +58,11 @@ for (const scenario of [
       page.getByRole("heading", { name: "Extensions", exact: true })
     ).toBeVisible();
     // Expire metadata freshness: a cached active parent must not hide data preloads.
-    await page.clock.fastForward(310_000);
+    // Expire Date-based freshness without firing unrelated chunk-load timeout
+    // timers while the browser is still fetching deferred shell modules.
+    await page.clock.setSystemTime(Date.now() + 310_000);
+    // Settle deferred shell work before measuring the intent interaction.
+    await page.clock.runFor(1000);
     await expect.poll(() => pending.size).toBe(0);
     if (scenario.saveData) {
       await page.evaluate(() => {
@@ -76,20 +81,15 @@ for (const scenario of [
       exact: true,
     });
 
-    if (scenario.interaction === "hover") {
-      await explorer.hover();
-    } else {
-      await explorer.focus();
-    }
+    await (scenario.interaction === "hover"
+      ? explorer.hover()
+      : explorer.focus());
     // Flush delayed work so speculative queries cannot hide behind timers.
     await page.clock.runFor(1000);
-    if (scenario.preload) {
-      await expect
-        .poll(() => scripts.length)
-        .toBeGreaterThan(initialScripts.length);
-    } else {
-      expect(scripts).toEqual(initialScripts);
-    }
+    await expect
+      .poll(() => scripts.length > initialScripts.length)
+      .toBe(scenario.preload);
+    expect(scripts.slice(0, initialScripts.length)).toEqual(initialScripts);
     expect(rpcRequests).toEqual(initialRpcRequests);
 
     await explorer.click();

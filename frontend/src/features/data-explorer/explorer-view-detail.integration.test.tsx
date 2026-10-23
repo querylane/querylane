@@ -1,5 +1,12 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { afterEach, beforeEach, describe, expect, it, rs } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
@@ -19,51 +26,92 @@ import {
   ViewSchema,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-const COLUMNS_TAB_PATTERN = /Columns/;
-const DEPENDENCIES_TAB_PATTERN = /Dependencies/;
-const INDEXES_TAB_PATTERN = /Indexes/;
-const SALES_ORDERS_PATTERN = /sales\.orders/;
+const COLUMNS_TAB_PATTERN = /Columns/u;
+const DEPENDENCIES_TAB_PATTERN = /Dependencies/u;
+const INDEXES_TAB_PATTERN = /Indexes/u;
+const SALES_ORDERS_PATTERN = /sales\.orders/u;
 
-const { tableApi, useExplainQueryMock, viewApi } = rs.hoisted(() => ({
-  tableApi: {
-    columns: {
-      data: undefined as unknown,
-      error: null as Error | null,
-      isLoading: false,
-      refetch: rs.fn(),
+const { tableApi, useExplainQueryMock, viewApi } = rs.hoisted(
+  (): {
+    tableApi: {
+      columns: {
+        data: unknown;
+        error: Error | null;
+        isLoading: boolean;
+        refetch: ReturnType<typeof rs.fn>;
+      };
+      constraints: {
+        data: unknown;
+        error: Error | null;
+        isLoading: boolean;
+        refetch: ReturnType<typeof rs.fn>;
+      };
+      indexes: {
+        data: unknown;
+        error: Error | null;
+        isLoading: boolean;
+        refetch: ReturnType<typeof rs.fn>;
+      };
+    };
+    useExplainQueryMock: ReturnType<typeof rs.fn>;
+    viewApi: {
+      dependencies: {
+        data: unknown;
+        error: Error | null;
+        fetchNextPage: ReturnType<typeof rs.fn>;
+        hasNextPage: boolean;
+        isFetchingNextPage: boolean;
+        isLoading: boolean;
+        refetch: ReturnType<typeof rs.fn>;
+      };
+      refresh: {
+        error: Error | null;
+        isPending: boolean;
+        mutateAsync: ReturnType<typeof rs.fn>;
+        reset: ReturnType<typeof rs.fn>;
+      };
+    };
+  } => ({
+    tableApi: {
+      columns: {
+        data: undefined,
+        error: null as Error | null,
+        isLoading: false,
+        refetch: rs.fn(),
+      },
+      constraints: {
+        data: undefined,
+        error: null as Error | null,
+        isLoading: false,
+        refetch: rs.fn(),
+      },
+      indexes: {
+        data: undefined,
+        error: null as Error | null,
+        isLoading: false,
+        refetch: rs.fn(),
+      },
     },
-    constraints: {
-      data: undefined as unknown,
-      error: null as Error | null,
-      isLoading: false,
-      refetch: rs.fn(),
+    useExplainQueryMock: rs.fn(),
+    viewApi: {
+      dependencies: {
+        data: undefined,
+        error: null as Error | null,
+        fetchNextPage: rs.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        isLoading: false,
+        refetch: rs.fn(),
+      },
+      refresh: {
+        error: null as Error | null,
+        isPending: false,
+        mutateAsync: rs.fn(),
+        reset: rs.fn(),
+      },
     },
-    indexes: {
-      data: undefined as unknown,
-      error: null as Error | null,
-      isLoading: false,
-      refetch: rs.fn(),
-    },
-  },
-  useExplainQueryMock: rs.fn(),
-  viewApi: {
-    dependencies: {
-      data: undefined as unknown,
-      error: null as Error | null,
-      fetchNextPage: rs.fn(),
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-      refetch: rs.fn(),
-    },
-    refresh: {
-      error: null as Error | null,
-      isPending: false,
-      mutateAsync: rs.fn(),
-      reset: rs.fn(),
-    },
-  },
-}));
+  })
+);
 
 rs.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -172,7 +220,7 @@ afterEach(() => {
 });
 
 describe("view detail integration", () => {
-  it("operates a materialized view through data, metadata, dependencies, definition, and refresh", async () => {
+  test("operates a materialized view through data, metadata, dependencies, definition, and refresh", async () => {
     const user = userEvent.setup();
     const name =
       "instances/prod/databases/app/schemas/public/views/daily_revenue";
@@ -226,12 +274,12 @@ describe("view detail integration", () => {
       expect.objectContaining({
         mode: RefreshMaterializedViewMode.CONCURRENT,
         name,
-        signal: expect.any(AbortSignal),
+        signal: expect.any(AbortSignal) as unknown,
       })
     );
   });
 
-  it("keeps unpopulated views read-safe and disables concurrent refresh", async () => {
+  test("keeps unpopulated views read-safe and disables concurrent refresh", async () => {
     const user = userEvent.setup();
     render(
       <ViewDetail
@@ -268,7 +316,7 @@ describe("view detail integration", () => {
     ).toBeTruthy();
   });
 
-  it("does not claim standard-only refresh before index metadata loads", () => {
+  test("does not claim standard-only refresh before index metadata loads", () => {
     tableApi.indexes.data = undefined;
     tableApi.indexes.isLoading = true;
 
@@ -290,7 +338,7 @@ describe("view detail integration", () => {
 });
 
 describe("standard view detail integration", () => {
-  it("shows an empty state when returned notices are blank", async () => {
+  test("shows an empty state when returned notices are blank", async () => {
     const user = userEvent.setup();
     useExplainQueryMock.mockReturnValue({
       data: {
@@ -323,7 +371,7 @@ describe("standard view detail integration", () => {
     ).toBeNull();
   });
 
-  it("keeps standard views focused on metadata without materialized stats", () => {
+  test("keeps standard views focused on metadata without materialized stats", () => {
     render(
       <ViewDetail
         view={createProto(ViewSchema, {

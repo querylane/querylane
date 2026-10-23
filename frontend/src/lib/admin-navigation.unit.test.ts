@@ -106,13 +106,18 @@ describe("admin navigation", () => {
     ).toBeNull();
   });
 
-  test("returns null for unknown page ids defensively", () => {
+  test("clears unknown legacy page ids and falls back to database overview", () => {
     expect(
-      resolveCanonicalAdminPageTarget({
+      resolveLegacyAdminPageRedirect({
+        currentPage: undefined,
         ids: { databaseId: "postgres", instanceId: "local" },
-        page: "unknown.page" as never,
+        search: { page: "unknown.page" },
       })
-    ).toBeNull();
+    ).toMatchObject({
+      params: { databaseId: "postgres", instanceId: "local" },
+      to: "/instances/$instanceId/databases/$databaseId",
+      search: { page: undefined },
+    });
   });
 
   test("does not redirect when legacy page cannot resolve at current scope", () => {

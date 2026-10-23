@@ -3,10 +3,6 @@ import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByTestId } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
-import {
-  CATEGORY_ORDER,
-  type CategoryKey,
-} from "@/features/data-explorer/data-explorer-types";
 import { ExplorerSidebar } from "@/features/data-explorer/explorer-sidebar";
 
 const defaultSchema = {
@@ -14,19 +10,19 @@ const defaultSchema = {
   name: "pg_catalog",
   owner: "postgres",
 };
-const FIRST_TABLE_BUTTON_RE = /table_0000/i;
-const LAST_TABLE_BUTTON_RE = /table_0999/i;
+const FIRST_TABLE_BUTTON_RE = /table_0000/iu;
+const LAST_TABLE_BUTTON_RE = /table_0999/iu;
 
 function categoryPagination() {
-  return Object.fromEntries(
-    CATEGORY_ORDER.map((category) => [
-      category,
-      { hasNextPage: false, isFetchingNextPage: false, isLoading: false },
-    ])
-  ) as Record<
-    CategoryKey,
-    { hasNextPage: boolean; isFetchingNextPage: boolean; isLoading: boolean }
-  >;
+  const pagination = {
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+  };
+  return {
+    tables: pagination,
+    views: pagination,
+  };
 }
 
 async function renderLargeExplorerSidebar() {
@@ -74,9 +70,9 @@ async function renderLargeExplorerSidebar() {
 
 function firstVisibleResourceGap(scrollRoot: HTMLElement): number {
   const rootBox = scrollRoot.getBoundingClientRect();
-  const visibleResource = Array.from(
-    scrollRoot.querySelectorAll<HTMLButtonElement>("button")
-  ).find((button) => {
+  const visibleResource = [
+    ...scrollRoot.querySelectorAll<HTMLButtonElement>("button"),
+  ].find((button) => {
     if (!button.textContent?.startsWith("table_")) {
       return false;
     }

@@ -15,11 +15,13 @@ import {
   selectedInstanceQueryOptions,
 } from "@/hooks/api/instance";
 import { tableDetailQueryOptions } from "@/hooks/api/table";
+import { captureException } from "@/lib/diagnostics";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import {
   prefetchRouteQuery,
   type RoutePrefetchClient,
 } from "@/lib/route-prefetch";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CellValueMode,
   ReadRowsRequestSchema,
@@ -68,7 +70,9 @@ function routeDataQuery<
   >[1]
 ): RouteDataQuery {
   return {
-    prefetch: (queryClient) => prefetchRouteQuery(queryClient, options),
+    prefetch: (queryClient) => {
+      prefetchRouteQuery(queryClient, options).catch(captureException);
+    },
     queryKey: options.queryKey,
     staleTime: options.staleTime,
   };
@@ -166,11 +170,11 @@ export function explorerRouteDataQueries({
     ...databaseSummaryQueries({ databaseId, instanceId, transport }),
   ];
 
-  if (!search.schema) {
+  if (!isNonEmptyString(search.schema)) {
     return queries;
   }
 
-  if (search.category !== "tables" || !search.name) {
+  if (search.category !== "tables" || !isNonEmptyString(search.name)) {
     return queries;
   }
 

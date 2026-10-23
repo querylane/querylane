@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-
 import { useEffect } from "react";
 import { z } from "zod";
-
 import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
@@ -12,6 +10,7 @@ import { useConsoleConfigStatus } from "@/hooks/api/console";
 import { useDb } from "@/lib/db-context";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { normalizeAppUiError } from "@/lib/ui-error";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { useSetupStore } from "@/stores/setup-store";
 
 const homeSearchSchema = z.object({
@@ -29,7 +28,7 @@ function resolveHomeInstanceId({
     return null;
   }
 
-  if (requestedInstanceId) {
+  if (isNonEmptyString(requestedInstanceId)) {
     const requestedInstance = instances.find(
       (instance) => instance.id === requestedInstanceId
     );
@@ -67,7 +66,7 @@ function HomeRedirectPage() {
   );
   const noInstances =
     instancesState.hasResolved &&
-    !instancesState.error &&
+    !Boolean(instancesState.error) &&
     instances.length === 0;
   // Only redirect to /new-instance once we know the management mode.
   // Without this gate, a config-managed empty deployment would redirect
@@ -75,9 +74,9 @@ function HomeRedirectPage() {
   const shouldRedirectToNewInstance =
     noInstances && isModeLoaded && !isConfigManaged;
 
-  // allow-useEffect: redirect to default instance
+  // redirect to default instance
   useEffect(() => {
-    if (!targetInstanceId) {
+    if (!isNonEmptyString(targetInstanceId)) {
       if (!shouldRedirectToNewInstance) {
         return;
       }
@@ -85,23 +84,24 @@ function HomeRedirectPage() {
       navigate({
         replace: true,
         to: "/new-instance",
-      }).catch((error: unknown) =>
-        handleNavigationError(error, { area: "home.new-instance-redirect" })
-      );
+      }).catch((error: unknown) => {
+        handleNavigationError(error, { area: "home.new-instance-redirect" });
+      });
 
       return;
     }
 
-    const destination = targetInstance?.credentialsUnreadable
-      ? "/instances/$instanceId/configuration"
-      : "/instances/$instanceId";
+    const destination =
+      targetInstance?.credentialsUnreadable === true
+        ? "/instances/$instanceId/configuration"
+        : "/instances/$instanceId";
     navigate({
       params: { instanceId: targetInstanceId },
       replace: true,
       to: destination,
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "home.instance-redirect" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "home.instance-redirect" });
+    });
   }, [
     navigate,
     shouldRedirectToNewInstance,
@@ -109,7 +109,7 @@ function HomeRedirectPage() {
     targetInstanceId,
   ]);
 
-  if (targetInstanceId) {
+  if (isNonEmptyString(targetInstanceId)) {
     return (
       <BrandedLoadingState
         description="Opening the first available instance."
@@ -138,7 +138,7 @@ function HomeRedirectPage() {
     );
   }
 
-  if (instancesState.error) {
+  if (Boolean(instancesState.error)) {
     return (
       <AppShellFrame>
         <AppErrorView

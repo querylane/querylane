@@ -11,9 +11,16 @@ function mapEntryCriteriaPrefix(key: readonly (string | number)[]): string {
   return `map:${JSON.stringify(key)}:`;
 }
 
-function formErrorTarget(schema: DescMessage, path: readonly (string | number)[]) {
+function formErrorTarget(
+  schema: DescMessage,
+  path: readonly (string | number)[]
+) {
   const [head, ...key] = path;
-  const isMapEntry = key.length > 0 && schema.fields.some((field) => field.localName === head && field.fieldKind === "map");
+  const isMapEntry =
+    key.length > 0 &&
+    schema.fields.some(
+      (field) => field.localName === head && field.fieldKind === "map"
+    );
   return isMapEntry
     ? { criterion: mapEntryCriteriaPrefix(key), path: String(head) }
     : { criterion: "", path: path.join(".") };

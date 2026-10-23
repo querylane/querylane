@@ -45,8 +45,8 @@ const SERVER_ERROR_STATUS_MIN = 500;
  * Connect error decoding stays untouched.
  */
 const CONNECT_CONTENT_TYPE_PATTERN =
-  /^application\/(?:connect\+)?(?:json|proto)\b/i;
-const UNARY_JSON_CONTENT_TYPE_PATTERN = /^application\/json\b/i;
+  /^application\/(?:connect\+)?(?:json|proto)\b/iu;
+const UNARY_JSON_CONTENT_TYPE_PATTERN = /^application\/json\b/iu;
 
 function describeUnexpectedResponse(
   info: UnexpectedResponseInfo
@@ -72,6 +72,7 @@ function describeUnexpectedResponse(
         summary: `The server returned a gateway error page (HTTP ${info.status}) instead of an API response. The Querylane server may be down or restarting.`,
         title: UNEXPECTED_RESPONSE_TITLE,
       };
+    case "unexpected":
     default:
       return {
         retryGuidance: "Reload the page and try again.",
@@ -123,7 +124,7 @@ function isRedirectResponse(
 }
 
 function sanitizeBodySnippet(text: string): string | null {
-  const compact = text.replaceAll(/\s+/g, " ").trim();
+  const compact = text.replaceAll(/\s+/gu, " ").trim();
   if (!compact) {
     return null;
   }

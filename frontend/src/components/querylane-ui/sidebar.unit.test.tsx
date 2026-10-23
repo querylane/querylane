@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 function stubDesktopHoverViewport(canHover = true) {
-  Object.defineProperty(window, "innerWidth", {
+  Object.defineProperty(globalThis.window, "innerWidth", {
     configurable: true,
     value: 1280,
   });
@@ -34,7 +34,7 @@ function dispatchPointerMove(
     clientY: { value: options.clientY ?? 100 },
     pointerType: { value: options.pointerType ?? "mouse" },
   });
-  window.dispatchEvent(event);
+  globalThis.window.dispatchEvent(event);
 }
 
 function stubSidebarBounds(sidebarPanel: HTMLElement) {
@@ -70,12 +70,16 @@ describe("sidebar hover reveal", () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
 
-    act(() => dispatchPointerMove(8));
+    act(() => {
+      dispatchPointerMove(8);
+    });
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
     });
 
-    act(() => dispatchPointerMove(400));
+    act(() => {
+      dispatchPointerMove(400);
+    });
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");
@@ -86,12 +90,16 @@ describe("sidebar hover reveal", () => {
     stubDesktopHoverViewport();
     const sidebarPanel = renderCollapsedOffcanvasSidebar();
 
-    act(() => dispatchPointerMove(8, { clientY: 100 }));
+    act(() => {
+      dispatchPointerMove(8, { clientY: 100 });
+    });
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("open");
     });
 
-    act(() => dispatchPointerMove(50, { clientY: 20 }));
+    act(() => {
+      dispatchPointerMove(50, { clientY: 20 });
+    });
 
     await waitFor(() => {
       expect(sidebarPanel.getAttribute("data-hover-reveal")).toBe("closed");

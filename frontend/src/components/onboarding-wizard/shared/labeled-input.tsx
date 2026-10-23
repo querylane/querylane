@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
-
 import { PasswordInput } from "@/components/password-input";
 import { Input } from "@/components/querylane-ui/input";
 import { Label } from "@/components/querylane-ui/label";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface LabeledInputProps
   extends Omit<ComponentProps<"input">, "className" | "children"> {
@@ -23,8 +23,8 @@ export function LabeledInput({
   ref,
   ...inputProps
 }: LabeledInputProps) {
-  const errorId = error ? `${id}-error` : undefined;
-  const invalid = error ? true : undefined;
+  const errorId = isNonEmptyString(error) ? `${id}-error` : undefined;
+  const invalid = isNonEmptyString(error) ? true : undefined;
 
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -32,7 +32,7 @@ export function LabeledInput({
         <Label htmlFor={id} presentation="onboarding">
           {label}
         </Label>
-        {description ? (
+        {isNonEmptyString(description) ? (
           <p className="text-xs text-white/50">{description}</p>
         ) : null}
       </div>
@@ -44,7 +44,7 @@ export function LabeledInput({
           id={id}
           presentation="onboarding"
           ref={ref}
-          validation={error ? "error" : undefined}
+          validation={isNonEmptyString(error) ? "error" : undefined}
           {...inputProps}
         />
       ) : (
@@ -56,11 +56,11 @@ export function LabeledInput({
           presentation="onboarding"
           ref={ref}
           type={type}
-          validation={error ? "error" : undefined}
+          validation={isNonEmptyString(error) ? "error" : undefined}
           {...inputProps}
         />
       )}
-      {error ? (
+      {isNonEmptyString(error) ? (
         <p className="text-negative-300/80 text-xs" id={errorId} role="alert">
           {error}
         </p>

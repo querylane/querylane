@@ -1,8 +1,9 @@
 import { isDirectSslNegotiationMode } from "@/lib/ssl-modes";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const MIN_POSTGRES_PORT = 1;
 const MAX_POSTGRES_PORT = 65_535;
-const POSTGRES_PORT_PATTERN = /^\d+$/;
+const POSTGRES_PORT_PATTERN = /^\d+$/u;
 
 interface CreateInstanceValidationLabel {
   key: string;
@@ -95,7 +96,9 @@ function validateCreateInstanceForm(
   }
   return {
     errors,
-    firstInvalidField: FIELD_FOCUS_ORDER.find((field) => errors[field]) ?? null,
+    firstInvalidField:
+      FIELD_FOCUS_ORDER.find((field) => isNonEmptyString(errors[field])) ??
+      null,
   };
 }
 

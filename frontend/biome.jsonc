@@ -1,24 +1,40 @@
 {
-  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "root": false,
-  "extends": [
-    "ultracite/biome/core",
-    "ultracite/biome/react",
-    "ultracite/biome/type-aware",
-    "ultracite/biome/tanstack"
-  ],
-  "css": {
-    "parser": { "cssModules": true }
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 80,
+    "attributePosition": "auto",
+    "bracketSpacing": true
   },
-  "tailwind": {
-    "stylesheet": "./src/index.css"
-  },
-  // Keep documentation formatting outside the frontend code-quality gate.
-  "markdown": {
-    "formatter": { "enabled": false },
-    "linter": { "enabled": false }
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "useSortedAttributes": "on",
+        "useSortedKeys": "off",
+        "useSortedEnumMembers": "off",
+        "noDuplicateClasses": "on",
+        "useSortedInterfaceMembers": "on",
+        "useSortedProperties": "off",
+        "useSortedTypeFields": "on",
+        "useSortedSelectionSet": "on",
+        "useSortedPackageJson": "on",
+        "preset": "all"
+      }
+    }
   },
   "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "semicolons": "always",
+      "trailingCommas": "es5"
+    },
     "globals": [
       "__API_BASE_URL__",
       "describe",
@@ -34,44 +50,92 @@
       "spyOn"
     ]
   },
-  "assist": {
-    "actions": {
-      "source": {
-        "preset": "all",
-        // These actions can change runtime semantics through insertion order.
-        "useSortedEnumMembers": "off",
-        "useSortedKeys": "off",
-        "useSortedProperties": "off"
-      }
+  "css": {
+    "formatter": {
+      "enabled": true,
+      "lineEnding": "lf",
+      "lineWidth": 80,
+      "quoteStyle": "double"
+    },
+    "parser": {
+      "allowWrongLineComments": false,
+      "cssModules": true,
+      "tailwindDirectives": true
     }
   },
+  "json": {
+    "assist": {
+      "enabled": false
+    },
+    "formatter": {
+      "enabled": true,
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineEnding": "lf",
+      "lineWidth": 80,
+      "trailingCommas": "none"
+    },
+    "parser": {
+      "allowTrailingCommas": false
+    }
+  },
+  "html": {
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
   "linter": {
     "rules": {
       "preset": "all",
       "a11y": {
+        "noAccessKey": "error",
+        "noAmbiguousAnchorText": "error",
         "noAriaHiddenOnFocusable": "error",
+        "noAriaUnsupportedElements": "error",
         "noAutofocus": "error",
+        "noDistractingElements": "error",
+        "noHeaderScope": "error",
         "noInteractiveElementToNoninteractiveRole": "error",
+        "noLabelWithoutControl": "error",
+        "noNoninteractiveElementInteractions": "error",
         "noNoninteractiveElementToInteractiveRole": "error",
         "noNoninteractiveTabindex": "error",
         "noPositiveTabindex": "error",
+        "noRedundantAlt": "error",
+        "noRedundantRoles": "error",
         "noStaticElementInteractions": "error",
         "noSvgWithoutTitle": "error",
         "useAltText": "error",
         "useAnchorContent": "error",
+        "useAriaActivedescendantWithTabindex": "error",
         "useAriaPropsForRole": "error",
         "useAriaPropsSupportedByRole": "error",
         "useButtonType": "error",
         "useFocusableInteractive": "error",
+        "useGenericFontNames": "error",
         "useHeadingContent": "error",
+        "useHtmlLang": "error",
+        "useIframeTitle": "error",
         "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "useMediaCaption": "error",
+        "useSemanticElements": "error",
+        "useValidAnchor": "error",
         "useValidAriaProps": "error",
         "useValidAriaRole": "error",
-        "useValidAriaValues": "error"
+        "useValidAriaValues": "error",
+        "useValidAutocomplete": "error",
+        "useValidLang": "error"
       },
       "complexity": {
-        // Runner-agnostic test rules for rstest and Playwright specs.
-        "noExcessiveNestedTestSuites": "error",
+        "noAdjacentSpacesInRegex": "error",
+        "noArguments": "error",
+        "noBannedTypes": "error",
+        "noCommaOperator": "error",
+        "noDivRegex": "error",
+        "noEmptyTypeParameters": "error",
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {
@@ -86,11 +150,40 @@
             "skipIifes": true
           }
         },
+        "noExcessiveNestedTestSuites": "error",
+        "noExtraBooleanCast": "off",
+        "noFlatMapIdentity": "error",
+        "noForEach": "error",
         "noImplicitCoercions": "error",
         "noImportantStyles": "error",
-        // TypeScript's noImplicitReturns requires explicit undefined returns.
+        "noRedundantDefaultExport": "error",
+        "noStaticOnlyClass": "error",
+        "noThisInStatic": "error",
+        "noUselessCatch": "error",
+        "noUselessCatchBinding": "error",
+        "noUselessConstructor": "error",
+        "noUselessContinue": "error",
+        "noUselessEmptyExport": "error",
+        "noUselessEscapeInRegex": "error",
+        "noUselessFragments": "error",
+        "noUselessLabel": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessRename": "error",
+        "noUselessReturn": "error",
+        "noUselessStringConcat": "error",
+        "noUselessStringRaw": "error",
+        "noUselessSwitchCase": "off",
+        "noUselessTernary": "error",
+        "noUselessThisAlias": "error",
+        "noUselessTypeConstraint": "error",
         "noUselessUndefined": "off",
-        // TypeScript's noPropertyAccessFromIndexSignature requires brackets.
+        "noUselessUndefinedInitialization": "error",
+        "noVoid": "error",
+        "useArrayFind": "error",
+        "useArrowFunction": "error",
+        "useDateNow": "error",
+        "useFlatMap": "error",
+        "useIndexOf": "error",
         "useLiteralKeys": "off",
         "useMaxParams": {
           "level": "error",
@@ -98,12 +191,49 @@
             "max": 3
           }
         },
+        "useNumericLiterals": "error",
+        "useOptionalChain": "error",
+        "useRegexLiterals": "error",
+        "useSimpleNumberKeys": "error",
+        "useSimplifiedLogicExpression": "error",
+        "useWhile": "error",
+        "noExcessiveNestedCallbacks": "error",
+        "noExcessiveSelectorClasses": "error",
+        "noPlaywrightUselessAwait": "error",
+        "noUnnecessaryTemplateExpression": "error",
+        "useArraySome": "error",
+        "useMathMinMax": "error",
         "useRegexpTest": "error"
       },
       "correctness": {
+        "noBeforeInteractiveScriptOutsideDocument": "error",
         "noChildrenProp": "error",
+        "noConstAssign": "error",
+        "noConstantCondition": "error",
+        "noConstantMathMinMaxClamp": "error",
+        "noConstructorReturn": "error",
+        "noDuplicateArgumentNames": "error",
+        "noDuplicateAttributes": "error",
+        "noDuplicateEnumValueNames": "error",
+        "noDuplicateInputFieldNames": "error",
+        "noDuplicateVariableNames": "error",
+        "noEmptyCharacterClassInRegex": "error",
+        "noEmptyPattern": "error",
+        "noGlobalDirnameFilename": "error",
+        "noGlobalObjectCalls": "error",
+        "noInnerDeclarations": "error",
+        "noInvalidBuiltinInstantiation": "error",
+        "noInvalidConstructorSuper": "error",
+        "noInvalidDirectionInLinearGradient": "error",
+        "noInvalidGridAreas": "error",
+        "noInvalidPositionAtImportRule": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noMissingVarFunction": "error",
         "noNestedComponentDefinitions": "error",
+        "noNextAsyncClientComponent": "error",
         "noNodejsModules": "error",
+        "noNonoctalDecimalEscape": "error",
+        "noPrecisionLoss": "error",
         "noPrivateImports": {
           "level": "error",
           "options": {
@@ -111,9 +241,9 @@
           }
         },
         "noProcessGlobal": "error",
-        // React Native's raw-text restrictions do not apply to React DOM.
-        "noReactNativeRawText": "off",
+        "noQwikUseVisibleTask": "error",
         "noReactPropAssignments": "error",
+        "noRenderReturnValue": "error",
         "noRestrictedElements": {
           "level": "error",
           "options": {
@@ -125,8 +255,11 @@
             }
           }
         },
-        // Solid's destructured-props rule misidentifies React components.
+        "noSelfAssign": "error",
+        "noSetterReturn": "error",
         "noSolidDestructuredProps": "off",
+        "noStringCaseMismatch": "error",
+        "noSwitchDeclarations": "error",
         "noUndeclaredDependencies": {
           "level": "error",
           "options": {
@@ -139,64 +272,212 @@
               "**/*.config.{ts,js,mts,cts,mjs,cjs}",
               "**/playwright.config.*",
               "**/rstest.*.{ts,js,mts,cts,mjs,cjs}",
-              "**/rsbuild.config.*"
+              "**/rsbuild.config.*",
+              "src/import-meta-env.d.ts"
             ],
             "peerDependencies": true,
             "optionalDependencies": true
           }
         },
-        "noUnusedImports": "error",
-        "noUnusedVariables": "error",
-        "useHookAtTopLevel": "error",
+        "noUndeclaredVariables": "error",
+        "noUnknownFunction": "error",
+        "noUnknownMediaFeatureName": "error",
+        "noUnknownProperty": "error",
+        "noUnknownPseudoClass": "error",
+        "noUnknownPseudoElement": "error",
+        "noUnknownTypeSelector": "error",
+        "noUnknownUnit": "error",
+        "noUnmatchableAnbSelector": "error",
+        "noUnreachable": "error",
+        "noUnreachableSuper": "error",
         "noUnresolvedImports": "error",
+        "noUnsafeFinally": "error",
+        "noUnsafeOptionalChaining": "error",
+        "noUnusedFunctionParameters": "error",
+        "noUnusedImports": "error",
+        "noUnusedInstantiation": "error",
+        "noUnusedLabels": "error",
+        "noUnusedPrivateClassMembers": "error",
+        "noUnusedVariables": "error",
+        "noVoidElementsWithChildren": "error",
+        "noVoidTypeReturn": "error",
+        "noVueDataObjectDeclaration": "error",
+        "noVueDuplicateKeys": "error",
+        "noVueReservedKeys": "error",
+        "noVueReservedProps": "error",
+        "noVueSetupPropsReactivityLoss": "error",
+        "noVueVIfWithVFor": "error",
+        "useExhaustiveDependencies": "error",
+        "useGraphqlNamedOperations": "error",
+        "useHookAtTopLevel": "error",
+        "useImageSize": "error",
         "useImportExtensions": {
           "level": "error",
           "options": {
             "forceJsExtensions": false
           }
         },
-        "useJsxKeyInIterable": "error",
+        "useInlineScriptId": "error",
+        "useIsNan": "error",
         "useJsonImportAttributes": "error",
-        // Qwik's serialization model does not apply to React closures.
+        "useJsxKeyInIterable": "error",
+        "useLoneAnonymousOperation": "error",
+        "useParseIntRadix": "error",
+        "useQwikClasslist": "error",
+        "useQwikMethodUsage": "error",
         "useQwikValidLexicalScope": "off",
-        "useUniqueElementIds": "error"
+        "useSingleJsDocAsterisk": "error",
+        "useUniqueElementIds": "error",
+        "useValidForDirection": "error",
+        "useValidTypeof": "error",
+        "useVueVForKey": "error",
+        "useVueValidTemplateRoot": "error",
+        "useVueValidVBind": "error",
+        "useVueValidVCloak": "error",
+        "useVueValidVElse": "error",
+        "useVueValidVElseIf": "error",
+        "useVueValidVHtml": "error",
+        "useVueValidVIf": "error",
+        "useVueValidVOn": "error",
+        "useVueValidVOnce": "error",
+        "useVueValidVPre": "error",
+        "useVueValidVText": "error",
+        "useYield": "error",
+        "noComponentHookFactories": "off",
+        "noDuplicateFieldDefinitionNames": "error",
+        "noJsxNamespace": "error",
+        "noPlaywrightMissingAwait": "error",
+        "noReactNativeRawText": "off",
+        "noVueImportCompilerMacros": "error",
+        "noVueRefAsOperand": "error",
+        "noVueVOnNumberValues": "error",
+        "usePlaywrightValidDescribeCallback": "error",
+        "useQwikLoaderLocation": "error",
+        "useReactAsyncServerFunction": "error",
+        "useReactNativePlatformComponents": "error",
+        "useVueValidVFor": "error"
       },
       "nursery": {
-        // Biome 2.6 rules for this React DOM, TypeScript, and Tailwind project.
+        "noAstroConflictingSetDirectives": "error",
+        "noAstroSetHtmlDirective": "error",
+        "noBaseToString": "error",
+        "noBunModules": "error",
+        "noExtendNative": "error",
+        "noFloatingPromises": "error",
+        "noImpliedEval": "error",
+        "noInvalidFileInputAccept": "error",
+        "noInvalidPropertyInitValue": "error",
+        "noJsRestrictedProperties": "error",
+        "noJsonUnsafeValues": "error",
+        "noMeaninglessVoidOperator": "error",
+        "noMisleadingReturnType": "error",
+        "noMisplacedListElements": "error",
+        "noMisusedPromises": "error",
+        "noNegationInEqualityCheck": "error",
+        "noNonScalableViewport": "error",
+        "noObsoleteTags": "error",
+        "noReactObjectTypeAsDefaultProp": "error",
+        "noRestrictedDependencies": "error",
+        "noReturnInFinally": "error",
+        "noSelfImport": "error",
+        "noSvelteAtDebugTags": "error",
+        "noSvelteAtHtmlTags": "error",
+        "noSvelteExportLet": "error",
+        "noSvelteLegacyConst": "error",
+        "noSvelteUnnecessaryStateWrap": "error",
+        "noTailwindArbitraryValue": "off",
+        "noTailwindRawColors": "error",
+        "noThisOutsideOfClass": "error",
+        "noUndeclaredClasses": "error",
+        "noUndeclaredCustomProperties": "error",
+        "noUnmodifiedLoopCondition": "error",
+        "noUnsafeIframeSandbox": "error",
+        "noUnsafePlusOperands": "error",
+        "noUnsafeTypeAssertion": "off",
+        "noUnusedClasses": "error",
+        "noUselessTypeConversion": "error",
+        "noVueDeprecatedScopedSlots": "error",
+        "noVueUndeclaredDirectives": "error",
+        "noXorAsExponentiation": "error",
+        "useAstroClientOnlyDirectiveValue": "error",
+        "useAwaitThenable": "error",
+        "useBetterDomTraversing": "off",
+        "useConsistentFunctionStyle": {
+          "level": "error",
+          "options": {
+            "style": "declaration",
+            "allowArrowFunctions": true
+          }
+        },
+        "useConsistentObjectKeys": "error",
+        "useControlLabel": "error",
+        "useDisposables": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useExplicitReturnType": "off",
+        "useExplicitType": "off",
+        "useFlatMathMinMax": "error",
+        "useIncludes": "error",
+        "useLayeredStyles": "off",
+        "useLogicalProperties": "error",
+        "useModernMathApis": "error",
+        "useNamedLayer": "error",
+        "useNullishCoalescing": "error",
+        "usePromiseRejectErrors": "error",
+        "useReactCompiler": "off",
+        "useReactFunctionComponentDefinition": "error",
+        "useReactNamingConvention": "error",
+        "useRegexpExec": "error",
+        "useStrictBooleanExpressions": "error",
+        "useStringStartsEndsWith": "error",
+        "useSvelteKitRuneImports": "error",
+        "useSvelteRequireEachKey": "error",
+        "useTailwindShorthandClasses": "off",
+        "useValidTestTitle": "error",
+        "useVueBaseImport": "error",
+        "preset": "all",
+        "useTailwindSortedClasses": "error",
         "noAccidentalBitwiseOperators": "error",
         "noArgumentsCallerOrCallee": "error",
-        "noBaseToString": "error",
         "noDoubleComparison": "error",
         "noDuplicateMapKeys": "error",
         "noExcessiveStatementsPerFunction": {
           "level": "error",
-          "options": { "max": 50 }
+          "options": {
+            "max": 50
+          }
         },
-        "noImpliedEval": "error",
         "noInvalidThis": "error",
-        "noNegationInEqualityCheck": "error",
         "noNestedSwitch": "error",
         "noNestedTemplateLiterals": "error",
         "noObjectConstructor": "error",
         "noOctal": "error",
         "noProcessExit": "error",
         "noPromiseExecutorReturn": "error",
-        "noRestrictedDependencies": "error",
+        "noSvelteAddEventListener": "error",
+        "noSvelteClassDirective": "error",
+        "noSvelteInspect": "error",
+        "noSvelteObjectInTextMustaches": "error",
+        "noSvelteUselessDerivedBy": "error",
         "noTailwindLegacyUtilities": "error",
-        // The import-aware shadcn/no-restyle rule owns registry components;
-        // Biome also flags unstyled icons, router links, and local primitives.
         "noTailwindRestyledComponents": "off",
-        "noUnsafePlusOperands": "error",
         "noUnsafeUnaryMinus": "error",
         "noUselessAssignment": "error",
         "noUselessCall": "error",
         "noUselessDateGetTime": "error",
+        "noVueBooleanDefault": "error",
+        "noVueLifecycleAfterAwait": "error",
+        "noVueRequiredPropWithDefault": "error",
+        "noVueRootVIf": "error",
+        "noVueShadowNativeEvents": "error",
+        "noVueVHtml": "error",
+        "noVueVText": "error",
         "noZeroFractions": "error",
         "useBigintLiterals": "error",
         "useCapitalizedConstructors": "error",
+        "useConsistentBlockLang": "error",
+        "useConsistentHeadingLevel": "off",
         "useConsistentJsonFileRead": "error",
-        "useExhaustiveSwitchCases": "error",
-        "useIncludes": "error",
+        "useFencedCodeLanguage": "off",
         "useLowercaseTestTitle": {
           "level": "error",
           "options": {
@@ -215,24 +496,33 @@
         },
         "useMatchingFunctionName": "error",
         "useNamedFunction": "error",
-        "useNullishCoalescing": "error",
-        "useReactFunctionComponentDefinition": "error",
         "useSimplifiedBooleanReturn": "error",
-        "useStringStartsEndsWith": "error",
-        "useTailwindSortedClasses": "error",
+        "useSingleTopLevelHeading": "off",
+        "useSvelteKitResolve": "error",
+        "useSvelteReactiveClasses": "error",
+        "useSvelteShorthandDirective": "error",
         "useTailwindStaticClassStrings": "error",
-        "useUnaryMinus": "error"
+        "useTopLevelHeading": "off",
+        "useUnaryMinus": "error",
+        "useVueConsistentEventHyphenation": "error",
+        "useVueMatchingComponentFileName": "error"
       },
       "performance": {
         "noAccumulatingSpread": "error",
+        "noAwaitInLoops": "error",
+        "noBarrelFile": "error",
         "noDelete": "error",
         "noDynamicNamespaceImportAccess": "error",
-        // React Compiler stabilizes JSX callbacks without manual extraction.
+        "noImgElement": "error",
         "noJsxPropsBind": "off",
+        "noNamespaceImport": "error",
         "noReExportAll": "error",
-        // Solid's <For> component is not valid in this React application.
+        "noSyncScripts": "error",
+        "noUnwantedPolyfillio": "error",
+        "useGoogleFontPreconnect": "error",
         "useSolidForComponent": "off",
         "useTopLevelRegex": "error",
+        "useVueVapor": "error",
         "useDomNodeTextContent": "error"
       },
       "security": {
@@ -241,25 +531,41 @@
         "noDangerouslySetInnerHtmlWithChildren": "error",
         "noGlobalEval": "error",
         "noScriptUrl": "error",
-        "noSecrets": "error"
+        "noSecrets": {
+          "level": "error",
+          "options": {
+            "entropyThreshold": 50
+          }
+        },
+        "useIframeSandbox": "error"
       },
       "style": {
-        "noDoneCallback": "error",
         "noCommonJs": "error",
+        "noContinue": "off",
         "noDefaultExport": "error",
+        "noDescendingSpecificity": "error",
+        "noDoneCallback": "error",
         "noEnum": "error",
-        // Plain JSX text is clearer than redundant string expressions.
-        "noJsxLiterals": "off",
+        "noExcessiveClassesPerFile": "error",
+        "noExcessiveLinesPerFile": "off",
+        "noExportedImports": "error",
+        "noHeadElement": "error",
+        "noHexColors": "error",
         "noImplicitBoolean": "error",
-        // Runtime geometry and chart values are passed through CSS variables.
-        "noInlineStyles": "off",
+        "noIncrementDecrement": "error",
+        "noInferrableTypes": "error",
+        "noJsxLiterals": "off",
         "noMagicNumbers": "error",
+        "noMultiAssign": "error",
+        "noMultilineString": "error",
         "noNamespace": "error",
+        "noNegationElse": "error",
         "noNestedTernary": "error",
         "noNonNullAssertion": "error",
         "noParameterAssign": "error",
         "noParameterProperties": "error",
         "noProcessEnv": "error",
+        "noRestrictedGlobals": "error",
         "noRestrictedImports": {
           "level": "error",
           "options": {
@@ -269,8 +575,21 @@
           }
         },
         "noRestrictedTypes": "error",
+        "noRootType": "error",
+        "noShoutyConstants": "error",
+        "noSubstr": "error",
+        "noTernary": "off",
+        "noUnusedTemplateLiteral": "error",
+        "noUselessElse": "error",
+        "noValueAtRule": "error",
+        "noVueOptionsApi": "error",
+        "noYodaExpression": "error",
+        "useArrayLiterals": "error",
         "useAsConstAssertion": "error",
         "useAtIndex": "error",
+        "useBlockStatements": "error",
+        "useCollapsedElseIf": "error",
+        "useCollapsedIf": "error",
         "useComponentExportOnlyModules": {
           "level": "error",
           "options": {
@@ -290,27 +609,36 @@
           }
         },
         "useConsistentArrayType": "error",
+        "useConsistentArrowReturn": "error",
+        "useConsistentBuiltinInstantiation": "error",
         "useConsistentCurlyBraces": "error",
-        // Rstest uses it(), while Playwright uses test().
-        "useConsistentTestIt": "off",
+        "useConsistentEnumValueType": "error",
+        "useConsistentGraphqlDescriptions": "error",
+        "useConsistentMemberAccessibility": "error",
+        "useConsistentMethodSignatures": "error",
+        "useConsistentObjectDefinitions": "error",
+        "useConsistentTypeDefinitions": "error",
+        "useConst": "error",
         "useDefaultParameterLast": "error",
+        "useDefaultSwitchClause": "error",
+        "useDeprecatedReason": "error",
+        "useDestructuring": "error",
+        "useEnumInitializers": "error",
         "useErrorCause": "error",
-        "useExportType": "error",
         "useExplicitLengthCheck": "error",
+        "useExponentiationOperator": "error",
+        "useExportType": "error",
         "useExportsLast": "error",
+        "useFilenamingConvention": "error",
+        "useForOf": "error",
         "useFragmentSyntax": "error",
+        "useGlobalThis": "error",
+        "useGraphqlNamingConvention": "error",
+        "useGroupedAccessorPairs": "error",
         "useImportType": "error",
-        "useNodejsImportProtocol": "error",
-        "useNumberNamespace": "error",
-        // Existing numbered captures are consumed by parser/replacement APIs.
-        "useNamedCaptureGroup": "off",
-        // Preserve existing regex semantics; Unicode mode changes valid patterns.
-        "useUnicodeRegex": "off",
-        "useReadonlyClassProperties": "error",
-        "useSelfClosingElements": "error",
-        "useSpreadOverApply": "error",
-        "useThrowNewError": "error",
-        "useThrowOnlyError": "error",
+        "useInputName": "error",
+        "useLiteralEnumMembers": "error",
+        "useLoneExecutableDefinition": "error",
         "useNamingConvention": {
           "level": "error",
           "options": {
@@ -337,79 +665,241 @@
             ]
           }
         },
+        "useNodeAssertStrict": "error",
+        "useNodejsImportProtocol": "error",
+        "useNumberNamespace": "error",
+        "useNumericSeparators": "error",
+        "useObjectSpread": "error",
+        "useReactFunctionComponents": "error",
+        "useReadonlyClassProperties": "error",
+        "useSelfClosingElements": "error",
+        "useShorthandAssign": "error",
+        "useShorthandFunctionType": "error",
         "useSingleVarDeclarator": "error",
+        "useSpreadOverApply": "error",
+        "useSymbolDescription": "error",
+        "useTemplate": "error",
+        "useThrowNewError": "error",
+        "useThrowOnlyError": "error",
+        "useTrimStartEnd": "error",
+        "useUnifiedTypeSignatures": "error",
+        "useVueConsistentVBindStyle": "error",
+        "useVueConsistentVOnStyle": "error",
+        "useVueDefineMacrosOrder": "error",
+        "useVueHyphenatedAttributes": "error",
+        "useVueMultiWordComponentNames": "error",
+        "noInlineStyles": "off",
+        "noPlaywrightElementHandle": "error",
+        "noPlaywrightEval": "error",
         "noPlaywrightWaitForSelector": "error",
+        "noReactNativeLiteralColors": "error",
+        "noTopLevelLiterals": "error",
+        "useConsistentTestIt": {
+          "level": "error",
+          "options": {
+            "function": "test",
+            "withinDescribe": "test"
+          }
+        },
+        "useDomQuerySelector": "error",
+        "useImportsFirst": "error",
+        "useNamedCaptureGroup": "error",
+        "useReduceTypeParameter": "error",
         "useTestHooksInOrder": "error",
         "useTestHooksOnTop": "error",
-        "useThisInClassMethods": "error"
+        "useThisInClassMethods": "error",
+        "useUnicodeRegex": "error",
+        "useVarsOnTop": "error",
+        "useVueConsistentDefinePropsDeclaration": "error",
+        "useVueNextTickPromise": "error"
       },
       "suspicious": {
-        "noDuplicateTestHooks": "error",
-        "noExportsInTest": "error",
-        "noFocusedTests": "error",
-        "noMisplacedAssertion": "error",
-        "noSkippedTests": "error",
+        "noAlert": "error",
+        "noApproximativeNumericConstant": "error",
         "noArrayIndexKey": "error",
         "noAssignInExpressions": "error",
+        "noAsyncPromiseExecutor": "error",
+        "noBiomeFirstException": "error",
         "noBitwiseOperators": "error",
+        "noCatchAssign": "error",
+        "noClassAssign": "error",
+        "noCommentText": "error",
+        "noCompareNegZero": "error",
+        "noConfusingLabels": "error",
+        "noConfusingVoidType": "error",
         "noConsole": "error",
-        // Conditional browser capabilities and assertion helpers are intentional.
-        "noConditionalExpect": "off",
-        "useExpect": "off",
-        // Browser support is governed by Rsbuild's targets, not CSS Baseline age.
-        "useBaseline": "off",
+        "noConstEnum": "error",
+        "noConstantBinaryExpressions": "error",
+        "noControlCharactersInRegex": "error",
+        "noDebugger": "error",
         "noDeprecatedImports": "error",
+        "noDeprecatedMediaType": "error",
+        "noDocumentCookie": "error",
+        "noDocumentImportInPage": "error",
         "noDoubleEquals": "error",
+        "noDuplicateAtImportRules": "error",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateCustomProperties": "error",
+        "noDuplicateDependencies": "error",
+        "noDuplicateElseIf": "error",
+        "noDuplicateEnumValues": "error",
+        "noDuplicateFields": "error",
+        "noDuplicateFontNames": "error",
+        "noDuplicateGraphqlOperationName": "error",
+        "noDuplicateJsxProps": "error",
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noDuplicateProperties": "error",
+        "noDuplicateSelectorsKeyframeBlock": "error",
+        "noDuplicateTestHooks": "error",
+        "noDuplicatedSpreadProps": "error",
+        "noEmptyBlock": "error",
+        "noEmptyBlockStatements": "error",
         "noEmptyInterface": "error",
+        "noEmptySource": "error",
+        "noEqualsToNull": "error",
+        "noEvolvingTypes": "error",
         "noExplicitAny": "error",
+        "noExportsInTest": "error",
+        "noExtraNonNullAssertion": "error",
+        "noFallthroughSwitchClause": "error",
+        "noFocusedTests": "error",
+        "noForIn": "error",
+        "noFunctionAssign": "error",
+        "noGlobalAssign": "error",
+        "noGlobalIsFinite": "error",
+        "noGlobalIsNan": "error",
+        "noHeadImportInDocument": "error",
+        "noImplicitAnyLet": "error",
+        "noImportAssign": "error",
         "noImportCycles": {
           "level": "error",
           "options": {
             "ignoreTypes": true
           }
         },
+        "noImportantInKeyframe": "error",
+        "noIrregularWhitespace": "error",
+        "noLabelVar": "error",
+        "noLeakedRender": "off",
+        "noMisleadingCharacterClass": "error",
+        "noMisleadingInstantiator": "error",
+        "noMisplacedAssertion": "error",
+        "noMisrefactoredShorthandAssign": "error",
+        "noNestedPromises": "error",
+        "noNonNullAssertedOptionalChain": "error",
+        "noOctalEscape": "error",
+        "noParametersOnlyUsedInRecursion": "error",
+        "noProto": "error",
+        "noPrototypeBuiltins": "error",
+        "noQuickfixBiome": "error",
+        "noReactForwardRef": "error",
+        "noReactSpecificProps": "off",
+        "noRedeclare": "error",
+        "noRedundantUseStrict": "error",
         "noReturnAssign": "error",
+        "noSelfCompare": "error",
+        "noShadow": "error",
+        "noShadowRestrictedNames": "error",
+        "noShorthandPropertyOverrides": "error",
+        "noSkippedTests": "error",
+        "noSparseArray": "error",
+        "noSuspiciousSemicolonInJsx": "error",
+        "noTemplateCurlyInString": "error",
         "noThenProperty": "error",
         "noTsIgnore": "error",
+        "noUnassignedVariables": "error",
+        "noUndeclaredEnvVars": "error",
+        "noUnknownAtRules": "error",
+        "noUnknownAttribute": "error",
+        "noUnnecessaryConditions": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "noUnsafeNegation": "error",
+        "noUnusedExpressions": "error",
+        "noUselessEscapeInString": "error",
+        "noUselessRegexBackrefs": "error",
+        "noVar": "error",
+        "noVueArrowFuncInWatch": "error",
+        "noWith": "error",
+        "useAdjacentOverloadSignatures": "error",
+        "useArraySortCompare": "error",
+        "useAwait": "off",
+        "useBiomeIgnoreFolder": "error",
+        "useDefaultSwitchClauseLast": "error",
         "useDeprecatedDate": "error",
+        "useErrorMessage": "error",
+        "useGetterReturn": "error",
+        "useGoogleFontDisplay": "error",
+        "useGuardForIn": "error",
+        "useIsArray": "error",
+        "useIterableCallbackReturn": "error",
+        "useNamespaceKeyword": "error",
+        "useNumberToFixedDigitsArgument": "error",
+        "useRequiredScripts": "error",
+        "useStaticResponseMethods": "error",
+        "useStrictMode": "error",
+        "noConditionalExpect": "error",
+        "noDrizzleDeleteWithoutWhere": "error",
+        "noDrizzleUpdateWithoutWhere": "error",
         "noDuplicateSelectors": "error",
+        "noEmptyObjectKeys": "error",
         "noIdenticalTestTitle": "error",
+        "noJsxLeakedDollar": "error",
+        "noLoopFunc": "error",
+        "noPlaywrightForceOption": "error",
+        "noPlaywrightNetworkidle": "error",
+        "noPlaywrightPagePause": "error",
+        "noPlaywrightWaitForNavigation": "error",
         "noPlaywrightWaitForTimeout": "error",
-        "noReactStringRefs": "error"
+        "noReactNativeDeepImports": "error",
+        "noReactStringRefs": "error",
+        "noUntrustedLicenses": "error",
+        "useBaseline": {
+          "level": "error",
+          "options": {
+            "available": "newly"
+          }
+        },
+        "useExpect": "error",
+        "useScopedStyles": "error"
       }
     }
   },
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": true,
+    "useIgnoreFile": false,
     "defaultBranch": "main"
   },
   "files": {
     "ignoreUnknown": true,
     "includes": [
-      "!**/protogen",
-      "!**/components/ui",
-      "!**/hooks/use-proto-form",
-      "!**/lib/core",
-      "!**/lib/protobuf-provider",
-      "!**/dist/**/*",
-      "!**/build/**/*",
-      "!**/out/**/*",
-      "!**/coverage/**/*",
-      "!**/.nyc_output/**/*",
-      "!**/playwright-report/**/*",
-      "!**/routeTree.gen.ts",
-      "!**/test-results/**/*"
+      "**",
+      "!!**/node_modules",
+      "!!**/.git",
+      "!!**/dist",
+      "!!**/build",
+      "!!**/out",
+      "!!**/.cache",
+      "!!**/.next",
+      "!!**/.turbo",
+      "!!**/coverage",
+      "!!**/.nyc_output",
+      "!!**/playwright-report",
+      "!!**/test-results",
+      "!!**/opensrc",
+      "!!src/protogen",
+      "!!src/components/ui",
+      "!src/routeTree.gen.ts",
+      "!!**/bun.lock",
+      "!!**/bun.lockb"
     ]
   },
   "overrides": [
     {
       "includes": [
         "src/components/ui/**",
-        "src/hooks/use-proto-form/**",
-        "src/lib/core/**",
-        "src/lib/protobuf-provider/**",
         "src/routeTree.gen.ts",
         "src/protogen/**"
       ],
@@ -424,25 +914,22 @@
       }
     },
     {
-      // Command-line scripts run under Bun and intentionally write to stdio.
       "includes": ["scripts/**/*"],
       "linter": {
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
           },
-          "nursery": {
-            // CLI wrappers intentionally propagate child-process exit statuses.
-            "noProcessExit": "off"
-          },
           "suspicious": {
             "noConsole": "off"
+          },
+          "nursery": {
+            "noProcessExit": "off"
           }
         }
       }
     },
     {
-      // Playwright, Lighthouse, and Rstest entrypoints run under Node/Bun.
       "includes": ["e2e/**/*", "lighthouserc.*", "rstest.shared.ts"],
       "linter": {
         "rules": {
@@ -453,7 +940,6 @@
       }
     },
     {
-      // Tooling config files commonly require default exports.
       "includes": [
         "*.config.{js,ts,mjs,cjs,mts,cts}",
         "**/*.config.{js,ts,mjs,cjs,mts,cts}",
@@ -474,7 +960,6 @@
       }
     },
     {
-      // Playwright loads custom reporters through a default export contract.
       "includes": ["e2e/llm-reporter.ts"],
       "linter": {
         "rules": {
@@ -485,7 +970,6 @@
       }
     },
     {
-      // Browser/runtime source code should not import Node.js modules.
       "includes": ["src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"],
       "linter": {
         "rules": {
@@ -496,7 +980,6 @@
       }
     },
     {
-      // Unresolved import scanner rule is useful for plain JS files.
       "includes": ["**/*.{js,jsx,mjs,cjs}"],
       "linter": {
         "rules": {
@@ -507,7 +990,6 @@
       }
     },
     {
-      // TanStack Router requires route components to stay private for code splitting.
       "includes": ["src/routes/**/*"],
       "linter": {
         "rules": {
@@ -518,77 +1000,52 @@
       }
     },
     {
-      // Fake credentials and high-entropy fixtures are required test inputs;
-      // Fast Refresh does not execute test modules.
       "includes": [
         "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
         "**/__tests__/**/*"
       ],
       "linter": {
         "rules": {
-          "correctness": {
-            // Rstest mock factories define replacement components once.
-            "noComponentHookFactories": "off"
-          },
-          "nursery": {
-            // Test suites contain setup and multiple assertions, unlike app logic.
-            "noExcessiveStatementsPerFunction": {
-              "level": "error",
-              "options": { "max": 100 }
-            }
-          },
           "security": {
             "noSecrets": "off"
           },
           "performance": {
-            // Rstest partial mocks require namespace imports with the importActual attribute.
             "noNamespaceImport": "off"
           },
           "style": {
             "noMagicNumbers": "off",
             "useComponentExportOnlyModules": "off"
-          }
-        }
-      }
-    },
-    {
-      // These static selectors and Tailwind variants are entropy false positives.
-      "includes": ["src/components/querylane-ui/sidebar.tsx"],
-      "linter": {
-        "rules": {
-          "security": {
-            "noSecrets": "off"
           },
-          "style": {
-            "noMagicNumbers": "off"
-          },
-          "suspicious": {
-            "noDocumentCookie": "off"
+          "nursery": {
+            "noExcessiveStatementsPerFunction": {
+              "level": "error",
+              "options": {
+                "max": 100
+              }
+            }
           }
         }
       }
     },
     {
-      // Payload benchmarks must include assets arriving after the UI is ready.
-      "includes": ["e2e/tests/data-explorer-perf.spec.ts"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noPlaywrightNetworkidle": "off"
-          }
-        }
-      }
-    },
-    {
-      // TanStack Query owns these four-argument callback signatures.
-      "includes": ["src/hooks/api/instance.ts", "src/lib/query-client.ts"],
-      "linter": {
-        "rules": {
-          "complexity": {
-            "useMaxParams": "off"
-          }
+      "includes": ["**/*.jsonc", "**/tsconfig*.json"],
+      "json": {
+        "parser": {
+          "allowComments": true,
+          "allowTrailingCommas": true
         }
       }
     }
-  ]
+  ],
+  "tailwind": {
+    "stylesheet": "./src/index.css"
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    },
+    "linter": {
+      "enabled": false
+    }
+  }
 }

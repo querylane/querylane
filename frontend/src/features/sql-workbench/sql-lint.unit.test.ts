@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import type { SqlProblem } from "@/features/sql-workbench/sql-diagnostics";
 import {
   mapWithConcurrency,
@@ -15,7 +15,7 @@ const PROBLEM: SqlProblem = {
 };
 
 function countingValidator(
-  results: ReadonlyArray<SqlProblem | null | undefined>,
+  results: readonly (SqlProblem | null | undefined)[],
   scopeKey = "public"
 ) {
   const calls: string[] = [];
@@ -30,7 +30,7 @@ function countingValidator(
 }
 
 describe("problem cache", () => {
-  it("asks the server once per statement and scope", async () => {
+  test("asks the server once per statement and scope", async () => {
     const cache = new ProblemCache();
     const { calls, validator } = countingValidator([PROBLEM, null]);
     const { signal } = new AbortController();
@@ -46,7 +46,7 @@ describe("problem cache", () => {
     expect(calls).toEqual(["select * from nope", "select 1"]);
   });
 
-  it("re-checks a statement after a failed check instead of calling it valid", async () => {
+  test("re-checks a statement after a failed check instead of calling it valid", async () => {
     const cache = new ProblemCache();
     const { calls, validator } = countingValidator([undefined, PROBLEM]);
     const { signal } = new AbortController();
@@ -60,7 +60,7 @@ describe("problem cache", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("keeps results apart per default schema", async () => {
+  test("keeps results apart per default schema", async () => {
     const cache = new ProblemCache();
     const { signal } = new AbortController();
     const inPublic = countingValidator([PROBLEM], "public");
@@ -75,7 +75,7 @@ describe("problem cache", () => {
 });
 
 describe("mapWithConcurrency", () => {
-  it("keeps results in input order with at most `limit` tasks in flight", async () => {
+  test("keeps results in input order with at most `limit` tasks in flight", async () => {
     let inFlight = 0;
     let peak = 0;
     const results = await mapWithConcurrency(
@@ -95,7 +95,7 @@ describe("mapWithConcurrency", () => {
     expect(peak).toBe(2);
   });
 
-  it("returns an empty list for no items", async () => {
+  test("returns an empty list for no items", async () => {
     expect(await mapWithConcurrency([], 2, () => Promise.resolve(1))).toEqual(
       []
     );

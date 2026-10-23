@@ -18,11 +18,11 @@ import {
 // Table detail tabs live in data-explorer-table-surfaces.spec.ts.
 
 const FETCHED_AT = new Date("2024-01-01T23:00:00Z");
-const KIND_FILTER_RE = /^Kind$/;
-const OWNER_FILTER_RE = /^Owner$/;
-const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/;
-const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/;
-const SCHEMA_MAP_FILTER_RE = /^Schema$/;
+const KIND_FILTER_RE = /^Kind$/u;
+const OWNER_FILTER_RE = /^Owner$/u;
+const ACTIVE_KIND_FILTER_RE = /^Kind.*Materialized views/u;
+const ACTIVE_OWNER_FILTER_RE = /^Owner.*analytics_owner/u;
+const SCHEMA_MAP_FILTER_RE = /^Schema$/u;
 const SCHEMA_MAP_WIDE_VIEWPORT = { height: 1320, width: 1420 };
 const SCHEMA_MAP_NARROW_VIEWPORT = { height: 1000, width: 900 };
 

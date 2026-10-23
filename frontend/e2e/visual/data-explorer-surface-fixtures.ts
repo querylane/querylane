@@ -1,4 +1,5 @@
 import type { Page } from "playwright/test";
+import { isNonEmptyString } from "../../src/lib/value-guards";
 import { SchemaService } from "../../src/protogen/querylane/console/v1alpha1/schema_pb";
 import { SQLService } from "../../src/protogen/querylane/console/v1alpha1/sql_pb";
 import { TableDataService } from "../../src/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -23,7 +24,7 @@ function tableUrl(schema: string, name: string, tab?: string) {
     category: "tables",
     name,
     schema,
-    ...(tab ? { tab } : {}),
+    ...(isNonEmptyString(tab) ? { tab } : {}),
   });
 }
 

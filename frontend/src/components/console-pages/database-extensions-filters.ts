@@ -1,7 +1,8 @@
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_pb";
 
 type ExtensionStatusFilter = "All" | "available" | "installed";
-type ExtensionCategoryFilter = "All" | string;
+type ExtensionCategoryFilter = string;
 
 type ExtensionBadgeVariant = "default" | "outline";
 
@@ -25,7 +26,10 @@ interface CuratedExtensionDocs {
   exampleSql: string;
   meta: string;
   minPostgres: number;
-  provides: { label: string; value: string }[];
+  provides: {
+    label: string;
+    value: string;
+  }[];
   scope: ExtensionScope;
   source: ExtensionSource;
 }
@@ -38,7 +42,10 @@ interface PresentedExtension {
   description: string;
   displayName: string;
   extension: Extension;
-  facts: { label: string; value: string }[];
+  facts: {
+    label: string;
+    value: string;
+  }[];
   installedVersion: string;
   installSql: string;
   key: string;
@@ -71,7 +78,7 @@ const SOURCE_LABELS = {
   postgresql: "PostgreSQL",
   vendor: "Vendor",
 } satisfies Record<ExtensionSource, string>;
-const VERSION_PREFIX_PATTERN = /^v(?=\d)/i;
+const VERSION_PREFIX_PATTERN = /^v(?=\d)/iu;
 
 // Editorial notes for well-known extensions. This is an optional enrichment
 // layer: extensions without an entry render only what the server reports.
@@ -279,7 +286,10 @@ const EXTENSION_METADATA: Record<string, CuratedExtensionDocs> = {
 
 function extensionDisplayName(extension: Extension): string {
   const fromName = extension.name.split("/").at(-1);
-  return extension.displayName || fromName || "unknown";
+  if (isNonEmptyString(extension.displayName)) {
+    return extension.displayName;
+  }
+  return isNonEmptyString(fromName) ? fromName : "unknown";
 }
 
 function extensionStatusFilterValue(
@@ -310,7 +320,7 @@ function extensionKey(extension: Extension): string {
   return extension.name || extensionDisplayName(extension);
 }
 
-const UNQUOTED_EXTENSION_NAME_PATTERN = /^[a-z_][a-z0-9_]*$/;
+const UNQUOTED_EXTENSION_NAME_PATTERN = /^[a-z_][a-z0-9_]*$/u;
 
 function extensionInstallSql(displayName: string): string {
   const identifier = UNQUOTED_EXTENSION_NAME_PATTERN.test(displayName)
@@ -322,8 +332,14 @@ function extensionInstallSql(displayName: string): string {
 function extensionFacts(
   extension: Extension,
   curated: CuratedExtensionDocs | undefined
-): { label: string; value: string }[] {
-  const facts: { label: string; value: string }[] = [];
+): {
+  label: string;
+  value: string;
+}[] {
+  const facts: {
+    label: string;
+    value: string;
+  }[] = [];
   const installedVersion = versionLabel(extension.installedVersion);
   const defaultVersion = versionLabel(extension.defaultVersion);
   if (installedVersion) {
@@ -348,7 +364,9 @@ function extensionFacts(
 function presentExtension(extension: Extension): PresentedExtension {
   const displayName = extensionDisplayName(extension);
   const curated = curatedDocsForExtension(extension);
-  const description = extension.comment || curated?.about || "";
+  const description = isNonEmptyString(extension.comment)
+    ? extension.comment
+    : (curated?.about ?? "");
   const searchText = [
     displayName,
     description,
@@ -420,7 +438,7 @@ function extensionInventorySummary(extensions: PresentedExtension[]): string {
     (extension) => extension.statusFilter === "installed"
   ).length;
   const available = extensions.length - installed;
-  return `${installed} installed \u00b7 ${available} available on this server`;
+  return `${installed} installed \u00B7 ${available} available on this server`;
 }
 
 function extensionCategoryOptions(
@@ -428,12 +446,12 @@ function extensionCategoryOptions(
 ): ExtensionFilterOption<string>[] {
   const categories = new Set<string>();
   for (const extension of extensions) {
-    if (extension.category) {
+    if (isNonEmptyString(extension.category)) {
       categories.add(extension.category);
     }
   }
   return [...categories]
-    .sort((left, right) => left.localeCompare(right))
+    .toSorted((left, right) => left.localeCompare(right))
     .map((category) => ({ label: category, value: category }));
 }
 

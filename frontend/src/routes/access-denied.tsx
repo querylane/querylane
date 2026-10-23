@@ -7,7 +7,7 @@ const accessDeniedSearchSchema = z.object({
     z
       .string()
       .min(1)
-      .regex(/^\/(?!\/).*/, "returnTo must be an in-app absolute path")
+      .regex(/^\/(?!\/).*/u, "returnTo must be an in-app absolute path")
   ),
 });
 

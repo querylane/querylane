@@ -42,7 +42,7 @@ export async function paginateAllWithLastResponse<
     }
 
     seenPageTokens.add(nextPageToken);
-    return collectPage(nextPageToken);
+    return await collectPage(nextPageToken);
   }
 
   const lastResponse = await collectPage();
@@ -92,7 +92,7 @@ export async function paginateUpTo<Response extends PaginatedResponse, Item>(
     }
 
     seenPageTokens.add(nextPageToken);
-    return collectPage(nextPageToken);
+    return await collectPage(nextPageToken);
   }
 
   return await collectPage();

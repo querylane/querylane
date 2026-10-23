@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import type { AppUiError } from "@/lib/ui-error-types";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const BUG_REPORT_TEMPLATE = "bug_report.yml";
 const DEFAULT_GITHUB_REPOSITORY = "querylane/querylane";
@@ -31,7 +32,7 @@ function sanitizeStack(
   stack: string | null | undefined,
   maxLength: number
 ): string | null {
-  if (!stack) {
+  if (!isNonEmptyString(stack)) {
     return null;
   }
 
@@ -39,7 +40,7 @@ function sanitizeStack(
     .split("\n")
     .filter((line) => STACK_FRAME_PATTERN.test(line))
     .join("\n")
-    .replace(STACK_URL_PATTERN, redactStackUrl);
+    .replaceAll(STACK_URL_PATTERN, redactStackUrl);
 
   return frames.length > 0 ? frames.slice(0, maxLength) : null;
 }

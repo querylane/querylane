@@ -250,7 +250,9 @@ function RoleNodeButton({
       className="absolute top-(--layout-top) left-(--layout-left) h-9 w-(--layout-width) justify-start text-left"
       data-dimmed={dimmed}
       data-selected={selected}
-      onClick={() => onSelect(node.id)}
+      onClick={() => {
+        onSelect(node.id);
+      }}
       presentation="access-node"
       style={{
         "--layout-left": `${ROLE_X}px`,
@@ -294,7 +296,9 @@ function ObjectNodeButton({
       className="absolute top-(--layout-top) left-(--layout-left) h-[42px] w-(--layout-width) justify-start text-left"
       data-dimmed={dimmed}
       data-selected={selected}
-      onClick={() => onSelect(node.id)}
+      onClick={() => {
+        onSelect(node.id);
+      }}
       presentation="access-node"
       style={{
         "--layout-left": `${OBJECT_X}px`,
@@ -435,7 +439,9 @@ function AccessFiltersPopover({
                 <Switch
                   checked={edgeVisibility[filter.tone]}
                   id={switchId}
-                  onCheckedChange={(checked) => onToggle(filter.tone, checked)}
+                  onCheckedChange={(checked) => {
+                    onToggle(filter.tone, checked);
+                  }}
                   size="sm"
                 />
               </div>
@@ -604,7 +610,9 @@ function RolesAccessMapCanvas({
                 ? "Collapse role access map"
                 : "Maximize role access map"
             }
-            onClick={() => setIsExpanded((current) => !current)}
+            onClick={() => {
+              setIsExpanded((current) => !current);
+            }}
             size="icon-sm"
             type="button"
             variant="ghost"

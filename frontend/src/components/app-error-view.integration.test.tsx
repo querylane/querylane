@@ -1,6 +1,6 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { afterEach, describe, it } from "@rstest/core";
+import { afterEach, describe, expect, test } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import { AppErrorView } from "@/components/app-error-view";
@@ -47,12 +47,12 @@ afterEach(() => {
 });
 
 describe("app error view integration", () => {
-  it("shows retry guidance on the page surface for PostgreSQL errors", () => {
+  test("shows retry guidance on the page surface for PostgreSQL errors", () => {
     render(
       <AppErrorView error={createPostgresPermissionError()} variant="page" />
     );
 
-    screen.getByText("PostgreSQL permission denied");
-    screen.getByText("Correct the issue before retrying.");
+    expect(screen.getByText("PostgreSQL permission denied")).toBeTruthy();
+    expect(screen.getByText("Correct the issue before retrying.")).toBeTruthy();
   });
 });

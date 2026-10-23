@@ -16,7 +16,7 @@ interface ReactPerformanceMode {
 }
 
 function resolveCompilerMode(value: string | undefined): ReactCompilerMode {
-  const mode = value || "infer";
+  const mode = (value ?? "") || "infer";
   if (mode === "annotation" || mode === "infer") {
     return mode;
   }

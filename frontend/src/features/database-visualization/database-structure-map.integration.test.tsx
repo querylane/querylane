@@ -22,7 +22,9 @@ rs.mock("@/features/database-visualization/flow-canvas", () => ({
     selectedNodeId,
   }: {
     actionPanel?: React.ReactNode | undefined;
-    nodes: { id: string }[];
+    nodes: {
+      id: string;
+    }[];
     selectedNodeId?: string | null | undefined;
   }) => (
     <section aria-label="Flow canvas mock">

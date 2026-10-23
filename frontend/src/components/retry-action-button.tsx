@@ -2,10 +2,11 @@
 
 import { RefreshCw } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-
 import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 interface RetryActionButtonProps {
   className?: string;
@@ -32,7 +33,7 @@ export function RetryActionButton({
   const retryErrorId = useId();
   const mountedRef = useRef(true);
 
-  // allow-useEffect: track mounted state so late-settling retries don't set
+  // track mounted state so late-settling retries don't set
   // state after unmount. Setting the ref true on mount is required: under
   // StrictMode the effect runs mount → cleanup → mount, and without this the
   // cleanup would leave the ref permanently false, wedging the pending state.
@@ -43,33 +44,37 @@ export function RetryActionButton({
     };
   }, []);
 
-  const handleRetry = () => {
-    if (retryPending) {
-      return;
-    }
+  function handleRetry() {
+    handleAsyncAction(() => {
+      if (retryPending) {
+        return;
+      }
 
-    setRetryPending(true);
-    setRetryError(null);
-    Promise.resolve()
-      .then(() => onRetry())
-      .catch(() => {
-        if (mountedRef.current) {
-          setRetryError(
-            "Retry failed. Review the error details or try again in a moment."
-          );
-        }
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          setRetryPending(false);
-        }
-      });
-  };
+      setRetryPending(true);
+      setRetryError(null);
+      return Promise.resolve()
+        .then(() => onRetry())
+        .catch(() => {
+          if (mountedRef.current) {
+            setRetryError(
+              "Retry failed. Review the error details or try again in a moment."
+            );
+          }
+        })
+        .finally(() => {
+          if (mountedRef.current) {
+            setRetryPending(false);
+          }
+        });
+    })();
+  }
 
   return (
     <span className="inline-flex flex-col items-start gap-1">
       <Button
-        aria-describedby={retryError ? retryErrorId : undefined}
+        aria-describedby={
+          isNonEmptyString(retryError) ? retryErrorId : undefined
+        }
         className={className}
         disabled={showPending}
         onClick={handleRetry}
@@ -82,7 +87,7 @@ export function RetryActionButton({
         ) : (
           <RefreshCw className="size-4" />
         )}
-        {String(showPending ? pendingLabel : label)}
+        {showPending ? pendingLabel : label}
       </Button>
       {retryError === null ? null : (
         <span

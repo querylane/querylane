@@ -13,6 +13,7 @@ import {
   createSetupStreamFailureError,
   type StepProgressCallback,
 } from "@/lib/setup-requests";
+import { handleAsyncAction } from "@/lib/ui-action";
 import {
   OnboardingService,
   type SetupAppDatabaseRequest,
@@ -207,10 +208,26 @@ function useWatchConfigChanges({
   onProgress,
 }: UseWatchConfigChangesOptions): UseWatchConfigChangesResult {
   const onboardingStreamingClient = useOnboardingStreamingClient();
-  const [isRunning, setIsRunning] = useState(false);
-  const [manualRetryRequired, setManualRetryRequired] = useState(false);
+  const [run, setRun] = useState({
+    enabled,
+    tick: 0,
+    isRunning: enabled,
+    manualRetryRequired: false,
+  });
   const [retryPending, setRetryPending] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
+  if (run.enabled !== enabled || run.tick !== retryTick) {
+    setRun({
+      enabled,
+      tick: retryTick,
+      isRunning: enabled,
+      manualRetryRequired: false,
+    });
+  }
+  const { isRunning, manualRetryRequired } = run;
+  const setManualRetryRequired = useEffectEvent((required: boolean) => {
+    setRun((current) => ({ ...current, manualRetryRequired: required }));
+  });
   const retryTickRef = useRef(retryTick);
   const retryPromiseRef = useRef<Promise<void> | null>(null);
   const retryResolveRef = useRef<(() => void) | null>(null);
@@ -227,7 +244,6 @@ function useWatchConfigChanges({
       return retryPromiseRef.current;
     }
 
-    setManualRetryRequired(false);
     setRetryPending(true);
 
     const retryPromise = new Promise<void>((resolve) => {
@@ -239,16 +255,14 @@ function useWatchConfigChanges({
     return retryPromise;
   };
 
-  // allow-useEffect: sync form field from server response
+  // sync form field from server response
   useEffect(() => {
     retryTickRef.current = retryTick;
   }, [retryTick]);
 
-  // allow-useEffect: sync form field from server response
+  // sync form field from server response
   useEffect(() => {
     if (!enabled) {
-      setIsRunning(false);
-      setManualRetryRequired(false);
       settleRetryState({
         retryPromiseRef,
         retryResolveRef,
@@ -260,55 +274,55 @@ function useWatchConfigChanges({
     let cancelled = false;
     const controller = new AbortController();
     const runId = retryTick;
-    setIsRunning(true);
-    setManualRetryRequired(false);
 
-    runWatchStreamWithRetries({
-      controller,
-      isCancelled: () => cancelled || controller.signal.aborted,
-      onboardingStreamingClient,
-      onComplete: () => {
-        settleRetryState({
-          retryPromiseRef,
-          retryResolveRef,
-          setRetryPending,
-        });
-        handleComplete();
-      },
-      onError: (error, reason) => {
-        settleRetryState({
-          retryPromiseRef,
-          retryResolveRef,
-          setRetryPending,
-        });
-        handleError(error, reason);
-      },
-      onProgress: (event) => {
-        settleRetryState({
-          retryPromiseRef,
-          retryResolveRef,
-          setRetryPending,
-        });
-        handleProgress(event);
-      },
-      setManualRetryRequired,
-    })
-      .catch((error) => {
-        if (!(cancelled || controller.signal.aborted)) {
-          setManualRetryRequired(true);
+    handleAsyncAction(() =>
+      runWatchStreamWithRetries({
+        controller,
+        isCancelled: () => cancelled || controller.signal.aborted,
+        onboardingStreamingClient,
+        onComplete: () => {
           settleRetryState({
             retryPromiseRef,
             retryResolveRef,
             setRetryPending,
           });
-          handleError(toError(error), "stream_error");
-        }
+          handleComplete();
+        },
+        onError: (error, reason) => {
+          settleRetryState({
+            retryPromiseRef,
+            retryResolveRef,
+            setRetryPending,
+          });
+          handleError(error, reason);
+        },
+        onProgress: (event) => {
+          settleRetryState({
+            retryPromiseRef,
+            retryResolveRef,
+            setRetryPending,
+          });
+          handleProgress(event);
+        },
+        setManualRetryRequired,
       })
-      .finally(() => {
-        if (!cancelled && runId === retryTickRef.current) {
-          setIsRunning(false);
-        }
-      });
+        .catch((error: unknown) => {
+          if (!(cancelled || controller.signal.aborted)) {
+            setManualRetryRequired(true);
+            settleRetryState({
+              retryPromiseRef,
+              retryResolveRef,
+              setRetryPending,
+            });
+            handleError(toError(error), "stream_error");
+          }
+        })
+        .finally(() => {
+          if (!cancelled && runId === retryTickRef.current) {
+            setRun((current) => ({ ...current, isRunning: false }));
+          }
+        })
+    )();
 
     return () => {
       cancelled = true;

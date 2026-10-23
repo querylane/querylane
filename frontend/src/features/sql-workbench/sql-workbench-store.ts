@@ -1,9 +1,13 @@
+import { toast } from "sonner";
+import { z } from "zod";
 import { create } from "zustand";
 import {
   type PersistStorage,
   persist,
   type StorageValue,
 } from "zustand/middleware";
+import { captureException } from "@/lib/diagnostics";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 /**
  * Editor tabs, run history and saved queries for the SQL workbench.
@@ -85,6 +89,61 @@ type PersistedSqlWorkbench = Pick<
   SqlWorkbenchState,
   "history" | "savedQueries" | "workspaces"
 >;
+
+const sqlTabSchema = z.object({
+  createdAt: z.number(),
+  defaultSchema: z.string().optional(),
+  id: z.string().min(1),
+  savedQueryId: z.string().optional(),
+  text: z.string(),
+  title: z.string(),
+});
+const sqlWorkspaceSchema = z
+  .object({
+    activeTabId: z.string().min(1),
+    nextTabNumber: z.int().positive(),
+    tabs: z.array(sqlTabSchema).min(1),
+  })
+  .refine(
+    (workspace) =>
+      workspace.tabs.some((tab) => tab.id === workspace.activeTabId),
+    {
+      message: "The active SQL tab is missing",
+    }
+  );
+const persistedWorkbenchSchema: z.ZodType<PersistedSqlWorkbench> = z.object({
+  history: z.record(
+    z.string(),
+    z.array(
+      z.object({
+        durationMs: z.number().nonnegative(),
+        errorSummary: z.string().optional(),
+        id: z.string().min(1),
+        rowCount: z.number().nonnegative().optional(),
+        startedAt: z.number(),
+        statement: z.string(),
+        status: z.enum(["ok", "error", "cancelled"]),
+      })
+    )
+  ),
+  savedQueries: z.record(
+    z.string(),
+    z.array(
+      z.object({
+        createdAt: z.number(),
+        id: z.string().min(1),
+        name: z.string(),
+        statement: z.string(),
+        updatedAt: z.number(),
+      })
+    )
+  ),
+  workspaces: z.record(z.string(), sqlWorkspaceSchema),
+});
+const storedWorkbenchSchema = z.object({
+  state: persistedWorkbenchSchema,
+  version: z.int().nonnegative().optional(),
+});
 
 const STORAGE_KEY = "querylane.sql-workbench.v1";
 // Every keystroke updates the tab text; writing the whole workbench to
@@ -172,6 +231,7 @@ function nextActiveTabAfterClose({
  * the page is hidden so closing the tab mid-typing keeps the draft.
  */
 function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
+  let recoveryWriteBlocked = false;
   let pending:
     | { name: string; value: StorageValue<PersistedSqlWorkbench> }
     | undefined;
@@ -179,31 +239,66 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
 
   function flush() {
     clearTimeout(timer);
+    if (recoveryWriteBlocked) {
+      pending = undefined;
+      reportInMemorySqlWork();
+      return;
+    }
     if (pending) {
       localStorage.setItem(pending.name, JSON.stringify(pending.value));
       pending = undefined;
     }
   }
 
-  if (typeof window !== "undefined") {
-    window.addEventListener("pagehide", flush);
+  if (typeof globalThis !== "undefined") {
+    globalThis.addEventListener("pagehide", flush);
   }
   return {
     getItem: (name) => {
       const raw = localStorage.getItem(name);
-      return raw === null ? null : JSON.parse(raw);
+      if (raw === null) {
+        recoveryWriteBlocked = false;
+        return null;
+      }
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        const { state, version } = storedWorkbenchSchema.parse(parsed);
+        recoveryWriteBlocked = false;
+        return version === undefined ? { state } : { state, version };
+      } catch (error) {
+        // A mounted workbench creates a fresh workspace automatically. Keep the
+        // rejected bytes separately before that first write can replace them.
+        recoveryWriteBlocked = true;
+        localStorage.setItem(`${name}.recovery`, raw);
+        recoveryWriteBlocked = false;
+        throw error;
+      }
     },
     removeItem: (name) => {
       pending = undefined;
       clearTimeout(timer);
       localStorage.removeItem(name);
+      recoveryWriteBlocked = false;
     },
     setItem: (name, value) => {
+      if (recoveryWriteBlocked) {
+        reportInMemorySqlWork();
+        return;
+      }
       pending = { name, value };
       clearTimeout(timer);
       timer = setTimeout(flush, PERSIST_DELAY_MS);
     },
   };
+}
+
+function reportInMemorySqlWork() {
+  toast.error("SQL changes are only stored in memory", {
+    id: "sql-workbench-recovery-blocked",
+    duration: Number.POSITIVE_INFINITY,
+    description:
+      "Keep this tab open and copy your SQL elsewhere. Browser storage could not keep a recovery copy.",
+  });
 }
 
 const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
@@ -219,7 +314,7 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         set((state) =>
           withWorkspace(state, scope, (current) => ({
             activeTabId: created.id,
-            nextTabNumber: tab?.title
+            nextTabNumber: isNonEmptyString(tab?.title)
               ? current.nextTabNumber
               : current.nextTabNumber + 1,
             tabs: [...current.tabs, created],
@@ -338,7 +433,7 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
             ...state.savedQueries,
             [scope]: [query, ...(state.savedQueries[scope] ?? [])],
           },
-          ...(input.tabId
+          ...(isNonEmptyString(input.tabId)
             ? withWorkspace(state, scope, (current) => ({
                 ...current,
                 tabs: current.tabs.map((tab) =>
@@ -391,6 +486,15 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         workspaces: state.workspaces,
       }),
       storage: debouncedLocalStorage(),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error !== undefined) {
+          toast.error("Saved SQL work could not be loaded", {
+            description:
+              "Check browser storage for recovery data before clearing it.",
+          });
+          captureException(error);
+        }
+      },
       // persist stamps version 0. When the persisted shape changes, bump
       // this and add a `migrate` from the previous version.
       version: 0,

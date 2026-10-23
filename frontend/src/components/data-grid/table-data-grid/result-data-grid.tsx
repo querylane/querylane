@@ -161,11 +161,8 @@ function ignoreSortChange() {
 }
 
 function useCellSelectionStore(): CellSelectionStore {
-  const storeRef = useRef<CellSelectionStore | null>(null);
-  if (storeRef.current === null) {
-    storeRef.current = createCellSelectionStore();
-  }
-  return storeRef.current;
+  const [store] = useState(createCellSelectionStore);
+  return store;
 }
 
 function useOpenRowState(rows: GridRow[]) {
@@ -196,9 +193,9 @@ function buildGridRows(
       [ROW_KEY_FIELD]: row.rowKey || fallbackRowKey(rowIndex),
       cells: new Map(),
     };
-    resultColumns.forEach((column, columnIndex) => {
+    for (const [columnIndex, column] of resultColumns.entries()) {
       setGridCell(grouped, column, row.values[columnIndex]);
-    });
+    }
     return grouped;
   });
 }
@@ -266,7 +263,9 @@ function RecordDetailDrawerHost({
           setOpenRowIndex(openRowIndex - 1);
         }
       }}
-      onRowIndexChange={(nextRowIndex) => setOpenRowIndex(nextRowIndex)}
+      onRowIndexChange={(nextRowIndex) => {
+        setOpenRowIndex(nextRowIndex);
+      }}
       open={openRow !== undefined}
       pkColumnSet={pkColumnSet}
       rowCells={openRowCells}
@@ -319,20 +318,14 @@ function CellSelectionLiveStatus({
     cellSelectionStore.getState
   );
   const summary = getCellSelectionSummary(state);
-  const hasHadSelectionRef = useRef(summary.cellCount > 0);
+  const [hasHadSelection, setHasHadSelection] = useState(summary.cellCount > 0);
+  if (summary.cellCount > 0 && !hasHadSelection) {
+    setHasHadSelection(true);
+  }
   const liveLabel =
-    state.isDragging || (summary.cellCount === 0 && !hasHadSelectionRef.current)
+    state.isDragging || (summary.cellCount === 0 && !hasHadSelection)
       ? ""
       : getCellSelectionLiveLabel(summary);
-
-  useEffect(
-    function rememberCellSelection() {
-      if (summary.cellCount > 0) {
-        hasHadSelectionRef.current = true;
-      }
-    },
-    [summary.cellCount]
-  );
 
   return (
     <span
@@ -457,14 +450,14 @@ function ResultDataGridHeader({
   isFlush: boolean;
   toolbar: ReactNode;
 }) {
-  if (!(toolbar || alerts)) {
+  if (!(Boolean(toolbar) || Boolean(alerts))) {
     return null;
   }
   return (
     <div
       className={cn(
         "flex shrink-0 flex-col gap-2",
-        isFlush && "px-3 pt-2 pb-2 sm:px-4"
+        isFlush && "px-3 py-2 sm:px-4"
       )}
     >
       {toolbar}
@@ -631,7 +624,9 @@ function ExpandedDataGridDialog({
         <div className="flex min-h-0 flex-1 flex-col gap-2">
           <ResultDataGridChrome
             {...chromeProps}
-            onToggleExpanded={() => onOpenChange(false)}
+            onToggleExpanded={() => {
+              onOpenChange(false);
+            }}
             variant="expanded"
           />
         </div>
@@ -818,8 +813,9 @@ function ResultDataGrid({
     foreignKeyReferences,
     frozenColumns,
     onFrozenColumnsChange: setFrozenColumns,
-    onHideColumn: (columnKey) =>
-      columnLayout.setColumnVisibility(columnKey, false),
+    onHideColumn: (columnKey) => {
+      columnLayout.setColumnVisibility(columnKey, false);
+    },
     renderOpenReferencedTableLink,
     resultColumns,
     rowIdentity,
@@ -839,7 +835,9 @@ function ResultDataGrid({
       displayedDataColumnKeys,
       rows.map((row) => row[ROW_KEY_FIELD]),
     ]),
-    () => cellSelectionStore.clear()
+    () => {
+      cellSelectionStore.clear();
+    }
   );
 
   const selectionActions = useSelectionActions({
@@ -886,7 +884,9 @@ function ResultDataGrid({
     onExportSelection: selectionActions.handleExportSelection,
     onSelectedRowsChange: setSelectedRows,
     onSortChange,
-    onToggleExpanded: () => setIsDataGridExpanded(true),
+    onToggleExpanded: () => {
+      setIsDataGridExpanded(true);
+    },
     pagination,
     queryErrorActive,
     refresh,
@@ -906,7 +906,9 @@ function ResultDataGrid({
         fill={fill}
         isDataGridExpanded={isDataGridExpanded}
         name={resourceName}
-        onCloseContextMenu={() => setContextMenu(null)}
+        onCloseContextMenu={() => {
+          setContextMenu(null);
+        }}
         onContextMenuCopyCell={cellHandlers.handleContextMenuCopyCell}
         onContextMenuCopyRow={cellHandlers.handleContextMenuCopyRow}
         onContextMenuCopyRowAsSql={optionalHandler(

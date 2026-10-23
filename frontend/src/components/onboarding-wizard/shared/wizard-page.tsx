@@ -30,7 +30,7 @@ export function WizardPage({
           </h1>
           {titleBadge}
         </div>
-        {description ? (
+        {Boolean(description) ? (
           <div className="max-w-3xl text-sm leading-6 text-white/62">
             {description}
           </div>

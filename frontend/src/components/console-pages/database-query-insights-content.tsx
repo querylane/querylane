@@ -67,6 +67,7 @@ import {
 } from "@/lib/query-insights";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { Status } from "@/protogen/google/rpc/status_pb";
 import type {
@@ -83,21 +84,24 @@ type QueryKindFilter = "all" | "reads" | "writes";
 const QUERY_KIND_FILTER_OPTIONS = [
   { label: "Read queries", value: "reads" },
   { label: "Write queries", value: "writes" },
-] satisfies { label: string; value: Exclude<QueryKindFilter, "all"> }[];
-const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/i;
-const LEADING_EXPLAIN_FLAG_RE = /^(?:(?:ANALYZE|VERBOSE)\b\s*)+/i;
-const WITH_QUERY_RE = /^WITH\b/i;
-const READ_QUERY_RE = /^(?:SELECT|SHOW|TABLE|VALUES)\b/i;
+] satisfies {
+  label: string;
+  value: Exclude<QueryKindFilter, "all">;
+}[];
+const LEADING_EXPLAIN_RE = /^EXPLAIN\b\s*(?:\([^)]*\)\s*)?/iu;
+const LEADING_EXPLAIN_FLAG_RE = /^(?:(?:ANALYZE|VERBOSE)\b\s*)+/iu;
+const WITH_QUERY_RE = /^WITH\b/iu;
+const READ_QUERY_RE = /^(?:SELECT|SHOW|TABLE|VALUES)\b/iu;
 const WRITE_QUERY_RE =
-  /^(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
+  /^(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/iu;
 const WRITE_QUERY_KEYWORD_RE =
-  /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/i;
+  /\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|CALL|DO)\b/iu;
 const LEADING_SQL_COMMENT_RE =
-  /^(?:(?:\/\*[\s\S]*?\*\/)|(?:--[^\r\n]*(?:\r?\n|$)))\s*/;
-const COPY_KEYWORD_RE = /^COPY\b/i;
-const DOLLAR_QUOTE_DELIMITER_RE = /^\$[A-Za-z_0-9]*\$/;
-const SQL_WORD_START_RE = /[A-Za-z_]/;
-const SQL_WORD_RE = /^[A-Za-z_][A-Za-z_0-9$]*/;
+  /^(?:(?:\/\*[\s\S]*?\*\/)|(?:--[^\r\n]*(?:\r?\n|$)))\s*/u;
+const COPY_KEYWORD_RE = /^COPY\b/iu;
+const DOLLAR_QUOTE_DELIMITER_RE = /^\$[A-Za-z_0-9]*\$/u;
+const SQL_WORD_START_RE = /[A-Za-z_]/u;
+const SQL_WORD_RE = /^[A-Za-z_][A-Za-z_0-9$]*/u;
 type MeanFilterValue = "any" | "5" | "10" | "30";
 
 const MEAN_FILTER_OPTIONS = [
@@ -130,6 +134,7 @@ function queryKindFromSelectedValues(values: string[]): QueryKindFilter {
     case "reads":
     case "writes":
       return value;
+    case undefined:
     default:
       return "all";
   }
@@ -143,6 +148,7 @@ function meanFilterFromSelectedValues(values: string[]): MeanFilterValue {
       return "10";
     case "30":
       return "30";
+    case undefined:
     default:
       return "any";
   }
@@ -238,11 +244,11 @@ function skipSqlComment(statement: string, index: number) {
   const nextCharacter = statement[index + 1];
   if (character === "-" && nextCharacter === "-") {
     const newlineIndex = statement.indexOf("\n", index + 2);
-    return newlineIndex < 0 ? statement.length : newlineIndex + 1;
+    return newlineIndex === -1 ? statement.length : newlineIndex + 1;
   }
   if (character === "/" && nextCharacter === "*") {
     const commentEndIndex = statement.indexOf("*/", index + 2);
-    return commentEndIndex < 0 ? statement.length : commentEndIndex + 2;
+    return commentEndIndex === -1 ? statement.length : commentEndIndex + 2;
   }
   return null;
 }
@@ -256,12 +262,12 @@ function skipProtectedSql(statement: string, index: number) {
     const delimiter = DOLLAR_QUOTE_DELIMITER_RE.exec(
       statement.slice(index)
     )?.[0];
-    if (delimiter) {
+    if (isNonEmptyString(delimiter)) {
       const closingIndex = statement.indexOf(
         delimiter,
         index + delimiter.length
       );
-      return closingIndex < 0
+      return closingIndex === -1
         ? statement.length
         : closingIndex + delimiter.length;
     }
@@ -437,10 +443,10 @@ function findSelectedQuery({
 function focusQueryDetailOnSmallScreens(
   panelRef: RefObject<HTMLElement | null>
 ) {
-  if (!window.matchMedia?.("(max-width: 1023px)").matches) {
+  if (!globalThis.matchMedia?.("(max-width: 1023px)").matches) {
     return;
   }
-  window.requestAnimationFrame(function focusQueryDetail() {
+  globalThis.requestAnimationFrame(function focusQueryDetail() {
     panelRef.current?.focus({ preventScroll: true });
     panelRef.current?.scrollIntoView({ block: "start" });
   });
@@ -507,7 +513,7 @@ function MetricUnavailableNotice({
     >
       {status ? <AlertCircle aria-hidden="true" /> : null}
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription>{status?.message || fallback}</AlertDescription>
+      <AlertDescription>{(status?.message ?? "") || fallback}</AlertDescription>
       <AlertAction className="static col-span-full mt-2 justify-self-start">
         <RetryActionButton
           label={retryLabel}
@@ -575,7 +581,9 @@ function TopQueriesTable({
                   aria-label={queryLabel}
                   aria-pressed={selected}
                   className="h-auto w-full justify-start overflow-hidden text-left"
-                  onClick={() => onSelectQuery(entry)}
+                  onClick={() => {
+                    onSelectQuery(entry);
+                  }}
                   presentation="query"
                   type="button"
                   variant="ghost"
@@ -646,7 +654,7 @@ function QueryPaginationFooter({
       <span className="ml-2 text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
-          if (!value) {
+          if (!isNonEmptyString(value)) {
             return;
           }
           const nextPageSize = queryPageSizeFromValue(value);
@@ -851,16 +859,18 @@ function TopQueriesCard({
   const facets = [
     {
       label: "Type",
-      onChange: (values: string[]) =>
-        handleKindChange(queryKindFromSelectedValues(values)),
+      onChange: (values: string[]) => {
+        handleKindChange(queryKindFromSelectedValues(values));
+      },
       options: QUERY_KIND_FILTER_OPTIONS,
       selected: kind === "all" ? [] : [kind],
       singleSelect: true,
     },
     {
       label: "Mean",
-      onChange: (values: string[]) =>
-        handleMeanFilterChange(meanFilterFromSelectedValues(values)),
+      onChange: (values: string[]) => {
+        handleMeanFilterChange(meanFilterFromSelectedValues(values));
+      },
       options: MEAN_FILTER_OPTIONS,
       selected: meanFilter === "any" ? [] : [meanFilter],
       singleSelect: true,
@@ -1124,7 +1134,9 @@ function QueryInsightsContent({
       </div>
       <QueryDetailPanel
         className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
-        onClose={() => setSelectedQuerySelection(null)}
+        onClose={() => {
+          setSelectedQuerySelection(null);
+        }}
         panelRef={detailPanelRef}
         query={selectedQuery}
       />

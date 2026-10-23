@@ -4,6 +4,7 @@ import {
   TimestampSchema,
   timestampDate,
 } from "@bufbuild/protobuf/wkt";
+import { isNonEmptyString } from "@/lib/value-guards";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type DbConnectionStatus = "connected" | "disconnected" | "error";
@@ -30,9 +31,9 @@ const timestampFormatter = new Intl.DateTimeFormat(undefined, {
 const BYTE_DECIMAL_SCALE = 10;
 const BYTES_PER_KIBIBYTE = 1024;
 const TABLE_RESOURCE_NAME_PATTERN =
-  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/tables\/([^/]+)$/;
+  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/(?<capture1>[^/]+)\/tables\/(?<capture2>[^/]+)$/u;
 const RELATION_RESOURCE_NAME_PATTERN =
-  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/([^/]+)\/(?:tables|views)\/([^/]+)$/;
+  /^instances\/[^/]+\/databases\/[^/]+\/schemas\/(?<capture1>[^/]+)\/(?:tables|views)\/(?<capture2>[^/]+)$/u;
 
 // Keep frontend resource names in lockstep with backend/resource/internal.go:
 // resource-name IDs only escape the path separator and escape character.
@@ -139,7 +140,13 @@ export function tryParseRelationQualifiedName(
   name: string
 ): QualifiedRelationName | undefined {
   const match = RELATION_RESOURCE_NAME_PATTERN.exec(name);
-  if (!(match?.[1] && match[2])) {
+  if (
+    !(
+      isNonEmptyString(match?.[1]) &&
+      typeof match[2] === "string" &&
+      match[2].length > 0
+    )
+  ) {
     return;
   }
   return {
@@ -152,7 +159,13 @@ export function tryParseTableQualifiedName(
   name: string
 ): QualifiedTableName | undefined {
   const match = TABLE_RESOURCE_NAME_PATTERN.exec(name);
-  if (!(match?.[1] && match[2])) {
+  if (
+    !(
+      isNonEmptyString(match?.[1]) &&
+      typeof match[2] === "string" &&
+      match[2].length > 0
+    )
+  ) {
     return;
   }
   return {

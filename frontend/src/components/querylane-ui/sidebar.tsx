@@ -4,7 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import {
   type ComponentProps,
-  type CSSProperties,
   createContext,
   type RefObject,
   use,
@@ -32,14 +31,14 @@ import {
 import { cn } from "@/lib/utils";
 import styles from "./sidebar.module.css";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "18rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_HOVER_REVEAL_TRIGGER_WIDTH = 20;
 const SIDEBAR_HOVER_REVEAL_EDGE_BUFFER = 8;
 const SIDEBAR_HOVER_REVEAL_CLOSE_DELAY = 80;
+const SKELETON_MIN_WIDTH_PERCENT = 50;
+const SKELETON_WIDTH_RANGE_PERCENT = 40;
 const SIDEBAR_HOVER_REVEAL_FALLBACK_WIDTH = 256;
 const SIDEBAR_FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -89,7 +88,9 @@ function isPointerWithinSidebarHoverRevealBounds(
     return side === "left"
       ? event.clientX <= sidebarWidth + SIDEBAR_HOVER_REVEAL_EDGE_BUFFER
       : event.clientX >=
-          window.innerWidth - sidebarWidth - SIDEBAR_HOVER_REVEAL_EDGE_BUFFER;
+          globalThis.window.innerWidth -
+            sidebarWidth -
+            SIDEBAR_HOVER_REVEAL_EDGE_BUFFER;
   }
 
   const verticalInside =
@@ -123,9 +124,9 @@ function useHiddenSidebarFocusGuard({
         return;
       }
 
-      const changedElements = Array.from(
-        container.querySelectorAll<HTMLElement>(SIDEBAR_FOCUSABLE_SELECTOR)
-      ).map((element) => ({
+      const changedElements = [
+        ...container.querySelectorAll<HTMLElement>(SIDEBAR_FOCUSABLE_SELECTOR),
+      ].map((element) => ({
         element,
         tabIndex: element.getAttribute("tabindex"),
       }));
@@ -187,7 +188,7 @@ function useSidebarHoverReveal({
 }) {
   const [revealed, setRevealed] = useState(false);
   const [previousEnabled, setPreviousEnabled] = useState(enabled);
-  const closeTimer = useRef<number | undefined>(undefined);
+  const closeTimerRef = useRef<number | undefined>(undefined);
 
   if (previousEnabled !== enabled) {
     setPreviousEnabled(enabled);
@@ -211,18 +212,18 @@ function useSidebarHoverReveal({
           side === "left"
             ? event.clientX <= SIDEBAR_HOVER_REVEAL_TRIGGER_WIDTH
             : event.clientX >=
-              window.innerWidth - SIDEBAR_HOVER_REVEAL_TRIGGER_WIDTH;
+              globalThis.window.innerWidth - SIDEBAR_HOVER_REVEAL_TRIGGER_WIDTH;
 
         if (nearEdge) {
           setRevealed(true);
         }
       }
 
-      window.addEventListener("pointermove", handlePointerMove, {
+      globalThis.window.addEventListener("pointermove", handlePointerMove, {
         passive: true,
       });
       return () => {
-        window.removeEventListener("pointermove", handlePointerMove);
+        globalThis.window.removeEventListener("pointermove", handlePointerMove);
       };
     },
     [enabled, revealed, side]
@@ -235,9 +236,9 @@ function useSidebarHoverReveal({
       }
 
       function clearCloseTimer() {
-        if (closeTimer.current !== undefined) {
-          window.clearTimeout(closeTimer.current);
-          closeTimer.current = undefined;
+        if (closeTimerRef.current !== undefined) {
+          globalThis.window.clearTimeout(closeTimerRef.current);
+          closeTimerRef.current = undefined;
         }
       }
 
@@ -261,7 +262,7 @@ function useSidebarHoverReveal({
         }
 
         clearCloseTimer();
-        closeTimer.current = window.setTimeout(
+        closeTimerRef.current = globalThis.window.setTimeout(
           function closeSidebarHoverReveal() {
             if (shouldKeepSidebarHoverRevealOpen(containerRef.current)) {
               return;
@@ -279,14 +280,14 @@ function useSidebarHoverReveal({
         setRevealed(false);
       }
 
-      window.addEventListener("pointermove", handlePointerMove, {
+      globalThis.window.addEventListener("pointermove", handlePointerMove, {
         passive: true,
       });
-      window.addEventListener("blur", handleWindowBlur);
+      globalThis.window.addEventListener("blur", handleWindowBlur);
       return () => {
         clearCloseTimer();
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("blur", handleWindowBlur);
+        globalThis.window.removeEventListener("pointermove", handlePointerMove);
+        globalThis.window.removeEventListener("blur", handleWindowBlur);
       };
     },
     [containerRef, enabled, revealed, side]
@@ -323,9 +324,6 @@ function SidebarProvider({
     } else {
       setInternalOpen(openState);
     }
-
-    // This sets the cookie to keep the sidebar state.
-    document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
   }
 
   // Helper to toggle the sidebar.
@@ -361,13 +359,11 @@ function SidebarProvider({
           className
         )}
         data-slot="sidebar-wrapper"
-        style={
-          {
-            "--sidebar-width": SIDEBAR_WIDTH,
-            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-            ...style,
-          } as CSSProperties
-        }
+        style={{
+          "--sidebar-width": SIDEBAR_WIDTH,
+          "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+          ...style,
+        }}
         {...props}
       >
         {children}
@@ -473,17 +469,15 @@ function Sidebar({
           data-slot="sidebar"
           dir={dir}
           {...props}
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as CSSProperties
-          }
+          style={{
+            "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+          }}
         >
           <div className="sr-only">
             <DrawerTitle>Sidebar</DrawerTitle>
             <DrawerDescription>Displays the mobile sidebar.</DrawerDescription>
           </div>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex size-full flex-col">{children}</div>
         </DrawerContent>
       </Drawer>
     );
@@ -582,10 +576,10 @@ function SidebarRail({ className, ...props }: ComponentProps<typeof Button>) {
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
+        "group-data-[side=left]:group-data-[state=collapsed]:cursor-e-resize group-data-[side=right]:group-data-[state=collapsed]:cursor-w-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        "group-data-[side=left]:group-data-[collapsible=offcanvas]:-right-2",
+        "group-data-[side=right]:group-data-[collapsible=offcanvas]:-left-2",
         "h-auto rounded-none border-0 bg-transparent p-0 text-inherit shadow-none hover:bg-transparent",
         className
       )}
@@ -816,7 +810,7 @@ function SidebarMenuButton({
       },
       props
     ),
-    render: tooltip ? <TooltipTrigger render={render} /> : render,
+    render: Boolean(tooltip) ? <TooltipTrigger render={render} /> : render,
     state: {
       active: isActive,
       sidebar: "menu-button",
@@ -825,15 +819,12 @@ function SidebarMenuButton({
     },
   });
 
-  if (!tooltip) {
+  if (!Boolean(tooltip)) {
     return comp;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
-  }
+  const tooltipProps =
+    typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
   return (
     <Tooltip>
@@ -842,7 +833,7 @@ function SidebarMenuButton({
         align="center"
         hidden={state !== "collapsed" || isMobile || hoverRevealOpen}
         side="right"
-        {...tooltip}
+        {...tooltipProps}
       />
     </Tooltip>
   );
@@ -900,7 +891,10 @@ function SidebarMenuSkeleton({
   showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.
-  const width = useRef(`${Math.floor(Math.random() * 40) + 50}%`).current;
+  const [width] = useState(
+    () =>
+      `${Math.floor(Math.random() * SKELETON_WIDTH_RANGE_PERCENT) + SKELETON_MIN_WIDTH_PERCENT}%`
+  );
 
   return (
     <div
@@ -918,11 +912,9 @@ function SidebarMenuSkeleton({
       <Skeleton
         className="h-4 max-w-(--skeleton-width) flex-1"
         data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as CSSProperties
-        }
+        style={{
+          "--skeleton-width": width,
+        }}
       />
     </div>
   );

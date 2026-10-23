@@ -54,6 +54,8 @@ import {
   type StructureMapTable,
   type StructureMapView,
 } from "@/features/database-visualization/structure-map-model";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const FlowCanvas = lazy(() =>
   import("@/features/database-visualization/flow-canvas").then((module) => ({
@@ -203,10 +205,18 @@ function databaseMapTargetNodeId(
   if (!targetResource) {
     return null;
   }
-  if (targetResource.category === "tables" && targetResource.name) {
+  if (
+    targetResource.category === "tables" &&
+    typeof targetResource.name === "string" &&
+    targetResource.name.length > 0
+  ) {
     return `table:${targetResource.schemaName}.${targetResource.name}`;
   }
-  if (targetResource.category === "views" && targetResource.name) {
+  if (
+    targetResource.category === "views" &&
+    typeof targetResource.name === "string" &&
+    targetResource.name.length > 0
+  ) {
     return `view:${targetResource.schemaName}.${targetResource.name}`;
   }
   return `schema:${targetResource.schemaName}`;
@@ -463,7 +473,8 @@ function focusedMapResources({
       isResourceFocusEnabled &&
       detailScope === "selected-schema" &&
       targetResource?.category &&
-      targetResource.name
+      typeof targetResource.name === "string" &&
+      targetResource.name.length > 0
     )
   ) {
     return { focusedResourceLabel: null, tables, views };
@@ -529,16 +540,17 @@ function DatabaseStructureMap({
   const hasTargetResourceFocus = Boolean(
     targetResource?.category && targetResource.name
   );
-  const isResourceFocusEnabled = Boolean(
+  const isResourceFocusEnabled =
     hasTargetResourceFocus &&
-      targetNodeId &&
-      resourceFocusDisabledForTarget !== targetNodeId
-  );
+    isNonEmptyString(targetNodeId) &&
+    resourceFocusDisabledForTarget !== targetNodeId;
   const effectiveDetailScope = isResourceFocusEnabled
     ? "selected-schema"
     : detailScope;
   const selectedNodeId =
-    isResourceFocusEnabled && targetNodeId
+    isResourceFocusEnabled &&
+    typeof targetNodeId === "string" &&
+    targetNodeId.length > 0
       ? targetNodeId
       : databaseSelectedNodeId;
   const data = useStructureMapData({
@@ -581,12 +593,18 @@ function DatabaseStructureMap({
       isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onShowAllNodeKinds={showAllNodeKinds}
       onShowCurrentSchema={showCurrentSchema}
       onShowFullMap={showFullMap}
-      onToggleDirection={() => setDirection(direction === "LR" ? "TB" : "LR")}
+      onToggleDirection={() => {
+        setDirection(direction === "LR" ? "TB" : "LR");
+      }}
       onToggleNodeKind={setVisibleNodeKind}
       visibleNodeKinds={visibleNodeKinds}
     />
@@ -600,12 +618,18 @@ function DatabaseStructureMap({
       isSelectedSchemaActive={
         effectiveDetailScope === "selected-schema" && !isResourceFocusEnabled
       }
-      onCollapse={() => setIsMapExpanded(false)}
-      onExpand={() => setIsMapExpanded(true)}
+      onCollapse={() => {
+        setIsMapExpanded(false);
+      }}
+      onExpand={() => {
+        setIsMapExpanded(true);
+      }}
       onShowAllNodeKinds={showAllNodeKinds}
       onShowCurrentSchema={showCurrentSchema}
       onShowFullMap={showFullMap}
-      onToggleDirection={() => setDirection(direction === "LR" ? "TB" : "LR")}
+      onToggleDirection={() => {
+        setDirection(direction === "LR" ? "TB" : "LR");
+      }}
       onToggleNodeKind={setVisibleNodeKind}
       visibleNodeKinds={visibleNodeKinds}
     />
@@ -640,19 +664,21 @@ function DatabaseStructureMap({
       return;
     }
     onOpenResource?.();
-    navigate({
-      params: { databaseId, instanceId },
-      search: (previous) => ({
-        ...previous,
-        category: navigation.category,
-        filter: undefined,
-        name: navigation.name,
-        schema: navigation.schema,
-        sort: undefined,
-        tab: undefined,
-      }),
-      to: "/instances/$instanceId/databases/$databaseId/explorer",
-    });
+    handleAsyncAction(() =>
+      navigate({
+        params: { databaseId, instanceId },
+        search: (previous) => ({
+          ...previous,
+          category: navigation.category,
+          filter: undefined,
+          name: navigation.name,
+          schema: navigation.schema,
+          sort: undefined,
+          tab: undefined,
+        }),
+        to: "/instances/$instanceId/databases/$databaseId/explorer",
+      })
+    )();
   }
 
   return (
@@ -663,7 +689,7 @@ function DatabaseStructureMap({
             Database map
           </h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            {focusedResourceLabel
+            {isNonEmptyString(focusedResourceLabel)
               ? `Focused on ${focusedResourceLabel}. Load the full map to see every schema object for ${databaseLabel}.`
               : `Visualizes schemas, tables, columns, keys, indexes, triggers, policies, and foreign key relationships for ${databaseLabel}.`}
           </p>
@@ -694,14 +720,14 @@ function DatabaseStructureMap({
         />
       </div>
 
-      {data.error ? (
+      {Boolean(data.error) ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Map data failed to load</AlertTitle>
           <AlertDescription>{errorMessage(data.error)}</AlertDescription>
         </Alert>
       ) : null}
-      {data.truncatedReason ? (
+      {isNonEmptyString(data.truncatedReason) ? (
         <Alert>
           <AlertCircle className="size-4" />
           <AlertTitle>Partial map</AlertTitle>

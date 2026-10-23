@@ -67,8 +67,12 @@ function RulesEditor({
             columns={columns}
             invalidMessage={invalidMessages.get(rule.id)}
             onApplyRequest={onApplyRequest}
-            onChange={(patch) => onUpdateRule(index, patch)}
-            onRemove={() => onRemoveRule(index)}
+            onChange={(patch) => {
+              onUpdateRule(index, patch);
+            }}
+            onRemove={() => {
+              onRemoveRule(index);
+            }}
             rule={rule}
           />
         </li>

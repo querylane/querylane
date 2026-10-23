@@ -2,7 +2,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { Table2 } from "lucide-react";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import { buttonVariants } from "@/components/ui/button";
@@ -126,12 +126,11 @@ function TableDetail({
   const [activeTab, setActiveTab] = useState<TableDetailTab>(resolvedUrlTab);
   const deferredTab = useDeferredValue(activeTab);
 
-  useEffect(
-    function syncActiveTabWithUrl() {
-      setActiveTab(resolvedUrlTab);
-    },
-    [resolvedUrlTab]
-  );
+  const [previousUrlTab, setPreviousUrlTab] = useState(resolvedUrlTab);
+  if (previousUrlTab !== resolvedUrlTab) {
+    setPreviousUrlTab(resolvedUrlTab);
+    setActiveTab(resolvedUrlTab);
+  }
 
   function handleTabChange(next: string) {
     if (!isTableDetailTab(next)) {

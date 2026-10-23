@@ -50,7 +50,9 @@ export function DataValueDialog({
         {children}
         <div className="flex shrink-0 justify-end">
           <Button
-            onClick={() => writeClipboard(raw)}
+            onClick={() => {
+              writeClipboard(raw);
+            }}
             size="sm"
             type="button"
             variant="outline"

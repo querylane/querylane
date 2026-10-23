@@ -1,0 +1,109 @@
+# Strict UI checks
+
+Owned UI code, tooling, public JavaScript, tests, and E2E fixtures share fatal lint and compiler checks. Fix violations rather than hiding files or adding directives. Conflicting, inaccurate, and framework-inapplicable rules have explicit decisions in [the rule inventory](rule-inventory.json).
+
+## Run before delivery
+
+```sh
+cd frontend
+bun install --frozen-lockfile
+bun run lint:fix
+bun run quality:gate
+bun run test:browser
+bun run test:e2e
+```
+
+`quality:gate` runs full lint, full React Doctor, both compilers, the production build and bundle budgets, unit tests, and integration tests. CI also checks draft PRs. Changed-only commands remain local feedback tools, not the final gate.
+
+Generate visual baselines only in the matching Linux Playwright image, review changes, then require the normal PR visual run to pass. Ordinary PR runs never update snapshots. E2E pixel assertions also use the canonical Linux image: `bash scripts/playwright-container.sh bun run test:e2e:ci`. Native macOS/Windows font rendering is not a substitute. Local Playwright refuses to reuse an existing server; set a free `PLAYWRIGHT_PORT` for parallel workspaces instead of testing an unidentified preview.
+
+```text
+Owned files -> Biome + typed Oxlint + shadcn + suppression guard
+           -> React Doctor + tsrs + TypeScript nightly
+           -> production build + tests + browser checks
+```
+
+## Tool ownership
+
+Versions are pinned in [package.json](../package.json), its lockfile, and [the inventory](rule-inventory.json).
+
+| Tool | Contract |
+| --- | --- |
+| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin. |
+| Biome / Ultracite | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries. |
+| Oxlint / tsgolint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings. |
+| shadcn lint | Token colors, known utilities, component styling, static classes, and inline-style contracts. |
+| React Doctor | Full-project security, bugs, accessibility, performance, maintainability, and supply-chain checks. |
+| tsrs / TypeScript | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS. |
+| React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan. |
+| Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
+
+Biome's formatting settings are materialized from Ultracite. Oxlint copies preset rules, not preset overrides. This prevents upstream test/declaration waivers and broad generated-file globs from silently weakening coverage.
+
+## Reviewed rule policy
+
+The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, or a changed tool pin. It also verifies every recorded error against Biome's explicit configuration, Oxlint's effective native configuration, Doctor's effective severities, and the loaded shadcn plugin configuration. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
+
+The rebase onto the upstream Biome 2.6.2 / Ultracite 8.0.2 upgrade migrates 59 promoted rule IDs and the Tailwind sorting rename, and records 50 additional catalog entries. The project stylesheet drives Tailwind detection. Import-aware shadcn still owns registry restyling; Blume owns documentation rather than claiming Markdown coverage here. App functions retain the upstream 50-statement limit; test functions use its 100-statement contract. Node CLI wrappers can propagate subprocess exit statuses. The stronger Promise preset requires explicit fulfillment returns and handled finalization; existing async-action boundaries preserve event/effect behavior.
+
+Some deliberate decisions:
+
+- React Compiler owns memoization. Do not introduce manual memoization solely to satisfy duplicate allocation heuristics.
+- Type-aware Oxlint owns unsafe assertions. Biome's duplicate has less compiler context.
+- Strict inference preserves generic/literal contracts. Redundant annotations are not a substitute for checked boundaries.
+- PostgreSQL `UTF8` identifiers are not Node encoding aliases. The generic encoding fixer changes valid values.
+- DOM capability probes remain valid even when ambient types declare an API as always present.
+- Router redirects are documented control-flow sentinels, not application errors.
+- The native void rule rejects valid generic calls. Biome still checks confusing void types.
+- Biome's leaked-render rule rejects safe string-valued ternaries. Typed boolean checks still reject unsafe conditions.
+- Biome's Tailwind shorthand fixer produces invalid `divide` from valid `divide-y`. Shadcn still validates utilities.
+- Secret patterns remain enabled. The global entropy threshold is 50 because long selectors and Tailwind variants are not credentials. Deliberate test credentials are fixture data, not shipped secrets. See [Biome's documented entropy tuning](https://biomejs.dev/linter/rules/no-secrets/javascript/#entropythreshold).
+
+The exact thresholds and options live in the configurations, not this document. Syntax bans that contradict supported JavaScript, React composition, or externally defined callback signatures are not enabled merely to increase the count.
+
+## Coverage boundaries
+
+- No app, protobuf-form implementation, test, script, or E2E directory has a blanket quality exclusion.
+- Generated protobuf/route files are generator-owned. Do not edit them manually.
+- `src/components/ui` is vendored registry output. Its source is strictly typechecked and CI verifies registry sync. Put owned variants in `src/components/querylane-ui`, not the registry directory.
+- Owned primitives define appearance. Their consumers cannot restyle them. Primitives still get raw-color, utility, inline-style, type, and correctness checks.
+- Node tooling can use Node APIs and CLI output. Browser source cannot. Test fixtures can contain representative numeric values and test credentials. These are file-role contracts, not one-off file waivers.
+- Artifact/dependency directories are not source. The suppression guard rejects reserved artifact directories nested inside authored paths, source symlinks, nested quality configurations, ignore files, and generated-looking authored filenames.
+- The guard rejects type-checker, linter, formatter, coverage, and compiler opt-out directives. Generated protobuf directives are generator-owned.
+
+No repository can make its own configuration immutable. A contributor can edit a gate or its inventory. Protect required CI checks and policy changes with repository-admin branch rules and review. Local flags and hooks are not security boundaries.
+
+## Compatibility and security
+
+The compatible transitive refresh removed reported production advisories. `bun audit --production --json` returned an empty report during verification. The refresh exposed duplicate CodeMirror singleton packages and mismatched Connect Query transport-key identities. The direct CodeMirror/Lezer and Connect Query/core pins were aligned and verified with a clean frozen install, mutation-cache integration tests, and real browser tests.
+
+Bun's audit request to the Buf package registry returned 404, so the generated Google APIs package was not audited. An empty report is not complete vulnerability coverage.
+
+Development-only advisories remain in Lighthouse/Changesets dependency chains. Do not treat a clean production audit or Doctor scan as a clean development audit. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`.
+
+| Dependency | Remaining constraint |
+| --- | --- |
+| `basic-ftp` | Lighthouse's proxy chain requires the older major. |
+| `braces` | The installed/current 3.x release still has a reported advisory. |
+| `extract-zip` | The current release still has reported archive-extraction advisories. |
+| `sprintf-js` | Legacy YAML tooling constrains an older minor. |
+| `tmp` | Lighthouse and its editor integration constrain older minors. |
+| `uuid` | Lighthouse constrains an older major. |
+
+These tools must not process untrusted archives, proxy configuration, or project input. Cross-major overrides without parent compatibility evidence are not a safe fix. No advisory is suppressed in the audit command.
+
+The core/SQL bundle caps include the measured cost of boundary validation and the compatible editor refresh. Initial payload and largest-async limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
+
+Compiler regressions exercise both real binaries: valid CSS variables pass, invalid CSS properties fail, and unchecked indexing/exact optional violations fail. Guard tests exercise actual filesystem bypasses. Rule-inventory tests invoke the actual CLI with downgraded configurations: turning a recorded error off or into a warning, disabling Biome, or adding a Doctor ignore cannot silently pass the review gate.
+
+Use the `checkAccessibility` Playwright fixture for startup, onboarding, explorer, workbench, and mobile-navigation journeys. It owns the full-page scan, fatal assertions for every impact, and full JSON attachments. It does not expose builder methods for filtering rules, excluding nodes, or limiting scans to a component. The scans include WCAG 2.0/2.1/2.2 A/AA and axe's stable best-practice rules. Reports retain passes, inapplicable checks, and incomplete items for review. A passing automated scan is not a claim of complete accessibility or manual assistive-technology coverage. See [Playwright's accessibility guidance](https://playwright.dev/docs/accessibility-testing) and [axe's rule/result semantics](https://www.deque.com/axe/core-documentation/api-documentation/).
+
+E2E's unmocked-request guard recognizes Connect POSTs by their protocol header, including same-origin proxies and protobuf requests. It does not rely only on a separate backend origin. Missing RPC fixtures fail the test instead of silently reaching the preview server. See [Connect's request-header contract](https://connectrpc.com/docs/protocol/#unary-request).
+
+## Required CI check
+
+`Frontend Quality Gate` always reports on PRs to main, including drafts. Change detection uses the full NUL-delimited Git diff, not GitHub's path-filter file limit. UI, root-file, or shared quality-policy changes require every frontend job (including every visual shard) to succeed. Every UI run uses the full unit, integration, browser, and E2E suites. E2E runs serially in the pinned Playwright image so latency budgets do not measure worker contention and screenshots use canonical fonts; changed-only aliases are local feedback tools. Non-UI changes skip those jobs but must still pass change detection and the aggregate gate. Missing, cancelled, failed, or malformed results cannot pass.
+
+The gate is safe to require repository-wide **after this workflow reaches main**. Requiring the new name while it exists only in this draft would strand unrelated PRs running the old workflow. Keep the existing zero-approval policy; do not invent human reviewers. Enforce resolved conversations, no administrator bypass, no force pushes, and no branch deletion with repository rules. A draft is not approval or merge authorization.
+
+GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit and its Buf-registry coverage limitation above remain explicit; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).

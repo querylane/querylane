@@ -7,6 +7,7 @@ import {
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { buildDatabaseName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListSchemasResponse,
   SchemaService,
@@ -30,16 +31,20 @@ function fetchSchemasPage(
 ) {
   const client = createClient(SchemaService, transport);
   return client.listSchemas({
-    ...(input ?? {}),
+    ...input,
     pageToken,
   });
 }
 
 export function useGetSchemaQuery(name: string | undefined) {
-  return useConnectQuery(getSchema, name ? { name } : undefined, {
-    ...RESOURCE_QUERY_OPTIONS.schemaList,
-    enabled: Boolean(name),
-  });
+  return useConnectQuery(
+    getSchema,
+    isNonEmptyString(name) ? { name } : undefined,
+    {
+      ...RESOURCE_QUERY_OPTIONS.schemaList,
+      enabled: Boolean(name),
+    }
+  );
 }
 
 export function useListSchemasInfiniteQuery(
@@ -75,7 +80,7 @@ export function schemasForDatabaseQueryInput({
   instanceId: string;
 }) {
   return {
-    ...(filter ? { filter } : {}),
+    ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "name asc",
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,
     parent: buildDatabaseName(instanceId, databaseId),

@@ -30,6 +30,7 @@ function SyncStatusCell({ status }: { status: CatalogSyncStatus }) {
       return <StatusIndicator label="Error" status="error" />;
     case CatalogSyncStatus.NEVER_SYNCED:
       return <StatusIndicator label="Never synced" status="disconnected" />;
+    case CatalogSyncStatus.UNSPECIFIED:
     default:
       return <StatusIndicator label="Unknown" status="disconnected" />;
   }

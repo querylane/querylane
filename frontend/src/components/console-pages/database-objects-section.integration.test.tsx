@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { afterEach, describe, expect, it, rs } from "@rstest/core";
+import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { OtherDatabaseObject } from "@/components/console-pages/database-object-categories";
@@ -13,17 +13,32 @@ const otherObjectsQuery = rs.hoisted(() => ({
   refetch: rs.fn(() => Promise.resolve()),
 }));
 
-const browseQuery = rs.hoisted(() => ({
-  data: { pages: [{ hasMore: false, objects: [] }] } as {
-    pages: { hasMore: boolean; objects: unknown[] }[];
-  },
-  error: null,
-  fetchNextPage: rs.fn(),
-  hasNextPage: false,
-  isFetchingNextPage: false,
-  isLoading: false,
-  refetch: rs.fn(() => Promise.resolve()),
-}));
+const browseQuery = rs.hoisted(
+  (): {
+    data: {
+      pages: { hasMore: boolean; objects: unknown[] }[];
+    };
+    error: null;
+    fetchNextPage: ReturnType<typeof rs.fn>;
+    hasNextPage: boolean;
+    isFetchingNextPage: boolean;
+    isLoading: boolean;
+    refetch: ReturnType<typeof rs.fn>;
+  } => ({
+    data: { pages: [{ hasMore: false, objects: [] }] } as {
+      pages: {
+        hasMore: boolean;
+        objects: unknown[];
+      }[];
+    },
+    error: null,
+    fetchNextPage: rs.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+    refetch: rs.fn(() => Promise.resolve()),
+  })
+);
 
 rs.mock("@/components/console-pages/other-database-objects-query", () => ({
   useOtherDatabaseObjectsSummaryQuery: () => otherObjectsQuery,
@@ -108,7 +123,7 @@ const extensions = [
 ];
 
 const params = { databaseId: "app", instanceId: "prod" };
-const VIEW_ALL_RE = /View all/;
+const VIEW_ALL_RE = /View all/u;
 
 function sequenceObject(index: number): OtherDatabaseObject {
   return {
@@ -127,7 +142,7 @@ afterEach(() => {
 });
 
 describe("database objects panel", () => {
-  it("renders one card per present category with kind-specific rows", () => {
+  test("renders one card per present category with kind-specific rows", () => {
     render(
       <DatabaseObjectsPanel
         extensions={extensions}
@@ -169,7 +184,7 @@ describe("database objects panel", () => {
     expect(screen.queryByRole("button", { name: VIEW_ALL_RE })).toBeNull();
   });
 
-  it("shows totals beyond the visible rows and opens the browse dialog", async () => {
+  test("shows totals beyond the visible rows and opens the browse dialog", async () => {
     const user = userEvent.setup();
     const topFive = Array.from({ length: 5 }, (_, index) =>
       sequenceObject(index)
@@ -196,7 +211,10 @@ describe("database objects panel", () => {
 
     const card = screen
       .getByText("Sequences")
-      .closest("[data-slot=card]") as HTMLElement;
+      .closest<HTMLElement>("[data-slot=card]");
+    if (!card) {
+      throw new Error("Expected sequences card");
+    }
     // The card itself stays bounded: five rows, an exact total, no expansion.
     expect(within(card).getByText("1234")).toBeTruthy();
     expect(within(card).getByText("seq_0")).toBeTruthy();
@@ -218,7 +236,7 @@ describe("database objects panel", () => {
     expect(within(dialog).getByText("seq_7")).toBeTruthy();
   });
 
-  it("collapses long extension lists behind the View-all dialog", async () => {
+  test("collapses long extension lists behind the View-all dialog", async () => {
     const user = userEvent.setup();
     const manyExtensions = Array.from({ length: 7 }, (_, index) =>
       create(ExtensionSchema, {

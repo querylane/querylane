@@ -1,5 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, it, rs } from "@rstest/core";
+import { describe, expect, rs, test } from "@rstest/core";
 
 import {
   AppDatabaseStatus_State,
@@ -57,7 +57,7 @@ function createInterleavedTestStore() {
 }
 
 describe("setup-store bootstrap flow", () => {
-  it("bootstrap routes to boot_error on network failure", async () => {
+  test("bootstrap routes to boot_error on network failure", async () => {
     const failure = new Error("network down");
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));
 
@@ -69,7 +69,7 @@ describe("setup-store bootstrap flow", () => {
 });
 
 describe("setup-store setup-required transition", () => {
-  it("setSetupRequired clears snapshot and refreshes onboarding state", async () => {
+  test("setSetupRequired clears snapshot and refreshes onboarding state", async () => {
     const { useSetupStore } = createTestStore(() =>
       Promise.resolve(
         buildOnboardingState({
@@ -97,7 +97,7 @@ describe("setup-store setup-required transition", () => {
 });
 
 describe("setup-store verify flow", () => {
-  it("verifyAfterSetup routes to boot_error on failure", async () => {
+  test("verifyAfterSetup routes to boot_error on failure", async () => {
     const failure = new Error("verify failed");
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));
 
@@ -109,7 +109,7 @@ describe("setup-store verify flow", () => {
 });
 
 describe("setup-store request sequencing", () => {
-  it("keeps a newer verify response when an older refresh resolves last", async () => {
+  test("keeps a newer verify response when an older refresh resolves last", async () => {
     const { newerRequest, olderRequest, useSetupStore } =
       createInterleavedTestStore();
 
@@ -137,7 +137,7 @@ describe("setup-store request sequencing", () => {
     expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(true);
   });
 
-  it("keeps a newer setup-required response when an older verify resolves last", async () => {
+  test("keeps a newer setup-required response when an older verify resolves last", async () => {
     const { newerRequest, olderRequest, useSetupStore } =
       createInterleavedTestStore();
 
@@ -168,7 +168,7 @@ describe("setup-store request sequencing", () => {
     expect(useSetupStore.getState().onboardingState?.isConfigured).toBe(false);
   });
 
-  it("ignores an older failure after a newer request succeeds", async () => {
+  test("ignores an older failure after a newer request succeeds", async () => {
     const { newerRequest, olderRequest, useSetupStore } =
       createInterleavedTestStore();
 
@@ -191,7 +191,7 @@ describe("setup-store request sequencing", () => {
   });
 });
 
-it("records warning codes for inconsistent configured state", async () => {
+test("records warning codes for inconsistent configured state", async () => {
   const { useSetupStore } = createTestStore(() =>
     Promise.resolve(
       buildOnboardingState({
@@ -208,7 +208,7 @@ it("records warning codes for inconsistent configured state", async () => {
   );
 });
 
-it("setSetupRequired swallows async refresh rejections", async () => {
+test("setSetupRequired swallows async refresh rejections", async () => {
   const { useSetupStore } = createTestStore(() =>
     Promise.resolve(
       buildOnboardingState({
@@ -221,7 +221,9 @@ it("setSetupRequired swallows async refresh rejections", async () => {
     refreshOnboardingState: () => Promise.reject(new Error("refresh failed")),
   });
 
-  expect(() => useSetupStore.getState().setSetupRequired()).not.toThrow();
+  expect(() => {
+    useSetupStore.getState().setSetupRequired();
+  }).not.toThrow();
   await Promise.resolve();
 
   expect(useSetupStore.getState().status).toBe("onboarding");

@@ -129,9 +129,11 @@ const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
-function uniqueSortedOptions(values: string[]): FacetedFilterOption[] {
-  return Array.from(new Set(values.filter(Boolean)))
-    .sort((left, right) => left.localeCompare(right))
+function uniqueSortedOptions<Value extends string>(
+  values: Value[]
+): ColumnFacetOption<Value>[] {
+  return [...new Set(values.filter(Boolean))]
+    .toSorted((left, right) => left.localeCompare(right))
     .map((value) => ({ label: value, value }));
 }
 function presentColumnOptions<Value extends string>(
@@ -144,8 +146,8 @@ function presentColumnOptions<Value extends string>(
 function presentConstraintKindOptions(
   constraints: TableConstraint[]
 ): FacetedFilterOption[] {
-  return Array.from(new Set(constraints.map((constraint) => constraint.type)))
-    .sort((left, right) =>
+  return [...new Set(constraints.map((constraint) => constraint.type))]
+    .toSorted((left, right) =>
       CONSTRAINT_TYPE_LABELS[left].localeCompare(CONSTRAINT_TYPE_LABELS[right])
     )
     .map((type) => ({
@@ -161,15 +163,15 @@ function presentIndexMethodOptions(
     const value = normalizeIndexMethod(index.method);
     options.set(value, describePostgresIndexMethod(index.method).label);
   }
-  return Array.from(options.entries())
-    .sort((left, right) => left[1].localeCompare(right[1]))
+  return [...options.entries()]
+    .toSorted((left, right) => left[1].localeCompare(right[1]))
     .map(([value, label]) => ({ label, value }));
 }
 function presentPolicyModeOptions(
   policies: TablePolicy[]
 ): FacetedFilterOption[] {
-  return Array.from(new Set(policies.map((policy) => policy.mode)))
-    .sort((left, right) =>
+  return [...new Set(policies.map((policy) => policy.mode))]
+    .toSorted((left, right) =>
       formatPolicyMode(left).localeCompare(formatPolicyMode(right))
     )
     .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));

@@ -31,6 +31,7 @@ import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { Badge } from "@/components/ui/badge";
 import { ItemGroup } from "@/components/ui/item";
 import type { PredefinedRoleInfo } from "@/lib/role-display";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 interface BuiltinParent {
@@ -126,7 +127,7 @@ function BuiltinPowersCard({
                 <span className="block truncate font-mono text-sm font-medium">
                   {parent.roleName}
                 </span>
-                {parent.summary ? (
+                {isNonEmptyString(parent.summary) ? (
                   <span className="text-muted-foreground block truncate text-xs">
                     {parent.summary}
                   </span>
@@ -246,7 +247,10 @@ function BuiltinExtraGrantsCard({
   selectedDatabaseId,
 }: {
   databaseName: string | undefined;
-  databases: { id: string; name: string }[];
+  databases: {
+    id: string;
+    name: string;
+  }[];
   error: unknown;
   isPending: boolean;
   objects: GrantedObject[];
@@ -265,7 +269,7 @@ function BuiltinExtraGrantsCard({
         title="No databases"
       />
     );
-  } else if (error) {
+  } else if (Boolean(error)) {
     body = (
       <p className="text-destructive text-sm">
         Could not load grants for{" "}
@@ -350,7 +354,10 @@ function BuiltinRoleBody({
 }: {
   builtinInfo: PredefinedRoleInfo | null;
   databaseName: string | undefined;
-  databases: { id: string; name: string }[];
+  databases: {
+    id: string;
+    name: string;
+  }[];
   grantObjects: GrantedObject[];
   grantsError: unknown;
   grantsPending: boolean;

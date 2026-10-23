@@ -8,7 +8,10 @@ const TABLE_LIST_SORT_ITEMS = [
   { label: "Name A to Z", value: "name-asc" },
   { label: "Largest first", value: "size-desc" },
   { label: "Smallest first", value: "size-asc" },
-] as const satisfies readonly { label: string; value: TableListSort }[];
+] as const satisfies readonly {
+  label: string;
+  value: TableListSort;
+}[];
 
 function isTableListSort(value: string): value is TableListSort {
   return TABLE_LIST_SORT_VALUES.has(value);

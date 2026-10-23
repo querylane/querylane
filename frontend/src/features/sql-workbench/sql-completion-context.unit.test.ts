@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   completionClause,
   contextOptions,
@@ -8,12 +8,12 @@ import {
 import { relationKey } from "@/features/sql-workbench/sql-relation";
 
 describe("completionClause", () => {
-  it("treats the first word of a statement as the statement keyword", () => {
+  test("treats the first word of a statement as the statement keyword", () => {
     expect(completionClause("")).toBe("statement");
     expect(completionClause("SEL")).toBe("statement");
   });
 
-  it("reads the column list and conditions as expressions", () => {
+  test("reads the column list and conditions as expressions", () => {
     expect(completionClause("SELECT ")).toBe("expression");
     expect(completionClause("SELECT st")).toBe("expression");
     expect(completionClause("SELECT id FROM orders WHERE sta")).toBe(
@@ -25,17 +25,17 @@ describe("completionClause", () => {
     expect(completionClause("SELECT a FROM t ORDER BY ")).toBe("expression");
   });
 
-  it("reads FROM and JOIN targets as relations", () => {
+  test("reads FROM and JOIN targets as relations", () => {
     expect(completionClause("SELECT * FROM ")).toBe("relation");
     expect(completionClause("SELECT * FROM orders o JOIN ")).toBe("relation");
   });
 
-  it("suggests nothing while an alias is being named", () => {
+  test("suggests nothing while an alias is being named", () => {
     expect(completionClause("SELECT count(*) AS ")).toBe("alias");
     expect(completionClause("SELECT count(*) AS n, st")).toBe("expression");
   });
 
-  it("ignores keywords inside strings, comments and finished sub-queries", () => {
+  test("ignores keywords inside strings, comments and finished sub-queries", () => {
     expect(completionClause("SELECT 'from x' , ")).toBe("expression");
     expect(completionClause("SELECT 1 -- from t\n, ")).toBe("expression");
     expect(
@@ -43,7 +43,7 @@ describe("completionClause", () => {
     ).toBe("expression");
   });
 
-  it("reads an open sub-query on its own", () => {
+  test("reads an open sub-query on its own", () => {
     expect(completionClause("SELECT * FROM t WHERE id IN (SELECT ")).toBe(
       "expression"
     );
@@ -56,13 +56,13 @@ describe("completionClause", () => {
 describe("contextOptions", () => {
   const none = { fromSchema: [], inScope: [] };
 
-  it("offers only statement keywords at the start", () => {
+  test("offers only statement keywords at the start", () => {
     const labels = contextOptions("statement", none).map((o) => o.label);
     expect(labels).toContain("SELECT");
     expect(labels).not.toContain("STDIN");
   });
 
-  it("keeps the expression keyword list short and relevant", () => {
+  test("keeps the expression keyword list short and relevant", () => {
     const labels = contextOptions("expression", none).map((o) => o.label);
     expect(labels).toContain("DISTINCT");
     expect(labels).toContain("count");
@@ -70,7 +70,7 @@ describe("contextOptions", () => {
     expect(labels).not.toContain("STYLE");
   });
 
-  it("ranks in-scope columns above functions and keywords", () => {
+  test("ranks in-scope columns above functions and keywords", () => {
     const options = contextOptions("expression", {
       fromSchema: [],
       inScope: [
@@ -103,7 +103,7 @@ describe("scopedColumns", () => {
     },
   ];
 
-  it("uses the referenced relations when there are any", () => {
+  test("uses the referenced relations when there are any", () => {
     const scoped = scopedColumns({
       columnsByRelation,
       defaultSchema: "public",
@@ -114,7 +114,7 @@ describe("scopedColumns", () => {
     expect(scoped.fromSchema).toEqual([]);
   });
 
-  it("falls back to the default schema's tables before FROM is written", () => {
+  test("falls back to the default schema's tables before FROM is written", () => {
     const scoped = scopedColumns({
       columnsByRelation,
       defaultSchema: "commerce",
@@ -126,7 +126,7 @@ describe("scopedColumns", () => {
 });
 
 describe("statementAround", () => {
-  it("sees a FROM that follows the cursor", () => {
+  test("sees a FROM that follows the cursor", () => {
     const doc = "SELECT st FROM orders";
     expect(statementAround(doc, 9)).toEqual({
       before: "SELECT st",
@@ -134,12 +134,12 @@ describe("statementAround", () => {
     });
   });
 
-  it("starts a new statement after a semicolon", () => {
+  test("starts a new statement after a semicolon", () => {
     const doc = "SELECT 1; ";
     expect(statementAround(doc, doc.length)).toEqual({ before: " ", full: "" });
   });
 
-  it("keeps trailing whitespace inside an unterminated statement", () => {
+  test("keeps trailing whitespace inside an unterminated statement", () => {
     const doc = "SELECT ";
     expect(statementAround(doc, doc.length).before).toBe("SELECT ");
   });

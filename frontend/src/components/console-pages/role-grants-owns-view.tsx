@@ -44,6 +44,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { buildOwnedFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import type { RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   GrantObjectType,
   type OwnedObject,
@@ -51,7 +52,10 @@ import {
 
 // ───────── "What ownership grants" legend ─────────
 
-const OWNERSHIP_PRIVS: { key: string; tone: PrivTone }[] = [
+const OWNERSHIP_PRIVS: {
+  key: string;
+  tone: PrivTone;
+}[] = [
   { key: "DROP", tone: "destructive" },
   { key: "ALTER", tone: "destructive" },
   { key: "TRUNCATE", tone: "destructive" },
@@ -193,7 +197,7 @@ function ownedTableFilter(
         : grantObjectTypeFilterToken(activeObjectType),
     search,
   });
-  return filter ? { filter, source: "owned" } : null;
+  return isNonEmptyString(filter) ? { filter, source: "owned" } : null;
 }
 
 function OwnedObjectsTable({
@@ -360,7 +364,7 @@ function OwnsDescription({
     return (
       <>
         <span className="text-foreground/80 font-mono">{roleName}</span>{" "}
-        {"doesn't own any objects in"}{" "}
+        doesn&apos;t own any objects in{" "}
         <span className="text-foreground/80 font-mono">{databaseName}</span>{" "}
         today. Ownership still matters: anything this role creates becomes owned
         by it.

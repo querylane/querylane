@@ -11,22 +11,25 @@ interface NotFoundStateProps {
 export function NotFoundState({ containerClassName }: NotFoundStateProps) {
   const navigate = useNavigate({ from: "/" });
   const handleGoBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      window.history.back();
+    if (
+      globalThis.window !== undefined &&
+      globalThis.window.history.length > 1
+    ) {
+      globalThis.window.history.back();
       return;
     }
     navigate({
       to: "/",
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "not-found.back-home" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "not-found.back-home" });
+    });
   };
   const handleGoHome = () => {
     navigate({
       to: "/",
-    }).catch((error: unknown) =>
-      handleNavigationError(error, { area: "not-found.home" })
-    );
+    }).catch((error: unknown) => {
+      handleNavigationError(error, { area: "not-found.home" });
+    });
   };
   return (
     <div

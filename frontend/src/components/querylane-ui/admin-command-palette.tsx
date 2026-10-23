@@ -11,7 +11,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/querylane-ui/command";
 import { formatRows } from "@/features/data-explorer/format-rows";
 import { useDatabaseCatalogSearchQuery } from "@/hooks/api/database-catalog";
 import {
@@ -159,7 +159,9 @@ function NavigationTargetGroup({
         <CommandItem
           className={COMMAND_ITEM_CLASS_NAME}
           key={target.page}
-          onSelect={() => onSelect(target.page)}
+          onSelect={() => {
+            onSelect(target.page);
+          }}
           value={target.label}
         >
           <ChevronRight className="text-muted-foreground size-3.5" />
@@ -200,7 +202,9 @@ function DatabaseObjectGroup({
           <CommandItem
             className={COMMAND_ITEM_CLASS_NAME}
             key={object.name ?? label}
-            onSelect={() => onSelect(object)}
+            onSelect={() => {
+              onSelect(object);
+            }}
             value={label}
           >
             <ChevronRight className="text-muted-foreground size-3.5" />
@@ -233,7 +237,9 @@ function RoleCommandGroup({
         <CommandItem
           className={COMMAND_ITEM_CLASS_NAME}
           key={role.name}
-          onSelect={() => onSelect(role)}
+          onSelect={() => {
+            onSelect(role);
+          }}
           value={role.roleName}
         >
           <ChevronRight className="text-muted-foreground size-3.5" />
@@ -267,7 +273,7 @@ function PaletteQueryStatus({
       </output>
     );
   }
-  if (error) {
+  if (Boolean(error)) {
     return <p className="text-destructive px-4 py-3 text-xs">{errorMessage}</p>;
   }
   return null;
@@ -343,7 +349,7 @@ function AdminCommandPaletteContent({
   });
   const roleFilter = buildRoleFilter({ query: serverQuery });
   const rolesQuery = useListRolesQuery(
-    instanceId && roleFilter
+    instanceId && typeof roleFilter === "string" && roleFilter.length > 0
       ? {
           ...rolesForInstanceQueryInput(instanceId),
           filter: roleFilter,
@@ -425,7 +431,6 @@ function AdminCommandPaletteContent({
       <div className="relative">
         <CommandInput
           aria-label="Search tables, screens, roles, or saved queries"
-          autoFocus={true}
           className="pr-16 text-sm"
           onValueChange={setQuery}
           placeholder="Jump to a table, screen, role, or saved query…"
@@ -477,12 +482,14 @@ const CommandPaletteContext = createContext<CommandPaletteController | null>(
 function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
-  useKeyboardShortcut("palette.open", () =>
-    setOpen((currentOpen) => !currentOpen)
-  );
+  useKeyboardShortcut("palette.open", () => {
+    setOpen((currentOpen) => !currentOpen);
+  });
 
   const controller: CommandPaletteController = {
-    openPalette: () => setOpen(true),
+    openPalette: () => {
+      setOpen(true);
+    },
   };
 
   return (

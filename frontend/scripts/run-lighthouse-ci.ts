@@ -4,13 +4,16 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import process, { env } from "node:process";
 import { chromium } from "playwright";
+import { isNonEmptyString } from "../src/lib/value-guards";
 
 const FRONTEND_ROOT = join(import.meta.dirname, "..");
 const FAILURE_EXIT_CODE = 1;
 
 function getChromePath() {
   const { CHROME_PATH: chromePath } = env;
-  return chromePath?.trim() || chromium.executablePath();
+  return isNonEmptyString(chromePath?.trim())
+    ? chromePath?.trim()
+    : chromium.executablePath();
 }
 
 function runLighthouseCi() {

@@ -50,15 +50,15 @@ const CATALOG_OBJECT_KIND_OPTIONS = [
   { label: "Partitioned tables", value: "partitioned-table" },
   { label: "Views", value: "view" },
   { label: "Materialized views", value: "materialized-view" },
-] satisfies FacetedFilterOption[];
+] as const satisfies FacetedFilterOption[];
 const CATALOG_SCHEMA_KIND_OPTIONS = [
   { label: "User", value: "user" },
   { label: "System", value: "system" },
-] satisfies FacetedFilterOption[];
+] as const satisfies FacetedFilterOption[];
 const CATALOG_OBJECT_SYSTEM_OPTIONS = [
   { label: "User", value: "user" },
   { label: "System", value: "system" },
-] satisfies FacetedFilterOption[];
+] as const satisfies FacetedFilterOption[];
 
 function schemaFilterValue(row: { schemaId: string }) {
   return row.schemaId.trim() || EMPTY_SCHEMA_FILTER_VALUE;
@@ -115,15 +115,15 @@ function uniqueSortedOptions(
   values: string[],
   getLabel: (value: string) => string = (value) => value
 ): FacetedFilterOption[] {
-  return Array.from(new Set(values))
-    .sort((left, right) => getLabel(left).localeCompare(getLabel(right)))
+  return [...new Set(values)]
+    .toSorted((left, right) => getLabel(left).localeCompare(getLabel(right)))
     .map((value) => ({ label: getLabel(value), value }));
 }
 
 function presentCatalogObjectKindOptions(objects: CatalogObjectKindRow[]) {
   const presentKinds = new Set(objects.map(catalogObjectKindValue));
   return CATALOG_OBJECT_KIND_OPTIONS.filter((option) =>
-    presentKinds.has(option.value as CatalogObjectKindFilter)
+    presentKinds.has(option.value)
   );
 }
 
@@ -134,7 +134,7 @@ function presentCatalogObjectSchemaOptions(objects: CatalogObjectFacetRow[]) {
 function presentCatalogObjectSystemOptions(objects: CatalogObjectFacetRow[]) {
   const presentKinds = new Set(objects.map(catalogObjectSystemValue));
   return CATALOG_OBJECT_SYSTEM_OPTIONS.filter((option) =>
-    presentKinds.has(option.value as CatalogObjectSystemFilter)
+    presentKinds.has(option.value)
   );
 }
 
@@ -145,7 +145,7 @@ function presentCatalogObjectOwnerOptions(objects: CatalogObjectFacetRow[]) {
 function presentCatalogSchemaKindOptions(schemas: CatalogSchemaFacetRow[]) {
   const presentKinds = new Set(schemas.map(catalogSchemaKindValue));
   return CATALOG_SCHEMA_KIND_OPTIONS.filter((option) =>
-    presentKinds.has(option.value as CatalogSchemaKindFilter)
+    presentKinds.has(option.value)
   );
 }
 

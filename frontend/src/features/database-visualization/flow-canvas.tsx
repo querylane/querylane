@@ -14,6 +14,8 @@ import {
   ReactFlow,
   useReactFlow,
 } from "@xyflow/react";
+import { handleAsyncAction } from "@/lib/ui-action";
+import { isNonEmptyString } from "@/lib/value-guards";
 import "@xyflow/react/dist/style.css";
 import { ExternalLink } from "lucide-react";
 import { type CSSProperties, type ReactNode, useEffect } from "react";
@@ -179,7 +181,7 @@ function flowTargetPosition(direction: VisualizationDirection): Position {
 
 function layoutIdentityKey(value: object): string {
   const cached = layoutIdentityCache.get(value);
-  if (cached) {
+  if (isNonEmptyString(cached)) {
     return cached;
   }
   nextLayoutIdentity += 1;
@@ -251,7 +253,7 @@ function VisualizationGraphNode({ data }: NodeProps<FlowNode>) {
       <Handle className="opacity-0" position={targetPosition} type="target" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {data.subtitle ? (
+          {isNonEmptyString(data.subtitle) ? (
             <p
               className={cn(
                 "text-muted-foreground truncate tracking-wider uppercase",
@@ -348,10 +350,12 @@ function AutoFitView() {
   const { fitView } = useReactFlow();
   useEffect(
     function fitGraphAfterLayoutChanges() {
-      fitView({
-        duration: FIT_VIEW_DURATION_MS,
-        padding: FIT_VIEW_PADDING,
-      });
+      handleAsyncAction(() =>
+        fitView({
+          duration: FIT_VIEW_DURATION_MS,
+          padding: FIT_VIEW_PADDING,
+        })
+      )();
     },
     [fitView]
   );
@@ -634,8 +638,10 @@ function computeGraphLayout({
       source: edge.source,
       target: edge.target,
       type: "step",
-      ...(accessibleLabel ? { ariaLabel: accessibleLabel } : {}),
-      ...(edge.label ? { label: edge.label } : {}),
+      ...(isNonEmptyString(accessibleLabel)
+        ? { ariaLabel: accessibleLabel }
+        : {}),
+      ...(isNonEmptyString(edge.label) ? { label: edge.label } : {}),
     };
   });
   return rememberGraphLayout(cacheKey, { flowEdges, positionedNodes });
@@ -718,7 +724,7 @@ function FlowCanvas({
         className
       )}
     >
-      <ReactFlow<FlowNode, Edge>
+      <ReactFlow<FlowNode>
         edges={flowEdges}
         fitView={true}
         minZoom={FLOW_MIN_ZOOM[density]}
@@ -728,7 +734,7 @@ function FlowCanvas({
         proOptions={{ hideAttribution: true }}
       >
         <AutoFitView key={viewportKey} />
-        {actionPanel ? (
+        {Boolean(actionPanel) ? (
           <Panel
             className="nodrag nopan bg-popover/95 text-popover-foreground supports-[backdrop-filter]:bg-popover/85 rounded-lg border p-2 shadow-lg backdrop-blur"
             position="top-right"

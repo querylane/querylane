@@ -26,7 +26,9 @@ function InternalStorageRecoveryDialog({
         render={
           <Button
             className="h-auto shrink-0"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setOpen(true);
+            }}
             presentation="recovery"
             size="sm"
             variant="destructive"

@@ -9,11 +9,13 @@ import {
   OwnedObjectSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-const captured = rs.hoisted(() => ({
-  direct: [] as unknown[],
-  owned: [] as unknown[],
-  publicGrants: [] as unknown[],
-}));
+const captured = rs.hoisted(
+  (): { direct: unknown[]; owned: unknown[]; publicGrants: unknown[] } => ({
+    direct: [] as unknown[],
+    owned: [] as unknown[],
+    publicGrants: [] as unknown[],
+  })
+);
 
 rs.mock("@/hooks/api/role", () => ({
   publicGrantsForDatabaseQueryInput: (input: unknown) => input,
@@ -23,7 +25,7 @@ rs.mock("@/hooks/api/role", () => ({
     input: unknown,
     options: { enabled?: boolean } | undefined
   ) => {
-    if (options?.enabled) {
+    if (options?.enabled === true) {
       captured.publicGrants.push(input);
     }
     return { data: undefined, error: null, isPending: false };
@@ -32,7 +34,7 @@ rs.mock("@/hooks/api/role", () => ({
     input: unknown,
     options: { enabled?: boolean } | undefined
   ) => {
-    if (options?.enabled) {
+    if (options?.enabled === true) {
       captured.direct.push(input);
     }
     return { data: undefined, error: null, isPending: false };
@@ -41,7 +43,7 @@ rs.mock("@/hooks/api/role", () => ({
     input: unknown,
     options: { enabled?: boolean } | undefined
   ) => {
-    if (options?.enabled) {
+    if (options?.enabled === true) {
       captured.owned.push(input);
     }
     return {

@@ -24,19 +24,22 @@ import {
   PAGE_SIZE_OPTIONS,
   pageIndexForPageSizeChange,
 } from "@/lib/pagination";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 import type { TableTrigger } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const TRIGGER_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS;
 const [DEFAULT_TRIGGER_PAGE_SIZE] = TRIGGER_PAGE_SIZE_OPTIONS;
-const SIMPLE_SQL_IDENTIFIER_RE = /^[a-z_][a-z0-9_]*$/;
-const CREATE_TRIGGER_RE = /^CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b/i;
-const EXECUTE_FUNCTION_RE = /EXECUTE\s+(?:FUNCTION|PROCEDURE)\s+([^;]+);?$/i;
-const EXECUTE_FUNCTION_PREFIX_RE = /^EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
-const TRIGGER_SQL_FOR_EACH_RE = /\s+FOR\s+EACH\s+/i;
-const TRIGGER_SCOPE_RE = /FOR\s+EACH\s+(ROW|STATEMENT)\b/i;
+const SIMPLE_SQL_IDENTIFIER_RE = /^[a-z_][a-z0-9_]*$/u;
+const CREATE_TRIGGER_RE = /^CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\b/iu;
+const EXECUTE_FUNCTION_RE =
+  /EXECUTE\s+(?:FUNCTION|PROCEDURE)\s+(?<capture1>[^;]+);?$/iu;
+const EXECUTE_FUNCTION_PREFIX_RE = /^EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/iu;
+const TRIGGER_SQL_FOR_EACH_RE = /\s+FOR\s+EACH\s+/iu;
+const TRIGGER_SCOPE_RE = /FOR\s+EACH\s+(?<capture1>ROW|STATEMENT)\b/iu;
 const TRIGGER_WHEN_RE =
-  /\bWHEN\s*\(([\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/i;
+  /\bWHEN\s*\((?<capture1>[\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/iu;
 const TRIGGER_SQL_COPY_FEEDBACK_MS = 1500;
 
 /** Leaves simple names bare to mirror pg_get_triggerdef output. */
@@ -105,8 +108,8 @@ function formatTriggerSqlForDisplay(sql: string) {
 }
 
 function triggerFunctionLabel(trigger: TableTrigger) {
-  const match = trigger.definition.trim().match(EXECUTE_FUNCTION_RE);
-  if (match?.[1]) {
+  const match = EXECUTE_FUNCTION_RE.exec(trigger.definition.trim());
+  if (isNonEmptyString(match?.[1])) {
     return `→ ${match[1].trim()}`;
   }
   if (!trigger.functionName) {
@@ -124,15 +127,15 @@ function triggerEventsLabel(trigger: TableTrigger) {
 }
 
 function triggerLevelLabel(trigger: TableTrigger) {
-  const match = trigger.definition.match(TRIGGER_SCOPE_RE);
-  if (!match?.[1]) {
+  const match = TRIGGER_SCOPE_RE.exec(trigger.definition);
+  if (!isNonEmptyString(match?.[1])) {
     return "ROW";
   }
   return match[1].toUpperCase();
 }
 
 function triggerWhenExpression(trigger: TableTrigger) {
-  const match = trigger.definition.match(TRIGGER_WHEN_RE);
+  const match = TRIGGER_WHEN_RE.exec(trigger.definition);
   return match?.[1]?.trim() ?? "";
 }
 
@@ -151,16 +154,19 @@ function TriggerSqlCopyButton({
     if (copyState === "idle") {
       return;
     }
-    const timeout = window.setTimeout(function resetTriggerSqlCopyState() {
+    const timeout = globalThis.setTimeout(function resetTriggerSqlCopyState() {
       setCopyState("idle");
     }, TRIGGER_SQL_COPY_FEEDBACK_MS);
     return () => {
-      window.clearTimeout(timeout);
+      globalThis.clearTimeout(timeout);
     };
   }, [copyState]);
 
   async function handleCopyTriggerSql() {
-    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.clipboard?.writeText !== "function"
+    ) {
       setCopyState("error");
       return;
     }
@@ -190,7 +196,7 @@ function TriggerSqlCopyButton({
       <Button
         aria-label={`Copy SQL for ${triggerName}`}
         className="h-6"
-        onClick={handleCopyTriggerSql}
+        onClick={handleAsyncAction(handleCopyTriggerSql)}
         presentation="compact"
         size="xs"
         type="button"

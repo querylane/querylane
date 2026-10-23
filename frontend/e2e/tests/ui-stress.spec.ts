@@ -3,15 +3,16 @@ import { consoleInstance } from "../../src/test/fixtures/console-resource-fixtur
 import { roleDetailFixture } from "../../src/test/fixtures/role-fixtures";
 import {
   CONFIGURATION_URL,
+  DATABASE_URL,
   mockConsoleResources,
 } from "../visual/console-resource-fixtures";
 import { mockRolesScreen } from "../visual/role-fixtures";
 import { expect, test } from "./base";
 import { mockRpc } from "./helpers";
 
-const VERIFY_FULL = /^verify-full/;
-const GRANTS = /^Grants/;
-const SQL_EDITOR = /^SQL editor/;
+const VERIFY_FULL = /^verify-full/u;
+const GRANTS = /^Grants/u;
+const SQL_EDITOR = /^SQL editor/u;
 
 const MAX_LENGTH_INSTANCE_NAME =
   "production_analytics_eu_central_failover_readonly_reconciliatio";
@@ -119,10 +120,10 @@ test("role tab navigation scrolls only the tab strip", async ({ page }) => {
 
 test("SQL tabs support keyboard selection, panels, and external actions", async ({
   page,
-  makeAxeBuilder,
+  checkAccessibility,
 }) => {
   await mockConsoleResources(page);
-  await page.goto("/instances/production/databases/appdb/workbench");
+  await page.goto(`${DATABASE_URL}/workbench`);
   const editor = page.getByRole("textbox", { name: SQL_EDITOR });
   await expect(editor).toBeVisible();
   await page
@@ -144,9 +145,7 @@ test("SQL tabs support keyboard selection, panels, and external actions", async 
   await expect(
     page.getByRole("tabpanel").filter({ has: editor })
   ).toHaveAttribute("id", panelId ?? "");
-  expect(
-    (await makeAxeBuilder().include('[role="tablist"]').analyze()).violations
-  ).toEqual([]);
+  await checkAccessibility();
   await page
     .getByRole("button", { name: "Close Query 1", exact: true })
     .click();
@@ -156,20 +155,31 @@ test("SQL tabs support keyboard selection, panels, and external actions", async 
 
 test("a narrow SQL editor remains keyboard-scrollable", async ({
   page,
-  makeAxeBuilder,
+  checkAccessibility,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await mockConsoleResources(page);
   await mockRpc(page, "SQLService/ValidateQuery", {});
-  await page.goto("/instances/production/databases/appdb/workbench");
-  await page
-    .getByRole("textbox", { name: SQL_EDITOR })
-    .fill(
-      "SELECT carrier_id, shipment_id, expected_delivery_time FROM shipping.shipments;"
-    );
-  expect(
-    (await makeAxeBuilder().include(".cm-scroller").analyze()).violations
-  ).toEqual([]);
+  await page.goto(`${DATABASE_URL}/workbench`);
+  const editor = page.getByRole("textbox", { name: SQL_EDITOR });
+  await editor.fill(
+    "SELECT carrier_id, shipment_id, expected_delivery_time FROM shipping.shipments;"
+  );
+  const scroller = page.locator(".cm-scroller");
+  await editor.press("Home");
+  const leftPosition = await scroller.evaluate((element) => element.scrollLeft);
+  await editor.press("End");
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(leftPosition);
+  const rightPosition = await scroller.evaluate(
+    (element) => element.scrollLeft
+  );
+  await editor.press("Home");
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollLeft))
+    .toBeLessThan(rightPosition);
+  await checkAccessibility();
 });
 
 test("connection and create actions remain reachable on a phone", async ({

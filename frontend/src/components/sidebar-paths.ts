@@ -1,14 +1,15 @@
 import type { AdminPageId } from "@/lib/admin-page";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 function matchesPath(pathname: string, target?: string): boolean {
-  if (!target) {
+  if (!isNonEmptyString(target)) {
     return false;
   }
   return pathname === target || pathname === `${target}/`;
 }
 
 function buildInstancePaths(instanceBase?: string): SidebarPaths {
-  if (!instanceBase) {
+  if (!isNonEmptyString(instanceBase)) {
     return {};
   }
   return {
@@ -20,7 +21,7 @@ function buildInstancePaths(instanceBase?: string): SidebarPaths {
 }
 
 function buildDatabasePaths(databaseBase?: string): SidebarPaths {
-  if (!databaseBase) {
+  if (!isNonEmptyString(databaseBase)) {
     return {};
   }
   return {
@@ -81,9 +82,13 @@ function buildSidebarPaths({
   databaseId,
   instanceId,
 }: NavigationIds): SidebarPaths {
-  const instanceBase = instanceId ? `/instances/${instanceId}` : undefined;
+  const instanceBase = isNonEmptyString(instanceId)
+    ? `/instances/${instanceId}`
+    : undefined;
   const databaseBase =
-    instanceBase && databaseId
+    isNonEmptyString(instanceBase) &&
+    typeof databaseId === "string" &&
+    databaseId.length > 0
       ? `${instanceBase}/databases/${databaseId}`
       : undefined;
 

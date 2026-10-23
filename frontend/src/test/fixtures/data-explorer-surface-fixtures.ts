@@ -167,8 +167,8 @@ function readRowsResponse(columns: ColumnInit[]) {
  * to `createTestRouterTransport` in rstest or `serveService` in Playwright.
  */
 function explorerSurfaceServices(catalog: ExplorerSurfaceCatalog) {
-  const failing = new Set(catalog.failing ?? []);
-  const truncated = new Set(catalog.truncatedSchemas ?? []);
+  const failing = new Set(catalog.failing);
+  const truncated = new Set(catalog.truncatedSchemas);
   const schemas = new Map(
     catalog.schemas.map((schema) => [schemaResource(schema.name), schema])
   );

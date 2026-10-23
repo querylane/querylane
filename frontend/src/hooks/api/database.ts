@@ -33,9 +33,9 @@ async function fetchAllDatabases(
 ) {
   const client = createClient(DatabaseService, transport);
   const databases = await paginateAll(
-    (pageToken) =>
-      client.listDatabases({
-        ...(input ?? {}),
+    async (pageToken) =>
+      await client.listDatabases({
+        ...input,
         pageToken: pageToken ?? "",
       }),
     (response) => response.databases
@@ -130,10 +130,7 @@ export function useListAllDatabasesQuery(
 }
 
 export function useGetDatabaseQuery(
-  input?:
-    | MessageInitShape<(typeof getDatabase)["input"]>
-    | SkipToken
-    | undefined,
+  input?: MessageInitShape<(typeof getDatabase)["input"]> | SkipToken,
   options?: ConnectUseQueryOptions<(typeof getDatabase)["output"]>
 ) {
   return useConnectQuery(getDatabase, input, {
@@ -145,8 +142,7 @@ export function useGetDatabaseQuery(
 export function useGetDatabaseQueryInsightsQuery(
   input?:
     | MessageInitShape<(typeof getDatabaseQueryInsights)["input"]>
-    | SkipToken
-    | undefined,
+    | SkipToken,
   options?: ConnectUseQueryOptions<(typeof getDatabaseQueryInsights)["output"]>
 ) {
   return useConnectQuery(getDatabaseQueryInsights, input, {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 
 import { parsePostgresConnectionString } from "./postgres-connection-string";
 
@@ -16,7 +16,7 @@ const NON_POSTGRES_DSN = [
 ].join("");
 
 describe("parsePostgresConnectionString", () => {
-  it("parses a PostgreSQL DSN into form-friendly fields", () => {
+  test("parses a PostgreSQL DSN into form-friendly fields", () => {
     const parsed = parsePostgresConnectionString(REQUIRE_SSL_DSN);
 
     expect(parsed).toEqual({
@@ -31,7 +31,7 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it("defaults missing host and sslmode values", () => {
+  test("defaults missing host and sslmode values", () => {
     const parsed = parsePostgresConnectionString("postgres:///querylane");
 
     expect(parsed).toEqual({
@@ -46,15 +46,15 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it("returns null for non-PostgreSQL connection strings", () => {
+  test("returns null for non-PostgreSQL connection strings", () => {
     expect(parsePostgresConnectionString(NON_POSTGRES_DSN)).toBeNull();
   });
 
-  it("returns null for invalid URLs", () => {
+  test("returns null for invalid URLs", () => {
     expect(parsePostgresConnectionString("postgres://:")).toBeNull();
   });
 
-  it("accepts the postgresql scheme, decoded credentials, and ssl aliases", () => {
+  test("accepts the postgresql scheme, decoded credentials, and ssl aliases", () => {
     expect(
       parsePostgresConnectionString(
         "postgresql://user%40app:p%40ss@db.example.com/app%2Fmain?sslmode=verify-full"
@@ -79,7 +79,7 @@ describe("parsePostgresConnectionString", () => {
     ).toBe("verify-ca");
   });
 
-  it("removes IPv6 URL brackets before populating the host field", () => {
+  test("removes IPv6 URL brackets before populating the host field", () => {
     expect(
       parsePostgresConnectionString(
         "postgres://user:password@[2001:db8::1]:5432/database"
@@ -90,7 +90,7 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it("surfaces hosted Postgres parameters that Querylane cannot apply", () => {
+  test("surfaces hosted Postgres parameters that Querylane cannot apply", () => {
     expect(
       parsePostgresConnectionString(
         "postgresql://neondb_owner:password@ep-example-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require&options=project%3Dexample"
@@ -103,7 +103,7 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it.each([
+  test.each([
     {
       dsn: "postgresql://postgres.project-ref:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
       expected: {
@@ -128,7 +128,7 @@ describe("parsePostgresConnectionString", () => {
     expect(parsePostgresConnectionString(dsn)).toMatchObject(expected);
   });
 
-  it("uses the username as PostgreSQL's default database", () => {
+  test("uses the username as PostgreSQL's default database", () => {
     expect(
       parsePostgresConnectionString(
         "postgres://app_user:password@db.example.com"
@@ -139,7 +139,7 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it("maps PostgreSQL's ssl=true URI alias to require", () => {
+  test("maps PostgreSQL's ssl=true URI alias to require", () => {
     expect(
       parsePostgresConnectionString(
         "postgres://app_user:password@db.example.com/database?ssl=true"
@@ -150,7 +150,7 @@ describe("parsePostgresConnectionString", () => {
     });
   });
 
-  it("rejects unknown sslmode values instead of silently changing them", () => {
+  test("rejects unknown sslmode values instead of silently changing them", () => {
     expect(
       parsePostgresConnectionString(
         "postgres://user:password@db.example.com/database?sslmode=unknown"
@@ -158,21 +158,21 @@ describe("parsePostgresConnectionString", () => {
     ).toBeNull();
   });
 
-  it.each([
+  test.each([
     "postgres://user:password@db.example.com/database?sslmode=disable&sslmode=require",
     "postgres://user:password@db.example.com/database?sslmode=disable&ssl=true",
   ])("rejects ambiguous SSL parameters in %s", (dsn) => {
     expect(parsePostgresConnectionString(dsn)).toBeNull();
   });
 
-  it("rejects out-of-range ports", () => {
+  test("rejects out-of-range ports", () => {
     expect(parsePostgresConnectionString("postgres://u:p@h:0/db")).toBeNull();
     expect(
       parsePostgresConnectionString("postgres://u:p@h:70000/db")
     ).toBeNull();
   });
 
-  it("rejects unknown sslnegotiation values", () => {
+  test("rejects unknown sslnegotiation values", () => {
     expect(
       parsePostgresConnectionString("postgres://u:p@h/db?sslnegotiation=foo")
     ).toBeNull();

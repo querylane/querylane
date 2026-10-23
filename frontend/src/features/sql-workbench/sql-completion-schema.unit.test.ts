@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@rstest/core";
+import { describe, expect, test } from "@rstest/core";
 import {
   buildCompletionNamespace,
   extractReferencedRelations,
@@ -29,7 +29,7 @@ const RELATIONS: SqlRelation[] = [
 ];
 
 describe("extractReferencedRelations", () => {
-  it("resolves unqualified names to public first and qualified names exactly", () => {
+  test("resolves unqualified names to public first and qualified names exactly", () => {
     const found = extractReferencedRelations(
       "select * from orders o join archive.orders a on a.id = o.id",
       RELATIONS
@@ -40,13 +40,13 @@ describe("extractReferencedRelations", () => {
     ]);
   });
 
-  it("falls back to the first schema holding an unqualified name", () => {
+  test("falls back to the first schema holding an unqualified name", () => {
     expect(
       extractReferencedRelations("SELECT 1 FROM events", RELATIONS)
     ).toEqual([{ name: "events", schema: "analytics" }]);
   });
 
-  it("understands quoted identifiers and skips unknown or keyword targets", () => {
+  test("understands quoted identifiers and skips unknown or keyword targets", () => {
     const found = extractReferencedRelations(
       `select * from analytics."Daily Rollup" r, from unnest(x), from (select 1) s, from nowhere`,
       RELATIONS
@@ -54,7 +54,7 @@ describe("extractReferencedRelations", () => {
     expect(found).toEqual([{ name: "Daily Rollup", schema: "analytics" }]);
   });
 
-  it("deduplicates repeated references", () => {
+  test("deduplicates repeated references", () => {
     const found = extractReferencedRelations(
       "select * from users u join users u2 on u.id = u2.id",
       RELATIONS
@@ -64,7 +64,7 @@ describe("extractReferencedRelations", () => {
 });
 
 describe("buildCompletionNamespace", () => {
-  it("nests relations under schemas and lists known columns under each relation", () => {
+  test("nests relations under schemas and lists known columns under each relation", () => {
     const columns = new Map([
       [
         relationKey({ name: "users", schema: "public" }),
@@ -77,10 +77,7 @@ describe("buildCompletionNamespace", () => {
     const namespace = buildCompletionNamespace({
       columns,
       relations: RELATIONS,
-    }) as Record<
-      string,
-      { children: Record<string, unknown>; self: { label: string } }
-    >;
+    });
 
     expect(Object.keys(namespace).toSorted()).toEqual([
       "analytics",
@@ -122,7 +119,7 @@ describe("buildCompletionNamespace", () => {
 });
 
 describe("isRelationPosition", () => {
-  it("is true while a relation reference is being typed", () => {
+  test("is true while a relation reference is being typed", () => {
     expect(isRelationPosition("SELECT * FROM ")).toBe(true);
     expect(isRelationPosition("SELECT * FROM cr")).toBe(true);
     expect(isRelationPosition("select * from crm.")).toBe(true);
@@ -130,7 +127,7 @@ describe("isRelationPosition", () => {
     expect(isRelationPosition("FROM a JOIN ")).toBe(true);
   });
 
-  it("is false once the reference is complete", () => {
+  test("is false once the reference is complete", () => {
     expect(isRelationPosition("SELECT ")).toBe(false);
     expect(isRelationPosition("SELECT * FROM crm.customer ")).toBe(false);
     expect(isRelationPosition("SELECT * FROM crm.customer c WHERE c.")).toBe(

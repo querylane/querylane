@@ -26,13 +26,13 @@ const ROW_NUMBER_COLUMN: Column<GridRow> = {
   key: ROW_NUMBER_KEY,
   maxWidth: ROW_NUMBER_COLUMN_WIDTH,
   minWidth: ROW_NUMBER_COLUMN_WIDTH,
-  name: "",
+  name: "Row number",
   renderCell: ({ rowIdx }) => (
     <span className="text-muted-foreground block text-right text-xs tabular-nums">
       {rowIdx + 1}
     </span>
   ),
-  renderHeaderCell: () => null,
+  renderHeaderCell: () => <span className="sr-only">Row number</span>,
   resizable: false,
   sortable: false,
   width: ROW_NUMBER_COLUMN_WIDTH,
@@ -129,11 +129,13 @@ function useGridColumns({
       key: EXPAND_COLUMN_KEY,
       maxWidth: EXPAND_COLUMN_WIDTH,
       minWidth: EXPAND_COLUMN_WIDTH,
-      name: "",
+      name: "Row actions",
       renderCell: ({ rowIdx }) => (
         <Button
           aria-label="Expand row"
-          onClick={() => setOpenRowIndex(rowIdx)}
+          onClick={() => {
+            setOpenRowIndex(rowIdx);
+          }}
           presentation="expand-cell"
           size="icon-xs"
           type="button"
@@ -142,7 +144,7 @@ function useGridColumns({
           <Maximize2 />
         </Button>
       ),
-      renderHeaderCell: () => null,
+      renderHeaderCell: () => <span className="sr-only">Row actions</span>,
       resizable: false,
       sortable: false,
       width: EXPAND_COLUMN_WIDTH,
@@ -159,11 +161,21 @@ function useGridColumns({
         column,
         foreignKeyReferences,
         isFrozen: frozenColumns.has(column.columnName),
-        onCopyName: () => writeClipboard(column.columnName),
-        onHide: () => onHideColumn(column.columnName),
-        onSortAsc: () => toggleColumnSort(column.columnName, "ASC"),
-        onSortDesc: () => toggleColumnSort(column.columnName, "DESC"),
-        onToggleFreeze: () => toggleColumnFreeze(column.columnName),
+        onCopyName: () => {
+          writeClipboard(column.columnName);
+        },
+        onHide: () => {
+          onHideColumn(column.columnName);
+        },
+        onSortAsc: () => {
+          toggleColumnSort(column.columnName, "ASC");
+        },
+        onSortDesc: () => {
+          toggleColumnSort(column.columnName, "DESC");
+        },
+        onToggleFreeze: () => {
+          toggleColumnFreeze(column.columnName);
+        },
         pkColumnSet,
         renderOpenReferencedTableLink,
         resultColumns,

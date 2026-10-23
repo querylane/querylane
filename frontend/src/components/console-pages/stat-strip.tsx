@@ -122,12 +122,12 @@ function StatCell({
           <span className="text-foreground font-mono leading-none font-semibold tracking-tight text-(length:--text-heading-sm) tabular-nums">
             {value}
           </span>
-          {notice ? (
+          {Boolean(notice) ? (
             <span className="text-warning-600 dark:text-warning-400 mt-1 text-xs leading-snug">
               {notice}
             </span>
           ) : null}
-          {!notice && sub ? (
+          {!Boolean(notice) && Boolean(sub) ? (
             <span className="text-muted-foreground mt-1 text-xs">{sub}</span>
           ) : null}
         </div>

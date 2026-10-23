@@ -23,6 +23,7 @@ import {
 } from "@/lib/admin-navigation";
 import type { AdminPageId, InstanceLayoutSearch } from "@/lib/admin-page";
 import type { ScopeLevel } from "@/lib/db-navigation";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 type NavLinkProps = CanonicalAdminPageTarget & {
   currentPage?: AdminPageId | undefined;
@@ -63,14 +64,18 @@ function buildNavLinkProps({
     }
   }
 
-  if (ids.instanceId) {
+  if (isNonEmptyString(ids.instanceId)) {
     linkToPage({ page: "instance.overview" });
     linkToPage({ page: "instance.activity" });
     linkToPage({ page: "instance.roles" });
     linkToPage({ page: "instance.configuration" });
   }
 
-  if (ids.instanceId && ids.databaseId) {
+  if (
+    isNonEmptyString(ids.instanceId) &&
+    typeof ids.databaseId === "string" &&
+    ids.databaseId.length > 0
+  ) {
     linkToPage({ page: "database.overview" });
     linkToPage({ page: "database.extensions" });
     linkToPage({ page: "database.explorer" });
@@ -92,28 +97,28 @@ function getInstanceNav({
     {
       icon: LayoutDashboard,
       isActive: active.instanceOverview,
-      isDisabled: !paths.instanceOverview,
+      isDisabled: !isNonEmptyString(paths.instanceOverview),
       key: "instance.overview",
       label: "Overview",
     },
     {
       icon: Activity,
       isActive: active.instanceActivity,
-      isDisabled: !paths.instanceActivity,
+      isDisabled: !isNonEmptyString(paths.instanceActivity),
       key: "instance.activity",
       label: "Activity",
     },
     {
       icon: Users,
       isActive: active.instanceRoles,
-      isDisabled: !paths.instanceRoles,
+      isDisabled: !isNonEmptyString(paths.instanceRoles),
       key: "instance.roles",
       label: "Roles",
     },
     {
       icon: Settings,
       isActive: active.instanceConfiguration,
-      isDisabled: !paths.instanceConfiguration,
+      isDisabled: !isNonEmptyString(paths.instanceConfiguration),
       key: "instance.configuration",
       label: "Configuration",
     },
@@ -135,35 +140,35 @@ function getDatabaseNav({
         {
           icon: DatabaseZap,
           isActive: active.databaseOverview,
-          isDisabled: !paths.databaseOverview,
+          isDisabled: !isNonEmptyString(paths.databaseOverview),
           key: "database.overview",
           label: "Overview",
         },
         {
           icon: Code2,
           isActive: active.databaseWorkbench,
-          isDisabled: !paths.databaseWorkbench,
+          isDisabled: !isNonEmptyString(paths.databaseWorkbench),
           key: "database.workbench",
           label: "SQL workbench",
         },
         {
           icon: Puzzle,
           isActive: active.databaseExtensions,
-          isDisabled: !paths.databaseExtensions,
+          isDisabled: !isNonEmptyString(paths.databaseExtensions),
           key: "database.extensions",
           label: "Extensions",
         },
         {
           icon: FolderTree,
           isActive: active.databaseExplorer,
-          isDisabled: !paths.databaseExplorer,
+          isDisabled: !isNonEmptyString(paths.databaseExplorer),
           key: "database.explorer",
           label: "Data Explorer",
         },
         {
           icon: SquareTerminal,
           isActive: active.databaseSql,
-          isDisabled: !paths.databaseSql,
+          isDisabled: !isNonEmptyString(paths.databaseSql),
           key: "database.sql",
           label: "SQL",
         },
@@ -201,6 +206,7 @@ function getNextStepHint(scopeLevel: ScopeLevel): string | null {
       return "Select an instance to get started";
     case "instance":
       return "Select a database to explore schemas, extensions, and queries";
+    case "database":
     default:
       return null;
   }

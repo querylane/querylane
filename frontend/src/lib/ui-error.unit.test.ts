@@ -518,7 +518,7 @@ describe("error routing and reporting", () => {
     expect(dependencies.toast.error.mock.calls[0]?.[1]).toMatchObject({
       action: {
         label: "Report bug",
-        onClick: expect.any(Function),
+        onClick: expect.any(Function) as unknown,
       },
     });
   });
@@ -558,11 +558,11 @@ describe("error routing and reporting", () => {
       status: 200,
       summaryFragment: "A proxy in front of Querylane",
     },
-  ] satisfies Array<{
+  ] satisfies {
     kind: UnexpectedResponseInfo["kind"];
     status: number;
     summaryFragment: string;
-  }>)(
+  }[])(
     "renders friendly copy for $kind proxy responses",
     ({ kind, status, summaryFragment }) => {
       const hostileBody = "<html><body>hostile login page</body></html>";

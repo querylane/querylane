@@ -3,7 +3,9 @@ const TANSTACK_MODULE_NOT_FOUND_ERROR_PREFIXES = [
   "error loading dynamically imported module",
   "Importing a module script failed",
 ] as const;
-const RSPACK_CHUNK_LOAD_ERROR_PATTERNS = [/loading (?:css )?chunk \S+ failed/i];
+const RSPACK_CHUNK_LOAD_ERROR_PATTERNS = [
+  /loading (?:css )?chunk \S+ failed/iu,
+];
 const TANSTACK_ROUTER_RELOAD_KEY_PREFIX = "tanstack_router_reload:";
 
 interface ChunkLoadReloadAttemptOptions {
@@ -68,13 +70,13 @@ function reserveChunkLoadReloadAttempt({
 }
 
 function getChunkLoadSessionStorage(): Storage | undefined {
-  if (typeof window === "undefined") {
+  if (typeof globalThis === "undefined") {
     return;
   }
 
   let storage: Storage | undefined;
   try {
-    storage = window.sessionStorage;
+    storage = globalThis.sessionStorage;
   } catch {
     // Session storage can be unavailable in privacy-restricted contexts.
   }

@@ -35,8 +35,8 @@ rs.mock("@tanstack/react-router", () => ({
 const HOST_VIOLATION = "Could not resolve host db.internal.";
 const INSTANCE_ID_VIOLATION = "Instance ID must start with a letter.";
 const CONFIG_VIOLATION = "Connection failed before validation completed.";
-const GENERIC_CREATE_ERROR_RE = /invalid CreateInstanceRequest/;
-const INSTANCE_LIMIT_RE = /instance limit reached/;
+const GENERIC_CREATE_ERROR_RE = /invalid CreateInstanceRequest/u;
+const INSTANCE_LIMIT_RE = /instance limit reached/u;
 
 function createInstanceBadRequestError({
   includeGeneralViolation = false,
@@ -146,14 +146,14 @@ describe("create instance backend field violations", () => {
       target: { value: "x".repeat(256) },
     });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
         screen
           .getAllByRole("alert")
           .map((alert) => alert.textContent)
           .join(" ")
-      ).toContain("255")
-    );
+      ).toContain("255");
+    });
     expect(
       screen
         .getAllByRole("alert")
@@ -220,11 +220,11 @@ describe("create instance backend field violations", () => {
         target: { value: key },
       });
       await user.click(screen.getByRole("button", { name: "Create instance" }));
-      await waitFor(() =>
+      await waitFor(() => {
         expect(
           screen.getByText("Label value is not allowed here.")
-        ).toBeTruthy()
-      );
+        ).toBeTruthy();
+      });
       expect(screen.getByText("This label is reserved.")).toBeTruthy();
       const rejected = screen.getByRole("textbox", { name: "Label key 2" });
       expect(rejected.getAttribute("aria-invalid")).toBe("true");
@@ -275,7 +275,7 @@ describe("create instance backend field violations", () => {
     await waitFor(() => {
       expect(screen.getByText(HOST_VIOLATION)).toBeTruthy();
     });
-    expect(screen.getByText(new RegExp(CONFIG_VIOLATION))).toBeTruthy();
+    expect(screen.getByText(new RegExp(CONFIG_VIOLATION, "u"))).toBeTruthy();
   });
 
   test("maps test-connection BadRequest violations onto connection fields", async () => {
@@ -322,10 +322,12 @@ describe("create instance backend field violations", () => {
   test("focuses the rejected field even when a frame fires before React commits", async () => {
     // A loaded device can run the next animation frame before React commits
     // the error render; focus must wait for the commit, not the frame.
-    rs.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      callback(0);
-      return 0;
-    });
+    rs.spyOn(globalThis, "requestAnimationFrame").mockImplementation(
+      (callback) => {
+        callback(0);
+        return 0;
+      }
+    );
     const user = userEvent.setup();
     renderCreateInstancePage({
       createInstance: async () => ({}),
@@ -408,14 +410,14 @@ test("valid prototype-like label keys cannot bypass value validation", async () 
     target: { value: "x".repeat(256) },
   });
   await user.click(screen.getByRole("button", { name: "Test connection" }));
-  await waitFor(() =>
+  await waitFor(() => {
     expect(
       screen
         .getAllByRole("alert")
         .map((alert) => alert.textContent)
         .join(" ")
-    ).toContain("255")
-  );
+    ).toContain("255");
+  });
   expect(testConnection).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: "Label key 1" })

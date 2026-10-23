@@ -20,11 +20,18 @@ const useDatabaseVisualizationStore = create<DatabaseVisualizationState>()(
     detailScope: "selected-schema",
     direction: "LR",
     roleSelectedNodeId: null,
-    setDatabaseSelectedNodeId: (databaseSelectedNodeId) =>
-      set({ databaseSelectedNodeId }),
-    setDetailScope: (detailScope) => set({ detailScope }),
-    setDirection: (direction) => set({ direction }),
-    setRoleSelectedNodeId: (roleSelectedNodeId) => set({ roleSelectedNodeId }),
+    setDatabaseSelectedNodeId: (databaseSelectedNodeId) => {
+      set({ databaseSelectedNodeId });
+    },
+    setDetailScope: (detailScope) => {
+      set({ detailScope });
+    },
+    setDirection: (direction) => {
+      set({ direction });
+    },
+    setRoleSelectedNodeId: (roleSelectedNodeId) => {
+      set({ roleSelectedNodeId });
+    },
   })
 );
 
