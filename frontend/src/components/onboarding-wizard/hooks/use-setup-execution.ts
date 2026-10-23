@@ -219,6 +219,8 @@ function useSetupExecution({
       })
         .then(() => {
           handleSetupSuccess();
+
+          return undefined;
         })
         .catch((error: unknown) => {
           if (!controller.signal.aborted) {

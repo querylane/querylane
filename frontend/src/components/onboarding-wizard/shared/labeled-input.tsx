@@ -33,7 +33,7 @@ export function LabeledInput({
           {label}
         </Label>
         {isNonEmptyString(description) ? (
-          <p className="text-white/50 text-xs">{description}</p>
+          <p className="text-xs text-white/50">{description}</p>
         ) : null}
       </div>
       {type === "password" ? (

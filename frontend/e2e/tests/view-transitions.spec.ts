@@ -63,6 +63,8 @@ async function openDatabase(page: Page, motion: Motion) {
                   : []
               )
           );
+
+          return undefined;
         })
         .catch((error: unknown) => {
           root.dataset["transitionError"] = String(error);
@@ -70,6 +72,8 @@ async function openDatabase(page: Page, motion: Motion) {
       transition.finished
         .then(() => {
           root.dataset["transitionFinished"] = String(count);
+
+          return undefined;
         })
         .catch((error: unknown) => {
           root.dataset["transitionError"] = String(error);

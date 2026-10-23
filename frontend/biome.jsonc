@@ -196,7 +196,14 @@
         "useRegexLiterals": "error",
         "useSimpleNumberKeys": "error",
         "useSimplifiedLogicExpression": "error",
-        "useWhile": "error"
+        "useWhile": "error",
+        "noExcessiveNestedCallbacks": "error",
+        "noExcessiveSelectorClasses": "error",
+        "noPlaywrightUselessAwait": "error",
+        "noUnnecessaryTemplateExpression": "error",
+        "useArraySome": "error",
+        "useMathMinMax": "error",
+        "useRegexpTest": "error"
       },
       "correctness": {
         "noBeforeInteractiveScriptOutsideDocument": "error",
@@ -335,34 +342,33 @@
         "useVueValidVOnce": "error",
         "useVueValidVPre": "error",
         "useVueValidVText": "error",
-        "useYield": "error"
+        "useYield": "error",
+        "noComponentHookFactories": "off",
+        "noDuplicateFieldDefinitionNames": "error",
+        "noJsxNamespace": "error",
+        "noPlaywrightMissingAwait": "error",
+        "noReactNativeRawText": "off",
+        "noVueImportCompilerMacros": "error",
+        "noVueRefAsOperand": "error",
+        "noVueVOnNumberValues": "error",
+        "usePlaywrightValidDescribeCallback": "error",
+        "useQwikLoaderLocation": "error",
+        "useReactAsyncServerFunction": "error",
+        "useReactNativePlatformComponents": "error",
+        "useVueValidVFor": "error"
       },
       "nursery": {
         "noAstroConflictingSetDirectives": "error",
         "noAstroSetHtmlDirective": "error",
         "noBaseToString": "error",
         "noBunModules": "error",
-        "noComponentHookFactories": "off",
-        "noConditionalExpect": "error",
-        "noDrizzleDeleteWithoutWhere": "error",
-        "noDrizzleUpdateWithoutWhere": "error",
-        "noDuplicateFieldDefinitionNames": "error",
-        "noDuplicateSelectors": "error",
-        "noEmptyObjectKeys": "error",
-        "noExcessiveNestedCallbacks": "error",
-        "noExcessiveSelectorClasses": "error",
         "noExtendNative": "error",
         "noFloatingPromises": "error",
-        "noIdenticalTestTitle": "error",
         "noImpliedEval": "error",
-        "noInlineStyles": "off",
         "noInvalidFileInputAccept": "error",
         "noInvalidPropertyInitValue": "error",
         "noJsRestrictedProperties": "error",
         "noJsonUnsafeValues": "error",
-        "noJsxLeakedDollar": "error",
-        "noJsxNamespace": "error",
-        "noLoopFunc": "error",
         "noMeaninglessVoidOperator": "error",
         "noMisleadingReturnType": "error",
         "noMisplacedListElements": "error",
@@ -370,21 +376,7 @@
         "noNegationInEqualityCheck": "error",
         "noNonScalableViewport": "error",
         "noObsoleteTags": "error",
-        "noPlaywrightElementHandle": "error",
-        "noPlaywrightEval": "error",
-        "noPlaywrightForceOption": "error",
-        "noPlaywrightMissingAwait": "error",
-        "noPlaywrightNetworkidle": "error",
-        "noPlaywrightPagePause": "error",
-        "noPlaywrightUselessAwait": "error",
-        "noPlaywrightWaitForNavigation": "error",
-        "noPlaywrightWaitForSelector": "error",
-        "noPlaywrightWaitForTimeout": "error",
-        "noReactNativeDeepImports": "error",
-        "noReactNativeLiteralColors": "error",
-        "noReactNativeRawText": "off",
         "noReactObjectTypeAsDefaultProp": "error",
-        "noReactStringRefs": "error",
         "noRestrictedDependencies": "error",
         "noReturnInFinally": "error",
         "noSelfImport": "error",
@@ -396,32 +388,19 @@
         "noTailwindArbitraryValue": "off",
         "noTailwindRawColors": "error",
         "noThisOutsideOfClass": "error",
-        "noTopLevelLiterals": "error",
         "noUndeclaredClasses": "error",
         "noUndeclaredCustomProperties": "error",
         "noUnmodifiedLoopCondition": "error",
-        "noUnnecessaryTemplateExpression": "error",
         "noUnsafeIframeSandbox": "error",
         "noUnsafePlusOperands": "error",
         "noUnsafeTypeAssertion": "off",
-        "noUntrustedLicenses": "error",
         "noUnusedClasses": "error",
         "noUselessTypeConversion": "error",
         "noVueDeprecatedScopedSlots": "error",
-        "noVueImportCompilerMacros": "error",
-        "noVueRefAsOperand": "error",
         "noVueUndeclaredDirectives": "error",
-        "noVueVOnNumberValues": "error",
         "noXorAsExponentiation": "error",
-        "useArraySome": "error",
         "useAstroClientOnlyDirectiveValue": "error",
         "useAwaitThenable": "error",
-        "useBaseline": {
-          "level": "error",
-          "options": {
-            "available": "newly"
-          }
-        },
         "useBetterDomTraversing": "off",
         "useConsistentFunctionStyle": {
           "level": "error",
@@ -431,61 +410,102 @@
           }
         },
         "useConsistentObjectKeys": "error",
-        "useConsistentTestIt": {
-          "level": "error",
-          "options": {
-            "function": "test",
-            "withinDescribe": "test"
-          }
-        },
         "useControlLabel": "error",
         "useDisposables": "error",
-        "useDomNodeTextContent": "error",
-        "useDomQuerySelector": "error",
         "useExhaustiveSwitchCases": "error",
-        "useExpect": "error",
         "useExplicitReturnType": "off",
         "useExplicitType": "off",
         "useFlatMathMinMax": "error",
-        "useIframeSandbox": "error",
-        "useImportsFirst": "error",
         "useIncludes": "error",
         "useLayeredStyles": "off",
         "useLogicalProperties": "error",
-        "useMathMinMax": "error",
         "useModernMathApis": "error",
-        "useNamedCaptureGroup": "error",
         "useNamedLayer": "error",
         "useNullishCoalescing": "error",
-        "usePlaywrightValidDescribeCallback": "error",
         "usePromiseRejectErrors": "error",
-        "useQwikLoaderLocation": "error",
-        "useReactAsyncServerFunction": "error",
         "useReactCompiler": "off",
         "useReactFunctionComponentDefinition": "error",
         "useReactNamingConvention": "error",
-        "useReactNativePlatformComponents": "error",
-        "useReduceTypeParameter": "error",
         "useRegexpExec": "error",
-        "useRegexpTest": "error",
-        "useScopedStyles": "error",
-        "useSortedClasses": "error",
         "useStrictBooleanExpressions": "error",
         "useStringStartsEndsWith": "error",
         "useSvelteKitRuneImports": "error",
         "useSvelteRequireEachKey": "error",
         "useTailwindShorthandClasses": "off",
-        "useTestHooksInOrder": "error",
-        "useTestHooksOnTop": "error",
-        "useThisInClassMethods": "error",
-        "useUnicodeRegex": "error",
         "useValidTestTitle": "error",
-        "useVarsOnTop": "error",
         "useVueBaseImport": "error",
-        "useVueConsistentDefinePropsDeclaration": "error",
-        "useVueNextTickPromise": "error",
-        "useVueValidVFor": "error",
-        "preset": "all"
+        "preset": "all",
+        "useTailwindSortedClasses": "error",
+        "noAccidentalBitwiseOperators": "error",
+        "noArgumentsCallerOrCallee": "error",
+        "noDoubleComparison": "error",
+        "noDuplicateMapKeys": "error",
+        "noExcessiveStatementsPerFunction": {
+          "level": "error",
+          "options": {
+            "max": 50
+          }
+        },
+        "noInvalidThis": "error",
+        "noNestedSwitch": "error",
+        "noNestedTemplateLiterals": "error",
+        "noObjectConstructor": "error",
+        "noOctal": "error",
+        "noProcessExit": "error",
+        "noPromiseExecutorReturn": "error",
+        "noSvelteAddEventListener": "error",
+        "noSvelteClassDirective": "error",
+        "noSvelteInspect": "error",
+        "noSvelteObjectInTextMustaches": "error",
+        "noSvelteUselessDerivedBy": "error",
+        "noTailwindLegacyUtilities": "error",
+        "noTailwindRestyledComponents": "off",
+        "noUnsafeUnaryMinus": "error",
+        "noUselessAssignment": "error",
+        "noUselessCall": "error",
+        "noUselessDateGetTime": "error",
+        "noVueBooleanDefault": "error",
+        "noVueLifecycleAfterAwait": "error",
+        "noVueRequiredPropWithDefault": "error",
+        "noVueRootVIf": "error",
+        "noVueShadowNativeEvents": "error",
+        "noVueVHtml": "error",
+        "noVueVText": "error",
+        "noZeroFractions": "error",
+        "useBigintLiterals": "error",
+        "useCapitalizedConstructors": "error",
+        "useConsistentBlockLang": "error",
+        "useConsistentHeadingLevel": "off",
+        "useConsistentJsonFileRead": "error",
+        "useFencedCodeLanguage": "off",
+        "useLowercaseTestTitle": {
+          "level": "error",
+          "options": {
+            "allowedPrefixes": [
+              "AIP ",
+              "Cmd+",
+              "DSN-",
+              "GitHub ",
+              "Go ",
+              "PostgreSQL ",
+              "SQL ",
+              "SSL ",
+              "UI-"
+            ]
+          }
+        },
+        "useMatchingFunctionName": "error",
+        "useNamedFunction": "error",
+        "useSimplifiedBooleanReturn": "error",
+        "useSingleTopLevelHeading": "off",
+        "useSvelteKitResolve": "error",
+        "useSvelteReactiveClasses": "error",
+        "useSvelteShorthandDirective": "error",
+        "useTailwindStaticClassStrings": "error",
+        "useTopLevelHeading": "off",
+        "useUnaryMinus": "error",
+        "useVueConsistentEventHyphenation": "error",
+        "useVueMatchingComponentFileName": "error"
       },
       "performance": {
         "noAccumulatingSpread": "error",
@@ -502,7 +522,8 @@
         "useGoogleFontPreconnect": "error",
         "useSolidForComponent": "off",
         "useTopLevelRegex": "error",
-        "useVueVapor": "error"
+        "useVueVapor": "error",
+        "useDomNodeTextContent": "error"
       },
       "security": {
         "noBlankTarget": "error",
@@ -515,7 +536,8 @@
           "options": {
             "entropyThreshold": 50
           }
-        }
+        },
+        "useIframeSandbox": "error"
       },
       "style": {
         "noCommonJs": "error",
@@ -665,7 +687,31 @@
         "useVueConsistentVOnStyle": "error",
         "useVueDefineMacrosOrder": "error",
         "useVueHyphenatedAttributes": "error",
-        "useVueMultiWordComponentNames": "error"
+        "useVueMultiWordComponentNames": "error",
+        "noInlineStyles": "off",
+        "noPlaywrightElementHandle": "error",
+        "noPlaywrightEval": "error",
+        "noPlaywrightWaitForSelector": "error",
+        "noReactNativeLiteralColors": "error",
+        "noTopLevelLiterals": "error",
+        "useConsistentTestIt": {
+          "level": "error",
+          "options": {
+            "function": "test",
+            "withinDescribe": "test"
+          }
+        },
+        "useDomQuerySelector": "error",
+        "useImportsFirst": "error",
+        "useNamedCaptureGroup": "error",
+        "useReduceTypeParameter": "error",
+        "useTestHooksInOrder": "error",
+        "useTestHooksOnTop": "error",
+        "useThisInClassMethods": "error",
+        "useUnicodeRegex": "error",
+        "useVarsOnTop": "error",
+        "useVueConsistentDefinePropsDeclaration": "error",
+        "useVueNextTickPromise": "error"
       },
       "suspicious": {
         "noAlert": "error",
@@ -792,7 +838,31 @@
         "useNumberToFixedDigitsArgument": "error",
         "useRequiredScripts": "error",
         "useStaticResponseMethods": "error",
-        "useStrictMode": "error"
+        "useStrictMode": "error",
+        "noConditionalExpect": "error",
+        "noDrizzleDeleteWithoutWhere": "error",
+        "noDrizzleUpdateWithoutWhere": "error",
+        "noDuplicateSelectors": "error",
+        "noEmptyObjectKeys": "error",
+        "noIdenticalTestTitle": "error",
+        "noJsxLeakedDollar": "error",
+        "noLoopFunc": "error",
+        "noPlaywrightForceOption": "error",
+        "noPlaywrightNetworkidle": "error",
+        "noPlaywrightPagePause": "error",
+        "noPlaywrightWaitForNavigation": "error",
+        "noPlaywrightWaitForTimeout": "error",
+        "noReactNativeDeepImports": "error",
+        "noReactStringRefs": "error",
+        "noUntrustedLicenses": "error",
+        "useBaseline": {
+          "level": "error",
+          "options": {
+            "available": "newly"
+          }
+        },
+        "useExpect": "error",
+        "useScopedStyles": "error"
       }
     }
   },
@@ -852,6 +922,9 @@
           },
           "suspicious": {
             "noConsole": "off"
+          },
+          "nursery": {
+            "noProcessExit": "off"
           }
         }
       }
@@ -942,6 +1015,14 @@
           "style": {
             "noMagicNumbers": "off",
             "useComponentExportOnlyModules": "off"
+          },
+          "nursery": {
+            "noExcessiveStatementsPerFunction": {
+              "level": "error",
+              "options": {
+                "max": 100
+              }
+            }
           }
         }
       }
@@ -955,5 +1036,16 @@
         }
       }
     }
-  ]
+  ],
+  "tailwind": {
+    "stylesheet": "./src/index.css"
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    },
+    "linter": {
+      "enabled": false
+    }
+  }
 }

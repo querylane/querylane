@@ -96,6 +96,8 @@ function focusInstanceConfigurationInvalidField(field: string) {
           (element) => element.getAttribute("aria-invalid") === "true"
         ) ?? fields[0];
       target?.focus();
+
+      return undefined;
     })
   )();
 }

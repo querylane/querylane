@@ -125,20 +125,20 @@ function NameCell({ role }: { role: Role }) {
       <RoleAvatar kind={kind} size="sm" />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium font-mono text-sm">
+          <span className="truncate font-mono text-sm font-medium">
             {role.roleName}
           </span>
           <RoleKindBadge role={role} />
         </div>
         {isNonEmptyString(subtitle) ? (
-          <div className="truncate text-muted-foreground text-xs">
+          <div className="text-muted-foreground truncate text-xs">
             <span className="truncate">{subtitle}</span>
           </div>
         ) : null}
       </div>
       <ChevronRight
         aria-hidden="true"
-        className="ml-auto size-4 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
+        className="text-muted-foreground/0 group-hover:text-muted-foreground ml-auto size-4 transition-colors"
       />
     </div>
   );
@@ -148,14 +148,14 @@ function LoginCell({ role }: { role: Role }) {
   if (role.attributes?.canLogin === true) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-1.5 rounded-full bg-positive-500" />
+        <span className="bg-positive-500 size-1.5 rounded-full" />
         Yes
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-muted-foreground/35" />
+    <span className="text-muted-foreground inline-flex items-center gap-1.5">
+      <span className="bg-muted-foreground/35 size-1.5 rounded-full" />
       <span>No</span>
     </span>
   );

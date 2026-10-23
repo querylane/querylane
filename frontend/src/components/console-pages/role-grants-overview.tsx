@@ -144,7 +144,7 @@ function SectionHead({
         <CountPill partial={partial} value={count} />
       )}
       {isNonEmptyString(hint) ? (
-        <span className="ml-auto text-muted-foreground text-xs">{hint}</span>
+        <span className="text-muted-foreground ml-auto text-xs">{hint}</span>
       ) : null}
     </div>
   );

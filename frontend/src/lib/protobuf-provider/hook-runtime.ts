@@ -129,7 +129,9 @@ function toDateTimeLocalValue(
   const fraction = date.getMilliseconds()
     ? `.${String(date.getMilliseconds()).padStart(MILLISECOND_DIGITS, "0").replace(TRAILING_FRACTION_ZEROES, "")}`
     : "";
-  return `${year}-${month}-${day}T${hours}:${minutes}${date.getSeconds() || fraction ? `:${seconds}${fraction}` : ""}`;
+  const secondsSuffix =
+    date.getSeconds() || fraction ? `:${seconds}${fraction}` : "";
+  return `${year}-${month}-${day}T${hours}:${minutes}${secondsSuffix}`;
 }
 
 function objectHasValues(value: Record<string, unknown>): boolean {

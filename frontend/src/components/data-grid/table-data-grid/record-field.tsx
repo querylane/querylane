@@ -100,7 +100,7 @@ function RecordField({
       .then((full) => {
         const kind = full.value?.kind;
         if (kind?.case !== "bytesValue") {
-          return;
+          return undefined;
         }
         const filename = buildByteaDownloadFilename({
           columnName: column.columnName,
@@ -114,6 +114,8 @@ function RecordField({
           new Uint8Array(kind.value),
           "application/octet-stream"
         );
+
+        return undefined;
       })
       .catch(() => toast.error("Couldn't download the value"));
   }

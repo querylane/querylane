@@ -75,6 +75,8 @@ function useUrlTableSearch(
             setDraftSearchText(settledRouteSearchTextRef.current);
           }
         }
+
+        return undefined;
       })
       .catch((error: unknown) => {
         handleNavigationError(error, { area: "url-table-search" });

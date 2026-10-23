@@ -47,7 +47,7 @@ function getStepStateLabel(state: StepState): string {
 function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
-      <span className="flex size-8 items-center justify-center rounded-full border border-positive-400/45 bg-positive-500/14 text-positive-300">
+      <span className="border-positive-400/45 bg-positive-500/14 text-positive-300 flex size-8 items-center justify-center rounded-full border">
         <Check aria-hidden="true" className="size-4" />
       </span>
     );
@@ -64,7 +64,7 @@ function StepStateIcon({ state }: { state: StepState }) {
   }
   if (state === StepState.FAILED) {
     return (
-      <span className="flex size-8 items-center justify-center rounded-full border border-negative-400/40 bg-negative-500/12 text-negative-200">
+      <span className="border-negative-400/40 bg-negative-500/12 text-negative-200 flex size-8 items-center justify-center rounded-full border">
         <X aria-hidden="true" className="size-4" />
       </span>
     );
@@ -137,17 +137,17 @@ function ProgressStepItem({
             )}
           />
         )}
-        <div className="relative z-10 rounded-full bg-background p-1">
+        <div className="bg-background relative z-10 rounded-full p-1">
           <StepStateIcon state={event.state} />
         </div>
       </div>
       <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-2.5">
         <div className="space-y-1.5">
-          <div className="font-medium text-sm text-white">
+          <div className="text-sm font-medium text-white">
             {event.displayName}
           </div>
           {isNonEmptyString(detail) ? (
-            <p className="max-w-3xl text-sm text-white/58 leading-6">
+            <p className="max-w-3xl text-sm leading-6 text-white/58">
               {detail}
             </p>
           ) : null}

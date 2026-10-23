@@ -128,7 +128,7 @@ function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <SchemaObjectIcon row={row} />
-      <span className="text-(length:--text-caption) truncate font-mono">
+      <span className="truncate font-mono text-(length:--text-caption)">
         {row.displayName}
       </span>
     </span>

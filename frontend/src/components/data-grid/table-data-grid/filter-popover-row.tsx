@@ -118,7 +118,7 @@ function BooleanValueSelect({
     >
       <SelectTrigger
         aria-label="Filter value"
-        className="@lg/filter-popover:col-start-auto col-start-1 w-full"
+        className="col-start-1 w-full @lg/filter-popover:col-start-auto"
         size="sm"
       >
         <SelectValue placeholder="Select value" />
@@ -228,7 +228,7 @@ function FilterRow({
   function renderValueEditor() {
     if (operatorMeta.valueCount === 0) {
       return (
-        <div className="@lg/filter-popover:col-start-auto col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-muted-foreground text-xs">
+        <div className="text-muted-foreground col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-xs @lg/filter-popover:col-start-auto">
           No value needed
         </div>
       );
@@ -248,7 +248,7 @@ function FilterRow({
     }
     return (
       <div
-        className="@lg/filter-popover:col-start-auto col-start-1 grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2"
+        className="col-start-1 grid min-w-0 grid-cols-1 gap-1.5 data-[range=true]:grid-cols-2 @lg/filter-popover:col-start-auto"
         data-range={operatorMeta.valueCount === 2}
       >
         <Input
@@ -289,11 +289,11 @@ function FilterRow({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <div className="grid @lg/filter-popover:grid-cols-[minmax(6rem,1fr)_14rem_minmax(7.5rem,1fr)_2rem] grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-center gap-1.5 @lg/filter-popover:grid-cols-[minmax(6rem,1fr)_14rem_minmax(7.5rem,1fr)_2rem]">
         <Select onValueChange={changeColumn} value={rule.column}>
           <SelectTrigger
             aria-label="Filter column"
-            className="@lg/filter-popover:col-span-1 col-span-2 w-full"
+            className="col-span-2 w-full @lg/filter-popover:col-span-1"
             presentation="identifier"
             size="sm"
           >
@@ -313,7 +313,7 @@ function FilterRow({
                   >
                     {candidate.columnName}
                   </span>
-                  <span className="max-w-[45%] shrink-0 truncate font-mono text-muted-foreground text-xs uppercase">
+                  <span className="text-muted-foreground max-w-[45%] shrink-0 truncate font-mono text-xs uppercase">
                     {candidate.rawType}
                   </span>
                 </span>
@@ -322,7 +322,7 @@ function FilterRow({
           </SelectContent>
         </Select>
 
-        <div className="@lg/filter-popover:col-span-1 col-span-2 flex min-w-0 items-center gap-1">
+        <div className="col-span-2 flex min-w-0 items-center gap-1 @lg/filter-popover:col-span-1">
           <Button
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}
@@ -375,7 +375,7 @@ function FilterRow({
         </Button>
       </div>
       {isNonEmptyString(invalidMessage) ? (
-        <p className="pl-1 text-destructive text-xs" id={messageId}>
+        <p className="text-destructive pl-1 text-xs" id={messageId}>
           {invalidMessage}
         </p>
       ) : null}

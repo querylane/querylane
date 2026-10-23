@@ -44,7 +44,7 @@ function ResourceMetadata({
       {item.badge ? (
         <span
           className={cn(
-            "text-(length:--text-micro) shrink-0 rounded border px-1.5 py-px font-mono uppercase tracking-wider",
+            "shrink-0 rounded border px-1.5 py-px font-mono tracking-wider text-(length:--text-micro) uppercase",
             item.badge.tone === "amber" &&
               "border-warning-400/40 bg-warning-500/10 text-warning-700 dark:text-warning-400",
             item.badge.tone === "blue" &&
@@ -61,7 +61,7 @@ function ResourceMetadata({
       {isNonEmptyString(item.sizeLabel) ? (
         <span
           className={cn(
-            "text-(length:--text-label-sm) @max-[15rem]/object-browser:hidden w-16 text-right font-mono tabular-nums",
+            "w-16 text-right font-mono text-(length:--text-label-sm) tabular-nums @max-[15rem]/object-browser:hidden",
             isItemSelected ? "text-foreground/80" : "text-muted-foreground"
           )}
         >

@@ -63,7 +63,7 @@ const tabsListPresentations = cva("", {
       "sql-results": "bg-transparent p-0",
       "sql-workbench": "h-full justify-start rounded-none bg-transparent p-0",
       metrics:
-        "divide-y divide-border rounded-none border-border border-b bg-transparent p-0 sm:divide-y-0",
+        "divide-border border-border divide-y rounded-none border-b bg-transparent p-0 sm:divide-y-0",
     },
   },
 });

@@ -41,14 +41,14 @@ import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 function GrantRowName({ object }: { object: GrantedObject }) {
   if (RELATION_TYPES.has(object.objectType) && object.schemaName) {
     return (
-      <span className="text-(length:--text-label-lg) truncate font-mono">
+      <span className="truncate font-mono text-(length:--text-label-lg)">
         <span className="text-muted-foreground">{object.schemaName}.</span>
         {object.objectName}
       </span>
     );
   }
   return (
-    <span className="text-(length:--text-label-lg) truncate font-mono">
+    <span className="truncate font-mono text-(length:--text-label-lg)">
       {objectDisplayName(object)}
     </span>
   );
@@ -81,12 +81,12 @@ function ObjectRow({
       >
         <ChevronRight
           className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform",
+            "text-muted-foreground size-3 shrink-0 transition-transform",
             open && "rotate-90"
           )}
         />
         <GrantRowName object={object} />
-        <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-muted-foreground text-xs">
+        <span className="text-muted-foreground ml-auto shrink-0 font-mono text-xs whitespace-nowrap">
           {heldCount} priv{heldCount === 1 ? "" : "s"}
           {grantCount > 0 ? (
             <span className="text-warning-600/90 dark:text-warning-400/90">
@@ -97,7 +97,7 @@ function ObjectRow({
         </span>
       </Button>
       {open ? (
-        <div className="mt-1 flex flex-col gap-1.5 border-border/60 border-t border-dashed py-2 pr-1.5 pl-6.5">
+        <div className="border-border/60 mt-1 flex flex-col gap-1.5 border-t border-dashed py-2 pr-1.5 pl-6.5">
           <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
             <span className="text-muted-foreground text-xs">privileges</span>
             <HeldPillStrip columns={columns} object={object} />
@@ -106,7 +106,7 @@ function ObjectRow({
             <div className="grid grid-cols-[90px_1fr] items-center gap-3 text-xs">
               <span className="text-muted-foreground text-xs">granted by</span>
               <span
-                className="text-(length:--text-xs) font-mono text-foreground/85"
+                className="text-foreground/85 font-mono text-(length:--text-xs)"
                 title={grantor.title}
               >
                 {grantor.text}
@@ -152,11 +152,11 @@ function SchemaFilterBar({
   unit: string;
 }) {
   return (
-    <div className="mb-1 flex flex-col gap-1.5 border-border border-b px-1.5 pt-1.5 pb-2">
+    <div className="border-border mb-1 flex flex-col gap-1.5 border-b px-1.5 pt-1.5 pb-2">
       <div className="relative w-full max-w-sm">
         <Search
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
         />
         <Input
           aria-label={`Filter ${unit}s in ${schema}`}
@@ -204,7 +204,7 @@ function SchemaFilterBar({
           </Button>
         ) : null}
         {filterActive ? (
-          <span className="ml-auto font-mono text-muted-foreground text-xs tracking-label">
+          <span className="text-muted-foreground tracking-label ml-auto font-mono text-xs">
             {matchCount.toLocaleString()} match{matchCount === 1 ? "" : "es"}
           </span>
         ) : null}
@@ -243,27 +243,27 @@ function SchemaSectionHeader({
     >
       <ChevronRight
         className={cn(
-          "size-3 shrink-0 text-muted-foreground transition-transform",
+          "text-muted-foreground size-3 shrink-0 transition-transform",
           open && "rotate-90"
         )}
       />
-      <FolderTree className="size-3.5 shrink-0 text-muted-foreground" />
+      <FolderTree className="text-muted-foreground size-3.5 shrink-0" />
       <span className="flex min-w-0 flex-col items-start">
-        <span className="text-(length:--text-caption) truncate font-medium font-mono leading-tight">
+        <span className="truncate font-mono leading-tight font-medium text-(length:--text-caption)">
           {schema}
         </span>
         {isNonEmptyString(grantor) ? (
-          <span className="truncate text-muted-foreground text-xs leading-tight">
+          <span className="text-muted-foreground truncate text-xs leading-tight">
             granted by{" "}
-            <span className="font-mono text-foreground/75 text-xs">
+            <span className="text-foreground/75 font-mono text-xs">
               {grantor}
             </span>
           </span>
         ) : null}
       </span>
-      <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-foreground/78 text-xs tracking-label">
+      <span className="text-foreground/78 tracking-label ml-auto shrink-0 font-mono text-xs whitespace-nowrap">
         <span className="font-medium">{objects.length.toLocaleString()}</span>
-        <span className="ml-1 font-normal text-muted-foreground">
+        <span className="text-muted-foreground ml-1 font-normal">
           {unit}
           {objects.length === 1 ? "" : "s"}
         </span>
@@ -366,7 +366,7 @@ function SchemaSectionBody({
             ? "Show fewer"
             : `Show all ${filtered.length.toLocaleString()} ${unit}s${filterActive ? " matching filters" : ""}`}
           {shouldShowHiddenObjectCount(showAll, overflow) ? (
-            <span className="ml-1.5 text-muted-foreground/70">
+            <span className="text-muted-foreground/70 ml-1.5">
               · +{overflow.toLocaleString()} hidden
             </span>
           ) : null}
@@ -538,15 +538,15 @@ function GroupHeader({
     >
       <ChevronRight
         className={cn(
-          "size-3.5 shrink-0 text-muted-foreground transition-transform",
+          "text-muted-foreground size-3.5 shrink-0 transition-transform",
           open && "rotate-90"
         )}
       />
-      <span className="flex size-[22px] shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+      <span className="bg-secondary text-muted-foreground flex size-[22px] shrink-0 items-center justify-center rounded-md">
         <Icon className="size-3.5" />
       </span>
-      <span className="font-medium text-sm">{title}</span>
-      <span className="font-mono text-muted-foreground text-xs tracking-control">
+      <span className="text-sm font-medium">{title}</span>
+      <span className="text-muted-foreground tracking-control font-mono text-xs">
         {count.toLocaleString()}
       </span>
       <span className="ml-auto flex items-center">{density}</span>
@@ -645,20 +645,20 @@ function FlatGroup({
             const grantor = grantorSummary(object.grantors);
             return (
               <div
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-sm p-1.5 hover:bg-foreground/3"
+                className="hover:bg-foreground/3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-sm p-1.5"
                 key={object.key}
               >
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-(length:--text-label-lg) truncate font-mono leading-tight">
+                  <span className="truncate font-mono leading-tight text-(length:--text-label-lg)">
                     {objectDisplayName(object)}
                   </span>
                   {grantor ? (
                     <span
-                      className="truncate text-muted-foreground text-xs leading-tight"
+                      className="text-muted-foreground truncate text-xs leading-tight"
                       title={grantor.title}
                     >
                       granted by{" "}
-                      <span className="font-mono text-foreground/75 text-xs">
+                      <span className="text-foreground/75 font-mono text-xs">
                         {grantor.text}
                       </span>
                     </span>

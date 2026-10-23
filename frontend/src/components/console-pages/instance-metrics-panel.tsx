@@ -85,14 +85,14 @@ function PanelHeader({
   onRangeChange: (rangeHours: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 border-border border-b px-4 py-2.5">
-      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+    <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2.5">
+      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         Metrics
       </span>
       {/* A clock icon frames the segmented picker as a trailing time window
           (the Grafana/Datadog convention); the comparison control lives on the
           chart itself, next to the line it toggles, not up here. */}
-      <div className="flex items-center gap-1.5 text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-1.5">
         <Clock aria-hidden="true" className="size-3.5" />
         <ChartRangePicker
           onRangeChange={onRangeChange}
@@ -124,10 +124,10 @@ function TabTrigger({
       presentation="metric"
       value={tab.key}
     >
-      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {tab.label}
       </span>
-      <span className="font-bold font-mono text-foreground text-xl tabular-nums tracking-tight">
+      <span className="text-foreground font-mono text-xl font-bold tracking-tight tabular-nums">
         {formatted}
       </span>
       {trend ? (
@@ -171,16 +171,16 @@ function CollectingStat({
 
   return (
     <div className="flex flex-col items-start gap-1.5 px-4 py-3 text-left">
-      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {tab.label}
       </span>
-      <span className="font-bold font-mono text-foreground text-xl tabular-nums tracking-tight">
+      <span className="text-foreground font-mono text-xl font-bold tracking-tight tabular-nums">
         {formatted}
       </span>
-      <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
+      <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
         <span
           aria-hidden="true"
-          className="size-1.5 animate-pulse rounded-full bg-success motion-reduce:animate-none"
+          className="bg-success size-1.5 animate-pulse rounded-full motion-reduce:animate-none"
         />
         collecting
       </span>
@@ -424,7 +424,7 @@ export function InstanceMetricsPanel({
     return (
       <Card presentation="bordered">
         <CardContent>
-          <div className="h-96 w-full animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
+          <div className="bg-muted/40 h-96 w-full animate-pulse rounded-lg motion-reduce:animate-none" />
         </CardContent>
       </Card>
     );
@@ -455,7 +455,7 @@ export function InstanceMetricsPanel({
     return (
       <Card presentation="bordered-flush">
         <PanelHeader onRangeChange={onRangeChange} range={range} />
-        <div className="grid w-full grid-cols-2 divide-y divide-border border-border border-b sm:grid-cols-4 sm:divide-y-0">
+        <div className="divide-border border-border grid w-full grid-cols-2 divide-y border-b sm:grid-cols-4 sm:divide-y-0">
           {METRIC_TABS.map((tab) => (
             <CollectingStat key={tab.key} series={series} tab={tab} />
           ))}

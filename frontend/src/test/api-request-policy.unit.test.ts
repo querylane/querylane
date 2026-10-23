@@ -49,7 +49,7 @@ test.each([
     expected: false,
   },
 ])(
-  "RPC guard policy: $method $url $contentType -> $expected",
+  "rpc guard policy: $method $url $contentType -> $expected",
   ({ url, method, contentType, protocol, expected }) => {
     expect(
       shouldGuardApiRequest({

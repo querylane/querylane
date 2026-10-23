@@ -577,7 +577,7 @@ function SidebarRail({ className, ...props }: ComponentProps<typeof Button>) {
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "group-data-[side=left]:group-data-[state=collapsed]:cursor-e-resize group-data-[side=right]:group-data-[state=collapsed]:cursor-w-resize",
-        "group-data-[collapsible=offcanvas]:translate-x-0 hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:after:left-full",
+        "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
         "group-data-[side=left]:group-data-[collapsible=offcanvas]:-right-2",
         "group-data-[side=right]:group-data-[collapsible=offcanvas]:-left-2",
         "h-auto rounded-none border-0 bg-transparent p-0 text-inherit shadow-none hover:bg-transparent",

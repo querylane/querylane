@@ -83,12 +83,12 @@ function PlanNodeInspector({
           {node.nodeType}
         </h3>
         {isNonEmptyString(node.relationName) ? (
-          <p className="mt-1 break-all font-mono text-sm">
+          <p className="mt-1 font-mono text-sm break-all">
             {node.relationName}
           </p>
         ) : null}
         {isNonEmptyString(node.indexName) ? (
-          <p className="mt-1 break-all font-mono text-muted-foreground text-xs">
+          <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
             {node.indexName}
           </p>
         ) : null}
@@ -107,7 +107,7 @@ function PlanNodeInspector({
         </div>
         {DESCRIPTIONS[node.nodeType] !== undefined &&
         DESCRIPTIONS[node.nodeType] !== "" ? (
-          <p className="mt-3 text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
             {DESCRIPTIONS[node.nodeType]}
           </p>
         ) : null}

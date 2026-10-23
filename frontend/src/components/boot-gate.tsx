@@ -70,7 +70,7 @@ function FullscreenMessage({
       className="flex min-h-dvh items-center justify-center p-4"
     >
       <div className="max-w-md space-y-4 text-center">
-        <h1 className="font-semibold text-2xl">{title}</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         {isNonEmptyString(description) ? (
           <p className="text-muted-foreground text-sm">{description}</p>
         ) : null}

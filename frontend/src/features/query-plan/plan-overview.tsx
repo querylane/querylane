@@ -100,7 +100,7 @@ function PlanOverview({
                       "h-full w-(--plan-share) shrink",
                       node.id === hotspot?.id ? "bg-chart-4" : "bg-chart-2/55",
                       node.id === selectedId &&
-                        "ring-1 ring-foreground ring-inset"
+                        "ring-foreground ring-1 ring-inset"
                     )}
                     key={node.id}
                     style={{
@@ -139,7 +139,7 @@ function PlanOverview({
                     value={node.id}
                   >
                     {planNodeTitle(node)}
-                    <span className="ml-auto pl-4 font-mono text-muted-foreground text-xs">
+                    <span className="text-muted-foreground ml-auto pl-4 font-mono text-xs">
                       {formatPlanMs(node.exclusiveMs ?? 0)}
                     </span>
                   </DropdownMenuRadioItem>

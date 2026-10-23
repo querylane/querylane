@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { isNonEmptyString } from "@/lib/value-guards";
 
 interface RetryActionButtonProps {
@@ -43,28 +44,30 @@ export function RetryActionButton({
     };
   }, []);
 
-  const handleRetry = () => {
-    if (retryPending) {
-      return;
-    }
+  function handleRetry() {
+    handleAsyncAction(() => {
+      if (retryPending) {
+        return;
+      }
 
-    setRetryPending(true);
-    setRetryError(null);
-    Promise.resolve()
-      .then(() => onRetry())
-      .catch(() => {
-        if (mountedRef.current) {
-          setRetryError(
-            "Retry failed. Review the error details or try again in a moment."
-          );
-        }
-      })
-      .finally(() => {
-        if (mountedRef.current) {
-          setRetryPending(false);
-        }
-      });
-  };
+      setRetryPending(true);
+      setRetryError(null);
+      return Promise.resolve()
+        .then(() => onRetry())
+        .catch(() => {
+          if (mountedRef.current) {
+            setRetryError(
+              "Retry failed. Review the error details or try again in a moment."
+            );
+          }
+        })
+        .finally(() => {
+          if (mountedRef.current) {
+            setRetryPending(false);
+          }
+        });
+    })();
+  }
 
   return (
     <span className="inline-flex flex-col items-start gap-1">

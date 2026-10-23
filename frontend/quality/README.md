@@ -44,6 +44,8 @@ Biome's formatting settings are materialized from Ultracite. Oxlint copies prese
 
 The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, or a changed tool pin. It also verifies every recorded error against Biome's explicit configuration, Oxlint's effective native configuration, Doctor's effective severities, and the loaded shadcn plugin configuration. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
+The rebase onto the upstream Biome 2.6.2 / Ultracite 8.0.2 upgrade migrates 59 promoted rule IDs and the Tailwind sorting rename, and records 50 additional catalog entries. The project stylesheet drives Tailwind detection. Import-aware shadcn still owns registry restyling; Blume owns documentation rather than claiming Markdown coverage here. App functions retain the upstream 50-statement limit; test functions use its 100-statement contract. Node CLI wrappers can propagate subprocess exit statuses. The stronger Promise preset requires explicit fulfillment returns and handled finalization; existing async-action boundaries preserve event/effect behavior.
+
 Some deliberate decisions:
 
 - React Compiler owns memoization. Do not introduce manual memoization solely to satisfy duplicate allocation heuristics.

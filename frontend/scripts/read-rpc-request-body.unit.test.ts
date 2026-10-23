@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@rstest/core";
 import { readRpcRequestBody } from "../e2e/tests/read-rpc-request-body";
 
-describe("RPC fixture request boundary", () => {
+describe("rpc fixture request boundary", () => {
   test("retains typed routing fields and endpoint-specific payloads", () => {
     expect(
       readRpcRequestBody({

@@ -390,7 +390,7 @@ function SessionWaitEvent({ row }: { row: ActivitySessionRow }) {
     <div className="border-border rounded-lg border p-3">
       <div className="font-mono text-sm">{row.wait}</div>
       {isNonEmptyString(row.waitExplanation) ? (
-        <p className="mt-1 text-muted-foreground text-xs">
+        <p className="text-muted-foreground mt-1 text-xs">
           {row.waitExplanation}
         </p>
       ) : null}
@@ -697,8 +697,8 @@ function ActivityPageHeader({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold text-2xl tracking-tight">Activity</h2>
-        <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-xs">
+        <h2 className="text-2xl font-semibold tracking-tight">Activity</h2>
+        <div className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
           {isNonEmptyString(lastRefreshedLabel) ? (
             <span className="hidden sm:inline">{lastRefreshedLabel}</span>
           ) : null}

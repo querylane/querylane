@@ -114,7 +114,12 @@ function escapeTableCell(value: string) {
 }
 
 function renderDiagnostic(diagnostic: DoctorDiagnostic) {
-  const lineSuffix = typeof diagnostic.line === "number" && diagnostic.line !== 0 && !Number.isNaN(diagnostic.line) ? `:${diagnostic.line}` : "";
+  const lineSuffix =
+    typeof diagnostic.line === "number" &&
+    diagnostic.line !== 0 &&
+    !Number.isNaN(diagnostic.line)
+      ? `:${diagnostic.line}`
+      : "";
   const location = isNonEmptyString(diagnostic.filePath)
     ? `${diagnostic.filePath}${lineSuffix}`
     : "unknown";

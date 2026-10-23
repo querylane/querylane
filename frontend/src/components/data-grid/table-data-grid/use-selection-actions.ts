@@ -234,13 +234,15 @@ function useSelectionActions({
           const result = buildSelectionExport(exportFormat, exportRows);
           if (!result.ok) {
             reportTruncatedExport(result);
-            return;
+            return undefined;
           }
           downloadBlob(
             result.payload.filename,
             result.payload.contents,
             result.payload.mimeType
           );
+
+          return undefined;
         })
         .catch(() => toast.error("Couldn't fetch full values for the export"));
     },

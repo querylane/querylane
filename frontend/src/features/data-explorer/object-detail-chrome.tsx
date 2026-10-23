@@ -38,7 +38,7 @@ function ObjectDetailHeader({
         <div className="min-w-0">
           <h1
             aria-label={titleAriaLabel}
-            className="truncate font-mono font-semibold text-lg leading-tight"
+            className="truncate font-mono text-lg leading-tight font-semibold"
             title={titleAriaLabel}
           >
             {isNonEmptyString(titlePrefix) ? (
@@ -47,7 +47,7 @@ function ObjectDetailHeader({
             {title}
           </h1>
           {Boolean(subtitle) ? (
-            <p className="truncate font-mono text-muted-foreground text-xs">
+            <p className="text-muted-foreground truncate font-mono text-xs">
               {subtitle}
             </p>
           ) : null}

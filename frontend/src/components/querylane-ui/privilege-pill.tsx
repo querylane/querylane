@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { TooltipTrigger } from "@/components/ui/tooltip";
 
 const privilegePill = cva(
-  "inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none tracking-section",
+  "tracking-section inline-flex h-[18px] items-center justify-center gap-0.5 rounded border px-1.5 font-mono text-xs leading-none",
   {
     variants: {
       tone: {
@@ -27,7 +27,7 @@ const privilegePill = cva(
           "border-warning-500/20 bg-warning-500/5 text-warning-600/80 dark:text-warning-400/80",
       },
       empty: {
-        true: "min-w-[2.75rem] border-border/50 border-dashed text-muted-foreground/40",
+        true: "border-border/50 text-muted-foreground/40 min-w-[2.75rem] border-dashed",
       },
       counted: { true: "min-w-[2.75rem]" },
     },

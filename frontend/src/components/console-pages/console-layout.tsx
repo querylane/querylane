@@ -144,7 +144,7 @@ export function InstanceStatItem({
         <div className="flex min-h-7 items-baseline gap-1.5">
           {children}
           {isNonEmptyString(suffix) ? (
-            <span className="font-mono text-muted-foreground text-xs tabular-nums">
+            <span className="text-muted-foreground font-mono text-xs tabular-nums">
               {suffix}
             </span>
           ) : null}
@@ -198,7 +198,7 @@ export function PageHeader({
           {title}
         </h1>
         {isNonEmptyString(description) ? (
-          <p className="max-w-3xl text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground max-w-3xl">{description}</p>
         ) : null}
       </div>
     </div>

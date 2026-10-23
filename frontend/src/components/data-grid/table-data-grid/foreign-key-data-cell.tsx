@@ -299,6 +299,8 @@ function ForeignKeyDataCell({
     fetchPromise
       .then(() => {
         finishOpenIntent(intent);
+
+        return undefined;
       })
       .catch(() => {
         finishOpenIntent(intent);

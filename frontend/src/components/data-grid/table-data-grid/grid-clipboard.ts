@@ -9,6 +9,8 @@ function writeClipboard(value: string) {
     .writeText(value)
     .then(() => {
       toast.success("Copied", { duration: 1500 });
+
+      return undefined;
     })
     .catch(() => {
       toast.error("Couldn't copy to clipboard");

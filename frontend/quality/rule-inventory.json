@@ -1,7 +1,7 @@
 {
   "versions": {
-    "@biomejs/biome": "2.5.15",
-    "ultracite": "8.0.1",
+    "@biomejs/biome": "2.6.2",
+    "ultracite": "8.0.2",
     "oxlint": "1.89.0",
     "@shadcn/lint": "0.2.3",
     "react-doctor": "0.9.18",
@@ -286,10 +286,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-excessive-lines-per-function/"
     },
     {
+      "rule": "complexity/noExcessiveNestedCallbacks",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-excessive-nested-callbacks/"
+    },
+    {
       "rule": "complexity/noExcessiveNestedTestSuites",
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-excessive-nested-test-suites/"
+    },
+    {
+      "rule": "complexity/noExcessiveSelectorClasses",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-excessive-selector-classes/"
     },
     {
       "rule": "complexity/noExtraBooleanCast",
@@ -322,6 +334,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-important-styles/"
     },
     {
+      "rule": "complexity/noPlaywrightUselessAwait",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-useless-await/"
+    },
+    {
       "rule": "complexity/noRedundantDefaultExport",
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
@@ -338,6 +356,12 @@
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-this-in-static/"
+    },
+    {
+      "rule": "complexity/noUnnecessaryTemplateExpression",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-unnecessary-template-expression/"
     },
     {
       "rule": "complexity/noUselessCatch",
@@ -466,6 +490,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-array-find/"
     },
     {
+      "rule": "complexity/useArraySome",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-array-some/"
+    },
+    {
       "rule": "complexity/useArrowFunction",
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
@@ -496,6 +526,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-literal-keys/"
     },
     {
+      "rule": "complexity/useMathMinMax",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-math-min-max/"
+    },
+    {
       "rule": "complexity/useMaxParams",
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
@@ -518,6 +554,12 @@
       "decision": "error",
       "reason": "Enforce this complexity contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-regex-literals/"
+    },
+    {
+      "rule": "complexity/useRegexpTest",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-regexp-test/"
     },
     {
       "rule": "complexity/useSimpleNumberKeys",
@@ -550,10 +592,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-children-prop/"
     },
     {
-      "rule": "correctness/noConstAssign",
-      "decision": "error",
-      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-const-assign/"
+      "rule": "correctness/noComponentHookFactories",
+      "decision": "inapplicable",
+      "reason": "Module-scoped test wrapper factories have stable identities; native static-components and production compilation enforce React identity.",
+      "docs": "https://biomejs.dev/linter/rules/no-component-hook-factories/"
     },
     {
       "rule": "correctness/noConstantCondition",
@@ -566,6 +608,12 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-constant-math-min-max-clamp/"
+    },
+    {
+      "rule": "correctness/noConstAssign",
+      "decision": "error",
+      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-const-assign/"
     },
     {
       "rule": "correctness/noConstructorReturn",
@@ -590,6 +638,12 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-duplicate-enum-value-names/"
+    },
+    {
+      "rule": "correctness/noDuplicateFieldDefinitionNames",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-duplicate-field-definition-names/"
     },
     {
       "rule": "correctness/noDuplicateInputFieldNames",
@@ -670,6 +724,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-invalid-use-before-declaration/"
     },
     {
+      "rule": "correctness/noJsxNamespace",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-jsx-namespace/"
+    },
+    {
       "rule": "correctness/noMissingVarFunction",
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
@@ -700,6 +760,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-nonoctal-decimal-escape/"
     },
     {
+      "rule": "correctness/noPlaywrightMissingAwait",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-missing-await/"
+    },
+    {
       "rule": "correctness/noPrecisionLoss",
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
@@ -722,6 +788,12 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-qwik-use-visible-task/"
+    },
+    {
+      "rule": "correctness/noReactNativeRawText",
+      "decision": "inapplicable",
+      "reason": "This is web React, not React Native.",
+      "docs": "https://biomejs.dev/linter/rules/no-react-native-raw-text/"
     },
     {
       "rule": "correctness/noReactPropAssignments",
@@ -922,6 +994,18 @@
       "docs": "https://biomejs.dev/linter/rules/no-vue-duplicate-keys/"
     },
     {
+      "rule": "correctness/noVueImportCompilerMacros",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-import-compiler-macros/"
+    },
+    {
+      "rule": "correctness/noVueRefAsOperand",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-ref-as-operand/"
+    },
+    {
       "rule": "correctness/noVueReservedKeys",
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
@@ -944,6 +1028,12 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-vue-v-if-with-v-for/"
+    },
+    {
+      "rule": "correctness/noVueVOnNumberValues",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-on-number-values/"
     },
     {
       "rule": "correctness/useExhaustiveDependencies",
@@ -1012,10 +1102,22 @@
       "docs": "https://biomejs.dev/linter/rules/use-parse-int-radix/"
     },
     {
+      "rule": "correctness/usePlaywrightValidDescribeCallback",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-playwright-valid-describe-callback/"
+    },
+    {
       "rule": "correctness/useQwikClasslist",
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-qwik-classlist/"
+    },
+    {
+      "rule": "correctness/useQwikLoaderLocation",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-qwik-loader-location/"
     },
     {
       "rule": "correctness/useQwikMethodUsage",
@@ -1028,6 +1130,18 @@
       "decision": "inapplicable",
       "reason": "This is React, not Qwik.",
       "docs": "https://biomejs.dev/linter/rules/use-qwik-valid-lexical-scope/"
+    },
+    {
+      "rule": "correctness/useReactAsyncServerFunction",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-react-async-server-function/"
+    },
+    {
+      "rule": "correctness/useReactNativePlatformComponents",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-react-native-platform-components/"
     },
     {
       "rule": "correctness/useSingleJsDocAsterisk",
@@ -1052,12 +1166,6 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-valid-typeof/"
-    },
-    {
-      "rule": "correctness/useVueVForKey",
-      "decision": "error",
-      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-vue-v-for-key/"
     },
     {
       "rule": "correctness/useVueValidTemplateRoot",
@@ -1088,6 +1196,12 @@
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-else-if/"
+    },
+    {
+      "rule": "correctness/useVueValidVFor",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-for/"
     },
     {
       "rule": "correctness/useVueValidVHtml",
@@ -1126,10 +1240,28 @@
       "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-text/"
     },
     {
+      "rule": "correctness/useVueVForKey",
+      "decision": "error",
+      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-v-for-key/"
+    },
+    {
       "rule": "correctness/useYield",
       "decision": "error",
       "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-yield/"
+    },
+    {
+      "rule": "nursery/noAccidentalBitwiseOperators",
+      "decision": "error",
+      "reason": "Disallow bitwise operators where a logical operator was likely intended. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-accidental-bitwise-operators/"
+    },
+    {
+      "rule": "nursery/noArgumentsCallerOrCallee",
+      "decision": "error",
+      "reason": "Disallow the use of arguments.caller and arguments.callee. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-arguments-caller-or-callee/"
     },
     {
       "rule": "nursery/noAstroConflictingSetDirectives",
@@ -1156,58 +1288,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-bun-modules/"
     },
     {
-      "rule": "nursery/noComponentHookFactories",
-      "decision": "inapplicable",
-      "reason": "Module-scoped test wrapper factories have stable identities; native static-components and production compilation enforce React identity.",
-      "docs": "https://biomejs.dev/linter/rules/no-component-hook-factories/"
+      "rule": "nursery/noDoubleComparison",
+      "decision": "error",
+      "reason": "Disallow two comparisons of the same values that can be combined into one. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-double-comparison/"
     },
     {
-      "rule": "nursery/noConditionalExpect",
+      "rule": "nursery/noDuplicateMapKeys",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-conditional-expect/"
+      "reason": "Disallow two keys with the same name inside YAML maps. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-duplicate-map-keys/"
     },
     {
-      "rule": "nursery/noDrizzleDeleteWithoutWhere",
+      "rule": "nursery/noExcessiveStatementsPerFunction",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-drizzle-delete-without-where/"
-    },
-    {
-      "rule": "nursery/noDrizzleUpdateWithoutWhere",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-drizzle-update-without-where/"
-    },
-    {
-      "rule": "nursery/noDuplicateFieldDefinitionNames",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-duplicate-field-definition-names/"
-    },
-    {
-      "rule": "nursery/noDuplicateSelectors",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-duplicate-selectors/"
-    },
-    {
-      "rule": "nursery/noEmptyObjectKeys",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-empty-object-keys/"
-    },
-    {
-      "rule": "nursery/noExcessiveNestedCallbacks",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-excessive-nested-callbacks/"
-    },
-    {
-      "rule": "nursery/noExcessiveSelectorClasses",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-excessive-selector-classes/"
+      "reason": "Enforce a maximum number of statements allowed in a function. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-excessive-statements-per-function/"
     },
     {
       "rule": "nursery/noExtendNative",
@@ -1222,22 +1318,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-floating-promises/"
     },
     {
-      "rule": "nursery/noIdenticalTestTitle",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-identical-test-title/"
-    },
-    {
       "rule": "nursery/noImpliedEval",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-implied-eval/"
-    },
-    {
-      "rule": "nursery/noInlineStyles",
-      "decision": "inapplicable",
-      "reason": "Virtualized grids and graph geometry require runtime coordinates; shadcn enforces component-specific inline-style contracts.",
-      "docs": "https://biomejs.dev/linter/rules/no-inline-styles/"
     },
     {
       "rule": "nursery/noInvalidFileInputAccept",
@@ -1252,10 +1336,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-invalid-property-init-value/"
     },
     {
-      "rule": "nursery/noJsRestrictedProperties",
+      "rule": "nursery/noInvalidThis",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-js-restricted-properties/"
+      "reason": "Disallow this in places where it is undefined. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-invalid-this/"
     },
     {
       "rule": "nursery/noJsonUnsafeValues",
@@ -1264,22 +1348,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-json-unsafe-values/"
     },
     {
-      "rule": "nursery/noJsxLeakedDollar",
+      "rule": "nursery/noJsRestrictedProperties",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-jsx-leaked-dollar/"
-    },
-    {
-      "rule": "nursery/noJsxNamespace",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-jsx-namespace/"
-    },
-    {
-      "rule": "nursery/noLoopFunc",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-loop-func/"
+      "docs": "https://biomejs.dev/linter/rules/no-js-restricted-properties/"
     },
     {
       "rule": "nursery/noMeaninglessVoidOperator",
@@ -1312,10 +1384,28 @@
       "docs": "https://biomejs.dev/linter/rules/no-negation-in-equality-check/"
     },
     {
+      "rule": "nursery/noNestedSwitch",
+      "decision": "error",
+      "reason": "Disallow switch statements inside other switch statements. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-nested-switch/"
+    },
+    {
+      "rule": "nursery/noNestedTemplateLiterals",
+      "decision": "error",
+      "reason": "Disallow template literals inside other template literals. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-nested-template-literals/"
+    },
+    {
       "rule": "nursery/noNonScalableViewport",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-non-scalable-viewport/"
+    },
+    {
+      "rule": "nursery/noObjectConstructor",
+      "decision": "error",
+      "reason": "Disallow calling Object without arguments to create an empty object. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-object-constructor/"
     },
     {
       "rule": "nursery/noObsoleteTags",
@@ -1324,94 +1414,28 @@
       "docs": "https://biomejs.dev/linter/rules/no-obsolete-tags/"
     },
     {
-      "rule": "nursery/noPlaywrightElementHandle",
+      "rule": "nursery/noOctal",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-element-handle/"
+      "reason": "Disallow numbers written with an extra leading zero. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-octal/"
     },
     {
-      "rule": "nursery/noPlaywrightEval",
+      "rule": "nursery/noProcessExit",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-eval/"
+      "reason": "Disallow the use of process.exit(). Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-process-exit/"
     },
     {
-      "rule": "nursery/noPlaywrightForceOption",
+      "rule": "nursery/noPromiseExecutorReturn",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-force-option/"
-    },
-    {
-      "rule": "nursery/noPlaywrightMissingAwait",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-missing-await/"
-    },
-    {
-      "rule": "nursery/noPlaywrightNetworkidle",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-networkidle/"
-    },
-    {
-      "rule": "nursery/noPlaywrightPagePause",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-page-pause/"
-    },
-    {
-      "rule": "nursery/noPlaywrightUselessAwait",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-useless-await/"
-    },
-    {
-      "rule": "nursery/noPlaywrightWaitForNavigation",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-navigation/"
-    },
-    {
-      "rule": "nursery/noPlaywrightWaitForSelector",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-selector/"
-    },
-    {
-      "rule": "nursery/noPlaywrightWaitForTimeout",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-timeout/"
-    },
-    {
-      "rule": "nursery/noReactNativeDeepImports",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-react-native-deep-imports/"
-    },
-    {
-      "rule": "nursery/noReactNativeLiteralColors",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-react-native-literal-colors/"
-    },
-    {
-      "rule": "nursery/noReactNativeRawText",
-      "decision": "inapplicable",
-      "reason": "This is web React, not React Native.",
-      "docs": "https://biomejs.dev/linter/rules/no-react-native-raw-text/"
+      "reason": "Disallow returning values from the function passed to new Promise(). Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-promise-executor-return/"
     },
     {
       "rule": "nursery/noReactObjectTypeAsDefaultProp",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-react-object-type-as-default-prop/"
-    },
-    {
-      "rule": "nursery/noReactStringRefs",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-react-string-refs/"
     },
     {
       "rule": "nursery/noRestrictedDependencies",
@@ -1432,6 +1456,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-self-import/"
     },
     {
+      "rule": "nursery/noSvelteAddEventListener",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-add-event-listener/"
+    },
+    {
       "rule": "nursery/noSvelteAtDebugTags",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
@@ -1444,10 +1474,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-svelte-at-html-tags/"
     },
     {
+      "rule": "nursery/noSvelteClassDirective",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-class-directive/"
+    },
+    {
       "rule": "nursery/noSvelteExportLet",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-svelte-export-let/"
+    },
+    {
+      "rule": "nursery/noSvelteInspect",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-inspect/"
     },
     {
       "rule": "nursery/noSvelteLegacyConst",
@@ -1456,10 +1498,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-svelte-legacy-const/"
     },
     {
+      "rule": "nursery/noSvelteObjectInTextMustaches",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-object-in-text-mustaches/"
+    },
+    {
       "rule": "nursery/noSvelteUnnecessaryStateWrap",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-svelte-unnecessary-state-wrap/"
+    },
+    {
+      "rule": "nursery/noSvelteUselessDerivedBy",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-useless-derived-by/"
     },
     {
       "rule": "nursery/noTailwindArbitraryValue",
@@ -1468,22 +1522,28 @@
       "docs": "https://biomejs.dev/linter/rules/no-tailwind-arbitrary-value/"
     },
     {
+      "rule": "nursery/noTailwindLegacyUtilities",
+      "decision": "error",
+      "reason": "Disallow Tailwind CSS utility classes that Tailwind CSS only keeps for backward compatibility. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-tailwind-legacy-utilities/"
+    },
+    {
       "rule": "nursery/noTailwindRawColors",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-tailwind-raw-colors/"
     },
     {
+      "rule": "nursery/noTailwindRestyledComponents",
+      "decision": "delegated",
+      "reason": "Import-aware shadcn/no-restyle owns registry appearance; Biome also flags unstyled icons and local primitives.",
+      "docs": "https://biomejs.dev/linter/rules/no-tailwind-restyled-components/"
+    },
+    {
       "rule": "nursery/noThisOutsideOfClass",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-this-outside-of-class/"
-    },
-    {
-      "rule": "nursery/noTopLevelLiterals",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-top-level-literals/"
     },
     {
       "rule": "nursery/noUndeclaredClasses",
@@ -1504,12 +1564,6 @@
       "docs": "https://biomejs.dev/linter/rules/no-unmodified-loop-condition/"
     },
     {
-      "rule": "nursery/noUnnecessaryTemplateExpression",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-unnecessary-template-expression/"
-    },
-    {
       "rule": "nursery/noUnsafeIframeSandbox",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
@@ -1528,10 +1582,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-unsafe-type-assertion/"
     },
     {
-      "rule": "nursery/noUntrustedLicenses",
+      "rule": "nursery/noUnsafeUnaryMinus",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-untrusted-licenses/"
+      "reason": "Require the operand of unary - to be a number or a bigint. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-unsafe-unary-minus/"
     },
     {
       "rule": "nursery/noUnusedClasses",
@@ -1540,10 +1594,34 @@
       "docs": "https://biomejs.dev/linter/rules/no-unused-classes/"
     },
     {
+      "rule": "nursery/noUselessAssignment",
+      "decision": "error",
+      "reason": "Disallow assignments whose value is never read. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-assignment/"
+    },
+    {
+      "rule": "nursery/noUselessCall",
+      "decision": "error",
+      "reason": "Disallow unnecessary .call() and .apply(). Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-call/"
+    },
+    {
+      "rule": "nursery/noUselessDateGetTime",
+      "decision": "error",
+      "reason": "Disallow calling .getTime() on a date before passing it to the Date constructor. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-date-get-time/"
+    },
+    {
       "rule": "nursery/noUselessTypeConversion",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-useless-type-conversion/"
+    },
+    {
+      "rule": "nursery/noVueBooleanDefault",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-boolean-default/"
     },
     {
       "rule": "nursery/noVueDeprecatedScopedSlots",
@@ -1552,16 +1630,28 @@
       "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-scoped-slots/"
     },
     {
-      "rule": "nursery/noVueImportCompilerMacros",
+      "rule": "nursery/noVueLifecycleAfterAwait",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-vue-import-compiler-macros/"
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-lifecycle-after-await/"
     },
     {
-      "rule": "nursery/noVueRefAsOperand",
+      "rule": "nursery/noVueRequiredPropWithDefault",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-vue-ref-as-operand/"
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-required-prop-with-default/"
+    },
+    {
+      "rule": "nursery/noVueRootVIf",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-root-v-if/"
+    },
+    {
+      "rule": "nursery/noVueShadowNativeEvents",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-shadow-native-events/"
     },
     {
       "rule": "nursery/noVueUndeclaredDirectives",
@@ -1570,10 +1660,16 @@
       "docs": "https://biomejs.dev/linter/rules/no-vue-undeclared-directives/"
     },
     {
-      "rule": "nursery/noVueVOnNumberValues",
+      "rule": "nursery/noVueVHtml",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-vue-v-on-number-values/"
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-html/"
+    },
+    {
+      "rule": "nursery/noVueVText",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-text/"
     },
     {
       "rule": "nursery/noXorAsExponentiation",
@@ -1582,10 +1678,10 @@
       "docs": "https://biomejs.dev/linter/rules/no-xor-as-exponentiation/"
     },
     {
-      "rule": "nursery/useArraySome",
+      "rule": "nursery/noZeroFractions",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-array-some/"
+      "reason": "Disallow number literals with zero fractions or dangling dots. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/no-zero-fractions/"
     },
     {
       "rule": "nursery/useAstroClientOnlyDirectiveValue",
@@ -1600,16 +1696,28 @@
       "docs": "https://biomejs.dev/linter/rules/use-await-thenable/"
     },
     {
-      "rule": "nursery/useBaseline",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-baseline/"
-    },
-    {
       "rule": "nursery/useBetterDomTraversing",
       "decision": "inapplicable",
       "reason": "The syntactic rule misclassifies protobuf children arrays as DOM collections.",
       "docs": "https://biomejs.dev/linter/rules/use-better-dom-traversing/"
+    },
+    {
+      "rule": "nursery/useBigintLiterals",
+      "decision": "error",
+      "reason": "Enforce the use of bigint literals over the BigInt() constructor. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-bigint-literals/"
+    },
+    {
+      "rule": "nursery/useCapitalizedConstructors",
+      "decision": "error",
+      "reason": "Require constructor names to begin with a capital letter. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-capitalized-constructors/"
+    },
+    {
+      "rule": "nursery/useConsistentBlockLang",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-block-lang/"
     },
     {
       "rule": "nursery/useConsistentFunctionStyle",
@@ -1618,16 +1726,22 @@
       "docs": "https://biomejs.dev/linter/rules/use-consistent-function-style/"
     },
     {
+      "rule": "nursery/useConsistentHeadingLevel",
+      "decision": "inapplicable",
+      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-heading-level/"
+    },
+    {
+      "rule": "nursery/useConsistentJsonFileRead",
+      "decision": "error",
+      "reason": "Enforce a consistent way of reading JSON files before passing them to JSON.parse(). Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-json-file-read/"
+    },
+    {
       "rule": "nursery/useConsistentObjectKeys",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-consistent-object-keys/"
-    },
-    {
-      "rule": "nursery/useConsistentTestIt",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-consistent-test-it/"
     },
     {
       "rule": "nursery/useControlLabel",
@@ -1642,28 +1756,10 @@
       "docs": "https://biomejs.dev/linter/rules/use-disposables/"
     },
     {
-      "rule": "nursery/useDomNodeTextContent",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-dom-node-text-content/"
-    },
-    {
-      "rule": "nursery/useDomQuerySelector",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-dom-query-selector/"
-    },
-    {
       "rule": "nursery/useExhaustiveSwitchCases",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-exhaustive-switch-cases/"
-    },
-    {
-      "rule": "nursery/useExpect",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-expect/"
     },
     {
       "rule": "nursery/useExplicitReturnType",
@@ -1678,22 +1774,16 @@
       "docs": "https://biomejs.dev/linter/rules/use-explicit-type/"
     },
     {
+      "rule": "nursery/useFencedCodeLanguage",
+      "decision": "inapplicable",
+      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "docs": "https://biomejs.dev/linter/rules/use-fenced-code-language/"
+    },
+    {
       "rule": "nursery/useFlatMathMinMax",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-flat-math-min-max/"
-    },
-    {
-      "rule": "nursery/useIframeSandbox",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-iframe-sandbox/"
-    },
-    {
-      "rule": "nursery/useImportsFirst",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-imports-first/"
     },
     {
       "rule": "nursery/useIncludes",
@@ -1714,10 +1804,16 @@
       "docs": "https://biomejs.dev/linter/rules/use-logical-properties/"
     },
     {
-      "rule": "nursery/useMathMinMax",
+      "rule": "nursery/useLowercaseTestTitle",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-math-min-max/"
+      "reason": "Require test and test suite titles to start with a lowercase letter. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-lowercase-test-title/"
+    },
+    {
+      "rule": "nursery/useMatchingFunctionName",
+      "decision": "error",
+      "reason": "Require function names to match the name of the variable or property they are assigned to. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-matching-function-name/"
     },
     {
       "rule": "nursery/useModernMathApis",
@@ -1726,10 +1822,10 @@
       "docs": "https://biomejs.dev/linter/rules/use-modern-math-apis/"
     },
     {
-      "rule": "nursery/useNamedCaptureGroup",
+      "rule": "nursery/useNamedFunction",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-named-capture-group/"
+      "reason": "Require function expressions to have a name. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-named-function/"
     },
     {
       "rule": "nursery/useNamedLayer",
@@ -1744,28 +1840,10 @@
       "docs": "https://biomejs.dev/linter/rules/use-nullish-coalescing/"
     },
     {
-      "rule": "nursery/usePlaywrightValidDescribeCallback",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-playwright-valid-describe-callback/"
-    },
-    {
       "rule": "nursery/usePromiseRejectErrors",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-promise-reject-errors/"
-    },
-    {
-      "rule": "nursery/useQwikLoaderLocation",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-qwik-loader-location/"
-    },
-    {
-      "rule": "nursery/useReactAsyncServerFunction",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-react-async-server-function/"
     },
     {
       "rule": "nursery/useReactCompiler",
@@ -1786,40 +1864,22 @@
       "docs": "https://biomejs.dev/linter/rules/use-react-naming-convention/"
     },
     {
-      "rule": "nursery/useReactNativePlatformComponents",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-react-native-platform-components/"
-    },
-    {
-      "rule": "nursery/useReduceTypeParameter",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-reduce-type-parameter/"
-    },
-    {
       "rule": "nursery/useRegexpExec",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-regexp-exec/"
     },
     {
-      "rule": "nursery/useRegexpTest",
+      "rule": "nursery/useSimplifiedBooleanReturn",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-regexp-test/"
+      "reason": "Return conditions directly instead of using if statements that only return true or false. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-simplified-boolean-return/"
     },
     {
-      "rule": "nursery/useScopedStyles",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-scoped-styles/"
-    },
-    {
-      "rule": "nursery/useSortedClasses",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-sorted-classes/"
+      "rule": "nursery/useSingleTopLevelHeading",
+      "decision": "inapplicable",
+      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "docs": "https://biomejs.dev/linter/rules/use-single-top-level-heading/"
     },
     {
       "rule": "nursery/useStrictBooleanExpressions",
@@ -1834,10 +1894,22 @@
       "docs": "https://biomejs.dev/linter/rules/use-string-starts-ends-with/"
     },
     {
+      "rule": "nursery/useSvelteKitResolve",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-kit-resolve/"
+    },
+    {
       "rule": "nursery/useSvelteKitRuneImports",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-svelte-kit-rune-imports/"
+    },
+    {
+      "rule": "nursery/useSvelteReactiveClasses",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-reactive-classes/"
     },
     {
       "rule": "nursery/useSvelteRequireEachKey",
@@ -1846,34 +1918,40 @@
       "docs": "https://biomejs.dev/linter/rules/use-svelte-require-each-key/"
     },
     {
+      "rule": "nursery/useSvelteShorthandDirective",
+      "decision": "error",
+      "reason": "Enforce this syntax-gated Svelte contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-shorthand-directive/"
+    },
+    {
       "rule": "nursery/useTailwindShorthandClasses",
       "decision": "inapplicable",
       "reason": "Biome 2.5.15 rewrites valid divide-y into nonexistent divide. Shadcn still rejects unknown utilities.",
       "docs": "https://biomejs.dev/linter/rules/use-tailwind-shorthand-classes/"
     },
     {
-      "rule": "nursery/useTestHooksInOrder",
+      "rule": "nursery/useTailwindSortedClasses",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-test-hooks-in-order/"
+      "reason": "Renamed from useSortedClasses in Biome 2.6; retain the reviewed Tailwind ordering contract and unsafe-fix classification.",
+      "docs": "https://biomejs.dev/linter/rules/use-tailwind-sorted-classes/"
     },
     {
-      "rule": "nursery/useTestHooksOnTop",
+      "rule": "nursery/useTailwindStaticClassStrings",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-test-hooks-on-top/"
+      "reason": "Require complete, statically written class names. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-tailwind-static-class-strings/"
     },
     {
-      "rule": "nursery/useThisInClassMethods",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-this-in-class-methods/"
+      "rule": "nursery/useTopLevelHeading",
+      "decision": "inapplicable",
+      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "docs": "https://biomejs.dev/linter/rules/use-top-level-heading/"
     },
     {
-      "rule": "nursery/useUnicodeRegex",
+      "rule": "nursery/useUnaryMinus",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-unicode-regex/"
+      "reason": "Enforce the use of the unary minus operator over multiplying or dividing by -1. Reviewed for the rebased Biome 2.6 catalog.",
+      "docs": "https://biomejs.dev/linter/rules/use-unary-minus/"
     },
     {
       "rule": "nursery/useValidTestTitle",
@@ -1882,34 +1960,22 @@
       "docs": "https://biomejs.dev/linter/rules/use-valid-test-title/"
     },
     {
-      "rule": "nursery/useVarsOnTop",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-vars-on-top/"
-    },
-    {
       "rule": "nursery/useVueBaseImport",
       "decision": "error",
       "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-vue-base-import/"
     },
     {
-      "rule": "nursery/useVueConsistentDefinePropsDeclaration",
+      "rule": "nursery/useVueConsistentEventHyphenation",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-define-props-declaration/"
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-event-hyphenation/"
     },
     {
-      "rule": "nursery/useVueNextTickPromise",
+      "rule": "nursery/useVueMatchingComponentFileName",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-vue-next-tick-promise/"
-    },
-    {
-      "rule": "nursery/useVueValidVFor",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-for/"
+      "reason": "Enforce this syntax-gated Vue contract if such files appear; React DOM code has no matching syntax.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-matching-component-file-name/"
     },
     {
       "rule": "performance/noAccumulatingSpread",
@@ -1978,6 +2044,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-unwanted-polyfillio/"
     },
     {
+      "rule": "performance/useDomNodeTextContent",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-dom-node-text-content/"
+    },
+    {
       "rule": "performance/useGoogleFontPreconnect",
       "decision": "error",
       "reason": "Enforce this performance contract at error severity; framework-specific syntax is checked when present.",
@@ -2036,6 +2108,12 @@
       "decision": "error",
       "reason": "Enforce this security contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-secrets/"
+    },
+    {
+      "rule": "security/useIframeSandbox",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-iframe-sandbox/"
     },
     {
       "rule": "style/noCommonJs",
@@ -2122,6 +2200,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-inferrable-types/"
     },
     {
+      "rule": "style/noInlineStyles",
+      "decision": "inapplicable",
+      "reason": "Virtualized grids and graph geometry require runtime coordinates; shadcn enforces component-specific inline-style contracts.",
+      "docs": "https://biomejs.dev/linter/rules/no-inline-styles/"
+    },
+    {
       "rule": "style/noJsxLiterals",
       "decision": "inapplicable",
       "reason": "This application is not using a translation-key-only UI; literal sentence-case UI copy is valid.",
@@ -2182,10 +2266,34 @@
       "docs": "https://biomejs.dev/linter/rules/no-parameter-properties/"
     },
     {
+      "rule": "style/noPlaywrightElementHandle",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-element-handle/"
+    },
+    {
+      "rule": "style/noPlaywrightEval",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-eval/"
+    },
+    {
+      "rule": "style/noPlaywrightWaitForSelector",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-selector/"
+    },
+    {
       "rule": "style/noProcessEnv",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-process-env/"
+    },
+    {
+      "rule": "style/noReactNativeLiteralColors",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-react-native-literal-colors/"
     },
     {
       "rule": "style/noRestrictedGlobals",
@@ -2228,6 +2336,12 @@
       "decision": "inapplicable",
       "reason": "Conditional expressions are supported; nested ternaries are rejected.",
       "docs": "https://biomejs.dev/linter/rules/no-ternary/"
+    },
+    {
+      "rule": "style/noTopLevelLiterals",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-top-level-literals/"
     },
     {
       "rule": "style/noUnusedTemplateLiteral",
@@ -2356,6 +2470,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-consistent-object-definitions/"
     },
     {
+      "rule": "style/useConsistentTestIt",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-test-it/"
+    },
+    {
       "rule": "style/useConsistentTypeDefinitions",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
@@ -2392,6 +2512,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-destructuring/"
     },
     {
+      "rule": "style/useDomQuerySelector",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-dom-query-selector/"
+    },
+    {
       "rule": "style/useEnumInitializers",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
@@ -2416,16 +2542,16 @@
       "docs": "https://biomejs.dev/linter/rules/use-exponentiation-operator/"
     },
     {
-      "rule": "style/useExportType",
-      "decision": "error",
-      "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-export-type/"
-    },
-    {
       "rule": "style/useExportsLast",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-exports-last/"
+    },
+    {
+      "rule": "style/useExportType",
+      "decision": "error",
+      "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-export-type/"
     },
     {
       "rule": "style/useFilenamingConvention",
@@ -2464,6 +2590,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-grouped-accessor-pairs/"
     },
     {
+      "rule": "style/useImportsFirst",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-imports-first/"
+    },
+    {
       "rule": "style/useImportType",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
@@ -2486,6 +2618,12 @@
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-lone-executable-definition/"
+    },
+    {
+      "rule": "style/useNamedCaptureGroup",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-named-capture-group/"
     },
     {
       "rule": "style/useNamingConvention",
@@ -2536,6 +2674,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-readonly-class-properties/"
     },
     {
+      "rule": "style/useReduceTypeParameter",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-reduce-type-parameter/"
+    },
+    {
       "rule": "style/useSelfClosingElements",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
@@ -2578,6 +2722,24 @@
       "docs": "https://biomejs.dev/linter/rules/use-template/"
     },
     {
+      "rule": "style/useTestHooksInOrder",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-test-hooks-in-order/"
+    },
+    {
+      "rule": "style/useTestHooksOnTop",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-test-hooks-on-top/"
+    },
+    {
+      "rule": "style/useThisInClassMethods",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-this-in-class-methods/"
+    },
+    {
       "rule": "style/useThrowNewError",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
@@ -2596,10 +2758,28 @@
       "docs": "https://biomejs.dev/linter/rules/use-trim-start-end/"
     },
     {
+      "rule": "style/useUnicodeRegex",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-unicode-regex/"
+    },
+    {
       "rule": "style/useUnifiedTypeSignatures",
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-unified-type-signatures/"
+    },
+    {
+      "rule": "style/useVarsOnTop",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-vars-on-top/"
+    },
+    {
+      "rule": "style/useVueConsistentDefinePropsDeclaration",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-define-props-declaration/"
     },
     {
       "rule": "style/useVueConsistentVBindStyle",
@@ -2630,6 +2810,12 @@
       "decision": "error",
       "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-vue-multi-word-component-names/"
+    },
+    {
+      "rule": "style/useVueNextTickPromise",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-next-tick-promise/"
     },
     {
       "rule": "suspicious/noAlert",
@@ -2698,6 +2884,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-compare-neg-zero/"
     },
     {
+      "rule": "suspicious/noConditionalExpect",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-conditional-expect/"
+    },
+    {
       "rule": "suspicious/noConfusingLabels",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -2716,16 +2908,16 @@
       "docs": "https://biomejs.dev/linter/rules/no-console/"
     },
     {
-      "rule": "suspicious/noConstEnum",
-      "decision": "error",
-      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-const-enum/"
-    },
-    {
       "rule": "suspicious/noConstantBinaryExpressions",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-constant-binary-expressions/"
+    },
+    {
+      "rule": "suspicious/noConstEnum",
+      "decision": "error",
+      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-const-enum/"
     },
     {
       "rule": "suspicious/noControlCharactersInRegex",
@@ -2770,6 +2962,18 @@
       "docs": "https://biomejs.dev/linter/rules/no-double-equals/"
     },
     {
+      "rule": "suspicious/noDrizzleDeleteWithoutWhere",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-drizzle-delete-without-where/"
+    },
+    {
+      "rule": "suspicious/noDrizzleUpdateWithoutWhere",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-drizzle-update-without-where/"
+    },
+    {
       "rule": "suspicious/noDuplicateAtImportRules",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -2798,6 +3002,12 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-duplicate-dependencies/"
+    },
+    {
+      "rule": "suspicious/noDuplicatedSpreadProps",
+      "decision": "error",
+      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-duplicated-spread-props/"
     },
     {
       "rule": "suspicious/noDuplicateElseIf",
@@ -2854,6 +3064,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-duplicate-properties/"
     },
     {
+      "rule": "suspicious/noDuplicateSelectors",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-duplicate-selectors/"
+    },
+    {
       "rule": "suspicious/noDuplicateSelectorsKeyframeBlock",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -2864,12 +3080,6 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-duplicate-test-hooks/"
-    },
-    {
-      "rule": "suspicious/noDuplicatedSpreadProps",
-      "decision": "error",
-      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-duplicated-spread-props/"
     },
     {
       "rule": "suspicious/noEmptyBlock",
@@ -2888,6 +3098,12 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-empty-interface/"
+    },
+    {
+      "rule": "suspicious/noEmptyObjectKeys",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-empty-object-keys/"
     },
     {
       "rule": "suspicious/noEmptySource",
@@ -2974,10 +3190,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-head-import-in-document/"
     },
     {
+      "rule": "suspicious/noIdenticalTestTitle",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-identical-test-title/"
+    },
+    {
       "rule": "suspicious/noImplicitAnyLet",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-implicit-any-let/"
+    },
+    {
+      "rule": "suspicious/noImportantInKeyframe",
+      "decision": "error",
+      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-important-in-keyframe/"
     },
     {
       "rule": "suspicious/noImportAssign",
@@ -2992,16 +3220,16 @@
       "docs": "https://biomejs.dev/linter/rules/no-import-cycles/"
     },
     {
-      "rule": "suspicious/noImportantInKeyframe",
-      "decision": "error",
-      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-important-in-keyframe/"
-    },
-    {
       "rule": "suspicious/noIrregularWhitespace",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/no-irregular-whitespace/"
+    },
+    {
+      "rule": "suspicious/noJsxLeakedDollar",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-jsx-leaked-dollar/"
     },
     {
       "rule": "suspicious/noLabelVar",
@@ -3014,6 +3242,12 @@
       "decision": "inapplicable",
       "reason": "Biome 2.5.15 falsely rejects safe string-valued ternaries. Strict boolean expressions still reject unsafe && conditions.",
       "docs": "https://biomejs.dev/linter/rules/no-leaked-render/"
+    },
+    {
+      "rule": "suspicious/noLoopFunc",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-loop-func/"
     },
     {
       "rule": "suspicious/noMisleadingCharacterClass",
@@ -3064,6 +3298,36 @@
       "docs": "https://biomejs.dev/linter/rules/no-parameters-only-used-in-recursion/"
     },
     {
+      "rule": "suspicious/noPlaywrightForceOption",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-force-option/"
+    },
+    {
+      "rule": "suspicious/noPlaywrightNetworkidle",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-networkidle/"
+    },
+    {
+      "rule": "suspicious/noPlaywrightPagePause",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-page-pause/"
+    },
+    {
+      "rule": "suspicious/noPlaywrightWaitForNavigation",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-navigation/"
+    },
+    {
+      "rule": "suspicious/noPlaywrightWaitForTimeout",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-wait-for-timeout/"
+    },
+    {
       "rule": "suspicious/noProto",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -3088,10 +3352,22 @@
       "docs": "https://biomejs.dev/linter/rules/no-react-forward-ref/"
     },
     {
+      "rule": "suspicious/noReactNativeDeepImports",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-react-native-deep-imports/"
+    },
+    {
       "rule": "suspicious/noReactSpecificProps",
       "decision": "inapplicable",
       "reason": "React props are required in a React application.",
       "docs": "https://biomejs.dev/linter/rules/no-react-specific-props/"
+    },
+    {
+      "rule": "suspicious/noReactStringRefs",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-react-string-refs/"
     },
     {
       "rule": "suspicious/noRedeclare",
@@ -3214,6 +3490,12 @@
       "docs": "https://biomejs.dev/linter/rules/no-unsafe-negation/"
     },
     {
+      "rule": "suspicious/noUntrustedLicenses",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/no-untrusted-licenses/"
+    },
+    {
       "rule": "suspicious/noUnusedExpressions",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -3268,6 +3550,12 @@
       "docs": "https://biomejs.dev/linter/rules/use-await/"
     },
     {
+      "rule": "suspicious/useBaseline",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-baseline/"
+    },
+    {
       "rule": "suspicious/useBiomeIgnoreFolder",
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
@@ -3290,6 +3578,12 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-error-message/"
+    },
+    {
+      "rule": "suspicious/useExpect",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect/"
     },
     {
       "rule": "suspicious/useGetterReturn",
@@ -3338,6 +3632,12 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-required-scripts/"
+    },
+    {
+      "rule": "suspicious/useScopedStyles",
+      "decision": "error",
+      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "docs": "https://biomejs.dev/linter/rules/use-scoped-styles/"
     },
     {
       "rule": "suspicious/useStaticResponseMethods",
