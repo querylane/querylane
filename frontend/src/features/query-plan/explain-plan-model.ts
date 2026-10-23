@@ -211,6 +211,9 @@ function planNodeTitle(node: PlanNode): string {
 }
 
 const ROW_ESTIMATE_THRESHOLD = 10;
+const HEAVY_FILTER_MIN_ROWS = 1000;
+const HEAVY_FILTER_RATIO = 0.9;
+const PERCENT = 100;
 
 function rowEstimateLabel(
   actual: number,
@@ -237,29 +240,59 @@ function rowEstimateLabel(
   return undefined;
 }
 
-function planNodeInsights(node: PlanNode): {
-  label: string;
+interface PlanInsight {
   detail: string;
-}[] {
-  const insights: {
-    label: string;
-    detail: string;
-  }[] = [];
+  label: string;
+}
+
+function rowEstimateInsights(node: PlanNode): PlanInsight[] {
   const { actualRows: actual, planRows: estimated } = node;
   // Both counts are per execution, not totals across loops.
   if (
-    node.actualLoops !== 0 &&
+    node.nodeType !== "BitmapAnd" &&
+    node.nodeType !== "BitmapOr" &&
     actual !== undefined &&
     estimated !== undefined
   ) {
     const label = rowEstimateLabel(actual, estimated);
     if (isNonEmptyString(label)) {
-      insights.push({
-        label,
-        detail: `${formatCount(actual)} actual / ${formatCount(estimated)} estimated per loop. Check statistics and predicates.`,
-      });
+      return [
+        {
+          label,
+          detail: `${formatCount(actual)} actual / ${formatCount(estimated)} estimated per loop. Check statistics and predicates.`,
+        },
+      ];
     }
   }
+  return [];
+}
+
+function filterInsights(node: PlanNode): PlanInsight[] {
+  const removed = Number(
+    node.details.find((detail) => detail.label === "Rows Removed by Filter")
+      ?.value ?? 0
+  );
+  const inspected = removed + (node.actualRows ?? 0);
+  if (
+    node.actualRows !== undefined &&
+    removed >= HEAVY_FILTER_MIN_ROWS &&
+    removed / inspected >= HEAVY_FILTER_RATIO
+  ) {
+    return [
+      {
+        label: `${((PERCENT * removed) / inspected).toFixed(1)}% filtered`,
+        detail: `${formatCount(removed)} rows removed per loop. Inspect the filter and scan conditions.`,
+      },
+    ];
+  }
+  return [];
+}
+
+function planNodeInsights(node: PlanNode): PlanInsight[] {
+  if (node.actualLoops === 0) {
+    return [];
+  }
+  const insights: PlanInsight[] = [];
   const diskSort = node.details.some(
     (detail) => detail.label === "Sort Space Type" && detail.value === "Disk"
   );
@@ -274,7 +307,7 @@ function planNodeInsights(node: PlanNode): {
         : "The hash table used multiple batches. Inspect memory usage and temporary blocks below.",
     });
   }
-  return insights;
+  return [...rowEstimateInsights(node), ...insights, ...filterInsights(node)];
 }
 
 export type { ExplainPlan, PlanMetric, PlanNode };

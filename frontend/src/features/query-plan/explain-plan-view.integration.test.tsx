@@ -9,6 +9,86 @@ const ROW_MISMATCH = /more rows|fewer rows/u;
 
 afterEach(cleanup);
 
+test("operator search reveals collapsed matches and recovers from an empty result", async () => {
+  const user = userEvent.setup();
+  render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
+  await user.click(screen.getByRole("tab", { name: "Operators" }));
+  await user.click(
+    screen.getByRole("button", { name: "Collapse Hash Join branch" })
+  );
+  const search = screen.getByRole("searchbox", {
+    name: "Search plan operators",
+  });
+  await user.click(search);
+  await user.paste("SHIPMENTS");
+  await user.click(
+    within(screen.getByRole("list", { name: "Matching operators" })).getByRole(
+      "button",
+      { name: "Inspect Seq Scan on shipments" }
+    )
+  );
+  expect(
+    within(
+      screen.getByRole("complementary", { name: "Plan node details" })
+    ).getByRole("heading", { name: "Seq Scan" })
+  ).not.toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Collapse Hash Join branch" })
+  ).not.toBeNull();
+  await user.clear(search);
+  await user.paste("missing_operator");
+  expect(screen.getByRole("status").textContent).toBe("No matching operators.");
+  await user.clear(search);
+  expect(screen.queryByRole("list", { name: "Matching operators" })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Inspect Seq Scan on shipments" })
+  ).not.toBeNull();
+});
+
+test("findings reveal their operator even inside a collapsed branch", async () => {
+  const user = userEvent.setup();
+  render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
+  await user.click(screen.getByRole("tab", { name: "Operators" }));
+  await user.click(
+    screen.getByRole("button", { name: "Collapse Hash Join branch" })
+  );
+  await user.click(screen.getByRole("button", { name: "Plan findings" }));
+  await user.click(
+    screen.getByRole("menuitem", {
+      name: "Seq Scan on shipments: 100× more rows",
+    })
+  );
+  expect(
+    screen.getByRole("button", { name: "Collapse Hash Join branch" })
+  ).not.toBeNull();
+  expect(
+    within(
+      screen.getByRole("complementary", { name: "Plan node details" })
+    ).getByRole("heading", { name: "Seq Scan" })
+  ).not.toBeNull();
+});
+
+test("timing ranks attributed work and shares operator selection with the map", async () => {
+  const user = userEvent.setup();
+  render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
+  await user.click(screen.getByRole("tab", { name: "Timing" }));
+  const work = screen.getByRole("list", { name: "Operator work" });
+  const [first] = within(work).getAllByRole("listitem");
+  if (!first) {
+    throw new Error("expected ranked work");
+  }
+  expect(
+    within(first).getByRole("button", { name: "Inspect Seq Scan on shipments" })
+  ).not.toBeNull();
+  await user.click(within(work).getByRole("button", { name: "Inspect Hash" }));
+  await user.click(screen.getByRole("tab", { name: "Map" }));
+  expect(
+    screen
+      .getByRole("button", { name: "Inspect Hash" })
+      .getAttribute("aria-pressed")
+  ).toBe("true");
+});
+
 test("self-work selection keeps small operations reachable through a menu", async () => {
   const user = userEvent.setup();
   render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
@@ -119,6 +199,13 @@ test("a new plan resets selection, metric availability and JSON fallback", async
     { Plan: { "Node Type": "Result", "Plan Rows": 0, "Total Cost": 0 } },
   ]);
   view.rerender(<ExplainPlanView analyze={false} rawPlan={rawPlan} />);
+  await user.click(screen.getByRole("tab", { name: "Timing" }));
+  expect(
+    screen.getByText(
+      "No self timings reported. Use Explain analyze to measure operator work."
+    )
+  ).not.toBeNull();
+  expect(screen.queryByRole("list", { name: "Operator work" })).toBeNull();
   await user.click(screen.getByRole("tab", { name: "Operators" }));
   expect(
     screen.getByRole("columnheader", { name: "Est. cost" })
@@ -231,6 +318,14 @@ test("keeps large plans readable and never attributes parallel work to self time
   expect(
     screen.getByText("Parallel work · self time unavailable")
   ).not.toBeNull();
+  await user.click(screen.getByRole("tab", { name: "Timing" }));
+  expect(screen.queryByRole("list", { name: "Operator work" })).toBeNull();
+  expect(
+    screen.getByText(
+      "Self time is unavailable for parallel or asynchronous work."
+    )
+  ).not.toBeNull();
+  await user.click(screen.getByRole("tab", { name: "Operators" }));
   await user.click(screen.getByRole("combobox", { name: "Plan metric" }));
   expect(
     screen

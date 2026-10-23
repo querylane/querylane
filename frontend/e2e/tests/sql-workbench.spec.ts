@@ -222,6 +222,30 @@ test("workbench recovers from an error and inspects the live execution plan", as
     inspector.getByRole("heading", { name: "Hash", exact: true })
   ).toBeVisible();
   await expect(workSelector).toBeFocused();
+  await page.getByRole("tab", { name: "Timing", exact: true }).click();
+  const work = page.getByRole("list", { name: "Operator work" });
+  await expect(work.getByRole("listitem").first()).toContainText(
+    "Seq Scan on shipments"
+  );
+  await checkAccessibility();
+  const search = page.getByRole("searchbox", { name: "Search plan operators" });
+  await search.fill("shipment_items");
+  await page
+    .getByRole("list", { name: "Matching operators" })
+    .getByRole("button")
+    .click();
+  await expect(
+    inspector.getByRole("heading", { name: "Index Scan", exact: true })
+  ).toBeVisible();
+  await search.fill("");
+  await page.getByRole("button", { name: "Plan findings" }).click();
+  await checkAccessibility();
+  await page
+    .getByRole("menuitem", { name: "Sort: Sort spilled to disk", exact: true })
+    .click();
+  await expect(
+    inspector.getByRole("heading", { name: "Sort", exact: true })
+  ).toBeVisible();
   await expect(page).toHaveURL(url);
   await softScreenshot(page, "workbench-plan-inspector");
 });

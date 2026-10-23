@@ -33,6 +33,8 @@ import {
 import { PlanMap } from "@/features/query-plan/plan-map";
 import { PlanNodeInspector } from "@/features/query-plan/plan-node-inspector";
 import { PlanOverview } from "@/features/query-plan/plan-overview";
+import { PlanSearch } from "@/features/query-plan/plan-search";
+import { PlanTiming } from "@/features/query-plan/plan-timing";
 import {
   formatCount,
   formatPlanMs,
@@ -290,6 +292,7 @@ function formatRawPlan(rawPlan: string): string {
 }
 
 function PlanMetricControls({
+  visible,
   analyze,
   hotspot,
   metric,
@@ -297,6 +300,7 @@ function PlanMetricControls({
   onMetric,
   onSelect,
 }: {
+  visible: boolean;
   analyze: boolean;
   hotspot: PlanNode | undefined;
   metric: PlanMetric;
@@ -304,6 +308,9 @@ function PlanMetricControls({
   onMetric: (metric: PlanMetric) => void;
   onSelect: (node: PlanNode) => void;
 }) {
+  if (!visible) {
+    return null;
+  }
   const active = METRICS.find((item) => item.value === metric);
   return (
     <div className="bg-muted/20 flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
@@ -456,13 +463,17 @@ function PlanExplorer({
     <Tabs
       aria-label="Query plan"
       className="@container flex min-h-0 flex-1 flex-col"
-      onValueChange={setMode}
+      onValueChange={(value: string) => {
+        setMode(value);
+        setSelection({ id: selection.id, inspect: false });
+        layoutRef.current?.scrollTo({ top: 0, left: 0 });
+      }}
       presentation="flush"
       role="region"
       value={mode}
     >
       {!focused && <h2 className="sr-only">Query plan</h2>}
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2">
         <TabsList aria-label="Plan display" className="h-7">
           <TabsTrigger className="h-6" presentation="sql-plan-mode" value="map">
             Map
@@ -473,6 +484,13 @@ function PlanExplorer({
             value="tree"
           >
             Operators
+          </TabsTrigger>
+          <TabsTrigger
+            className="h-6"
+            presentation="sql-plan-mode"
+            value="timing"
+          >
+            Timing
           </TabsTrigger>
           <TabsTrigger className="h-6" presentation="sql-plan-mode" value="raw">
             JSON
@@ -513,7 +531,9 @@ function PlanExplorer({
             nodes={nodes}
             onMetric={setMetric}
             onSelect={selectNode}
+            visible={mode !== "timing"}
           />
+          <PlanSearch nodes={nodes} onSelect={selectNode} />
         </>
       )}
       <TabsContent className="flex min-h-0 flex-1 flex-col" value={mode}>
@@ -574,7 +594,6 @@ function PlanBody({
   layoutRef: RefObject<HTMLDivElement | null>;
   tableRef: RefObject<HTMLDivElement | null>;
 }) {
-  const { onSelect: handleSelect } = rows;
   if (mode === "raw") {
     return (
       <div className="min-h-0 flex-1 overflow-auto">
@@ -584,58 +603,89 @@ function PlanBody({
       </div>
     );
   }
-  const heading = METRICS.find((item) => item.value === rows.metric)?.heading;
   return (
     <div
       className="flex min-h-0 flex-1 flex-col overflow-auto @4xl:flex-row @4xl:overflow-hidden"
       ref={layoutRef}
     >
-      {mode === "map" ? (
-        <PlanMap
-          metric={rows.metric}
-          onSelect={handleSelect}
-          root={plan.root}
-          selection={selection}
-        />
-      ) : (
-        <div className="min-h-48 min-w-0 flex-1 overflow-auto" ref={tableRef}>
-          <table
-            aria-label="Execution plan"
-            className="w-full min-w-2xl border-collapse text-xs"
-          >
-            <thead className="bg-background sticky top-0 z-10">
-              <tr className="border-b text-left">
-                {[
-                  "Operation",
-                  "Rows / loop",
-                  "Est. rows",
-                  "Loops",
-                  heading,
-                ].map((label, index) => (
-                  <th
-                    className={cn(
-                      "h-9 px-2 text-right font-medium whitespace-nowrap last:pr-4",
-                      index === 0 && "w-full pl-4 text-left"
-                    )}
-                    key={label}
-                    scope="col"
-                  >
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <PlanRows {...rows} />
-            </tbody>
-          </table>
-        </div>
-      )}
+      <PlanVisualization
+        mode={mode}
+        plan={plan}
+        rows={rows}
+        selection={selection}
+        tableRef={tableRef}
+      />
       <PlanNodeInspector
         node={selected}
         onViewJson={onViewJson}
         parallel={Boolean(plan.root.parallel)}
       />
+    </div>
+  );
+}
+
+function PlanVisualization({
+  mode,
+  plan,
+  rows,
+  selection,
+  tableRef,
+}: {
+  mode: string;
+  plan: ExplainPlan;
+  rows: PlanRowsProps;
+  selection: { id: string; inspect: boolean };
+  tableRef: RefObject<HTMLDivElement | null>;
+}) {
+  const { onSelect: handleSelect } = rows;
+  if (mode === "timing") {
+    return (
+      <PlanTiming
+        nodes={flattenPlan(plan.root)}
+        onSelect={handleSelect}
+        selectedId={rows.selectedId}
+      />
+    );
+  }
+  if (mode === "map") {
+    return (
+      <PlanMap
+        metric={rows.metric}
+        onSelect={handleSelect}
+        root={plan.root}
+        selection={selection}
+      />
+    );
+  }
+  const heading = METRICS.find((item) => item.value === rows.metric)?.heading;
+  return (
+    <div className="min-h-48 min-w-0 flex-1 overflow-auto" ref={tableRef}>
+      <table
+        aria-label="Execution plan"
+        className="w-full min-w-2xl border-collapse text-xs"
+      >
+        <thead className="bg-background sticky top-0 z-10">
+          <tr className="border-b text-left">
+            {["Operation", "Rows / loop", "Est. rows", "Loops", heading].map(
+              (label, index) => (
+                <th
+                  className={cn(
+                    "h-9 px-2 text-right font-medium whitespace-nowrap last:pr-4",
+                    index === 0 && "w-full pl-4 text-left"
+                  )}
+                  key={label}
+                  scope="col"
+                >
+                  {label}
+                </th>
+              )
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          <PlanRows {...rows} />
+        </tbody>
+      </table>
     </div>
   );
 }
