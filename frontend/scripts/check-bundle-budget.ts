@@ -51,7 +51,10 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // Measured core: 1013.8 -> 1016.6 KiB; initial remains 334.3 KiB.
 // 1024 (was 1018): validated persisted drafts, fail-closed forms and explicit
 // runtime guards. Measured with Bun 1.4.3: 1022.5 KiB, keeping similar headroom.
-const MAX_TOTAL_GZIP_KIB = 1024;
+// 1027 (was 1024): port plan search, findings and ranked timing onto the spatial
+// workspace. Paired Bun 1.4.4 builds: main 1023.8 -> 1025.9 KiB core gzip.
+// No new dependencies; initial, SQL editor and largest-async caps are unchanged.
+const MAX_TOTAL_GZIP_KIB = 1027;
 
 interface BundleBudgetAsset {
   brotli: number;

@@ -2,6 +2,7 @@ import { describe, expect, test } from "@rstest/core";
 import {
   flattenPlan,
   parseExplainPlan,
+  planNodeInsights,
 } from "@/features/query-plan/explain-plan-model";
 
 const ANALYZE_PLAN = JSON.stringify([
@@ -148,4 +149,49 @@ describe("flattenPlan", () => {
       "0.1",
     ]);
   });
+});
+
+test("reports heavy per-loop filtering without diagnosing bitmap artifacts or unexecuted nodes", () => {
+  const plan = parseExplainPlan(
+    JSON.stringify({
+      Plan: {
+        "Node Type": "Append",
+        Plans: [
+          {
+            "Node Type": "Seq Scan",
+            "Actual Rows": 10,
+            "Plan Rows": 10,
+            "Actual Loops": 2,
+            "Rows Removed by Filter": 1990,
+          },
+          ...["BitmapAnd", "BitmapOr"].map((nodeType) => ({
+            "Node Type": nodeType,
+            "Actual Rows": 0,
+            "Plan Rows": 500,
+            "Actual Loops": 1,
+          })),
+          {
+            "Node Type": "Sort",
+            "Actual Rows": 0,
+            "Plan Rows": 500,
+            "Actual Loops": 0,
+            "Sort Space Type": "Disk",
+            "Hash Batches": 8,
+          },
+          {
+            "Node Type": "Seq Scan",
+            "Actual Rows": 1,
+            "Plan Rows": 1,
+            "Actual Loops": 1,
+            "Rows Removed by Filter": 9,
+          },
+        ],
+      },
+    })
+  );
+  expect(
+    plan?.root.children.map((node) =>
+      planNodeInsights(node).map((insight) => insight.label)
+    )
+  ).toEqual([["99.5% filtered"], [], [], [], []]);
 });
