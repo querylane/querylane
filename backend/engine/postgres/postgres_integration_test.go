@@ -183,12 +183,23 @@ func (s *PostgresEngineIntegrationTestSuite) TestListViewDependenciesPaginatesLa
 func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples() {
 	ctx := context.Background()
 
+	// Keep two real sessions idle so swapping the active/idle projections is
+	// observable. Positive total/max assertions alone miss that regression.
+	for range 2 {
+		idle, err := s.db.Conn(ctx)
+		s.Require().NoError(err)
+		s.T().Cleanup(func() { _ = idle.Close() })
+		s.Require().NoError(idle.PingContext(ctx))
+	}
+
 	version, err := s.eng.GetServerVersionNum(ctx, s.db)
 	s.Require().NoError(err)
 	s.GreaterOrEqual(version, int32(160000), "test container is PG16+")
 
 	conn, err := s.eng.GetConnectionMetrics(ctx, s.db)
 	s.Require().NoError(err)
+	s.Positive(conn.Active, "the metrics query itself is active")
+	s.GreaterOrEqual(conn.Idle, int32(2), "the held sessions must be counted as idle")
 	s.Positive(conn.Total, "our own connection must be counted")
 	s.Positive(conn.Max)
 
