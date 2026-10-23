@@ -5,11 +5,14 @@ It supports time-series line, area, and stacked charts; sparklines; axes;
 tooltips; and legends. Every Querylane chart should use this kit instead of
 hand-assembled chart-library primitives.
 
-TanStack Charts 1.0.0 is pinned exactly. Its documented APIs follow the
+TanStack Charts 1.1.0 is pinned exactly. Its documented APIs follow the
 [v1 compatibility contract](https://tanstack.com/charts/latest/docs/compatibility).
 Definitions use `@tanstack/charts/scene`, the React SVG host uses
 `@tanstack/charts/react`, and marks, scales, and interactions use exact subpaths.
 Keep chart behavior and bundle-budget checks green when upgrading.
+
+Axes use `axis.ticks.line: false` to hide tick stubs without hiding labels or
+the value grid. Keep application-owned tick values, formatters, and padding.
 
 ## Compose, do not replace
 

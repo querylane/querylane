@@ -386,8 +386,8 @@ function MetricTimeChart({
             },
             ticks: {
               format: (value) => formatTimeTick(value, spanMs),
+              line: false,
               padding: 8,
-              size: 0,
               values: timeTicks,
             },
           },
@@ -401,8 +401,8 @@ function MetricTimeChart({
                   line: false,
                   ticks: {
                     format: formatValue,
+                    line: false,
                     padding: 6,
-                    size: 0,
                     values: valueTicks,
                   },
                 },

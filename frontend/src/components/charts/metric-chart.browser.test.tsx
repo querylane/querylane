@@ -54,6 +54,23 @@ test("renders the metric chart kit", async () => {
     expect(path.getAttribute("stroke-width")).toBe("0");
   }
   await expect.element(page.getByText("Alert threshold")).toBeVisible();
+  // Hidden tick stubs must not hide the labels or full-width value grid.
+  await expect
+    .element(chart.getByText("0 req/s", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(chart.getByText("25 req/s", { exact: true }))
+    .toBeVisible();
+  const guideLines = screen
+    .getByRole("img", { name: "Metric time series" })
+    .querySelectorAll<SVGLineElement>("line");
+  expect(guideLines.length).toBeGreaterThan(0);
+  for (const line of guideLines) {
+    expect(line.y1.baseVal.value).toBe(line.y2.baseVal.value);
+    expect(
+      Math.abs(line.x2.baseVal.value - line.x1.baseVal.value)
+    ).toBeGreaterThan(100);
+  }
   const currentPoint = await hoverLineEnd(chart, CURRENT_LINE_SELECTOR);
   await expect.element(page.getByText("15.00 req/s")).toBeVisible();
   const tooltip = page.getByRole("status");
