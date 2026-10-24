@@ -104,6 +104,8 @@ jobs:
             git push origin "refs/tags/$tag"
           done
 
+          # publish-cli checks out this tag; all tags must be pushed BEFORE
+          # published=true makes that dependent job eligible to start.
           echo "published=true" >> "$GITHUB_OUTPUT"
 
       - name: Resolve released version
@@ -136,3 +138,16 @@ jobs:
       image: ghcr.io/${{ github.repository }}
       version: ${{ needs.release.outputs.version }}
       push: true
+
+  publish-cli:
+    name: Publish CLI and Homebrew formula
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_cli-build.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      publish: true
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
