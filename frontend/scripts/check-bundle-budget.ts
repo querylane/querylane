@@ -32,8 +32,9 @@ const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
 // 145 (was 140): the console-pages chunk shares these sources and also grew
 // with the instance health section redesign.
 const MAX_DEFERRED_CHARTS_GZIP_KIB = 145;
-const MAX_INITIAL_GZIP_KIB = 450;
-const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
+// Keep the measured lean-validation startup win from silently regressing.
+const MAX_INITIAL_GZIP_KIB = 327;
+const MAX_INITIAL_SCRIPT_GZIP_KIB = 293;
 // 975 (was 970): the data explorer's grid interaction layer became a shared
 // ResultDataGrid chunk used by the SQL workbench too (~3 KiB of optional
 // capability props and chunk overhead; the logic itself did not grow).

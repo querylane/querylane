@@ -101,19 +101,48 @@ Rsbuild 2.2.10 and Rspack 2.2.9 reported:
 | All application HTML/JS/CSS, gzip | 1395.5 KiB |
 | Largest async script, gzip | 111.6 KiB |
 
-The Rsdoctor 2 tooling upgrade preserved these budgets; no user-payload or build-speed
-reduction is claimed. It fixes accounting that previously counted the generated
-profiler HTML as application payload and lets a profile enforce byte budgets too.
+### Implemented validation-runtime improvements
 
-Initial investigation found no duplicate-package or tree-shaking rule alerts.
-The emitted-module query highlights React DOM, CodeMirror, React Flow, and generated
-protobuf validation descriptors. React DOM is expected at startup; the editor and
-visualization dependencies remain deferred. Local generated validation metadata also
-appears in the initial app chunk, while the validation package carries its own copy
-in a deferred chunk. Investigate descriptor/code-generation sharing separately, with
-form-validation and RPC compatibility tests; do not edit generated files or strip
-validation metadata based only on size. These are investigation leads, not proven
-optimization wins.
+The normal production build now reports **326.3 KiB initial gzip**, **292.0 KiB
+initial JavaScript gzip**, and **1371.7 KiB total application HTML/JS/CSS gzip**.
+The initial script/style request count stays at five. Compared with the baseline,
+that removes **11,301 initial gzip bytes (3.27%)** and **24,414 total gzip bytes
+(1.71%)**. These are emitted-payload measurements, not load-time or route-journey
+speed claims. The comparison uses the same machine, locked packages, production
+configuration and `collectBundleBudgetStats` compression; normal builds were
+measured separately from instrumented builds.
+
+Two changes implement the Rsdoctor findings:
+
+- Browser schemas use `zod/mini`'s functional API instead of Classic. They import
+  `@/lib/zod-locale` to retain English validation messages. Node-only tooling keeps
+  its existing Classic imports. URL search, persisted drafts, and public environment
+  variables retain their validation and transformation behavior.
+- `buf.gen.yaml` pins protoc-gen-es 2.15.0 and maps `buf/validate/` imports to
+  `@bufbuild/protovalidate/gen`. Generated API schemas and the validation runtime
+  therefore share one canonical descriptor. Validation annotations are preserved,
+  not stripped or deferred. Regenerate with `task proto:generate`; never edit
+  generated output. See the generator's [map_imports release notes](https://github.com/bufbuild/protobuf-es/releases/tag/v2.15.0)
+  and [Zod Mini documentation](https://zod.dev/packages/mini).
+
+The descriptor-only experiment reduced total gzip by 9,959 bytes but grew initial
+payload by 3,201 bytes. It missed the independent startup guardrail. The combined
+slice is retained because the Mini change more than offsets that cost while
+removing the duplicate descriptor overall. Do not describe descriptor sharing
+alone as a startup optimization.
+
+Rsdoctor's final emitted graph contains one canonical validation descriptor and no
+local validation-descriptor copy, Zod Classic modules, or Zod JSON-schema conversion
+modules. Its rule report has no alerts; that is not a general proof of perfect
+bundling. React DOM remains eager, while CodeMirror, charts, React Flow, the
+validation engine, and SQL highlighting remain deferred.
+
+Verification includes a failing-before descriptor-identity assertion, actual
+required-field/range and message-level CEL validation, binary/JSON round trips,
+English multi-error output, existing search/draft tests, and a failing-before
+startup byte-budget gate. The 28 generated encoded file descriptors are unchanged;
+only dependency imports and generator-produced TypeScript declarations changed.
+
 
 ## Accessibility manual-check evidence
 
@@ -154,13 +183,13 @@ The Lighthouse command uses 3 desktop runs and median assertions against a mocke
 
 ## Current thresholds
 
-| Metric | Initial policy |
+| Metric | Current limit |
 | --- | --- |
-| Initial gzip | Hard fail at 450 KiB |
-| Initial JavaScript gzip | Hard fail at 400 KiB |
-| Core gzip | Hard fail at 950 KiB |
+| Initial gzip | Hard fail at 327 KiB |
+| Initial JavaScript gzip | Hard fail at 293 KiB |
+| Core gzip | Hard fail at 1027 KiB |
 | Largest async JavaScript gzip | Hard fail at 130 KiB |
-| Deferred visualization gzip | Hard fail at 90 KiB |
+| Deferred visualization gzip | Hard fail at 91 KiB |
 | Lighthouse performance | Hard fail below 100 |
 | Lighthouse accessibility | Hard fail below 100 |
 | Lighthouse best practices | Hard fail below 100 |

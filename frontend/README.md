@@ -8,6 +8,7 @@ React + TypeScript app bundled with Rsbuild.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
 - Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
 - `react-doctor` runs lint/dead-code checks.
+- Browser validation uses `zod/mini` with `@/lib/zod-locale` for English messages. Keep Classic Zod in Node-only tooling.
 
 ## Scripts
 

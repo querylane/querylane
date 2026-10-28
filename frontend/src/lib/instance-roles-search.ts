@@ -1,5 +1,6 @@
-import { z } from "zod";
 import type { RoleKind } from "@/lib/role-display";
+import "@/lib/zod-locale";
+import { z } from "zod/mini";
 
 const instanceRolesTabSchema = z.enum(["details", "map"]);
 const instanceRolesSearchTabSchema = z.enum([
@@ -16,12 +17,12 @@ const INSTANCE_ROLES_TYPES = [
   "super",
 ] as const satisfies readonly RoleKind[];
 const instanceRolesTypeValueSchema = z.enum(INSTANCE_ROLES_TYPES);
-const instanceRolesTypeSchema = z
-  .string()
-  .optional()
-  .transform((value): RoleKind | undefined =>
+const instanceRolesTypeSchema = z.pipe(
+  z.optional(z.string()),
+  z.transform((value): RoleKind | undefined =>
     isInstanceRolesType(value) ? value : undefined
-  );
+  )
+);
 
 type InstanceRolesTab = z.infer<typeof instanceRolesTabSchema>;
 interface InstanceRolesSearch {
@@ -44,13 +45,13 @@ function normalizeInstanceRolesTab(
   return value;
 }
 
-const instanceRolesSearchSchema = z
-  .object({
-    q: z.string().optional(),
-    tab: instanceRolesSearchTabSchema.optional(),
-    type: instanceRolesTypeSchema.optional(),
-  })
-  .transform<InstanceRolesSearch>(({ q, tab, type }) => {
+const instanceRolesSearchSchema = z.pipe(
+  z.object({
+    q: z.optional(z.string()),
+    tab: z.optional(instanceRolesSearchTabSchema),
+    type: z.optional(instanceRolesTypeSchema),
+  }),
+  z.transform(({ q, tab, type }): InstanceRolesSearch => {
     const search: InstanceRolesSearch = {};
     const normalizedTab = normalizeInstanceRolesTab(tab);
 
@@ -67,7 +68,8 @@ const instanceRolesSearchSchema = z
     }
 
     return search;
-  });
+  })
+);
 
 function isInstanceRolesTab(
   value: string | undefined
