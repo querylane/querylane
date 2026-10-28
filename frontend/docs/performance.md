@@ -143,6 +143,38 @@ English multi-error output, existing search/draft tests, and a failing-before
 startup byte-budget gate. The 28 generated encoded file descriptors are unchanged;
 only dependency imports and generator-produced TypeScript declarations changed.
 
+### Further experiments: rejected, not shipped
+
+A follow-up pass compared normal builds against `8d8b8a64`, using the same byte
+collector and locked dependencies. Rsdoctor traced an eager import from the SQL
+workbench route to the shared prefetch registry, including table and extension
+RPC schemas. Deferring it lowered initial bytes, but duplicated small modules
+across async chunks. Initial bytes alone were not sufficient evidence to keep it.
+
+| Experiment | Initial gzip change | Total app gzip change | Decision |
+| --- | ---: | ---: | --- |
+| Dynamic workbench prefetch import only | −9,302 bytes | +8,217 bytes | Reverted |
+| Separate common, explorer and extension prefetch factories | −9,143 bytes | +8,763 bytes | Reverted |
+| Split factories plus targeted shared async query chunk | −9,102 bytes | +3,904 bytes | Reverted |
+
+Before the shared-chunk revision, the acceptance ceiling was set at 2 KiB total
+growth while retaining at least 5 KiB initial savings. That revision still missed
+the ceiling. Rsdoctor confirmed the cause: the factory split emitted the infinite
+query observer in five chunks and the extension descriptor in three; the shared
+group removed those duplicates but did not offset the remaining output growth.
+The import-only variant also missed the ceiling. All candidate code and cache
+groups were discarded; the implemented measurements above remain unchanged.
+
+The narrower import-only variant would benefit setup and empty deployments, not
+necessarily existing-instance startup: instance loaders already import that same
+registry. Moving bytes out of `index.html`'s initial assets does not prove a
+smaller cold route journey. Existing mocked Data Explorer readiness and navigation
+payload gates passed on the retained implementation without relaxed limits.
+
+A Tailwind compiler probe restricting source detection to `src` produced a
+negligible CSS reduction and was also discarded. Investigation reports stay local
+because they contain absolute paths and source/configuration details.
+
 
 ## Accessibility manual-check evidence
 
