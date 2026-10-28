@@ -148,6 +148,11 @@ function allBuildAssets(directory: string, prefix = ""): string[] {
     if (entry.isDirectory()) {
       return allBuildAssets(absolutePath, relativePath);
     }
+    // The opt-in profiler emits its own HTML app, not Querylane payload.
+    // Exclude only its configured root report; other app HTML still counts.
+    if (relativePath === "rsdoctor-report.html") {
+      return [];
+    }
     return BUILD_ASSET_EXTENSION_PATTERN.test(entry.name) ? [relativePath] : [];
   });
 }

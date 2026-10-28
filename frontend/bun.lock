@@ -65,6 +65,7 @@
         "@rsbuild/core": "2.2.14",
         "@rsbuild/plugin-react": "2.1.1",
         "@rsbuild/plugin-tailwindcss": "2.0.3",
+        "@rsdoctor/agent-cli": "0.1.1",
         "@rsdoctor/core": "2.0.1",
         "@rsdoctor/shared": "2.0.1",
         "@rstest/browser": "0.12.5",
@@ -572,6 +573,8 @@
     "@rsbuild/plugin-react": ["@rsbuild/plugin-react@2.1.1", "", { "dependencies": { "@rspack/plugin-react-refresh": "^2.0.2", "react-refresh": "^0.19.0" }, "peerDependencies": { "@rsbuild/core": "^2.0.0" }, "optionalPeers": ["@rsbuild/core"] }, "sha512-tLtUedsRtTLS6M4VtwzI6aakFLOFdgl9Sh1ZNBWvxb0Te3EnHrppaE7UiYEmDUXQDJ50gfr6yyirtxY5N6moyg=="],
 
     "@rsbuild/plugin-tailwindcss": ["@rsbuild/plugin-tailwindcss@2.0.3", "", { "dependencies": { "@tailwindcss/webpack": "^4.3.1" }, "peerDependencies": { "@rsbuild/core": "^2.0.0" }, "optionalPeers": ["@rsbuild/core"] }, "sha512-sl7mN0fyoP0W+zEyFR2xEMVAS2cZPlOAqsXwI8Ei9tUSvV7V4G8Xw2WBVCOQ/B4KEFfJ6H1+TEuPlAzHLEfc4g=="],
+
+    "@rsdoctor/agent-cli": ["@rsdoctor/agent-cli@0.1.1", "", { "bin": { "rsdoctor-agent": "bin/rsdoctor-agent.js" } }, "sha512-5bLoaIvvrlVcDRKGQFKXf5OiQkpcoHivVxqy+93ujxcATc6quWiJ3il9rLLzEV0mP0cF3IEsFpituVzHtBy6MA=="],
 
     "@rsdoctor/client": ["@rsdoctor/client@2.0.1", "", {}, "sha512-v/KZwX9j1s2Vsni8KNVNCcxGDx7/UZeK+U+DkqgGT1akmTHq/Hr1bNAkzUknIne5Fy+UVVmJBx61KyLcA8he8w=="],
 

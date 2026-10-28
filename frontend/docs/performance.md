@@ -31,6 +31,90 @@ shareable and intended for CI logs or pull request comments. They are not the
 long-term source of truth; keep bundle budgets and local assertions as the hard
 gate.
 
+## Rsdoctor analysis loop
+
+Querylane already uses Rsbuild 2; it is one web app, not a Module Federation host.
+Rsdoctor 2 is opt-in through `build:profile`. Normal builds do not collect profiles.
+The pinned Agent CLI reads local reports without an MCP server or external upload.
+See the upstream [migration guide](https://rsdoctor.rs/guide/migration/migration-v2)
+and [Agent CLI documentation](https://rsdoctor.rs/guide/start/ai).
+
+From `frontend/`:
+
+```bash
+# Baseline before changing imports or chunking. This cleans dist, not the build cache.
+bun run build:profile
+# Keep the baseline outside dist: the next build replaces that directory.
+cp dist/rsdoctor-data.json /tmp/querylane-rsdoctor-baseline.json
+
+bun run analyze bundle optimize --data-file dist/rsdoctor-data.json
+bun run analyze tree-shaking summary --data-file dist/rsdoctor-data.json
+bun run analyze tree-shaking retained-modules --emitted-only --sort parsedSize --limit 25 --data-file dist/rsdoctor-data.json
+bun run analyze loaders hot-files --data-file dist/rsdoctor-data.json
+
+# Drill into a retained module, then trace the ID returned by this query.
+bun run analyze modules by-path --path chrono-node --data-file dist/rsdoctor-data.json
+# bun run analyze modules issuer --id <returned-id> --data-file dist/rsdoctor-data.json
+
+# After one evidence-backed change, rebuild and compare.
+bun run build:profile
+bun run analyze assets diff --baseline /tmp/querylane-rsdoctor-baseline.json --current dist/rsdoctor-data.json --data-file dist/rsdoctor-data.json
+```
+
+Open `dist/rsdoctor-report.html` for the visual overview, compilation analysis,
+and bundle tree. Use `bun run analyze --describe` and `--schema <group.command>`
+to inspect supported commands/options. A missing data file fails with a nonzero
+exit; regenerate it with `build:profile` before querying again.
+
+### Measurement boundaries
+
+- Module sizes help locate retained code, not estimate download savings. Concatenated
+  parent/child entries can describe the same emitted code. Do not sum module gzip sizes.
+- No rule alerts does not mean every retained module is needed. Inspect emitted chunks,
+  issuer chains, and source before making a change. Empty export data is not proof of
+  perfect tree-shaking.
+- Agent CLI 0.1.1's `assets diff` reported zero initial JS/CSS assets for this build
+  despite three initial chunks. Use `budget:check` for initial payload and request counts;
+  do not treat that CLI field as a first-load measurement.
+- Budgets use Node's default `gzipSync`/Brotli compression. Initial payload counts
+  scripts/styles referenced by `index.html`, including theme initialization, but not
+  fonts, HTML, API responses, or route-navigation downloads. Total payload counts app
+  HTML/JS/CSS, not the profiler's HTML/JSON, source maps, fonts, or images.
+- Profiling changes chunk IDs and adds analysis overhead. Compare normal production
+  builds for user payload or build-speed claims. For build timing, use the same machine,
+  environment and locked dependencies, clear `dist` and `node_modules/.cache/rsbuild`
+  before each run, and report the median of three runs per revision. Do not mix cold
+  and warm builds or include profiler timing in normal-build claims.
+- Keep only improvements that clear a declared worthwhile threshold. Re-run the same
+  route journey for navigation claims; this profile alone does not measure a journey.
+
+### Baseline: October 28, 2026
+
+At `e7196590`, a normal production build on macOS arm64, Bun 1.4.4, Node 26.12.1,
+Rsbuild 2.2.10 and Rspack 2.2.9 reported:
+
+| Metric | Baseline |
+| --- | ---: |
+| Initial scripts/styles, gzip | 337.4 KiB |
+| Initial JavaScript, gzip | 303.0 KiB |
+| Initial script/style requests | 5 |
+| All application HTML/JS/CSS, gzip | 1395.5 KiB |
+| Largest async script, gzip | 111.6 KiB |
+
+The Rsdoctor 2 tooling upgrade preserved these budgets; no user-payload or build-speed
+reduction is claimed. It fixes accounting that previously counted the generated
+profiler HTML as application payload and lets a profile enforce byte budgets too.
+
+Initial investigation found no duplicate-package or tree-shaking rule alerts.
+The emitted-module query highlights React DOM, CodeMirror, React Flow, and generated
+protobuf validation descriptors. React DOM is expected at startup; the editor and
+visualization dependencies remain deferred. Local generated validation metadata also
+appears in the initial app chunk, while the validation package carries its own copy
+in a deferred chunk. Investigate descriptor/code-generation sharing separately, with
+form-validation and RPC compatibility tests; do not edit generated files or strip
+validation metadata based only on size. These are investigation leads, not proven
+optimization wins.
+
 ## Accessibility manual-check evidence
 
 Lighthouse always lists some accessibility checks as manual because it cannot

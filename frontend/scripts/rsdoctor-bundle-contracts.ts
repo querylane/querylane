@@ -1,5 +1,5 @@
 import { defineRule } from "@rsdoctor/core";
-import { Err, type Linter, type SDK } from "@rsdoctor/shared/types";
+import type { SDK } from "@rsdoctor/shared/types";
 
 // Keep this list limited to intentionally deferred feature dependencies, not
 // every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
@@ -34,27 +34,6 @@ function* emittedModules(chunkGraph: SDK.ChunkGraphInstance) {
   }
 }
 
-function enforceBundleContracts({
-  validateResult,
-}: Pick<Linter.RuleCheckerContextForCheckEnd, "validateResult">): void {
-  // Rsdoctor 1.6.4 forwards even Error findings to compilation.warnings.
-  // Fail only our contracts, after every rule has reported its diagnostics.
-  const titles = new Set(
-    bundleContractRules.map((rule) => rule.meta.title.toUpperCase())
-  );
-  const failures = validateResult.errors.filter(
-    (error) =>
-      error.severity === Err.ErrorLevel.Error && titles.has(error.title)
-  );
-  if (failures.length > 0) {
-    throw new Error(
-      failures
-        .map((error) => `[${error.title.toLowerCase()}] ${error.message}`)
-        .join("\n")
-    );
-  }
-}
-
 function routeComponentPath(modulePath: string) {
   const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
   // TanStack encodes grouped split targets with `---` separators.
@@ -76,7 +55,6 @@ export const heavyPackagesStayDeferred = defineRule(() => ({
     severity: "Error",
     title: "querylane-heavy-packages-stay-deferred",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph } = context;
     const reportedPackages = new Set<string>();
@@ -110,7 +88,6 @@ export const noShikiOniguruma = defineRule(() => ({
     severity: "Error",
     title: "querylane-no-shiki-oniguruma",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph } = context;
     const reported = new Set<string>();
@@ -132,7 +109,6 @@ export const routesStaySplit = defineRule(() => ({
     severity: "Error",
     title: "querylane-routes-stay-split",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph, root } = context;
     const expected = new Map(

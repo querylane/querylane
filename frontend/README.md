@@ -14,6 +14,8 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run dev` - start dev server
 - `bun run dev:scan` - start local dev with React Scan and the default global Compiler
 - `bun run build` - build production assets
+- `bun run build:profile` - build with Rsdoctor 2, enforce graph contracts and byte budgets
+- `bun run analyze <group> <command> --data-file dist/rsdoctor-data.json` - query a profile with the pinned Rsdoctor Agent CLI
 - `bun run preview` - preview the production build
 - `bun run quality:gate` - run the standard full local gate with React Doctor, typecheck, build, unit tests, and integration tests
 - `bun run quality:changed` - run changed-file Ultracite, React Doctor, typecheck, and changed Rstest suites against `QUALITY_BASE_REF` (defaults to `origin/main`)
@@ -92,8 +94,12 @@ the normal build and byte budgets; contract violations fail the build.
 Rules live in `scripts/rsdoctor-bundle-contracts.ts`, using Rsdoctor's
 [custom rule API](https://rsdoctor.rs/guide/rules/rule-custom). They follow concatenated
 modules and ignore tree-shaken modules; `cross-chunks-package` stays off because of
-known route/CSS false positives. An `onCheckEnd` hook fails only these contracts because
-the installed Rsdoctor 1.6.4 forwards even error-level findings as compiler warnings.
-Update the explicit route sentinels when intentionally
-renaming those routes. Ordinary local `bun run build` keeps its existing byte-budget gate;
-use `build:profile` for graph enforcement.
+known route/CSS false positives. Rsdoctor 2 forwards error-level findings to Rspack's
+compilation errors, so the former `onCheckEnd` failure shim is no longer needed.
+Update the explicit route sentinels when intentionally renaming those routes.
+Both build commands enforce byte budgets; only `build:profile` enforces the graph
+contracts. Its root `rsdoctor-report.html` is excluded from application byte totals.
+
+See [the profiling workflow](docs/performance.md#rsdoctor-analysis-loop) for Agent CLI
+commands, comparison limits, and the current baseline. Reports contain source and
+resolved build configuration: keep them local and never deploy a profiled `dist`.
