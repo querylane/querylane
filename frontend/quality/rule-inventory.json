@@ -13738,5 +13738,58 @@
       "decision": "error",
       "reason": "Enforce the design-system contract. Owned primitives define appearance; consumers only place them."
     }
-  ]
+  ],
+  "overrideExceptions": {
+    "biome": [
+      {
+        "scope": ["scripts/**/*"],
+        "rules": [
+          "correctness/noNodejsModules",
+          "suspicious/noConsole",
+          "nursery/noProcessExit"
+        ]
+      },
+      {
+        "scope": ["e2e/**/*", "lighthouserc.*", "rstest.shared.ts"],
+        "rules": ["correctness/noNodejsModules"]
+      },
+      {
+        "scope": [
+          "*.config.{js,ts,mjs,cjs,mts,cts}",
+          "**/*.config.{js,ts,mjs,cjs,mts,cts}",
+          "playwright.config.*",
+          "rsbuild.config.*",
+          "rstest.config.*",
+          "postcss.config.*"
+        ],
+        "rules": ["correctness/noNodejsModules", "style/noDefaultExport"]
+      },
+      {
+        "scope": ["e2e/llm-reporter.ts"],
+        "rules": ["style/noDefaultExport"]
+      },
+      {
+        "scope": ["src/routes/**/*"],
+        "rules": ["style/useComponentExportOnlyModules"]
+      },
+      {
+        "scope": [
+          "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+          "**/__tests__/**/*"
+        ],
+        "rules": [
+          "security/noSecrets",
+          "performance/noNamespaceImport",
+          "style/noMagicNumbers",
+          "style/useComponentExportOnlyModules"
+        ]
+      }
+    ],
+    "oxlint": [
+      {
+        "scope": ["src/components/querylane-ui/**"],
+        "rules": ["shadcn/no-restyle", "shadcn/require-static-classes"]
+      }
+    ]
+  }
 }

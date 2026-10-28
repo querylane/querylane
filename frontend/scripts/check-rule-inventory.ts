@@ -4,7 +4,8 @@ import { join, resolve } from "node:path";
 import shadcn from "@shadcn/lint";
 import { z } from "zod";
 import oxlintConfig from "../oxlint.config";
-import { isRecord, isUnknownArray } from "../src/lib/value-guards";
+import { isRecord } from "../src/lib/value-guards";
+import { assertQualityBoundaries, ruleSeverity } from "./quality-boundaries";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ESLINT_SCOPE_PATTERN = /^eslint\//u;
@@ -164,11 +165,6 @@ function assertNativeOverrides(
   }
 }
 
-function ruleSeverity(configured: unknown): unknown {
-  const level = isUnknownArray(configured) ? configured[0] : configured;
-  return isRecord(level) ? level["level"] : level;
-}
-
 function assertErrorLevel(rule: string, configured: unknown) {
   const severity = ruleSeverity(configured);
   if (severity !== "deny" && severity !== "error" && severity !== 2) {
@@ -285,7 +281,8 @@ function assertShadcnRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
 }
 
 async function assertDelegatedOwners(
-  inventory: z.infer<typeof inventorySchema>
+  inventory: z.infer<typeof inventorySchema>,
+  compiler: ReadonlySet<string>
 ) {
   const biomeModule: unknown = await import(join(ROOT, "biome.jsonc"));
   const biome = z
@@ -299,9 +296,6 @@ async function assertDelegatedOwners(
       }),
     })
     .parse(biomeModule).default;
-  const compiler = z
-    .object({ compilerOptions: z.record(z.string(), z.unknown()) })
-    .parse(readJson(join(ROOT, "tsconfig.strict.json"))).compilerOptions;
   const assists =
     biome.assist.enabled === false ? {} : biome.assist.actions.source;
   const owners = new Set([
@@ -310,9 +304,7 @@ async function assertDelegatedOwners(
         entry.decision === "error" ? [`${tool}/${entry.rule}`] : []
       )
     ),
-    ...Object.entries(compiler).flatMap(([rule, enabled]) =>
-      enabled === true ? [`typescript/${rule}`] : []
-    ),
+    ...Array.from(compiler, (rule) => `typescript/${rule}`),
     ...Object.entries(assists).flatMap(([rule, level]) =>
       level === "on" ? [`biome/assist/source/${rule}`] : []
     ),
@@ -336,6 +328,7 @@ async function checkRuleInventory() {
   const inventory = inventorySchema.parse(
     readJson(join(ROOT, "quality/rule-inventory.json"))
   );
+  const compiler = await assertQualityBoundaries(ROOT);
   const native = z
     .array(z.object({ scope: z.string(), value: z.string() }))
     .parse(toolJson("oxlint", ["--rules", "--format", "json"]));
@@ -362,7 +355,7 @@ async function checkRuleInventory() {
   assertNativeRuleLevels(inventory.oxlint);
   await assertDoctorRuleLevels(inventory.reactDoctor, doctor);
   assertShadcnRuleLevels(inventory.shadcn);
-  await assertDelegatedOwners(inventory);
+  await assertDelegatedOwners(inventory, compiler);
   const manifest = z
     .object({
       dependencies: z.record(z.string(), z.string()),

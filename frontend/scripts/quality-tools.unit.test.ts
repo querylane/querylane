@@ -19,21 +19,69 @@ const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
 test.each([
   {
     name: "readonly inputs",
-    rule: "prefer-readonly-parameter-types",
+    rule: "typescript(prefer-readonly-parameter-types)",
     source:
       "export function count(values: string[]): number { return values.length; }\n",
   },
   {
     name: "explicit exported contracts",
-    rule: "explicit-module-boundary-types",
+    rule: "typescript(explicit-module-boundary-types)",
     source:
       "export function count(values: readonly string[]) { return values.length; }\n",
   },
   {
     name: "impossible conditions",
-    rule: "no-unnecessary-condition",
+    rule: "typescript(no-unnecessary-condition)",
     source:
       "export function missing(values: readonly string[]): boolean { return values === undefined; }\n",
+  },
+  {
+    name: "stateful alias imports",
+    rule: "eslint(no-restricted-imports)",
+    source:
+      'import { logger } from "@/lib/diagnostics";\n\nexport function count(values: readonly string[]): number { logger.info("count", values.length); return values.length; }\n',
+  },
+  {
+    name: "relative escapes into platform adapters",
+    rule: "eslint(no-restricted-imports)",
+    source:
+      'import { logger } from "../../diagnostics";\n\nexport function count(values: readonly string[]): number { logger.info("count", values.length); return values.length; }\n',
+  },
+  {
+    name: "React hooks in value transformations",
+    rule: "eslint(no-restricted-imports)",
+    source:
+      'import { useId } from "react";\n\nexport function useDomainId(): string { return useId(); }\n',
+  },
+  {
+    name: "ambient browser state",
+    rule: "eslint(no-restricted-globals)",
+    source:
+      "export function language(): string { return navigator.language; }\n",
+  },
+  {
+    name: "qualified browser state",
+    rule: "eslint(no-restricted-globals)",
+    source:
+      "export function language(): string { return globalThis.navigator.language; }\n",
+  },
+  {
+    name: "browser state through a namespace alias",
+    rule: "eslint(no-restricted-globals)",
+    source:
+      "export function language(): string { const platform = globalThis; return platform.navigator.language; }\n",
+  },
+  {
+    name: "erased adapter type imports",
+    rule: null,
+    source:
+      'import type { DiagnosticLogger } from "@/lib/diagnostics";\n\nexport type LogSink = Readonly<DiagnosticLogger>;\n',
+  },
+  {
+    name: "shared value guards",
+    rule: null,
+    source:
+      'import { isNonEmptyString } from "@/lib/value-guards";\n\nexport function hasText(value: string | undefined): boolean { return isNonEmptyString(value); }\n',
   },
   {
     name: "valid pure transformation",
@@ -65,7 +113,7 @@ test.each([
       .object({ diagnostics: z.array(z.object({ code: z.string() })) })
       .parse(JSON.parse(result.stdout));
     expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
-      rule === null ? [] : [`typescript(${rule})`]
+      rule === null ? [] : [rule]
     );
   } finally {
     rmSync(directory, { recursive: true });
@@ -200,14 +248,39 @@ test.each([
   { input: "{}", fixesEditedFile: false },
   { input: '{"tool_input":{}}', fixesEditedFile: false },
   { input: '{"tool_input":{"file_path":""}}', fixesEditedFile: false },
+  { input: '{"tool_input":{"file_path":42}}', fixesEditedFile: false },
+  { input: '{"tool_input":{"file_path":"."}}', fixesEditedFile: false },
+  {
+    input: '{"tool_input":{"file_path":"missing.ts"}}',
+    fixesEditedFile: false,
+  },
+  {
+    input: '{"tool_input":{"file_path":"escaped.ts"}}',
+    fixesEditedFile: false,
+  },
+  {
+    input: '{"tool_name":"bash","tool_input":{"file_path":"edited.ts"}}',
+    fixesEditedFile: false,
+  },
   {
     input: '{"tool_input":{"file_path":"edited.ts"}}',
+    fixesEditedFile: true,
+  },
+  {
+    input: JSON.stringify({
+      tool_name: "apply_patch",
+      tool_input: {
+        patch: "*** Begin Patch\n*** Update File: edited.ts\n@@\n*** End Patch",
+      },
+    }),
     fixesEditedFile: true,
   },
 ])(
   "agent hook fixes only its named file: $input",
   ({ input, fixesEditedFile }) => {
     const directory = mkdtempSync(join(tmpdir(), "querylane-hook-"));
+    const outside = mkdtempSync(join(tmpdir(), "querylane-hook-outside-"));
+    const escapedSource = join(outside, "external.ts");
     const source = join(directory, "untouched.ts");
     const original = 'export const value={key:"value"};\n';
     try {
@@ -218,6 +291,8 @@ test.each([
       );
       writeFileSync(join(directory, "biome.json"), '{"root":true}');
       writeFileSync(source, original);
+      writeFileSync(escapedSource, original);
+      symlinkSync(escapedSource, join(directory, "escaped.ts"));
       const editedSource = join(directory, "edited.ts");
       writeFileSync(editedSource, original);
       const result = spawnSync(
@@ -227,11 +302,13 @@ test.each([
       );
       expect(result.status).toBe(0);
       expect(readFileSync(source, "utf8")).toBe(original);
+      expect(readFileSync(escapedSource, "utf8")).toBe(original);
       expect(readFileSync(editedSource, "utf8")).toBe(
         fixesEditedFile ? 'export const value = { key: "value" };\n' : original
       );
     } finally {
       rmSync(directory, { recursive: true });
+      rmSync(outside, { recursive: true });
     }
   }
 );

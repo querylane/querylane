@@ -34,6 +34,184 @@ test("accepts the same reviewed catalog in a different order", () => {
 
 test.each([
   {
+    config: "tsconfig.strict.json",
+    original: '"compilerOptions": {',
+    replacement:
+      '// Shared compiler policy supports JSONC.\n  "compilerOptions": {',
+    rule: "valid compiler comments",
+    status: 0,
+    message: "Every installed rule has a recorded policy decision.",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"extends": ["ultracite/biome/playwright"],',
+    replacement: "",
+    rule: "missing Playwright inheritance",
+    message: "Unreviewed Biome preset inheritance",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"extends": ["ultracite/biome/playwright"]',
+    replacement:
+      '"extends": ["ultracite/biome/playwright", "./quality/unreviewed-biome.jsonc"]',
+    rule: "hidden preset inheritance",
+    message: "Unreviewed Biome preset inheritance",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "categories: {",
+    replacement: 'extends: ["./quality/unreviewed-oxlint.json"], categories: {',
+    rule: "hidden typed inheritance",
+    message:
+      "Oxlint presets must remain materialized without inherited overrides",
+  },
+  {
+    config: "tsconfig.strict.json",
+    original: '"compilerOptions": {',
+    replacement: '"exclude": ["public/hidden.js"], "compilerOptions": {',
+    rule: "inherited compiler source exclusion",
+    message: "Compiler coverage is not enforced: tsconfig.browser-js.json",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"includes": ["scripts/**/*"]',
+    replacement: '"includes": ["src/**/*"]',
+    rule: "broadened Node waiver",
+    message: "Unreviewed Biome override",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"src/components/ui/**",',
+    replacement: '"src/components/ui/**", "src/features/**",',
+    rule: "authored source presented as generated",
+    message: "Quality engine cannot be disabled",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "overrides: [",
+    replacement:
+      'overrides: [{ files: ["src/features/**"], plugins: [], rules: {} },',
+    rule: "per-role engine bypass",
+    message: "Oxlint overrides cannot alter engine or coverage settings",
+  },
+  {
+    config: "tsconfig.browser-js.json",
+    original: '"checkJs": true',
+    replacement: '"checkJs": false',
+    rule: "unchecked public JavaScript",
+    message:
+      "Compiler contract is not enforced: tsconfig.browser-js.json/checkJs",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"overrides": [',
+    replacement:
+      '"overrides": [{ "includes": ["src/features/**"], "linter": { "rules": { "suspicious": { "noDebugger": "off" } } } },',
+    rule: "hidden Biome waiver",
+    message: "Unreviewed Biome override",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"overrides": [',
+    replacement:
+      '"overrides": [{ "includes": ["src/features/**"], "linter": { "rules": { "suspicious": { "noLeakedRender": "error" } } } },',
+    rule: "hidden conflicting Biome rule",
+    message: "Unreviewed Biome override",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"overrides": [',
+    replacement:
+      '"overrides": [{ "includes": ["src/features/**"], "linter": { "enabled": false } },',
+    rule: "disabled source engine",
+    message: "Quality engine cannot be disabled",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"javascript": {',
+    replacement: '"javascript": { "linter": { "enabled": false },',
+    rule: "disabled JavaScript linting",
+    message: "Quality engine cannot be disabled",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"useIgnoreFile": false',
+    replacement: '"useIgnoreFile": true',
+    rule: "gitignore coverage bypass",
+    message: "Biome must not inherit source exclusions from gitignore",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"!!src/protogen",',
+    replacement: '"!!src/protogen", "!!src/features",',
+    rule: "hidden Biome source exclusion",
+    message: "Unreviewed Biome exclusion",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"**",',
+    replacement: '"src/**",',
+    rule: "narrowed Biome source coverage",
+    message: "Biome must cover all authored file roles",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "overrides: [",
+    replacement:
+      'overrides: [{ files: ["src/features/**"], rules: { "typescript/no-floating-promises": "off" } },',
+    rule: "hidden typed waiver",
+    message: "Unreviewed Oxlint override",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "ignorePatterns: [",
+    replacement: 'ignorePatterns: ["src/features/**",',
+    rule: "hidden typed source exclusion",
+    message: "Unreviewed Oxlint exclusion",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "typeAware: true",
+    replacement: "typeAware: false",
+    rule: "disabled editor typed checks",
+    message: "Oxlint must retain type-aware fatal checks",
+  },
+  {
+    config: "doctor.config.ts",
+    original: "files: [",
+    replacement: 'files: ["src/features/**",',
+    rule: "hidden Doctor source exclusion",
+    message: "Unreviewed Doctor exclusion",
+  },
+  {
+    config: "doctor.config.ts",
+    original: "lint: true",
+    replacement: "lint: false",
+    rule: "disabled Doctor analysis",
+    message: "Doctor must retain full fatal analysis",
+  },
+  {
+    config: "tsconfig.json",
+    original: '"target": "ESNext",',
+    replacement: '"target": "ESNext", "strict": false,',
+    rule: "weakened application compiler",
+    message: "Compiler contract is not enforced: tsconfig.json/strict",
+  },
+  {
+    config: "tsconfig.json",
+    original: '"src",',
+    replacement: '"src/env.ts",',
+    rule: "narrowed compiler source coverage",
+    message: "Compiler coverage is not enforced: tsconfig.json",
+  },
+  {
+    config: "tsconfig.json",
+    original: '"exclude": [',
+    replacement: '"exclude": ["src/features",',
+    rule: "hidden compiler source exclusion",
+    message: "Compiler coverage is not enforced: tsconfig.json",
+  },
+  {
     config: "biome.jsonc",
     original: '"noDebugger": "error"',
     replacement: '"noDebugger": "off"',
@@ -69,7 +247,7 @@ test.each([
     original: '"linter": {',
     replacement: '"linter": { "enabled": false,',
     rule: "Biome linter",
-    message: "Biome linter must remain enabled",
+    message: "Quality engine cannot be disabled: linter",
   },
   {
     config: "biome.jsonc",
@@ -115,8 +293,7 @@ test.each([
     original: '"assist": {',
     replacement: '"assist": { "enabled": false,',
     rule: "eslint/sort-imports",
-    message:
-      "Delegated owner is not enforced: eslint/sort-imports -> biome/assist/source/organizeImports",
+    message: "Quality engine cannot be disabled: assist",
   },
   {
     config: "tsconfig.strict.json",
@@ -124,7 +301,7 @@ test.each([
     replacement: '"noImplicitReturns": false',
     rule: "typescript/consistent-return",
     message:
-      "Delegated owner is not enforced: typescript/consistent-return -> typescript/noImplicitReturns",
+      "Compiler contract is not enforced: tsconfig.json/noImplicitReturns",
   },
   {
     config: "quality/rule-inventory.json",
@@ -140,6 +317,7 @@ test.each([
     original: '"typescript/prefer-readonly-parameter-types": "error"',
     replacement: '"typescript/prefer-readonly-parameter-types": "off"',
     rule: "typescript/prefer-readonly-parameter-types",
+    message: "Unreviewed Oxlint override",
   },
   {
     config: "oxlint.config.ts",
@@ -149,16 +327,23 @@ test.each([
     message:
       "Reviewed rule scope is not enforced: typescript/explicit-module-boundary-types",
   },
-])("rejects a silent policy downgrade: $rule -> $replacement", (scenario) => {
+])("enforces reviewed quality policy: $rule -> $replacement", (scenario) => {
   const source = resolve(import.meta.dirname, "..");
   const root = mkdtempSync(join(tmpdir(), "querylane-rule-policy-"));
   try {
     for (const file of [
       "scripts/check-rule-inventory.ts",
+      "scripts/quality-boundaries.ts",
       "src/lib/value-guards.ts",
       "quality/rule-inventory.json",
       "package.json",
       "tsconfig.strict.json",
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "tsconfig.browser-js.json",
+      "tsconfig.ui.json",
+      "tsconfig.declarations.json",
+      "src/types/css.d.ts",
       "biome.jsonc",
       "oxlint.config.ts",
       "doctor.config.ts",
@@ -167,6 +352,29 @@ test.each([
       cpSync(join(source, file), join(root, file));
     }
     symlinkSync(join(source, "node_modules"), join(root, "node_modules"));
+    mkdirSync(join(root, "public"), { recursive: true });
+    writeFileSync(
+      join(root, "public/quality-probe.js"),
+      "export const ready = true;\n"
+    );
+    writeFileSync(
+      join(root, "quality/unreviewed-biome.jsonc"),
+      JSON.stringify({
+        root: false,
+        overrides: [{ includes: ["**"], linter: { enabled: false } }],
+      })
+    );
+    writeFileSync(
+      join(root, "quality/unreviewed-oxlint.json"),
+      JSON.stringify({
+        overrides: [
+          {
+            files: ["src/features/**"],
+            rules: { "typescript/no-floating-promises": "off" },
+          },
+        ],
+      })
+    );
     const config = join(root, scenario.config);
     const original = readFileSync(config, "utf8");
     const modified = original.replace(scenario.original, scenario.replacement);
@@ -190,8 +398,8 @@ test.each([
       [join(root, "scripts/check-rule-inventory.ts")],
       { cwd: root, encoding: "utf8" }
     );
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain(
+    expect(result.status).toBe("status" in scenario ? scenario.status : 1);
+    expect(result.stdout + result.stderr).toContain(
       "message" in scenario
         ? scenario.message
         : `Reviewed error rule is not enforced: ${scenario.rule}`

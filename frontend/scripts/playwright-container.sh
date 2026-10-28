@@ -8,10 +8,12 @@ playwright_version="$(bun -e 'console.log(require("playwright/package.json").ver
 bun_version="$(bun --version)"
 image="mcr.microsoft.com/playwright:v${playwright_version}-noble"
 
-# The anonymous volume keeps the host's macOS node_modules out of the container.
+# Keep dependencies and build output private: a host build must not replace the
+# visual harness while this container's preview server is using it.
 docker run --rm --ipc=host \
   --volume "${frontend_dir}:/work" \
   --volume /work/node_modules \
+  --volume /work/dist \
   --workdir /work \
   --env CI=1 \
   "${image}" \

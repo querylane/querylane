@@ -199,6 +199,63 @@ export default defineConfig({
         "typescript/prefer-readonly-parameter-types": "error",
         "typescript/explicit-module-boundary-types": "error",
         "typescript/no-unnecessary-condition": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [
+              {
+                group: ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"],
+                allowTypeImports: true,
+                message:
+                  "Pure value modules may only import domain values and shared value guards.",
+              },
+              {
+                group: [
+                  "../**",
+                  "react",
+                  "react/**",
+                  "react-dom",
+                  "react-dom/**",
+                  "@connectrpc/**",
+                  "@tanstack/**",
+                  "zustand",
+                  "zustand/**",
+                ],
+                allowTypeImports: true,
+                message:
+                  "Keep stateful adapters outside the pure domain role; use direct domain imports.",
+              },
+            ],
+          },
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            globals: [
+              "globalThis",
+              "global",
+              "window",
+              "self",
+              "document",
+              "navigator",
+              "location",
+              "history",
+              "localStorage",
+              "sessionStorage",
+              "indexedDB",
+              "caches",
+              "fetch",
+              "reportError",
+              "WebSocket",
+              "Worker",
+              "MessageChannel",
+              "setTimeout",
+              "setInterval",
+              "requestAnimationFrame",
+            ],
+            checkGlobalObject: false,
+          },
+        ],
       },
     },
     {

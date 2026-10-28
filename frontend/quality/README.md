@@ -44,6 +44,12 @@ Biome's formatting settings are materialized from Ultracite. Its configuration e
 
 The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects unreviewed catalog changes, duplicates, changed pins, severity drift, and narrowed file-role scopes. Every delegated decision names an enforced owner: another error rule, a compiler option, a Biome assist, or its formatter. Recorded global disabled levels cannot silently change or fall back to inherited defaults. The gate also compares every installed Playwright preset rule with the explicit project errors. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
+[Configuration boundaries](../scripts/quality-boundaries.ts) run before tool catalogs. They reject hidden overrides, broadened waiver roles, authored-source exclusions, disabled engines, and unreviewed preset inheritance. The inventory's `overrideExceptions` records only the existing Node, test, route, and primitive-author roles; it adds no new waivers. Biome keeps the explicit Playwright preset, while Oxlint presets remain materialized without inherited overrides.
+
+The gate inspects all five compiler projects through the real `tsc --showConfig`. Both local and inherited include/exclude settings must retain source coverage. Effective strict options, unchecked indexing, exact optional properties, and checked public JavaScript cannot be weakened in a child configuration. This protects the configuration used by both compiler runs, not just the shared base file.
+
+The canonical Playwright container owns its dependency and `dist` volumes. A concurrent host build cannot replace its visual harness or lazy chunks. Reports and source snapshots still reach the host checkout; ordinary verification never regenerates baselines.
+
 [Ultracite 8.1](https://github.com/haydenbleasel/ultracite/pull/857) and [Biome 2.6.3](https://biomejs.dev/internals/changelog/version/2-6-3/) replace the temporary Tailwind compatibility patch. The inventory reviews all 33 new Biome rules: 18 are errors, one unsafe-return check belongs to typed Oxlint, and 14 are framework-inapplicable or reject valid project contracts. Oxlint 1.90 adds the fatal `no-unsafe-enum-assignment` check; protobuf defaults and fixtures use named enum members rather than numeric literals.
 
 Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. YAML and SCSS use Biome's formatter when present. Markdown formatting remains disabled because Biome 2.6.3 can change whitespace around inline code; Blume owns documentation. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled.
@@ -73,9 +79,15 @@ Pure transformations in `src/lib/domain/**/*.ts` enforce three additional Oxlint
 
 Browser, persistence, and RPC adapters stay outside that pure role. They retain runtime capability checks and mutable resource handles. This scope adds checks; it does not exclude adapters from the existing strict toolchain.
 
+The pure role also rejects static imports from stateful application modules and UI/state frameworks, relative parent escapes, and ambient browser/resource globals, including namespace aliases. Direct domain imports, shared value guards, and erased adapter type imports remain valid. These are dependency rules, not a proof of mathematical purity.
+
 Biome's `noComponentHookFactories` is a global error. Component mocks now have module-level identities. Hook tests use a module-level provider component with per-test render callbacks and query clients, preserving isolation and cleanup.
 
 Real CLI regressions reject mutable pure inputs, missing exported return contracts, impossible conditions, nested component definitions, missing Playwright awaits, brittle waits, and empty fixture patterns. Valid transformations, condition-based assertions, and runtime capability guards pass. Repeated Biome and Oxlint fixes converge on the same source.
+
+Hook regressions also cover non-string paths, missing files, the repository root, symlinks escaping the project, non-edit tools, and Codex patch payloads. Valid edits format only the named file; unrelated and external files remain unchanged.
+
+`bun run test:integration:leaks` stays diagnostic-only, as [Rstest recommends](https://rstest.rs/config/test/detect-async-leaks). A local diagnostic run reports active `MESSAGEPORT` resources after some tests; their origin is not established. Do not suppress those reports or describe that diagnostic run as passing. Normal integration assertions and cleanup checks remain required.
 
 ## Coverage boundaries
 
