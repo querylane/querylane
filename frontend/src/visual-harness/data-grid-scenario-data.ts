@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { NullValue } from "@bufbuild/protobuf/wkt";
 import type { TableFilterRule } from "@/features/data-explorer/table-data/filter-state";
 import {
   type TableCell,
@@ -186,7 +187,7 @@ const CELL_GALLERY_EXAMPLES: {
     name: "Date",
   },
   {
-    cell: gridCell({ case: "nullValue", value: 0 }),
+    cell: gridCell({ case: "nullValue", value: NullValue.NULL_VALUE }),
     dataType: DataType.STRING,
     name: "Null",
   },

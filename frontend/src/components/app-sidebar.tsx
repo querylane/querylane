@@ -660,7 +660,6 @@ function SidebarSearchButton() {
   return (
     <Button
       aria-keyshortcuts="Meta+K Control+K"
-      aria-label="Search or jump to"
       className="h-8 w-full justify-start"
       onClick={openPalette}
       presentation="sidebar-action"
@@ -692,7 +691,7 @@ function SidebarBrandHeader() {
           collapse trigger sits next to the wordmark, mirroring the design. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pr-1.5 pl-2">
         <Button
-          aria-label="Go to instance overview"
+          aria-description="Go to instance overview"
           className="size-auto min-w-0 shrink"
           disabled={!selectedInstance}
           onClick={() => {

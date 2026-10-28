@@ -1,4 +1,5 @@
 import { create as createProto } from "@bufbuild/protobuf";
+import { NullValue } from "@bufbuild/protobuf/wkt";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { isValidElement } from "react";
 import type { CalculatedColumn, Column } from "react-data-grid";
@@ -48,6 +49,16 @@ rs.mock("sonner", () => ({
 function calculatedColumn(column: Column<GridRow>): CalculatedColumn<GridRow> {
   return {
     ...column,
+    cellClass: column.cellClass,
+    headerCellClass: column.headerCellClass,
+    summaryCellClass: column.summaryCellClass,
+    renderSummaryCell: column.renderSummaryCell,
+    renderGroupCell: column.renderGroupCell,
+    renderEditCell: column.renderEditCell,
+    editable: column.editable,
+    colSpan: column.colSpan,
+    sortDescendingFirst: column.sortDescendingFirst,
+    editorOptions: column.editorOptions,
     parent: undefined,
     idx: 0,
     level: 0,
@@ -170,7 +181,10 @@ describe("grid helpers", () => {
       [ROW_KEY_FIELD]: "row-1",
       cells: new Map([
         ["carrier_id", testValueCell({ case: "int64Value", value: 214n })],
-        ["tenant_id", testValueCell({ case: "nullValue", value: 0 })],
+        [
+          "tenant_id",
+          testValueCell({ case: "nullValue", value: NullValue.NULL_VALUE }),
+        ],
       ]),
     });
     const markup = renderToStaticMarkup(<span>{rendered}</span>);

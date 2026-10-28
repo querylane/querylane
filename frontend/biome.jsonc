@@ -20,7 +20,7 @@
         "useSortedInterfaceMembers": "on",
         "useSortedProperties": "off",
         "useSortedTypeFields": "on",
-        "useSortedSelectionSet": "on",
+        "useSortedSelectionSet": "off",
         "useSortedPackageJson": "on",
         "preset": "all"
       }
@@ -505,7 +505,45 @@
         "useTopLevelHeading": "off",
         "useUnaryMinus": "error",
         "useVueConsistentEventHyphenation": "error",
-        "useVueMatchingComponentFileName": "error"
+        "useVueMatchingComponentFileName": "error",
+        "noArraySortForMinMax": "error",
+        "noBooleanSortComparator": "error",
+        "noDanglingUnderscore": "off",
+        "noEagerArrayMethodsInLoops": "error",
+        "noNewRequire": "error",
+        "noObsoleteAttributes": "error",
+        "noPathConcat": "error",
+        "noPlaywrightNthMethods": "off",
+        "noSelfNestedLayer": "error",
+        "noShortTimeValues": "off",
+        "noSvelteInternal": "off",
+        "noTanstackQueryRestDestructuring": "error",
+        "noUnreadableForOfExpression": "off",
+        "noUnsafeReturn": "off",
+        "noUselessSplice": "error",
+        "noVueUnusedEmitDeclarations": "off",
+        "noVueVTextVHtmlOnComponent": "off",
+        "noVueWatchAfterAwait": "off",
+        "noZeroLengthUnit": "error",
+        "useBlockStatementOverIife": "error",
+        "useConsistentLightnessNotation": {
+          "level": "error",
+          "options": {
+            "notation": "number"
+          }
+        },
+        "useConsistentUnicodeBom": "error",
+        "useExpectToContain": "error",
+        "useIteratorZip": "off",
+        "useMathAbs": "error",
+        "useMathTrunc": "error",
+        "usePackageJsonValidCpu": "error",
+        "usePackageJsonValidEngines": "error",
+        "useReactNativeValidPlatformColors": "off",
+        "useVueComponentIs": "off",
+        "useVueToggleInsideTransition": "off",
+        "useVueTypedRef": "off",
+        "useVueVOnExact": "off"
       },
       "performance": {
         "noAccumulatingSpread": "error",
@@ -1038,7 +1076,9 @@
     }
   ],
   "tailwind": {
-    "stylesheet": "./src/index.css"
+    "stylesheet": "./src/index.css",
+    "mergeFunctions": ["clsx", "tw", "twMerge", "cn", "twJoin"],
+    "variantFunctions": ["cva", "tv"]
   },
   "markdown": {
     "formatter": {
@@ -1046,6 +1086,9 @@
     },
     "linter": {
       "enabled": false
+    },
+    "parser": {
+      "frontmatter": true
     }
   }
 }

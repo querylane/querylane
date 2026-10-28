@@ -44,7 +44,13 @@ Biome's formatting settings are materialized from Ultracite. Oxlint copies prese
 
 The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, or a changed tool pin. It also verifies every recorded error against Biome's explicit configuration, Oxlint's effective native configuration, Doctor's effective severities, and the loaded shadcn plugin configuration. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
-The rebase onto the upstream Biome 2.6.2 / Ultracite 8.0.2 upgrade migrates 59 promoted rule IDs and the Tailwind sorting rename, and records 50 additional catalog entries. The project stylesheet drives Tailwind detection. Import-aware shadcn still owns registry restyling; Blume owns documentation rather than claiming Markdown coverage here. App functions retain the upstream 50-statement limit; test functions use its 100-statement contract. Node CLI wrappers can propagate subprocess exit statuses. The stronger Promise preset requires explicit fulfillment returns and handled finalization; existing async-action boundaries preserve event/effect behavior.
+[Ultracite 8.1](https://github.com/haydenbleasel/ultracite/pull/857) and [Biome 2.6.3](https://biomejs.dev/internals/changelog/version/2-6-3/) replace the temporary Tailwind compatibility patch. The inventory reviews all 33 new Biome rules: 18 are errors, one unsafe-return check belongs to typed Oxlint, and 14 are framework-inapplicable or reject valid project contracts. Oxlint 1.90 adds the fatal `no-unsafe-enum-assignment` check; protobuf defaults and fixtures use named enum members rather than numeric literals.
+
+Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. YAML and SCSS use Biome's formatter when present. Markdown formatting remains disabled because Biome 2.6.3 can change whitespace around inline code; Blume owns documentation. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled. The materialized configuration already enforces every rule in the new Playwright preset without importing its test-pattern waiver.
+
+The CLI regression tests exercise `ultracite fix --hook` with missing, malformed, empty, and valid path payloads. Invalid payloads leave all files unchanged; a valid payload formats only its named file. The tests also exercise Tailwind variant sorting through the actual Biome binary.
+
+The frontend requires Node 24.15 or later. Axe 4.14 checks visible labels against accessible names; text buttons use their visible content instead of conflicting overrides, and action hints use descriptions. Generated browser reports are excluded from Doctor scans, not authored source. Changesets 3 uses `changeset git-tag`; private-package versioning and tagging stay explicit. Rsdoctor 2 consolidates the plugin into `@rsdoctor/core` and the shared types into `@rsdoctor/shared/types`. React Flow attribution remains visible, avoiding the new upstream warning about unlicensed attribution removal.
 
 Some deliberate decisions:
 
@@ -75,24 +81,15 @@ No repository can make its own configuration immutable. A contributor can edit a
 
 ## Compatibility and security
 
-The compatible transitive refresh removed reported production advisories. `bun audit --production --json` returned an empty report during verification. The refresh exposed duplicate CodeMirror singleton packages and mismatched Connect Query transport-key identities. The direct CodeMirror/Lezer and Connect Query/core pins were aligned and verified with a clean frozen install, mutation-cache integration tests, and real browser tests.
+The current frontend refresh aligns direct runtime dependencies and their coupled packages. It retains the separately pinned TypeScript canary rather than downgrading it to the stable compiler tag. Run `bun outdated` to inspect remaining direct updates.
 
-Bun's audit request to the Buf package registry returned 404, so the generated Google APIs package was not audited. An empty report is not complete vulnerability coverage.
+`bun audit --production --json` returned an empty report during this refresh. The Buf registry returned HTTP 404 for the audit request, so the generated Google APIs package was not audited. This is not complete vulnerability coverage.
 
-Development-only advisories remain in Lighthouse/Changesets dependency chains. Do not treat a clean production audit or Doctor scan as a clean development audit. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`.
-
-| Dependency | Remaining constraint |
-| --- | --- |
-| `basic-ftp` | Lighthouse's proxy chain requires the older major. |
-| `braces` | The installed/current 3.x release still has a reported advisory. |
-| `extract-zip` | The current release still has reported archive-extraction advisories. |
-| `sprintf-js` | Legacy YAML tooling constrains an older minor. |
-| `tmp` | Lighthouse and its editor integration constrain older minors. |
-| `uuid` | Lighthouse constrains an older major. |
+The development audit still reports advisories in `basic-ftp`, `deepmerge`, `extract-zip`, `tmp`, `uuid`, and a Zod 3 dependency. Lighthouse constrains the older major versions; current Ultracite and shadcn depend on the reported `deepmerge` release. The compatible transitive refresh updates `body-parser` to 1.20.9. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`. No cross-major overrides or audit suppressions are added.
 
 These tools must not process untrusted archives, proxy configuration, or project input. Cross-major overrides without parent compatibility evidence are not a safe fix. No advisory is suppressed in the audit command.
 
-The core/SQL bundle caps include the measured cost of boundary validation and the compatible editor refresh. Initial payload and largest-async limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
+The approved dependency refresh raises the core gzip cap from 1027 to 1043 KiB, the lazy SQL editor cap from 203 to 205 KiB, and the deferred explorer-click payload cap from 160 to 164 KiB. Paired Bun 1.4.4 builds measured core at 1025.9 → 1040.7 KiB and the SQL editor at 199.3 → 203.5 KiB. Initial-load, largest-async, and latency limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
 
 Compiler regressions exercise both real binaries: valid CSS variables pass, invalid CSS properties fail, and unchecked indexing/exact optional violations fail. Guard tests exercise actual filesystem bypasses. Rule-inventory tests invoke the actual CLI with downgraded configurations: turning a recorded error off or into a warning, disabling Biome, or adding a Doctor ignore cannot silently pass the review gate.
 

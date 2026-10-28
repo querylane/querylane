@@ -1,12 +1,16 @@
 import type { Page } from "playwright/test";
 import { expect, test } from "../tests/base";
 
+const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
+const SHIPMENT_ITEMS_NODE_NAME =
+  /^(?:Inspect )?Index Scan\b.*\bshipment_items\b/u;
+
 async function openPlan(page: Page) {
   await page.goto("/visual.html?scenario=query-plan");
   await expect(
     page.getByRole("button", {
       exact: true,
-      name: "Inspect Seq Scan on shipments",
+      name: SHIPMENTS_NODE_NAME,
     })
   ).toHaveAttribute("aria-pressed", "true");
   return page.getByRole("region", { name: "Query plan demo" });
@@ -83,7 +87,7 @@ test("timing and search keep operator inspection linked", async ({ page }) => {
   await page.getByRole("tab", { name: "Map", exact: true }).click();
   await expect(
     page.getByRole("button", {
-      name: "Inspect Index Scan on shipment_items using shipment_items_shipment_id_idx",
+      name: SHIPMENT_ITEMS_NODE_NAME,
       exact: true,
     })
   ).toHaveAttribute("aria-pressed", "true");
@@ -99,7 +103,7 @@ test("findings reveal collapsed operators and remain usable on phones", async ({
   await expect(page).toHaveScreenshot("plan-findings.png");
   await page
     .getByRole("menuitem", {
-      name: "Seq Scan on shipments: 100× more rows",
+      name: "100× more rows Seq Scan on shipments",
       exact: true,
     })
     .click();
@@ -108,7 +112,7 @@ test("findings reveal collapsed operators and remain usable on phones", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Inspect Seq Scan on shipments",
+      name: SHIPMENTS_NODE_NAME,
       exact: true,
     })
   ).toHaveAttribute("aria-pressed", "true");

@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { NullValue } from "@bufbuild/protobuf/wkt";
 import { describe, expect, test } from "@rstest/core";
 
 import {
@@ -37,7 +38,7 @@ function stringCell(value: string, truncated = false) {
 function nullCell() {
   return create(TableCellSchema, {
     value: create(TableValueSchema, {
-      kind: { case: "nullValue", value: 0 },
+      kind: { case: "nullValue", value: NullValue.NULL_VALUE },
     }),
   });
 }

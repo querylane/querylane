@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { NullValue } from "@bufbuild/protobuf/wkt";
 import { describe, expect, test } from "@rstest/core";
 import {
   type FormattedCell,
@@ -46,7 +47,10 @@ describe("formatTableCell", () => {
 
     expect(formatTableCell(undefined, column())).toEqual(expected);
     expect(
-      formatTableCell(cell({ case: "nullValue", value: 0 }), column())
+      formatTableCell(
+        cell({ case: "nullValue", value: NullValue.NULL_VALUE }),
+        column()
+      )
     ).toEqual(expected);
   });
 

@@ -145,7 +145,7 @@ for (const motion of ["no-preference", "dark", "mobile"] as const) {
     const errors = await openDatabase(page, motion);
     const prefix = motion === "no-preference" ? "" : `${motion}-`;
     await expect(
-      page.getByRole("button", { name: "Search or jump to", exact: true })
+      page.getByRole("button", { name: "Search or jump to…", exact: true })
     ).toBeVisible({ visible: motion !== "mobile" });
     await capturePage(page, `${prefix}database-page`);
     await openExplorer(page);

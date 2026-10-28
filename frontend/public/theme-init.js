@@ -1,6 +1,6 @@
 // Runs before React. Keep the storage key and system fallback aligned with
 // ThemeProvider; startup E2E tests cover the handoff to the mounted provider.
-(() => {
+{
   let theme;
   try {
     theme = globalThis.window.localStorage.getItem("querylane-ui-theme");
@@ -21,4 +21,4 @@
   root.classList.remove("light", "dark");
   root.classList.add(theme);
   root.style.colorScheme = theme;
-})();
+}

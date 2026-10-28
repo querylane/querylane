@@ -4,7 +4,7 @@ import process, { env } from "node:process";
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginTailwindcss } from "@rsbuild/plugin-tailwindcss";
-import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin";
+import { RsdoctorRspackPlugin } from "@rsdoctor/core";
 import { createEnv } from "@t3-oss/env-core";
 import { tanstackRouter } from "@tanstack/router-plugin/rspack";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";

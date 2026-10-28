@@ -1,3 +1,4 @@
+import { NullValue } from "@bufbuild/protobuf/wkt";
 import "./header-edge-fixture.css";
 import { page } from "@rstest/browser";
 import { cleanup, render } from "@rstest/browser-react";
@@ -176,9 +177,9 @@ async function renderLongRecordDrawer() {
       "implementation_info_name",
       cell({ case: "stringValue", value: "SERVER NAME" }),
     ],
-    ["integer_value", cell({ case: "nullValue", value: 0 })],
+    ["integer_value", cell({ case: "nullValue", value: NullValue.NULL_VALUE })],
     ["character_value", cell({ case: "stringValue", value: "" })],
-    ["comments", cell({ case: "nullValue", value: 0 })],
+    ["comments", cell({ case: "nullValue", value: NullValue.NULL_VALUE })],
   ]);
 
   await render(

@@ -64,3 +64,6 @@ frontend/playwright-report
 frontend/test-results
 frontend/e2e/playwright-report
 frontend/e2e/test-results
+
+# Rstest browser failure screenshots
+/frontend/.rstest/

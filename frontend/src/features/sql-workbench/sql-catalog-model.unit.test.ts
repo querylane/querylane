@@ -3,6 +3,7 @@ import type {
   CatalogObject,
   CatalogSchema,
 } from "@/hooks/api/database-catalog";
+import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import {
   buildCatalogTree,
   filterCatalogTree,
@@ -44,7 +45,7 @@ function object(
     rowCount: 0n,
     schemaId,
     sizeBytes: 0n,
-    tableType: 0,
+    tableType: Table_TableType.UNSPECIFIED,
   };
 }
 

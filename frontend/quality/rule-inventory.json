@@ -1,12 +1,12 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.2",
-    "ultracite": "8.0.2",
-    "oxlint": "1.89.0",
+    "@biomejs/biome": "2.6.3",
+    "ultracite": "8.1.0",
+    "oxlint": "1.90.0",
     "@shadcn/lint": "0.2.3",
     "react-doctor": "0.9.18",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
-    "typescript": "7.1.0-dev.20261020.3"
+    "tsrs": "0.20.1-ts7.1.0-beta",
+    "typescript": "7.1.0-dev.20261028.1"
   },
   "biome": [
     {
@@ -3650,6 +3650,204 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-strict-mode/"
+    },
+    {
+      "rule": "nursery/noArraySortForMinMax",
+      "decision": "error",
+      "reason": "Disallow sorting an array only to read its smallest or largest value.",
+      "docs": "https://biomejs.dev/linter/rules/no-array-sort-for-min-max"
+    },
+    {
+      "rule": "nursery/noBooleanSortComparator",
+      "decision": "error",
+      "reason": "Disallow sort comparators that return a boolean.",
+      "docs": "https://biomejs.dev/linter/rules/no-boolean-sort-comparator"
+    },
+    {
+      "rule": "nursery/noDanglingUnderscore",
+      "decision": "inapplicable",
+      "reason": "Leading underscores are valid ignored callback parameters and externally defined identifiers, not correctness defects.",
+      "docs": "https://biomejs.dev/linter/rules/no-dangling-underscore"
+    },
+    {
+      "rule": "nursery/noEagerArrayMethodsInLoops",
+      "decision": "error",
+      "reason": "Disallow .map() and .filter() calls in the header of for...of loops.",
+      "docs": "https://biomejs.dev/linter/rules/no-eager-array-methods-in-loops"
+    },
+    {
+      "rule": "nursery/noNewRequire",
+      "decision": "error",
+      "reason": "Disallow calling require with the new operator.",
+      "docs": "https://biomejs.dev/linter/rules/no-new-require"
+    },
+    {
+      "rule": "nursery/noObsoleteAttributes",
+      "decision": "error",
+      "reason": "Disallow obsolete attributes on HTML elements.",
+      "docs": "https://biomejs.dev/linter/rules/no-obsolete-attributes"
+    },
+    {
+      "rule": "nursery/noPathConcat",
+      "decision": "error",
+      "reason": "Disallow building file paths and URLs by joining strings to __dirname, __filename, or import.meta values.",
+      "docs": "https://biomejs.dev/linter/rules/no-path-concat"
+    },
+    {
+      "rule": "nursery/noPlaywrightNthMethods",
+      "decision": "inapplicable",
+      "reason": "Positional assertions verify ordered grid rows, columns and chart series. Banning every first/last/nth selector prevents these intentional order contracts; await and brittle-wait checks remain fatal.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-nth-methods"
+    },
+    {
+      "rule": "nursery/noSelfNestedLayer",
+      "decision": "error",
+      "reason": "Disallow nesting a cascade layer inside a layer with the same name.",
+      "docs": "https://biomejs.dev/linter/rules/no-self-nested-layer"
+    },
+    {
+      "rule": "nursery/noShortTimeValues",
+      "decision": "inapplicable",
+      "reason": "Short transitions are intentional interaction feedback; no universal minimum motion duration applies.",
+      "docs": "https://biomejs.dev/linter/rules/no-short-time-values"
+    },
+    {
+      "rule": "nursery/noSvelteInternal",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-internal"
+    },
+    {
+      "rule": "nursery/noTanstackQueryRestDestructuring",
+      "decision": "error",
+      "reason": "Disallow rest destructuring and object spread on TanStack Query results.",
+      "docs": "https://biomejs.dev/linter/rules/no-tanstack-query-rest-destructuring"
+    },
+    {
+      "rule": "nursery/noUnreadableForOfExpression",
+      "decision": "inapplicable",
+      "reason": "The rule rejects ordinary nullish fallback iterables (items ?? []) and direct Object.entries calls; naming every one adds indirection without a correctness or readability benefit. Eager array allocations in loops remain errors.",
+      "docs": "https://biomejs.dev/linter/rules/no-unreadable-for-of-expression"
+    },
+    {
+      "rule": "nursery/noUnsafeReturn",
+      "decision": "delegated",
+      "reason": "Type-aware Oxlint typescript/no-unsafe-return owns this contract with compiler context.",
+      "docs": "https://biomejs.dev/linter/rules/no-unsafe-return"
+    },
+    {
+      "rule": "nursery/noUselessSplice",
+      "decision": "error",
+      "reason": "Disallow splice() calls that have a simpler alternative.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-splice"
+    },
+    {
+      "rule": "nursery/noVueUnusedEmitDeclarations",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-unused-emit-declarations"
+    },
+    {
+      "rule": "nursery/noVueVTextVHtmlOnComponent",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-text-v-html-on-component"
+    },
+    {
+      "rule": "nursery/noVueWatchAfterAwait",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-watch-after-await"
+    },
+    {
+      "rule": "nursery/noZeroLengthUnit",
+      "decision": "error",
+      "reason": "Disallow units on zero lengths.",
+      "docs": "https://biomejs.dev/linter/rules/no-zero-length-unit"
+    },
+    {
+      "rule": "nursery/useBlockStatementOverIife",
+      "decision": "error",
+      "reason": "Prefer block statements over functions that are called immediately only to create a scope.",
+      "docs": "https://biomejs.dev/linter/rules/use-block-statement-over-iife"
+    },
+    {
+      "rule": "nursery/useConsistentLightnessNotation",
+      "decision": "error",
+      "reason": "Enforce a consistent notation for the lightness of colors.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-lightness-notation"
+    },
+    {
+      "rule": "nursery/useConsistentUnicodeBom",
+      "decision": "error",
+      "reason": "Require or disallow a Unicode byte order mark at the beginning of a file.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-unicode-bom"
+    },
+    {
+      "rule": "nursery/useExpectToContain",
+      "decision": "error",
+      "reason": "Enforce using toContain() to check whether an array or string contains a value.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-contain"
+    },
+    {
+      "rule": "nursery/useIteratorZip",
+      "decision": "inapplicable",
+      "reason": "Iterator.zip is not available across the supported browsers; do not introduce an unshipped runtime API.",
+      "docs": "https://biomejs.dev/linter/rules/use-iterator-zip"
+    },
+    {
+      "rule": "nursery/useMathAbs",
+      "decision": "error",
+      "reason": "Prefer Math.abs() over manual absolute value calculations and range checks.",
+      "docs": "https://biomejs.dev/linter/rules/use-math-abs"
+    },
+    {
+      "rule": "nursery/useMathTrunc",
+      "decision": "error",
+      "reason": "Require Math.trunc() instead of tricks that remove the decimal part of a number.",
+      "docs": "https://biomejs.dev/linter/rules/use-math-trunc"
+    },
+    {
+      "rule": "nursery/usePackageJsonValidCpu",
+      "decision": "error",
+      "reason": "Require the cpu field in package.json to be a valid list of processor types.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-valid-cpu"
+    },
+    {
+      "rule": "nursery/usePackageJsonValidEngines",
+      "decision": "error",
+      "reason": "Enforce that the engines field in package.json is valid.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-valid-engines"
+    },
+    {
+      "rule": "nursery/useReactNativeValidPlatformColors",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-react-native-valid-platform-colors"
+    },
+    {
+      "rule": "nursery/useVueComponentIs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-component-is"
+    },
+    {
+      "rule": "nursery/useVueToggleInsideTransition",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-toggle-inside-transition"
+    },
+    {
+      "rule": "nursery/useVueTypedRef",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-typed-ref"
+    },
+    {
+      "rule": "nursery/useVueVOnExact",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-v-on-exact"
     }
   ],
   "oxlint": [
@@ -8878,6 +9076,12 @@
       "decision": "inapplicable",
       "reason": "Not a project runtime: Querylane uses web React, TanStack Router and Rstest, not Next.js, Vue, Jest or Vitest. Applicable test contracts are enforced by Biome and React Doctor.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/vue/valid-next-tick.html"
+    },
+    {
+      "rule": "typescript/no-unsafe-enum-assignment",
+      "decision": "error",
+      "reason": "Reject unsafe assignments to enum-typed values with compiler-aware checks.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unsafe-enum-assignment.html"
     }
   ],
   "reactDoctor": [

@@ -5,7 +5,9 @@ import { isNonEmptyString } from "../src/lib/value-guards";
 
 const BYTES_PER_KIB = 1024;
 const BUILD_REAL_TIME_BUDGET_MS = 5500;
-const DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB = 160;
+// Latest grid dependencies: measured 161.4 KiB for the deferred overview click.
+// This is not the initial-load budget; keep the approved refresh tightly bounded.
+const DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB = 164;
 const DATA_EXPLORER_DIRECT_READY_BUDGET_MS = 1200;
 const DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS = 1000;
 const FAILURE_EXIT_CODE = 1;

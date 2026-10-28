@@ -1,11 +1,114 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, test } from "@rstest/core";
 
 const root = resolve(import.meta.dirname, "..");
 const compilers = ["tsrs", "tsc"];
 const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
+
+test.each([
+  { input: "", fixesEditedFile: false },
+  { input: "not JSON", fixesEditedFile: false },
+  { input: "{}", fixesEditedFile: false },
+  { input: '{"tool_input":{}}', fixesEditedFile: false },
+  { input: '{"tool_input":{"file_path":""}}', fixesEditedFile: false },
+  {
+    input: '{"tool_input":{"file_path":"edited.ts"}}',
+    fixesEditedFile: true,
+  },
+])(
+  "agent hook fixes only its named file: $input",
+  ({ input, fixesEditedFile }) => {
+    const directory = mkdtempSync(join(tmpdir(), "querylane-hook-"));
+    const source = join(directory, "untouched.ts");
+    const original = 'export const value={key:"value"};\n';
+    try {
+      symlinkSync(join(root, "node_modules"), join(directory, "node_modules"));
+      writeFileSync(
+        join(directory, "package.json"),
+        JSON.stringify({ devDependencies: { "@biomejs/biome": "*" } })
+      );
+      writeFileSync(join(directory, "biome.json"), '{"root":true}');
+      writeFileSync(source, original);
+      const editedSource = join(directory, "edited.ts");
+      writeFileSync(editedSource, original);
+      const result = spawnSync(
+        join(root, "node_modules/.bin/ultracite"),
+        ["fix", "--hook"],
+        { cwd: directory, encoding: "utf8", input }
+      );
+      expect(result.status).toBe(0);
+      expect(readFileSync(source, "utf8")).toBe(original);
+      expect(readFileSync(editedSource, "utf8")).toBe(
+        fixesEditedFile ? 'export const value = { key: "value" };\n' : original
+      );
+    } finally {
+      rmSync(directory, { recursive: true });
+    }
+  }
+);
+
+test("tailwind sorts cva variant objects using the project stylesheet", () => {
+  const result = spawnSync(
+    join(root, "node_modules/.bin/biome"),
+    [
+      "lint",
+      "--config-path=biome.jsonc",
+      "--write",
+      "--unsafe",
+      "--only=nursery/useTailwindSortedClasses",
+      "--stdin-file-path=src/quality-probe.ts",
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      input:
+        'const variants = cva("", { variants: { size: { small: "px-2 flex" } } });\n',
+    }
+  );
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain('small: "flex px-2"');
+});
+
+test.each([
+  { value: "0", status: 1 },
+  { value: "MetricUnit.UNSPECIFIED", status: 0 },
+])("typed lint checks protobuf enum values: $value", ({ value, status }) => {
+  const directory = mkdtempSync(join(root, "src", "quality-probe-"));
+  const source = join(directory, "probe.ts");
+  try {
+    writeFileSync(
+      source,
+      `import { MetricUnit } from "@/protogen/querylane/console/v1alpha1/metrics_pb";\n\nexport const unit: MetricUnit = ${value};\n`
+    );
+    const result = spawnSync(
+      join(root, "node_modules/.bin/oxlint"),
+      [
+        "--config",
+        "oxlint.config.ts",
+        "--type-aware",
+        "--deny-warnings",
+        source,
+      ],
+      { cwd: root, encoding: "utf8" }
+    );
+    expect(result.status).toBe(status);
+    expect(
+      (result.stdout + result.stderr).includes("no-unsafe-enum-assignment")
+    ).toBe(status === 1);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
 
 test.each(["biome", "oxlint"])(
   "%s rejects invalid source through the real CLI",

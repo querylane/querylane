@@ -614,7 +614,7 @@ function DatabaseSelector({
         value={selectedDatabase?.name ?? null}
         valuePrefix={
           <span className="text-muted-foreground shrink-0 text-sm font-medium">
-            DB:
+            Database:
           </span>
         }
       >

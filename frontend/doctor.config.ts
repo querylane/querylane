@@ -9,6 +9,9 @@ export default defineConfig({
   adoptExistingLintConfig: true,
   ignore: {
     files: [
+      "playwright-report/**",
+      "test-results/**",
+      ".rstest/**",
       "src/components/ui/**",
       "src/protogen/**",
       "**/*.gen.ts",

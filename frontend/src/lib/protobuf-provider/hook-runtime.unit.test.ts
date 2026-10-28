@@ -4,6 +4,7 @@ import {
   type MessageShape,
   type MessageValidType,
 } from "@bufbuild/protobuf";
+import { WireType } from "@bufbuild/protobuf/wire";
 import {
   AnySchema,
   ListValueSchema,
@@ -42,7 +43,9 @@ describe("protobuf form conversion", () => {
       labels: { environment: "development" },
       config: create(PostgresConfigSchema, { host: "localhost", port: 5432 }),
     });
-    source.$unknown = [{ no: 999, wireType: 0, data: new Uint8Array([1]) }];
+    source.$unknown = [
+      { no: 999, wireType: WireType.Varint, data: new Uint8Array([1]) },
+    ];
     expect(roundTrip(InstanceSchema, source)).toEqual(source);
   });
 

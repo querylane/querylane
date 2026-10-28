@@ -228,7 +228,7 @@ function PlanRows(props: PlanRowsProps) {
               <span className="w-6 shrink-0" />
             )}
             <Button
-              aria-label={`Inspect ${title}`}
+              aria-description={`Inspect ${title}`}
               aria-pressed={node.id === selectedId}
               className="h-auto min-w-0 justify-start"
               onClick={() => {
