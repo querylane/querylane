@@ -1,4 +1,5 @@
 {
+  "extends": ["ultracite/biome/playwright"],
   "formatter": {
     "enabled": true,
     "formatWithErrors": true,
@@ -343,7 +344,7 @@
         "useVueValidVPre": "error",
         "useVueValidVText": "error",
         "useYield": "error",
-        "noComponentHookFactories": "off",
+        "noComponentHookFactories": "error",
         "noDuplicateFieldDefinitionNames": "error",
         "noJsxNamespace": "error",
         "noPlaywrightMissingAwait": "error",
@@ -1046,6 +1047,10 @@
         "rules": {
           "security": {
             "noSecrets": "off"
+          },
+          "correctness": {
+            // Retain the project check instead of the preset's test-fixture waiver.
+            "noEmptyPattern": "error"
           },
           "performance": {
             "noNamespaceImport": "off"

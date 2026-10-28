@@ -27,7 +27,10 @@ import type {
 } from "@/components/console-pages/role-grants-table-filter";
 import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { buildGrantFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
+import {
+  buildGrantFilter,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/domain/aip-filter";
 import { isNonEmptyString } from "@/lib/value-guards";
 
 function isGrantsType(slug: string): slug is GrantsType {

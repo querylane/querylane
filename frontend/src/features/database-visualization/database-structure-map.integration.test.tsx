@@ -16,23 +16,7 @@ rs.mock("@tanstack/react-router", () => ({
 }));
 
 rs.mock("@/features/database-visualization/flow-canvas", () => ({
-  FlowCanvas: ({
-    actionPanel,
-    nodes,
-    selectedNodeId,
-  }: {
-    actionPanel?: React.ReactNode | undefined;
-    nodes: {
-      id: string;
-    }[];
-    selectedNodeId?: string | null | undefined;
-  }) => (
-    <section aria-label="Flow canvas mock">
-      <fieldset aria-label="Canvas map controls">{actionPanel}</fieldset>
-      Selected node {selectedNodeId ?? "none"}
-      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
-    </section>
-  ),
+  FlowCanvas: MockFlowCanvas,
 }));
 
 rs.mock("@/features/database-visualization/structure-map-data", () => ({
@@ -221,3 +205,23 @@ describe("database structure map", () => {
     );
   });
 });
+
+function MockFlowCanvas({
+  actionPanel,
+  nodes,
+  selectedNodeId,
+}: {
+  actionPanel?: React.ReactNode | undefined;
+  nodes: {
+    id: string;
+  }[];
+  selectedNodeId?: string | null | undefined;
+}) {
+  return (
+    <section aria-label="Flow canvas mock">
+      <fieldset aria-label="Canvas map controls">{actionPanel}</fieldset>
+      Selected node {selectedNodeId ?? "none"}
+      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
+    </section>
+  );
+}

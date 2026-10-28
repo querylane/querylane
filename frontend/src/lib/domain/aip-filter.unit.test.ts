@@ -3,7 +3,7 @@ import {
   buildGrantFilter,
   buildOwnedFilter,
   buildRoleFilter,
-} from "@/lib/aip-filter";
+} from "@/lib/domain/aip-filter";
 
 describe("AIP filter builders", () => {
   test("combines owned-object kind and escaped name filters", () => {

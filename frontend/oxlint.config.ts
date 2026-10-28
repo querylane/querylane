@@ -192,6 +192,16 @@ export default defineConfig({
   },
   overrides: [
     {
+      // Pure value transformations have immutable inputs and stable exported contracts.
+      // Platform adapters retain real capability checks and mutable resource handles.
+      files: ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"],
+      rules: {
+        "typescript/prefer-readonly-parameter-types": "error",
+        "typescript/explicit-module-boundary-types": "error",
+        "typescript/no-unnecessary-condition": "error",
+      },
+    },
+    {
       // Querylane's owned variants compose the unmodified registry components.
       // Consumers still get every rule; authors may define appearance here.
       files: ["src/components/querylane-ui/**"],

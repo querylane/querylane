@@ -1,8 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
-import { TransportProvider } from "@connectrpc/connect-query";
 import { afterEach, describe, expect, test } from "@rstest/core";
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -28,6 +27,7 @@ import {
   RoleService,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import { createTestQueryClient } from "@/test/query-client";
+import { QueryHookProviders } from "@/test/query-hook-providers";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 const ROLE_ID = "YWxpY2U";
@@ -40,16 +40,12 @@ function createWrapper(
 ) {
   activeQueryClients.push(queryClient);
 
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <TransportProvider transport={transport}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </TransportProvider>
-    );
-  }
-  return Wrapper;
+  const renderProviders = ({ children }: { children: ReactNode }) => (
+    <QueryHookProviders queryClient={queryClient} transport={transport}>
+      {children}
+    </QueryHookProviders>
+  );
+  return renderProviders;
 }
 
 afterEach(async () => {

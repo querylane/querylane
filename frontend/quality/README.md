@@ -38,15 +38,15 @@ Versions are pinned in [package.json](../package.json), its lockfile, and [the i
 | React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan. |
 | Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
 
-Biome's formatting settings are materialized from Ultracite. Oxlint copies preset rules, not preset overrides. This prevents upstream test/declaration waivers and broad generated-file globs from silently weakening coverage.
+Biome's formatting settings are materialized from Ultracite. Its configuration explicitly extends `ultracite/biome/playwright` and restores `noEmptyPattern` for tests instead of accepting the preset's fixture waiver. Oxlint copies preset rules, not preset overrides. Upstream test/declaration waivers and broad generated-file globs cannot silently weaken coverage.
 
 ## Reviewed rule policy
 
-The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects an unreviewed catalog addition/removal, duplicate entries, or a changed tool pin. It also verifies every recorded error against Biome's explicit configuration, Oxlint's effective native configuration, Doctor's effective severities, and the loaded shadcn plugin configuration. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
+The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects unreviewed catalog changes, duplicates, changed pins, severity drift, and narrowed file-role scopes. Every delegated decision names an enforced owner: another error rule, a compiler option, a Biome assist, or its formatter. Recorded global disabled levels cannot silently change or fall back to inherited defaults. The gate also compares every installed Playwright preset rule with the explicit project errors. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
 [Ultracite 8.1](https://github.com/haydenbleasel/ultracite/pull/857) and [Biome 2.6.3](https://biomejs.dev/internals/changelog/version/2-6-3/) replace the temporary Tailwind compatibility patch. The inventory reviews all 33 new Biome rules: 18 are errors, one unsafe-return check belongs to typed Oxlint, and 14 are framework-inapplicable or reject valid project contracts. Oxlint 1.90 adds the fatal `no-unsafe-enum-assignment` check; protobuf defaults and fixtures use named enum members rather than numeric literals.
 
-Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. YAML and SCSS use Biome's formatter when present. Markdown formatting remains disabled because Biome 2.6.3 can change whitespace around inline code; Blume owns documentation. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled. The materialized configuration already enforces every rule in the new Playwright preset without importing its test-pattern waiver.
+Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. YAML and SCSS use Biome's formatter when present. Markdown formatting remains disabled because Biome 2.6.3 can change whitespace around inline code; Blume owns documentation. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled.
 
 The CLI regression tests exercise `ultracite fix --hook` with missing, malformed, empty, and valid path payloads. Invalid payloads leave all files unchanged; a valid payload formats only its named file. The tests also exercise Tailwind variant sorting through the actual Biome binary.
 
@@ -66,6 +66,16 @@ Some deliberate decisions:
 - Secret patterns remain enabled. The global entropy threshold is 50 because long selectors and Tailwind variants are not credentials. Deliberate test credentials are fixture data, not shipped secrets. See [Biome's documented entropy tuning](https://biomejs.dev/linter/rules/no-secrets/javascript/#entropythreshold).
 
 The exact thresholds and options live in the configurations, not this document. Syntax bans that contradict supported JavaScript, React composition, or externally defined callback signatures are not enabled merely to increase the count.
+
+### Pure value contracts
+
+Pure transformations in `src/lib/domain/**/*.ts` enforce three additional Oxlint errors: `prefer-readonly-parameter-types`, `explicit-module-boundary-types`, and `no-unnecessary-condition`. The selection and AIP filter helpers live there with their tests. The existing `src/lib/pagination.ts` API receives the same checks without changing vendored UI imports. Inputs are readonly; generic resource results retain their inferred caller types. Exported functions declare return contracts, while implementation-local inference stays available.
+
+Browser, persistence, and RPC adapters stay outside that pure role. They retain runtime capability checks and mutable resource handles. This scope adds checks; it does not exclude adapters from the existing strict toolchain.
+
+Biome's `noComponentHookFactories` is a global error. Component mocks now have module-level identities. Hook tests use a module-level provider component with per-test render callbacks and query clients, preserving isolation and cleanup.
+
+Real CLI regressions reject mutable pure inputs, missing exported return contracts, impossible conditions, nested component definitions, missing Playwright awaits, brittle waits, and empty fixture patterns. Valid transformations, condition-based assertions, and runtime capability guards pass. Repeated Biome and Oxlint fixes converge on the same source.
 
 ## Coverage boundaries
 

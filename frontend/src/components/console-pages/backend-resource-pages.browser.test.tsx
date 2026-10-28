@@ -47,19 +47,7 @@ const state = rs.hoisted(
 );
 
 rs.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    className,
-    to,
-  }: {
-    children: ReactNode;
-    className?: string;
-    to: string;
-  }) => (
-    <a className={className} href={to}>
-      {children}
-    </a>
-  ),
+  Link: MockLink,
   useLocation: ({
     select,
   }: {
@@ -774,3 +762,19 @@ test("backend instance delete navigates without waiting for catalog refresh", as
   await expect.poll(() => state.navigate.mock.calls.length).toBe(1);
   expect(state.navigate).toHaveBeenCalledWith({ replace: true, to: "/" });
 });
+
+function MockLink({
+  children,
+  className,
+  to,
+}: {
+  children: ReactNode;
+  className?: string;
+  to: string;
+}) {
+  return (
+    <a className={className} href={to}>
+      {children}
+    </a>
+  );
+}

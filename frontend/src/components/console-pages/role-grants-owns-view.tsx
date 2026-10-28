@@ -41,7 +41,10 @@ import {
   SortableHeader,
 } from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { buildOwnedFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
+import {
+  buildOwnedFilter,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/domain/aip-filter";
 import type { RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";

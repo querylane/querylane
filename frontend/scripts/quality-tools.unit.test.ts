@@ -10,10 +10,189 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, test } from "@rstest/core";
+import { z } from "zod";
 
 const root = resolve(import.meta.dirname, "..");
 const compilers = ["tsrs", "tsc"];
 const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
+
+test.each([
+  {
+    name: "readonly inputs",
+    rule: "prefer-readonly-parameter-types",
+    source:
+      "export function count(values: string[]): number { return values.length; }\n",
+  },
+  {
+    name: "explicit exported contracts",
+    rule: "explicit-module-boundary-types",
+    source:
+      "export function count(values: readonly string[]) { return values.length; }\n",
+  },
+  {
+    name: "impossible conditions",
+    rule: "no-unnecessary-condition",
+    source:
+      "export function missing(values: readonly string[]): boolean { return values === undefined; }\n",
+  },
+  {
+    name: "valid pure transformation",
+    rule: null,
+    source:
+      "export function count(values: readonly string[]): number { return values.length; }\n",
+  },
+])("pure domain lint enforces $name", ({ rule, source }) => {
+  const domain = join(root, "src/lib/domain");
+  mkdirSync(domain, { recursive: true });
+  const directory = mkdtempSync(join(domain, "quality-probe-"));
+  const file = join(directory, "probe.ts");
+  try {
+    writeFileSync(file, source);
+    const result = spawnSync(
+      join(root, "node_modules/.bin/oxlint"),
+      [
+        "--config",
+        "oxlint.config.ts",
+        "--type-aware",
+        "--deny-warnings",
+        "--format=json",
+        file,
+      ],
+      { cwd: root, encoding: "utf8" }
+    );
+    expect(result.status).toBe(rule === null ? 0 : 1);
+    const { diagnostics } = z
+      .object({ diagnostics: z.array(z.object({ code: z.string() })) })
+      .parse(JSON.parse(result.stdout));
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
+      rule === null ? [] : [`typescript(${rule})`]
+    );
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test("platform adapters retain capability guards and mutable resource contracts", () => {
+  const directory = mkdtempSync(join(root, "src", "quality-probe-"));
+  const file = join(directory, "probe.ts");
+  try {
+    writeFileSync(
+      file,
+      "export function cancel(controller: AbortController): void { controller.abort(); }\nexport function report(error: unknown): void { globalThis.reportError?.(error); }\n"
+    );
+    const result = spawnSync(
+      join(root, "node_modules/.bin/oxlint"),
+      ["--config", "oxlint.config.ts", "--type-aware", "--deny-warnings", file],
+      { cwd: root, encoding: "utf8" }
+    );
+    expect(result.status).toBe(0);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test("domain formatter and typed fixes converge without contradictory rewrites", () => {
+  const directory = mkdtempSync(join(root, "src/lib/domain", "quality-probe-"));
+  const file = join(directory, "probe.ts");
+  const formatted =
+    "export function count(values: readonly string[]): number {\n  return values.length;\n}\n";
+  try {
+    writeFileSync(
+      file,
+      "export function count(values:readonly string[]):number{return values.length;}\n"
+    );
+    const passes = Array.from({ length: 2 }, () => {
+      const biome = spawnSync(
+        join(root, "node_modules/.bin/biome"),
+        ["check", "--write", file],
+        { cwd: root, encoding: "utf8" }
+      );
+      const oxlint = spawnSync(
+        join(root, "node_modules/.bin/oxlint"),
+        [
+          "--config",
+          "oxlint.config.ts",
+          "--type-aware",
+          "--deny-warnings",
+          "--fix",
+          file,
+        ],
+        { cwd: root, encoding: "utf8" }
+      );
+      return {
+        biome: biome.status,
+        oxlint: oxlint.status,
+        source: readFileSync(file, "utf8"),
+      };
+    });
+    expect(passes).toEqual([
+      { biome: 0, oxlint: 0, source: formatted },
+      { biome: 0, oxlint: 0, source: formatted },
+    ]);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test.each([
+  {
+    name: "render-time component factory",
+    suffix: "tsx",
+    rule: "noComponentHookFactories",
+    source:
+      "export function Parent() { function Child() { return <div />; } return <Child />; }\n",
+  },
+  {
+    name: "module-level components",
+    suffix: "tsx",
+    rule: null,
+    source:
+      "function Child() { return <div />; }\nexport function Parent() { return <Child />; }\n",
+  },
+  {
+    name: "missing Playwright await",
+    suffix: "spec.ts",
+    rule: "noPlaywrightMissingAwait",
+    source:
+      'test("shows content", ({ page }) => { expect(page.getByRole("heading")).toBeVisible(); });\n',
+  },
+  {
+    name: "brittle Playwright timeout",
+    suffix: "spec.ts",
+    rule: "noPlaywrightWaitForTimeout",
+    source:
+      'test("shows content", async ({ page }) => { await page.waitForTimeout(1000); await expect(page.getByRole("heading")).toBeVisible(); });\n',
+  },
+  {
+    name: "empty Playwright fixture pattern",
+    suffix: "spec.ts",
+    rule: "noEmptyPattern",
+    source:
+      'test("reads the browser", ({}) => { expect(globalThis).toBeDefined(); });\n',
+  },
+  {
+    name: "condition-based Playwright assertion",
+    suffix: "spec.ts",
+    rule: null,
+    source:
+      'test("shows content", async ({ page }) => { await expect(page.getByRole("heading")).toBeVisible(); });\n',
+  },
+])("biome checks $name", ({ rule, source, suffix }) => {
+  const directory = mkdtempSync(join(root, "src", "quality-probe-"));
+  const file = join(directory, `probe.${suffix}`);
+  try {
+    writeFileSync(file, source);
+    const result = spawnSync(
+      join(root, "node_modules/.bin/biome"),
+      ["lint", file],
+      { cwd: root, encoding: "utf8" }
+    );
+    expect(result.status).toBe(rule === null ? 0 : 1);
+    expect(result.stdout + result.stderr).toContain(rule ?? "Checked 1 file");
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
 
 test.each([
   { input: "", fixesEditedFile: false },

@@ -2,11 +2,11 @@ function pageIndexForPageSizeChange({
   nextPageSize,
   pageIndex,
   pageSize,
-}: {
+}: Readonly<{
   nextPageSize: number;
   pageIndex: number;
   pageSize: number;
-}) {
+}>): number {
   return Math.floor((pageIndex * pageSize) / nextPageSize);
 }
 

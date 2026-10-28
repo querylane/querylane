@@ -9,9 +9,8 @@ import {
   type ServiceImpl,
   type Transport,
 } from "@connectrpc/connect";
-import { TransportProvider } from "@connectrpc/connect-query";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -31,6 +30,7 @@ import {
   WatchConfigChangesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
 import { createTestQueryClient } from "@/test/query-client";
+import { QueryHookProviders } from "@/test/query-hook-providers";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 // Keep the client identity stable across test renders just as the React
@@ -72,16 +72,12 @@ function createWrapper(transport: Transport) {
   const queryClient = createTestQueryClient();
   activeQueryClients.push(queryClient);
 
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <TransportProvider transport={transport}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </TransportProvider>
-    );
-  }
-  return Wrapper;
+  const renderProviders = ({ children }: { children: ReactNode }) => (
+    <QueryHookProviders queryClient={queryClient} transport={transport}>
+      {children}
+    </QueryHookProviders>
+  );
+  return renderProviders;
 }
 
 function connectingEvent() {

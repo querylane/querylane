@@ -42,7 +42,7 @@ import {
   resolveSelectedResource,
   resolveValidSelectionId,
   shouldEnableDatabaseSelectionQuery,
-} from "@/lib/db-selection-utils";
+} from "@/lib/domain/db-selection-utils";
 import { useCurrentRouteIds } from "@/lib/route-ids";
 import { isNonEmptyString } from "@/lib/value-guards";
 

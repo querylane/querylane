@@ -1,8 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError, type Transport } from "@connectrpc/connect";
-import { TransportProvider } from "@connectrpc/connect-query";
 import { afterEach, describe, expect, test } from "@rstest/core";
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useReadRowsQuery } from "@/hooks/api/table-data";
@@ -13,21 +12,18 @@ import {
   TableDataService,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { createTestQueryClient } from "@/test/query-client";
+import { QueryHookProviders } from "@/test/query-hook-providers";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 const activeQueryClients: QueryClient[] = [];
 
 function createWrapper(transport: Transport, queryClient: QueryClient) {
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <TransportProvider transport={transport}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </TransportProvider>
-    );
-  }
-  return Wrapper;
+  const renderProviders = ({ children }: { children: ReactNode }) => (
+    <QueryHookProviders queryClient={queryClient} transport={transport}>
+      {children}
+    </QueryHookProviders>
+  );
+  return renderProviders;
 }
 
 afterEach(async () => {

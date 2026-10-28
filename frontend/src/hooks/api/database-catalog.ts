@@ -1,12 +1,12 @@
 import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { useQuery } from "@tanstack/react-query";
-import { buildContainsFilter } from "@/lib/aip-filter";
 import {
   buildDatabaseName,
   buildSchemaName,
   normalizeEstimatedRowCount,
 } from "@/lib/console-resources";
+import { buildContainsFilter } from "@/lib/domain/aip-filter";
 import { isNonEmptyString } from "@/lib/value-guards";
 import {
   type ListSchemasResponse,

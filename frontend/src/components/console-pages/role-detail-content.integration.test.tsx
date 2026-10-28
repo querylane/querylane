@@ -40,22 +40,7 @@ rs.mock("@/lib/db-context", () => ({
 }));
 
 rs.mock("@/components/console-pages/role-detail-view", () => ({
-  RoleDetailView: (props: RoleDetailViewProps) => (
-    <>
-      <output data-testid="partial-flags">
-        {[
-          props.grantsPartial,
-          props.ownedPartial,
-          props.publicGrantsPartial,
-          props.defaultPrivilegesPartial,
-          props.partialAccess,
-        ].join(",")}
-      </output>
-      <output data-testid="ready-flags">
-        {[props.grantsReady, props.ownedReady].join(",")}
-      </output>
-    </>
-  ),
+  RoleDetailView: MockRoleDetailView,
 }));
 
 function settledQuery(data: object) {
@@ -179,3 +164,22 @@ describe("role detail content", () => {
     expect(screen.getByTestId("ready-flags").textContent).toBe("false,false");
   });
 });
+
+function MockRoleDetailView(props: RoleDetailViewProps) {
+  return (
+    <>
+      <output data-testid="partial-flags">
+        {[
+          props.grantsPartial,
+          props.ownedPartial,
+          props.publicGrantsPartial,
+          props.defaultPrivilegesPartial,
+          props.partialAccess,
+        ].join(",")}
+      </output>
+      <output data-testid="ready-flags">
+        {[props.grantsReady, props.ownedReady].join(",")}
+      </output>
+    </>
+  );
+}
