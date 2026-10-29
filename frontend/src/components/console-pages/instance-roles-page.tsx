@@ -30,7 +30,10 @@ import {
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { buildRoleFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
+import {
+  buildRoleFilter,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/domain/aip-filter";
 import {
   type InstanceRolesSearch,
   type InstanceRolesTab,

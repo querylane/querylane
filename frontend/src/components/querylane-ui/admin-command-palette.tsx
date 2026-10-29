@@ -25,13 +25,13 @@ import {
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
+import { normalizeEstimatedRowCount } from "@/lib/console-resources";
+import { useDb } from "@/lib/db-context";
 import {
   buildRoleFilter,
   MIN_SERVER_SUBSTRING_LENGTH,
   SERVER_FILTER_DEBOUNCE_MS,
-} from "@/lib/aip-filter";
-import { normalizeEstimatedRowCount } from "@/lib/console-resources";
-import { useDb } from "@/lib/db-context";
+} from "@/lib/domain/aip-filter";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { deriveRoleKind, ROLE_KIND_LABEL, roleIdOf } from "@/lib/role-display";
 

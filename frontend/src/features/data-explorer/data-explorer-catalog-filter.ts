@@ -1,5 +1,5 @@
-import { buildContainsFilter } from "@/lib/aip-filter";
 import { parseResourceLeafId } from "@/lib/console-resources";
+import { buildContainsFilter } from "@/lib/domain/aip-filter";
 
 function resourceDisplayName(resource: { displayName?: string; name: string }) {
   return (resource.displayName ?? "") || parseResourceLeafId(resource.name);

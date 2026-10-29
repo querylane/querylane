@@ -20,66 +20,46 @@ const routerState = rs.hoisted(() => ({
 const PRESERVES_SETTINGS_RE =
   /creates a backup and preserves your other settings/iu;
 
-rs.mock("@tanstack/react-router", () => {
-  function MockCatchBoundary({ children }: { children: React.ReactNode }) {
-    return children;
-  }
+rs.mock("@tanstack/react-router", () => ({
+  ...Object.fromEntries([["CatchBoundary", MockCatchBoundary]]),
+  useLocation: ({
+    select,
+  }: {
+    select?: (location: { href: string; pathname: string }) => unknown;
+  } = {}) => {
+    const location = {
+      href: routerState.pathname,
+      pathname: routerState.pathname,
+    };
+    return select ? select(location) : location;
+  },
+  useRouterState: ({
+    select,
+  }: {
+    select?: (state: {
+      isLoading: boolean;
+      location: { pathname: string };
+    }) => unknown;
+  } = {}) => {
+    const state = {
+      isLoading: routerState.isLoading,
+      location: { pathname: routerState.pathname },
+    };
+    return select ? select(state) : state;
+  },
+}));
 
-  return {
-    ...Object.fromEntries([["CatchBoundary", MockCatchBoundary]]),
-    useLocation: ({
-      select,
-    }: {
-      select?: (location: { href: string; pathname: string }) => unknown;
-    } = {}) => {
-      const location = {
-        href: routerState.pathname,
-        pathname: routerState.pathname,
-      };
-      return select ? select(location) : location;
-    },
-    useRouterState: ({
-      select,
-    }: {
-      select?: (state: {
-        isLoading: boolean;
-        location: { pathname: string };
-      }) => unknown;
-    } = {}) => {
-      const state = {
-        isLoading: routerState.isLoading,
-        location: { pathname: routerState.pathname },
-      };
-      return select ? select(state) : state;
-    },
-  };
-});
+rs.mock("@/components/admin-header", () =>
+  Object.fromEntries([["AdminHeader", MockAdminHeader]])
+);
 
-rs.mock("@/components/admin-header", () => {
-  function MockAdminHeader() {
-    return <header data-testid="admin-header" />;
-  }
+rs.mock("@/components/admin-keyboard-shortcuts", () =>
+  Object.fromEntries([["AdminKeyboardShortcuts", MockAdminKeyboardShortcuts]])
+);
 
-  return Object.fromEntries([["AdminHeader", MockAdminHeader]]);
-});
-
-rs.mock("@/components/admin-keyboard-shortcuts", () => {
-  function MockAdminKeyboardShortcuts() {
-    return null;
-  }
-
-  return Object.fromEntries([
-    ["AdminKeyboardShortcuts", MockAdminKeyboardShortcuts],
-  ]);
-});
-
-rs.mock("@/components/app-sidebar", () => {
-  function MockAppSidebar() {
-    return <aside data-testid="app-sidebar" />;
-  }
-
-  return Object.fromEntries([["AppSidebar", MockAppSidebar]]);
-});
+rs.mock("@/components/app-sidebar", () =>
+  Object.fromEntries([["AppSidebar", MockAppSidebar]])
+);
 
 describe("database layout route transitions", () => {
   beforeEach(() => {
@@ -175,3 +155,19 @@ describe("database layout route transitions", () => {
     expect(screen.getByText(PRESERVES_SETTINGS_RE)).toBeTruthy();
   });
 });
+
+function MockCatchBoundary({ children }: { children: React.ReactNode }) {
+  return children;
+}
+
+function MockAdminHeader() {
+  return <header data-testid="admin-header" />;
+}
+
+function MockAdminKeyboardShortcuts() {
+  return null;
+}
+
+function MockAppSidebar() {
+  return <aside data-testid="app-sidebar" />;
+}

@@ -114,33 +114,11 @@ const { tableApi, useExplainQueryMock, viewApi } = rs.hoisted(
 );
 
 rs.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string | undefined;
-  }) => (
-    <a className={className} href="#dependency">
-      {children}
-    </a>
-  ),
+  Link: MockLink,
 }));
 
 rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () => ({
-  TableDataGrid: ({
-    children,
-  }: {
-    children?: (state: {
-      grid: React.ReactNode;
-      lastFetchedLabel: string;
-    }) => React.ReactNode;
-  }) => {
-    const grid = <div>Materialized rows</div>;
-    return children
-      ? children({ grid, lastFetchedLabel: "Last fetched just now" })
-      : grid;
-  },
+  TableDataGrid: MockTableDataGrid,
 }));
 
 rs.mock("@/hooks/api/table", () => ({
@@ -392,3 +370,31 @@ describe("standard view detail integration", () => {
     expect(screen.queryByText("Size")).toBeNull();
   });
 });
+
+function MockLink({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string | undefined;
+}) {
+  return (
+    <a className={className} href="#dependency">
+      {children}
+    </a>
+  );
+}
+
+function MockTableDataGrid({
+  children,
+}: {
+  children?: (state: {
+    grid: React.ReactNode;
+    lastFetchedLabel: string;
+  }) => React.ReactNode;
+}) {
+  const grid = <div>Materialized rows</div>;
+  return children
+    ? children({ grid, lastFetchedLabel: "Last fetched just now" })
+    : grid;
+}

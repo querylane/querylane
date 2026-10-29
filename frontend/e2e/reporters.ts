@@ -8,10 +8,10 @@ const CI_REPORTERS = [
     {
       mergeFiles: true,
       open: "never",
-      outputFolder: "playwright-report",
+      outputFolder: "../playwright-report",
     },
   ],
-  ["json", { outputFile: "test-results/results.json" }],
+  ["json", { outputFile: "../test-results/results.json" }],
 ] satisfies PlaywrightTestConfig["reporter"];
 
 export { CI_REPORTERS };

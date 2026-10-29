@@ -192,6 +192,73 @@ export default defineConfig({
   },
   overrides: [
     {
+      // Pure value transformations have immutable inputs and stable exported contracts.
+      // Platform adapters retain real capability checks and mutable resource handles.
+      files: ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"],
+      rules: {
+        "typescript/prefer-readonly-parameter-types": "error",
+        "typescript/explicit-module-boundary-types": "error",
+        "typescript/no-unnecessary-condition": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [
+              {
+                group: ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"],
+                allowTypeImports: true,
+                message:
+                  "Pure value modules may only import domain values and shared value guards.",
+              },
+              {
+                group: [
+                  "../**",
+                  "react",
+                  "react/**",
+                  "react-dom",
+                  "react-dom/**",
+                  "@connectrpc/**",
+                  "@tanstack/**",
+                  "zustand",
+                  "zustand/**",
+                ],
+                allowTypeImports: true,
+                message:
+                  "Keep stateful adapters outside the pure domain role; use direct domain imports.",
+              },
+            ],
+          },
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            globals: [
+              "globalThis",
+              "global",
+              "window",
+              "self",
+              "document",
+              "navigator",
+              "location",
+              "history",
+              "localStorage",
+              "sessionStorage",
+              "indexedDB",
+              "caches",
+              "fetch",
+              "reportError",
+              "WebSocket",
+              "Worker",
+              "MessageChannel",
+              "setTimeout",
+              "setInterval",
+              "requestAnimationFrame",
+            ],
+            checkGlobalObject: false,
+          },
+        ],
+      },
+    },
+    {
       // Querylane's owned variants compose the unmodified registry components.
       // Consumers still get every rule; authors may define appearance here.
       files: ["src/components/querylane-ui/**"],

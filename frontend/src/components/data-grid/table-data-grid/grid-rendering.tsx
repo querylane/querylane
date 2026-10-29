@@ -17,10 +17,10 @@ import {
   type CellKeyDownArgs,
   type CellMouseArgs,
   type CellMouseEvent,
-  type CellRendererProps,
   type Column,
   DataGrid,
   type DefaultColumnOptions,
+  type RenderCellProps,
   type Renderers,
   type SortColumn,
 } from "react-data-grid";
@@ -214,7 +214,7 @@ function runCellSelectionAutoScroll({
   return true;
 }
 
-function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
+function CellSelectionCell(props: RenderCellProps<GridRow, unknown>) {
   const cellSelectionStore = useContext(CellSelectionContext);
   const coordinate = {
     columnIndex: props.column.idx,
@@ -289,7 +289,7 @@ function CellSelectionCell(props: CellRendererProps<GridRow, unknown>) {
   );
 }
 
-function renderCell(key: Key, props: CellRendererProps<GridRow, unknown>) {
+function renderCell(key: Key, props: RenderCellProps<GridRow, unknown>) {
   return <CellSelectionCell key={key} {...props} />;
 }
 

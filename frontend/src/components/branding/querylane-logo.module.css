@@ -82,7 +82,7 @@
 
   40%,
   56% {
-    transform: translate(-1.4px, 0px);
+    transform: translate(-1.4px, 0);
   }
 
   60%,
@@ -103,7 +103,7 @@
 @keyframes querylane-chevron-scan {
   0%,
   100% {
-    transform: translateX(0px);
+    transform: translateX(0);
   }
 
   50% {
@@ -145,7 +145,7 @@
   }
 
   .chevronTrack {
-    transform: translate(-1.4px, 0px);
+    transform: translate(-1.4px, 0);
   }
 
   .chevron {

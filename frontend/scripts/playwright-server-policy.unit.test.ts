@@ -1,6 +1,47 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { env } from "node:process";
 import { expect, test } from "@rstest/core";
+
+test("canonical container build output cannot share the host dist directory", () => {
+  const directory = mkdtempSync(
+    join(tmpdir(), "querylane-container-contract-")
+  );
+  const runtimeEnv = new Map(Object.entries(env));
+  runtimeEnv.set("PATH", `${directory}:${runtimeEnv.get("PATH") ?? ""}`);
+  try {
+    writeFileSync(
+      join(directory, "docker"),
+      '#!/usr/bin/env bash\nprintf "%s\\n" "$@"\n',
+      { mode: 0o755 }
+    );
+    const result = spawnSync(
+      "bash",
+      [
+        join(import.meta.dirname, "playwright-container.sh"),
+        "bun",
+        "run",
+        "test:visual",
+      ],
+      {
+        cwd: new URL("../", import.meta.url),
+        encoding: "utf8",
+        env: Object.fromEntries(runtimeEnv),
+        timeout: 30_000,
+      }
+    );
+    expect(result.status).toBe(0);
+    const args = result.stdout.trim().split("\n");
+    const volumes = args.flatMap((argument, index) =>
+      argument === "--volume" ? [args[index + 1]] : []
+    );
+    expect(volumes).toContain("/work/dist");
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
 
 test("local E2E cannot silently reuse a server from another workspace", () => {
   const runtimeEnv = new Map(Object.entries(env));

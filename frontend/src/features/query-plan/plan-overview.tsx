@@ -42,7 +42,7 @@ function PlanOverview({
         <SummaryNumbers count={nodes.length} plan={plan} />
         {hotspot && total > 0 ? (
           <Button
-            aria-label={`Inspect largest work: ${planNodeTitle(hotspot)}`}
+            aria-description={`Inspect ${planNodeTitle(hotspot)}`}
             className="h-auto max-w-full justify-start"
             onClick={() => {
               onSelect(hotspot);

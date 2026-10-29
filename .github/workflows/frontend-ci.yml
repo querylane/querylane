@@ -19,7 +19,7 @@ env:
   NODE_VERSION: &node_version 24
   # Keep in sync with the `playwright` version in frontend/package.json. The
   # visual job fails fast when they drift, because baselines depend on it.
-  PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.64.0-noble
+  PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.64.1-noble
 
 permissions:
   contents: read

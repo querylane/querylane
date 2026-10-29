@@ -29,20 +29,7 @@ rs.mock("@tanstack/react-router", () => ({
 }));
 
 rs.mock("@/features/database-visualization/flow-canvas", () => ({
-  FlowCanvas: ({
-    actionPanel,
-    nodes,
-  }: {
-    actionPanel?: React.ReactNode | undefined;
-    nodes: {
-      id: string;
-    }[];
-  }) => (
-    <section aria-label="Access flow canvas">
-      <fieldset aria-label="Access canvas controls">{actionPanel}</fieldset>
-      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
-    </section>
-  ),
+  FlowCanvas: MockFlowCanvas,
 }));
 
 function grantObject(): GrantedObject {
@@ -258,3 +245,20 @@ describe("role access map tab", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 });
+
+function MockFlowCanvas({
+  actionPanel,
+  nodes,
+}: {
+  actionPanel?: React.ReactNode | undefined;
+  nodes: {
+    id: string;
+  }[];
+}) {
+  return (
+    <section aria-label="Access flow canvas">
+      <fieldset aria-label="Access canvas controls">{actionPanel}</fieldset>
+      <span>Node ids {nodes.map((node) => node.id).join(",")}</span>
+    </section>
+  );
+}

@@ -28,7 +28,7 @@ function buildContainsFilter(
 }
 
 function joinFilterConditions(
-  conditions: (string | undefined)[]
+  conditions: readonly (string | undefined)[]
 ): string | undefined {
   const present = conditions.filter((condition) => condition !== undefined);
   return present.length === 0 ? undefined : present.join(" AND ");
@@ -37,10 +37,10 @@ function joinFilterConditions(
 function buildOwnedFilter({
   objectType,
   search,
-}: {
+}: Readonly<{
   objectType?: string | undefined;
   search: string;
-}): string | undefined {
+}>): string | undefined {
   return joinFilterConditions([
     isNonEmptyString(objectType)
       ? `object_type = ${quoteFilterValue(objectType)}`
@@ -62,11 +62,11 @@ function buildGrantFilter({
   objectType,
   schemaName,
   search,
-}: {
+}: Readonly<{
   objectType?: string | undefined;
   schemaName?: string | undefined;
   search: string;
-}): string | undefined {
+}>): string | undefined {
   return joinFilterConditions([
     schemaName === undefined
       ? undefined
@@ -100,10 +100,10 @@ function roleTypeFilter(type: RoleFilterKind | undefined): string | undefined {
 function buildRoleFilter({
   query,
   type,
-}: {
+}: Readonly<{
   query: string;
   type?: RoleFilterKind | undefined;
-}): string | undefined {
+}>): string | undefined {
   return joinFilterConditions([
     buildContainsFilter("role_name", query),
     roleTypeFilter(type),

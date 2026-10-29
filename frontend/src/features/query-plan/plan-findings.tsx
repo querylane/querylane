@@ -49,7 +49,6 @@ function PlanFindings({
       >
         {findings.map(({ node, label }) => (
           <DropdownMenuItem
-            aria-label={`${planNodeTitle(node)}: ${label}`}
             closeOnClick={true}
             key={`${node.id}:${label}`}
             onClick={() => {

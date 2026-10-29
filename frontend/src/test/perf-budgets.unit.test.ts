@@ -32,7 +32,9 @@ describe("frontend performance budgets", () => {
     const exitCode = runPerformanceBudgetCli({
       argv: ["bun", "perf-budgets.ts", "build-real-ms", "5500"],
       stderr: () => undefined,
-      stdout: (line) => output.push(line),
+      stdout: (line) => {
+        output.push(line);
+      },
     });
 
     expect(exitCode).toBe(0);
@@ -42,14 +44,16 @@ describe("frontend performance budgets", () => {
   test("accepts already-sliced CLI args and formats byte budgets", () => {
     const output: string[] = [];
     const exitCode = runPerformanceBudgetCli({
-      argv: ["data-explorer-cold-payload-gzip-bytes", String(160 * 1024)],
+      argv: ["data-explorer-cold-payload-gzip-bytes", String(164 * 1024)],
       stderr: () => undefined,
-      stdout: (line) => output.push(line),
+      stdout: (line) => {
+        output.push(line);
+      },
     });
 
     expect(exitCode).toBe(0);
     expect(output).toEqual([
-      "Data Explorer cold payload: 160.0 KiB <= 160.0 KiB",
+      "Data Explorer cold payload: 164.0 KiB <= 164.0 KiB",
     ]);
   });
 });

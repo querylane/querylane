@@ -144,7 +144,7 @@ function MapNode({
   const caption = nodeCaption(node);
   return (
     <Button
-      aria-label={`Inspect ${planNodeTitle(node)}`}
+      aria-description={`Inspect ${planNodeTitle(node)}`}
       aria-pressed={selected}
       className="absolute top-(--plan-y) left-(--plan-x) h-(--plan-height) w-(--plan-width)"
       data-plan-node={node.id}

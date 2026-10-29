@@ -17,6 +17,8 @@ import {
 import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CreateInstanceSpecSchema,
+  PostgresConfig_SslMode,
+  PostgresConfig_SslNegotiation,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import type {
@@ -92,8 +94,12 @@ function readCreateInstanceFormState({
       !Number.isNaN(values.config?.port)
         ? String(values.config.port)
         : "",
-    sslMode: formatSslMode(values.config?.sslMode ?? 0),
-    sslNegotiation: formatSslNegotiation(values.config?.sslNegotiation ?? 0),
+    sslMode: formatSslMode(
+      values.config?.sslMode ?? PostgresConfig_SslMode.UNSPECIFIED
+    ),
+    sslNegotiation: formatSslNegotiation(
+      values.config?.sslNegotiation ?? PostgresConfig_SslNegotiation.UNSPECIFIED
+    ),
     username: values.config?.username ?? "",
   };
 }

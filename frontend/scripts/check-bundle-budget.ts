@@ -24,7 +24,9 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // separately from core.
 // 203 (was 200): align CodeMirror/Lezer singletons after the security lock refresh.
 // Measured with Bun 1.4.3: 201.3 KiB. Initial/largest-chunk caps are unchanged.
-const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 203;
+// 205 (was 203): latest sql-formatter and panel releases add deferred code.
+// Paired Bun 1.4.4 builds: SQL editor 199.3 -> 203.5 KiB gzip.
+const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
 // TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
@@ -54,7 +56,10 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 1027 (was 1024): port plan search, findings and ranked timing onto the spatial
 // workspace. Paired Bun 1.4.4 builds: main 1023.8 -> 1025.9 KiB core gzip.
 // No new dependencies; initial, SQL editor and largest-async caps are unchanged.
-const MAX_TOTAL_GZIP_KIB = 1027;
+// 1043 (was 1027): approved latest-dependency refresh, primarily the grid.
+// Paired Bun 1.4.4 builds: core 1025.9 -> 1040.7 KiB gzip (+1.4%).
+// Initial-load and largest-async caps stay unchanged.
+const MAX_TOTAL_GZIP_KIB = 1043;
 
 interface BundleBudgetAsset {
   brotli: number;

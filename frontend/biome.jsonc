@@ -1,4 +1,5 @@
 {
+  "extends": ["ultracite/biome/playwright"],
   "formatter": {
     "enabled": true,
     "formatWithErrors": true,
@@ -20,7 +21,7 @@
         "useSortedInterfaceMembers": "on",
         "useSortedProperties": "off",
         "useSortedTypeFields": "on",
-        "useSortedSelectionSet": "on",
+        "useSortedSelectionSet": "off",
         "useSortedPackageJson": "on",
         "preset": "all"
       }
@@ -343,7 +344,7 @@
         "useVueValidVPre": "error",
         "useVueValidVText": "error",
         "useYield": "error",
-        "noComponentHookFactories": "off",
+        "noComponentHookFactories": "error",
         "noDuplicateFieldDefinitionNames": "error",
         "noJsxNamespace": "error",
         "noPlaywrightMissingAwait": "error",
@@ -358,6 +359,36 @@
         "useVueValidVFor": "error"
       },
       "nursery": {
+        "noConsoleSpaces": "error",
+        "noMagicArrayFlatDepth": "error",
+        "noNull": "off",
+        "noReturnArrayPush": "error",
+        "noUnreadableIife": "error",
+        "noUselessRecursion": "error",
+        "noVueComputedPropertiesInData": "off",
+        "noVueDeprecatedDeleteSet": "off",
+        "noVueDeprecatedListeners": "off",
+        "noVueDeprecatedRouterLinkTagProp": "off",
+        "noVueDeprecatedScopeAttribute": "off",
+        "noVueMultipleSlotArgs": "off",
+        "noVueMutatingProps": "off",
+        "noVueSideEffectsInComputed": "off",
+        "noVueUnusedRefs": "off",
+        "noYamlBooleanKeys": "error",
+        "useSvelteEventDispatcherTypes": "off",
+        "useVueDefineOptions": "off",
+        "useVueDefinePropsDestructuring": "off",
+        "useVueTemplateRef": "off",
+        "useVueTypedProps": "off",
+        "useVueVModel": "off",
+        "useVueValidDefineEmits": "off",
+        "useVueValidDefineProps": "off",
+        "useVueValidVIs": "off",
+        "useVueValidVMemo": "off",
+        "useVueValidVModel": "off",
+        "useVueValidVShow": "off",
+        "useVueValidVSlot": "off",
+        "useWhileLoopCondition": "error",
         "noAstroConflictingSetDirectives": "error",
         "noAstroSetHtmlDirective": "error",
         "noBaseToString": "error",
@@ -505,7 +536,45 @@
         "useTopLevelHeading": "off",
         "useUnaryMinus": "error",
         "useVueConsistentEventHyphenation": "error",
-        "useVueMatchingComponentFileName": "error"
+        "useVueMatchingComponentFileName": "error",
+        "noArraySortForMinMax": "error",
+        "noBooleanSortComparator": "error",
+        "noDanglingUnderscore": "off",
+        "noEagerArrayMethodsInLoops": "error",
+        "noNewRequire": "error",
+        "noObsoleteAttributes": "error",
+        "noPathConcat": "error",
+        "noPlaywrightNthMethods": "off",
+        "noSelfNestedLayer": "error",
+        "noShortTimeValues": "off",
+        "noSvelteInternal": "off",
+        "noTanstackQueryRestDestructuring": "error",
+        "noUnreadableForOfExpression": "off",
+        "noUnsafeReturn": "off",
+        "noUselessSplice": "error",
+        "noVueUnusedEmitDeclarations": "off",
+        "noVueVTextVHtmlOnComponent": "off",
+        "noVueWatchAfterAwait": "off",
+        "noZeroLengthUnit": "error",
+        "useBlockStatementOverIife": "error",
+        "useConsistentLightnessNotation": {
+          "level": "error",
+          "options": {
+            "notation": "number"
+          }
+        },
+        "useConsistentUnicodeBom": "error",
+        "useExpectToContain": "error",
+        "useIteratorZip": "off",
+        "useMathAbs": "error",
+        "useMathTrunc": "error",
+        "usePackageJsonValidCpu": "error",
+        "usePackageJsonValidEngines": "error",
+        "useReactNativeValidPlatformColors": "off",
+        "useVueComponentIs": "off",
+        "useVueToggleInsideTransition": "off",
+        "useVueTypedRef": "off",
+        "useVueVOnExact": "off"
       },
       "performance": {
         "noAccumulatingSpread": "error",
@@ -1009,6 +1078,10 @@
           "security": {
             "noSecrets": "off"
           },
+          "correctness": {
+            // Retain the project check instead of the preset's test-fixture waiver.
+            "noEmptyPattern": "error"
+          },
           "performance": {
             "noNamespaceImport": "off"
           },
@@ -1038,7 +1111,9 @@
     }
   ],
   "tailwind": {
-    "stylesheet": "./src/index.css"
+    "stylesheet": "./src/index.css",
+    "mergeFunctions": ["clsx", "tw", "twMerge", "cn", "twJoin"],
+    "variantFunctions": ["cva", "tv"]
   },
   "markdown": {
     "formatter": {
@@ -1046,6 +1121,9 @@
     },
     "linter": {
       "enabled": false
+    },
+    "parser": {
+      "frontmatter": true
     }
   }
 }

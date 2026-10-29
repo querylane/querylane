@@ -11,17 +11,15 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 rs.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: React.ReactNode }) => (
-    <a href="/roles">{children}</a>
-  ),
+  Link: MockLink,
 }));
 
 rs.mock("@/components/console-pages/role-detail-builtins", () => ({
-  BuiltinRoleBody: () => <div>Built-in role details</div>,
+  BuiltinRoleBody: MockBuiltinRoleBody,
 }));
 
 rs.mock("@/components/console-pages/role-detail-tabs", () => ({
-  OrdinaryRoleTabs: () => <div>Role tabs</div>,
+  OrdinaryRoleTabs: MockOrdinaryRoleTabs,
 }));
 
 function roleDetailProps(): RoleDetailViewProps {
@@ -160,3 +158,15 @@ describe("role detail view", () => {
     expect(screen.getByRole("status")).toBeTruthy();
   });
 });
+
+function MockLink({ children }: { children: React.ReactNode }) {
+  return <a href="/roles">{children}</a>;
+}
+
+function MockBuiltinRoleBody() {
+  return <div>Built-in role details</div>;
+}
+
+function MockOrdinaryRoleTabs() {
+  return <div>Role tabs</div>;
+}

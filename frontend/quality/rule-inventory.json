@@ -1,12 +1,12 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.2",
-    "ultracite": "8.0.2",
-    "oxlint": "1.89.0",
+    "@biomejs/biome": "2.6.4",
+    "ultracite": "8.1.0",
+    "oxlint": "1.90.0",
     "@shadcn/lint": "0.2.3",
     "react-doctor": "0.9.18",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
-    "typescript": "7.1.0-dev.20261020.3"
+    "tsrs": "0.20.1-ts7.1.0-beta",
+    "typescript": "7.1.0-dev.20261028.1"
   },
   "biome": [
     {
@@ -593,8 +593,8 @@
     },
     {
       "rule": "correctness/noComponentHookFactories",
-      "decision": "inapplicable",
-      "reason": "Module-scoped test wrapper factories have stable identities; native static-components and production compilation enforce React identity.",
+      "decision": "error",
+      "reason": "Module-level components and hook definitions preserve React identity. Test doubles are module-level; provider render callbacks adapt stable per-test resources.",
       "docs": "https://biomejs.dev/linter/rules/no-component-hook-factories/"
     },
     {
@@ -1537,7 +1537,11 @@
       "rule": "nursery/noTailwindRestyledComponents",
       "decision": "delegated",
       "reason": "Import-aware shadcn/no-restyle owns registry appearance; Biome also flags unstyled icons and local primitives.",
-      "docs": "https://biomejs.dev/linter/rules/no-tailwind-restyled-components/"
+      "docs": "https://biomejs.dev/linter/rules/no-tailwind-restyled-components/",
+      "owner": {
+        "tool": "shadcn",
+        "rule": "shadcn/no-restyle"
+      }
     },
     {
       "rule": "nursery/noThisOutsideOfClass",
@@ -3650,6 +3654,388 @@
       "decision": "error",
       "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
       "docs": "https://biomejs.dev/linter/rules/use-strict-mode/"
+    },
+    {
+      "rule": "nursery/noArraySortForMinMax",
+      "decision": "error",
+      "reason": "Disallow sorting an array only to read its smallest or largest value.",
+      "docs": "https://biomejs.dev/linter/rules/no-array-sort-for-min-max"
+    },
+    {
+      "rule": "nursery/noBooleanSortComparator",
+      "decision": "error",
+      "reason": "Disallow sort comparators that return a boolean.",
+      "docs": "https://biomejs.dev/linter/rules/no-boolean-sort-comparator"
+    },
+    {
+      "rule": "nursery/noDanglingUnderscore",
+      "decision": "inapplicable",
+      "reason": "Leading underscores are valid ignored callback parameters and externally defined identifiers, not correctness defects.",
+      "docs": "https://biomejs.dev/linter/rules/no-dangling-underscore"
+    },
+    {
+      "rule": "nursery/noEagerArrayMethodsInLoops",
+      "decision": "error",
+      "reason": "Disallow .map() and .filter() calls in the header of for...of loops.",
+      "docs": "https://biomejs.dev/linter/rules/no-eager-array-methods-in-loops"
+    },
+    {
+      "rule": "nursery/noNewRequire",
+      "decision": "error",
+      "reason": "Disallow calling require with the new operator.",
+      "docs": "https://biomejs.dev/linter/rules/no-new-require"
+    },
+    {
+      "rule": "nursery/noObsoleteAttributes",
+      "decision": "error",
+      "reason": "Disallow obsolete attributes on HTML elements.",
+      "docs": "https://biomejs.dev/linter/rules/no-obsolete-attributes"
+    },
+    {
+      "rule": "nursery/noPathConcat",
+      "decision": "error",
+      "reason": "Disallow building file paths and URLs by joining strings to __dirname, __filename, or import.meta values.",
+      "docs": "https://biomejs.dev/linter/rules/no-path-concat"
+    },
+    {
+      "rule": "nursery/noPlaywrightNthMethods",
+      "decision": "inapplicable",
+      "reason": "Positional assertions verify ordered grid rows, columns and chart series. Banning every first/last/nth selector prevents these intentional order contracts; await and brittle-wait checks remain fatal.",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-nth-methods"
+    },
+    {
+      "rule": "nursery/noSelfNestedLayer",
+      "decision": "error",
+      "reason": "Disallow nesting a cascade layer inside a layer with the same name.",
+      "docs": "https://biomejs.dev/linter/rules/no-self-nested-layer"
+    },
+    {
+      "rule": "nursery/noShortTimeValues",
+      "decision": "inapplicable",
+      "reason": "Short transitions are intentional interaction feedback; no universal minimum motion duration applies.",
+      "docs": "https://biomejs.dev/linter/rules/no-short-time-values"
+    },
+    {
+      "rule": "nursery/noSvelteInternal",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-internal"
+    },
+    {
+      "rule": "nursery/noTanstackQueryRestDestructuring",
+      "decision": "error",
+      "reason": "Disallow rest destructuring and object spread on TanStack Query results.",
+      "docs": "https://biomejs.dev/linter/rules/no-tanstack-query-rest-destructuring"
+    },
+    {
+      "rule": "nursery/noUnreadableForOfExpression",
+      "decision": "inapplicable",
+      "reason": "The rule rejects ordinary nullish fallback iterables (items ?? []) and direct Object.entries calls; naming every one adds indirection without a correctness or readability benefit. Eager array allocations in loops remain errors.",
+      "docs": "https://biomejs.dev/linter/rules/no-unreadable-for-of-expression"
+    },
+    {
+      "rule": "nursery/noUnsafeReturn",
+      "decision": "delegated",
+      "reason": "Type-aware Oxlint typescript/no-unsafe-return owns this contract with compiler context.",
+      "docs": "https://biomejs.dev/linter/rules/no-unsafe-return",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-unsafe-return"
+      }
+    },
+    {
+      "rule": "nursery/noUselessSplice",
+      "decision": "error",
+      "reason": "Disallow splice() calls that have a simpler alternative.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-splice"
+    },
+    {
+      "rule": "nursery/noVueUnusedEmitDeclarations",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-unused-emit-declarations"
+    },
+    {
+      "rule": "nursery/noVueVTextVHtmlOnComponent",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-text-v-html-on-component"
+    },
+    {
+      "rule": "nursery/noVueWatchAfterAwait",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-watch-after-await"
+    },
+    {
+      "rule": "nursery/noZeroLengthUnit",
+      "decision": "error",
+      "reason": "Disallow units on zero lengths.",
+      "docs": "https://biomejs.dev/linter/rules/no-zero-length-unit"
+    },
+    {
+      "rule": "nursery/useBlockStatementOverIife",
+      "decision": "error",
+      "reason": "Prefer block statements over functions that are called immediately only to create a scope.",
+      "docs": "https://biomejs.dev/linter/rules/use-block-statement-over-iife"
+    },
+    {
+      "rule": "nursery/useConsistentLightnessNotation",
+      "decision": "error",
+      "reason": "Enforce a consistent notation for the lightness of colors.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-lightness-notation"
+    },
+    {
+      "rule": "nursery/useConsistentUnicodeBom",
+      "decision": "error",
+      "reason": "Require or disallow a Unicode byte order mark at the beginning of a file.",
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-unicode-bom"
+    },
+    {
+      "rule": "nursery/useExpectToContain",
+      "decision": "error",
+      "reason": "Enforce using toContain() to check whether an array or string contains a value.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-contain"
+    },
+    {
+      "rule": "nursery/useIteratorZip",
+      "decision": "inapplicable",
+      "reason": "Iterator.zip is not available across the supported browsers; do not introduce an unshipped runtime API.",
+      "docs": "https://biomejs.dev/linter/rules/use-iterator-zip"
+    },
+    {
+      "rule": "nursery/useMathAbs",
+      "decision": "error",
+      "reason": "Prefer Math.abs() over manual absolute value calculations and range checks.",
+      "docs": "https://biomejs.dev/linter/rules/use-math-abs"
+    },
+    {
+      "rule": "nursery/useMathTrunc",
+      "decision": "error",
+      "reason": "Require Math.trunc() instead of tricks that remove the decimal part of a number.",
+      "docs": "https://biomejs.dev/linter/rules/use-math-trunc"
+    },
+    {
+      "rule": "nursery/usePackageJsonValidCpu",
+      "decision": "error",
+      "reason": "Require the cpu field in package.json to be a valid list of processor types.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-valid-cpu"
+    },
+    {
+      "rule": "nursery/usePackageJsonValidEngines",
+      "decision": "error",
+      "reason": "Enforce that the engines field in package.json is valid.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-valid-engines"
+    },
+    {
+      "rule": "nursery/useReactNativeValidPlatformColors",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-react-native-valid-platform-colors"
+    },
+    {
+      "rule": "nursery/useVueComponentIs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-component-is"
+    },
+    {
+      "rule": "nursery/useVueToggleInsideTransition",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-toggle-inside-transition"
+    },
+    {
+      "rule": "nursery/useVueTypedRef",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-typed-ref"
+    },
+    {
+      "rule": "nursery/useVueVOnExact",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-v-on-exact"
+    },
+    {
+      "rule": "nursery/noConsoleSpaces",
+      "decision": "error",
+      "reason": "Console methods already separate arguments; prevent accidental duplicate spacing while retaining intentional indentation.",
+      "docs": "https://biomejs.dev/linter/rules/no-console-spaces/"
+    },
+    {
+      "rule": "nursery/noMagicArrayFlatDepth",
+      "decision": "error",
+      "reason": "Require a descriptive depth variable or explanation for non-default array flattening, preserving intentional nested-data contracts.",
+      "docs": "https://biomejs.dev/linter/rules/no-magic-array-flat-depth/"
+    },
+    {
+      "rule": "nursery/noNull",
+      "decision": "inapplicable",
+      "reason": "Preserve explicit null sentinels required by DOM, React refs and external JSON/RPC contracts; replacing them with undefined can change behavior.",
+      "docs": "https://biomejs.dev/linter/rules/no-null/"
+    },
+    {
+      "rule": "nursery/noReturnArrayPush",
+      "decision": "error",
+      "reason": "Do not mistake the length returned by array mutation for an item or array; read length explicitly when needed.",
+      "docs": "https://biomejs.dev/linter/rules/no-return-array-push/"
+    },
+    {
+      "rule": "nursery/noUnreadableIife",
+      "decision": "error",
+      "reason": "Keep immediate evaluation readable without nested expression parentheses; named helpers or block-bodied IIFEs remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-unreadable-iife/"
+    },
+    {
+      "rule": "nursery/noUselessRecursion",
+      "decision": "error",
+      "reason": "Use bounded-stack iteration instead of direct tail self-recursion; branching recursion and disposal-sensitive cases remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-recursion/"
+    },
+    {
+      "rule": "nursery/noVueComputedPropertiesInData",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-computed-properties-in-data/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedDeleteSet",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-delete-set/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedListeners",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-listeners/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedRouterLinkTagProp",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-router-link-tag-prop/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedScopeAttribute",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-scope-attribute/"
+    },
+    {
+      "rule": "nursery/noVueMultipleSlotArgs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-multiple-slot-args/"
+    },
+    {
+      "rule": "nursery/noVueMutatingProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-mutating-props/"
+    },
+    {
+      "rule": "nursery/noVueSideEffectsInComputed",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-side-effects-in-computed/"
+    },
+    {
+      "rule": "nursery/noVueUnusedRefs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-unused-refs/"
+    },
+    {
+      "rule": "nursery/noYamlBooleanKeys",
+      "decision": "error",
+      "reason": "Require textual YAML keys instead of accidental boolean keys; explicit quoted or string-tagged keys remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-yaml-boolean-keys/"
+    },
+    {
+      "rule": "nursery/useSvelteEventDispatcherTypes",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-event-dispatcher-types/"
+    },
+    {
+      "rule": "nursery/useVueDefineOptions",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-define-options/"
+    },
+    {
+      "rule": "nursery/useVueDefinePropsDestructuring",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-define-props-destructuring/"
+    },
+    {
+      "rule": "nursery/useVueTemplateRef",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-template-ref/"
+    },
+    {
+      "rule": "nursery/useVueTypedProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-typed-props/"
+    },
+    {
+      "rule": "nursery/useVueVModel",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-v-model/"
+    },
+    {
+      "rule": "nursery/useVueValidDefineEmits",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-define-emits/"
+    },
+    {
+      "rule": "nursery/useVueValidDefineProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-define-props/"
+    },
+    {
+      "rule": "nursery/useVueValidVIs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-is/"
+    },
+    {
+      "rule": "nursery/useVueValidVMemo",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-memo/"
+    },
+    {
+      "rule": "nursery/useVueValidVModel",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-model/"
+    },
+    {
+      "rule": "nursery/useVueValidVShow",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-show/"
+    },
+    {
+      "rule": "nursery/useVueValidVSlot",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-slot/"
+    },
+    {
+      "rule": "nursery/useWhileLoopCondition",
+      "decision": "error",
+      "reason": "Make simple stopping conditions visible in loop headers; mid-loop checks and multiple exits remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/use-while-loop-condition/"
     }
   ],
   "oxlint": [
@@ -3915,7 +4301,11 @@
       "rule": "eslint/no-console",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-console.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-console.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "suspicious/noConsole"
+      }
     },
     {
       "rule": "eslint/no-const-assign",
@@ -4099,8 +4489,8 @@
     },
     {
       "rule": "eslint/no-implicit-coercion",
-      "decision": "delegated",
-      "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
+      "decision": "inapplicable",
+      "reason": "Typed strict boolean and operand rules reject unsafe conversions; a universal syntactic coercion ban is not the policy.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-implicit-coercion.html"
     },
     {
@@ -4191,7 +4581,11 @@
       "rule": "eslint/no-magic-numbers",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-magic-numbers.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-magic-numbers.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noMagicNumbers"
+      }
     },
     {
       "rule": "eslint/no-misleading-character-class",
@@ -4725,7 +5119,11 @@
       "rule": "eslint/sort-imports",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-imports.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/sort-imports.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "assist/source/organizeImports"
+      }
     },
     {
       "rule": "eslint/sort-keys",
@@ -4797,13 +5195,21 @@
       "rule": "import/exports-last",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/exports-last.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/exports-last.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/useExportsLast"
+      }
     },
     {
       "rule": "import/extensions",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/extensions.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/extensions.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "correctness/useImportExtensions"
+      }
     },
     {
       "rule": "import/first",
@@ -4863,7 +5269,11 @@
       "rule": "import/no-commonjs",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-commonjs.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-commonjs.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noCommonJs"
+      }
     },
     {
       "rule": "import/no-cycle",
@@ -4875,7 +5285,11 @@
       "rule": "import/no-default-export",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-default-export.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-default-export.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noDefaultExport"
+      }
     },
     {
       "rule": "import/no-duplicates",
@@ -4929,13 +5343,21 @@
       "rule": "import/no-namespace",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-namespace.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-namespace.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "performance/noNamespaceImport"
+      }
     },
     {
       "rule": "import/no-nodejs-modules",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-nodejs-modules.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/no-nodejs-modules.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "correctness/noNodejsModules"
+      }
     },
     {
       "rule": "import/no-relative-parent-imports",
@@ -5613,7 +6035,11 @@
       "rule": "jsx_a11y/no-autofocus",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/no-autofocus.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/no-autofocus.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "a11y/noAutofocus"
+      }
     },
     {
       "rule": "jsx_a11y/no-distracting-elements",
@@ -6043,8 +6469,8 @@
     },
     {
       "rule": "promise/always-return",
-      "decision": "inapplicable",
-      "reason": "Promise identity, settlement timing and synchronous contract adapters matter. Type-aware floating/misused/rejection rules remain errors.",
+      "decision": "error",
+      "reason": "Enforce promise chain return and rejection handling; compatible with typed async contracts.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/promise/always-return.html"
     },
     {
@@ -6055,8 +6481,8 @@
     },
     {
       "rule": "promise/catch-or-return",
-      "decision": "inapplicable",
-      "reason": "Promise identity, settlement timing and synchronous contract adapters matter. Type-aware floating/misused/rejection rules remain errors.",
+      "decision": "error",
+      "reason": "Enforce promise chain return and rejection handling; compatible with typed async contracts.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/promise/catch-or-return.html"
     },
     {
@@ -6255,7 +6681,11 @@
       "rule": "react/jsx-boolean-value",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/jsx-boolean-value.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/jsx-boolean-value.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noImplicitBoolean"
+      }
     },
     {
       "rule": "react/jsx-curly-brace-presence",
@@ -6267,7 +6697,11 @@
       "rule": "react/jsx-filename-extension",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/jsx-filename-extension.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/jsx-filename-extension.html",
+      "owner": {
+        "tool": "reactDoctor",
+        "rule": "react-doctor/jsx-filename-extension"
+      }
     },
     {
       "rule": "react/jsx-fragments",
@@ -6369,7 +6803,11 @@
       "rule": "react/no-array-index-key",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/no-array-index-key.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/no-array-index-key.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "suspicious/noArrayIndexKey"
+      }
     },
     {
       "rule": "react/no-children-prop",
@@ -6519,7 +6957,11 @@
       "rule": "react/only-export-components",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/only-export-components.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/only-export-components.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/useComponentExportOnlyModules"
+      }
     },
     {
       "rule": "react/prefer-es6-class",
@@ -6729,7 +7171,11 @@
       "rule": "typescript/consistent-return",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/consistent-return.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/consistent-return.html",
+      "owner": {
+        "tool": "typescript",
+        "rule": "noImplicitReturns"
+      }
     },
     {
       "rule": "typescript/consistent-type-assertions",
@@ -6757,8 +7203,8 @@
     },
     {
       "rule": "typescript/dot-notation",
-      "decision": "delegated",
-      "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
+      "decision": "inapplicable",
+      "reason": "TypeScript requires bracket access for index signatures; a competing property-access style rule adds no safety contract.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/dot-notation.html"
     },
     {
@@ -6775,9 +7221,10 @@
     },
     {
       "rule": "typescript/explicit-module-boundary-types",
-      "decision": "inapplicable",
-      "reason": "Strict inference preserves generic and literal precision; compiler checks and unsafe-flow rules enforce contracts without redundant annotations.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/explicit-module-boundary-types.html"
+      "decision": "scoped-error",
+      "reason": "Pure domain modules require immutable input contracts, explicit exported types, and feasible conditions. Platform/resource adapters retain capability checks and mutable handles.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/explicit-module-boundary-types.html",
+      "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]
     },
     {
       "rule": "typescript/method-signature-style",
@@ -6969,7 +7416,11 @@
       "rule": "typescript/no-require-imports",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-require-imports.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-require-imports.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noCommonJs"
+      }
     },
     {
       "rule": "typescript/no-restricted-types",
@@ -6991,9 +7442,10 @@
     },
     {
       "rule": "typescript/no-unnecessary-condition",
-      "decision": "inapplicable",
-      "reason": "DOM declarations cannot replace runtime feature detection; JSON.stringify(unknown) can also return undefined despite its overload.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unnecessary-condition.html"
+      "decision": "scoped-error",
+      "reason": "Pure domain modules require immutable input contracts, explicit exported types, and feasible conditions. Platform/resource adapters retain capability checks and mutable handles.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unnecessary-condition.html",
+      "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]
     },
     {
       "rule": "typescript/no-unnecessary-parameter-property-assignment",
@@ -7119,7 +7571,11 @@
       "rule": "typescript/no-var-requires",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-var-requires.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-var-requires.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noCommonJs"
+      }
     },
     {
       "rule": "typescript/no-wrapper-object-types",
@@ -7219,9 +7675,10 @@
     },
     {
       "rule": "typescript/prefer-readonly-parameter-types",
-      "decision": "inapplicable",
-      "reason": "Strict inference preserves generic and literal precision; compiler checks and unsafe-flow rules enforce contracts without redundant annotations.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-readonly-parameter-types.html"
+      "decision": "scoped-error",
+      "reason": "Pure domain modules require immutable input contracts, explicit exported types, and feasible conditions. Platform/resource adapters retain capability checks and mutable handles.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/prefer-readonly-parameter-types.html",
+      "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]
     },
     {
       "rule": "typescript/prefer-reduce-type-parameter",
@@ -7767,13 +8224,21 @@
       "rule": "unicorn/number-literal-case",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/number-literal-case.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/number-literal-case.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "formatter"
+      }
     },
     {
       "rule": "unicorn/numeric-separators-style",
       "decision": "delegated",
       "reason": "Biome owns numeric formatting; Oxc and Biome disagree on fractional separator grouping.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/numeric-separators-style.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/numeric-separators-style.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "formatter"
+      }
     },
     {
       "rule": "unicorn/prefer-add-event-listener",
@@ -7899,7 +8364,11 @@
       "rule": "unicorn/prefer-global-this",
       "decision": "delegated",
       "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-global-this.html"
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/prefer-global-this.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/useGlobalThis"
+      }
     },
     {
       "rule": "unicorn/prefer-import-meta-properties",
@@ -8878,6 +9347,12 @@
       "decision": "inapplicable",
       "reason": "Not a project runtime: Querylane uses web React, TanStack Router and Rstest, not Next.js, Vue, Jest or Vitest. Applicable test contracts are enforced by Biome and React Doctor.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/vue/valid-next-tick.html"
+    },
+    {
+      "rule": "typescript/no-unsafe-enum-assignment",
+      "decision": "error",
+      "reason": "Reject unsafe assignments to enum-typed values with compiler-aware checks.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-unsafe-enum-assignment.html"
     }
   ],
   "reactDoctor": [
@@ -13443,5 +13918,58 @@
       "decision": "error",
       "reason": "Enforce the design-system contract. Owned primitives define appearance; consumers only place them."
     }
-  ]
+  ],
+  "overrideExceptions": {
+    "biome": [
+      {
+        "scope": ["scripts/**/*"],
+        "rules": [
+          "correctness/noNodejsModules",
+          "suspicious/noConsole",
+          "nursery/noProcessExit"
+        ]
+      },
+      {
+        "scope": ["e2e/**/*", "lighthouserc.*", "rstest.shared.ts"],
+        "rules": ["correctness/noNodejsModules"]
+      },
+      {
+        "scope": [
+          "*.config.{js,ts,mjs,cjs,mts,cts}",
+          "**/*.config.{js,ts,mjs,cjs,mts,cts}",
+          "playwright.config.*",
+          "rsbuild.config.*",
+          "rstest.config.*",
+          "postcss.config.*"
+        ],
+        "rules": ["correctness/noNodejsModules", "style/noDefaultExport"]
+      },
+      {
+        "scope": ["e2e/llm-reporter.ts"],
+        "rules": ["style/noDefaultExport"]
+      },
+      {
+        "scope": ["src/routes/**/*"],
+        "rules": ["style/useComponentExportOnlyModules"]
+      },
+      {
+        "scope": [
+          "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+          "**/__tests__/**/*"
+        ],
+        "rules": [
+          "security/noSecrets",
+          "performance/noNamespaceImport",
+          "style/noMagicNumbers",
+          "style/useComponentExportOnlyModules"
+        ]
+      }
+    ],
+    "oxlint": [
+      {
+        "scope": ["src/components/querylane-ui/**"],
+        "rules": ["shadcn/no-restyle", "shadcn/require-static-classes"]
+      }
+    ]
+  }
 }

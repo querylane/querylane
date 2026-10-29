@@ -64,7 +64,10 @@ import {
   useListRoleOwnedObjectsQuery,
 } from "@/hooks/api/role";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { buildGrantFilter, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
+import {
+  buildGrantFilter,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/domain/aip-filter";
 import type { PredefinedRoleInfo, RoleKind } from "@/lib/role-display";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";

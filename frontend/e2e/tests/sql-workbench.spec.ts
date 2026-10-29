@@ -14,6 +14,8 @@ import { connectStreamBody } from "../visual/serve-service";
 import { expect, softScreenshot, test } from "./base";
 import { mockRpc } from "./helpers";
 
+const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
+
 const RUN_BUTTON_NAME_RE = /^Run/u;
 
 test("storage quota keeps rejected SQL work intact and warns that new drafts are in memory", async ({
@@ -172,7 +174,7 @@ test("workbench recovers from an error and inspects the live execution plan", as
     page.getByRole("tab", { name: "Map", exact: true })
   ).toHaveAttribute("aria-selected", "true");
   await page
-    .getByRole("button", { name: "Inspect Seq Scan on shipments", exact: true })
+    .getByRole("button", { name: SHIPMENTS_NODE_NAME, exact: true })
     .click();
   const inspector = page.getByRole("complementary", {
     name: "Plan node details",
@@ -187,14 +189,14 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await page.getByRole("button", { name: "Collapse Hash Join branch" }).click();
   await expect(
     page.getByRole("button", {
-      name: "Inspect Seq Scan on shipments",
+      name: SHIPMENTS_NODE_NAME,
       exact: true,
     })
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Find hotspot" }).click();
   await expect(
     page.getByRole("button", {
-      name: "Inspect Seq Scan on shipments",
+      name: SHIPMENTS_NODE_NAME,
       exact: true,
     })
   ).toHaveAttribute("aria-pressed", "true");
@@ -241,7 +243,7 @@ test("workbench recovers from an error and inspects the live execution plan", as
   await page.getByRole("button", { name: "Plan findings" }).click();
   await checkAccessibility();
   await page
-    .getByRole("menuitem", { name: "Sort: Sort spilled to disk", exact: true })
+    .getByRole("menuitem", { name: "Sort spilled to disk Sort", exact: true })
     .click();
   await expect(
     inspector.getByRole("heading", { name: "Sort", exact: true })
@@ -274,7 +276,7 @@ test("phone navigation dismisses the sidebar and plan focus restores keyboard fo
   await page.getByRole("button", { name: "Focus plan" }).click();
   const map = page.getByRole("region", { name: "Plan map" });
   const operation = page.getByRole("button", {
-    name: "Inspect Seq Scan on shipments",
+    name: SHIPMENTS_NODE_NAME,
     exact: true,
   });
   await expect

@@ -58,6 +58,8 @@ import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import {
   Instance_CredentialState,
   InstanceSchema,
+  PostgresConfig_SslMode,
+  PostgresConfig_SslNegotiation,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 const REQUIRED_ERROR_BY_FIELD = {
@@ -490,9 +492,11 @@ function InstanceConfigurationSection({
   const { errors } = form.formState;
   const fieldErrors = configurationFieldErrors(errors, labelsError);
 
-  const sslMode = formatSslMode(values.config?.sslMode ?? 0);
+  const sslMode = formatSslMode(
+    values.config?.sslMode ?? PostgresConfig_SslMode.UNSPECIFIED
+  );
   const sslNegotiation = formatSslNegotiation(
-    values.config?.sslNegotiation ?? 0
+    values.config?.sslNegotiation ?? PostgresConfig_SslNegotiation.UNSPECIFIED
   );
   if (sslNegotiation === "direct" && !isDirectSslNegotiationMode(sslMode)) {
     fieldErrors.sslNegotiation ??= SSL_NEGOTIATION_ERROR;

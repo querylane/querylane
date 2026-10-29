@@ -1,5 +1,5 @@
-import { defineRule } from "@rsdoctor/core/rules";
-import { Err, type Linter, type SDK } from "@rsdoctor/types";
+import { defineRule } from "@rsdoctor/core";
+import { Err, type Linter, type SDK } from "@rsdoctor/shared/types";
 
 // Keep this list limited to intentionally deferred feature dependencies, not
 // every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
@@ -60,6 +60,14 @@ function routeComponentPath(modulePath: string) {
   // TanStack encodes grouped split targets with `---` separators.
   const targets = new URLSearchParams(query).get("tsr-split")?.split("---");
   return targets?.includes("component") === true ? path : "";
+}
+
+function* initialChunks(chunks: Iterable<SDK.ChunkInstance>) {
+  for (const chunk of chunks) {
+    if (chunk.initial) {
+      yield chunk;
+    }
+  }
 }
 
 export const heavyPackagesStayDeferred = defineRule(() => ({
@@ -142,9 +150,7 @@ export const routesStaySplit = defineRule(() => ({
           message: `Missing emitted route component split ${path}. Check TanStack Router autoCodeSplitting and component exports.`,
         });
       }
-      for (const chunk of [...chunks].filter(
-        (candidate) => candidate.initial
-      )) {
+      for (const chunk of initialChunks(chunks)) {
         context.report({
           message: `Route component split ${path} is in initial chunk ${chunk.id} (${chunk.name}). Keep route components behind their lazy boundary.`,
         });

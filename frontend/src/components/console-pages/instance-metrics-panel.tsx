@@ -303,7 +303,7 @@ function TabChart({
     points: decodePoints(metricSeries.points),
   }));
 
-  const unit = present[0]?.metricSeries.unit ?? 0;
+  const unit = present[0]?.metricSeries.unit ?? MetricUnit.UNSPECIFIED;
 
   // The gate judges the current window alone: a comparison overlay must never
   // resurrect a chart whose own window is still empty.

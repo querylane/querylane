@@ -12,7 +12,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/metrics_pb";
 
 rs.mock("@/components/charts/metric-time-chart", () => ({
-  MetricTimeChart: () => <div data-testid="metric-time-chart" />,
+  MetricTimeChart: MockMetricTimeChart,
 }));
 
 const DAY_SECONDS = 24 * 3600;
@@ -127,3 +127,7 @@ describe("instance metrics panel nascent coverage", () => {
     expect(screen.getAllByText("collecting")).toHaveLength(4);
   });
 });
+
+function MockMetricTimeChart() {
+  return <div data-testid="metric-time-chart" />;
+}

@@ -36,55 +36,14 @@ const {
 );
 
 rs.mock("@xyflow/react", () => ({
-  Background: () => <div data-testid="flow-background" />,
-  Controls: ({
-    className,
-    style,
-  }: {
-    className?: string | undefined;
-    style?: CapturedControlsStyle | undefined;
-  }) => {
-    capturedControlsClassNames.push(className);
-    if (style) {
-      capturedControlsStyles.push(style);
-    }
-    return <div data-testid="flow-controls" />;
-  },
-  Handle: () => null,
+  Background: MockBackground,
+  Controls: MockControls,
+  Handle: MockHandle,
   MarkerType: { ArrowClosed: "arrowclosed" },
-  MiniMap: () => <div aria-label="Canvas minimap" role="img" />,
-  Panel: ({
-    children,
-  }: {
-    children: React.ReactNode;
-    className?: string | undefined;
-    position?: string | undefined;
-  }) => <div data-testid="flow-panel">{children}</div>,
+  MiniMap: MockMiniMap,
+  Panel: MockPanel,
   Position: { Left: "left", Right: "right" },
-  ReactFlow: ({
-    children,
-    edges,
-    minZoom,
-    nodes,
-  }: {
-    children: React.ReactNode;
-    edges: unknown[];
-    minZoom?: number | undefined;
-    nodes: unknown[];
-  }) => {
-    capturedEdges.splice(0, capturedEdges.length, ...edges);
-    capturedNodes.splice(0, capturedNodes.length, ...nodes);
-    return (
-      <section
-        aria-label="Flow mock"
-        data-edge-count={edges.length}
-        data-min-zoom={minZoom}
-        data-node-count={nodes.length}
-      >
-        {children}
-      </section>
-    );
-  },
+  ReactFlow: MockReactFlow,
   useReactFlow: () => ({ fitView: fitViewMock }),
 }));
 
@@ -137,3 +96,64 @@ describe("flow canvas", () => {
     );
   });
 });
+
+function MockBackground() {
+  return <div data-testid="flow-background" />;
+}
+
+function MockControls({
+  className,
+  style,
+}: {
+  className?: string | undefined;
+  style?: CapturedControlsStyle | undefined;
+}) {
+  capturedControlsClassNames.push(className);
+  if (style) {
+    capturedControlsStyles.push(style);
+  }
+  return <div data-testid="flow-controls" />;
+}
+
+function MockHandle() {
+  return null;
+}
+
+function MockMiniMap() {
+  return <div aria-label="Canvas minimap" role="img" />;
+}
+
+function MockPanel({
+  children,
+}: {
+  children: React.ReactNode;
+  className?: string | undefined;
+  position?: string | undefined;
+}) {
+  return <div data-testid="flow-panel">{children}</div>;
+}
+
+function MockReactFlow({
+  children,
+  edges,
+  minZoom,
+  nodes,
+}: {
+  children: React.ReactNode;
+  edges: unknown[];
+  minZoom?: number | undefined;
+  nodes: unknown[];
+}) {
+  capturedEdges.splice(0, capturedEdges.length, ...edges);
+  capturedNodes.splice(0, capturedNodes.length, ...nodes);
+  return (
+    <section
+      aria-label="Flow mock"
+      data-edge-count={edges.length}
+      data-min-zoom={minZoom}
+      data-node-count={nodes.length}
+    >
+      {children}
+    </section>
+  );
+}

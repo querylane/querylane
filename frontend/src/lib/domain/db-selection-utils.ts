@@ -8,11 +8,11 @@ export function resolveValidSelectionId({
   candidateId,
   items,
   loaded,
-}: {
+}: Readonly<{
   candidateId?: string | undefined;
-  items: readonly { id: string }[];
+  items: readonly { readonly id: string }[];
   loaded: boolean;
-}): string | undefined {
+}>): string | undefined {
   if (!isNonEmptyString(candidateId)) {
     return;
   }
@@ -24,8 +24,8 @@ export function resolveValidSelectionId({
     : undefined;
 }
 
-export function pickSelectedResource<Item extends { id: string }>(
-  items: Item[],
+export function pickSelectedResource<Item extends { readonly id: string }>(
+  items: readonly Item[],
   selectedId?: string
 ): Item | null {
   if (!isNonEmptyString(selectedId)) {
@@ -34,17 +34,17 @@ export function pickSelectedResource<Item extends { id: string }>(
   return items.find((item) => item.id === selectedId) ?? null;
 }
 
-export function resolveSelectedResource<Item extends { id: string }>({
+export function resolveSelectedResource<Item extends { readonly id: string }>({
   fallbackItem,
   items,
   queryItem,
   selectedId,
-}: {
+}: Readonly<{
   fallbackItem?: Item | null | undefined;
-  items: Item[];
+  items: readonly Item[];
   queryItem: Item | null;
   selectedId?: string | undefined;
-}): Item | null {
+}>): Item | null {
   return (
     queryItem ?? pickSelectedResource(items, selectedId) ?? fallbackItem ?? null
   );
@@ -55,12 +55,12 @@ export function isSelectedResourceResolved({
   queryPending,
   selectedId,
   selectedResource,
-}: {
+}: Readonly<{
   queryEnabled: boolean;
   queryPending: boolean;
   selectedId?: string | undefined;
   selectedResource: unknown;
-}) {
+}>): boolean {
   if (!isNonEmptyString(selectedId)) {
     return true;
   }
@@ -72,11 +72,11 @@ export function shouldEnableDatabaseSelectionQuery({
   effectiveDatabaseId,
   effectiveInstanceId,
   hydrateSelectedDatabaseFromQuery,
-}: {
+}: Readonly<{
   effectiveDatabaseId?: string | undefined;
   effectiveInstanceId?: string | undefined;
   hydrateSelectedDatabaseFromQuery: boolean;
-}) {
+}>): boolean {
   return Boolean(
     hydrateSelectedDatabaseFromQuery &&
       isNonEmptyString(effectiveInstanceId) &&

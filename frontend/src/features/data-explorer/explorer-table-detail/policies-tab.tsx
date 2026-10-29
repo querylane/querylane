@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
 import {
   PolicyCommand,
-  type PolicyMode,
+  PolicyMode,
   type TablePolicy,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
@@ -156,8 +156,11 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
     }
   }
   function handleCommandChange(value: string | null) {
-    if (isNonEmptyString(value)) {
-      setSelectedCommand(Number(value));
+    const command = PREVIEW_POLICY_COMMANDS.find(
+      (candidate) => String(candidate) === value
+    );
+    if (command !== undefined) {
+      setSelectedCommand(command);
     }
   }
 
@@ -286,9 +289,12 @@ function PoliciesTab({
     return <TableResourceEmptyState category="policies" toolbar={toolbar} />;
   }
   const normalizedSearch = policySearch.trim().toLocaleLowerCase();
+  const selectedModes = new Set(modeFilters);
   const visiblePolicies = filterPoliciesByMode(
     policies,
-    modeFilters.map(Number) as PolicyMode[]
+    [PolicyMode.PERMISSIVE, PolicyMode.RESTRICTIVE].filter((mode) =>
+      selectedModes.has(String(mode))
+    )
   ).filter((policy) =>
     policy.policyName.toLocaleLowerCase().includes(normalizedSearch)
   );

@@ -1,12 +1,8 @@
 import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
-import {
-  TransportProvider,
-  useQuery as useConnectQuery,
-} from "@connectrpc/connect-query";
+import { useQuery as useConnectQuery } from "@connectrpc/connect-query";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import { afterEach, describe, expect, test } from "@rstest/core";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -28,6 +24,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import { listInstances } from "@/protogen/querylane/console/v1alpha1/instance-InstanceService_connectquery";
 import { createTestQueryClient } from "@/test/query-client";
+import { QueryHookProviders } from "@/test/query-hook-providers";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 const INSTANCE_NAME = "instances/local";
@@ -42,19 +39,15 @@ function createWrapper(transport: Transport) {
   const queryClient = createTestQueryClient();
   activeQueryClients.push(queryClient);
 
-  function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <TransportProvider transport={transport}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </TransportProvider>
-    );
-  }
+  const renderProviders = ({ children }: { children: ReactNode }) => (
+    <QueryHookProviders queryClient={queryClient} transport={transport}>
+      {children}
+    </QueryHookProviders>
+  );
 
   return {
     queryClient,
-    wrapper: Wrapper,
+    wrapper: renderProviders,
   };
 }
 

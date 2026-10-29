@@ -731,7 +731,6 @@ function FlowCanvas({
         nodes={flowNodes}
         nodeTypes={NODE_TYPES}
         onNodeClick={handleNodeClick}
-        proOptions={{ hideAttribution: true }}
       >
         <AutoFitView key={viewportKey} />
         {Boolean(actionPanel) ? (

@@ -44,7 +44,9 @@ test("instance overview defers form validation until configuration opens", {
 
   const scripts = new Set<string>();
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+  });
   page.on("request", (request) => {
     const { pathname } = new URL(request.url());
     if (

@@ -20,8 +20,11 @@ import {
   PopoverTrigger,
 } from "@/components/querylane-ui/popover";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { quoteFilterValue, SERVER_FILTER_DEBOUNCE_MS } from "@/lib/aip-filter";
 import { buildDatabaseName } from "@/lib/console-resources";
+import {
+  quoteFilterValue,
+  SERVER_FILTER_DEBOUNCE_MS,
+} from "@/lib/domain/aip-filter";
 import { cn } from "@/lib/utils";
 import { listSchemas } from "@/protogen/querylane/console/v1alpha1/schema-SchemaService_connectquery";
 

@@ -15,7 +15,9 @@ type Motion =
 
 async function openDatabase(page: Page, motion: Motion) {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+  });
   page.on("response", (response) => {
     if (response.status() >= 400) {
       errors.push(`${response.status()} ${response.url()}`);
@@ -145,7 +147,7 @@ for (const motion of ["no-preference", "dark", "mobile"] as const) {
     const errors = await openDatabase(page, motion);
     const prefix = motion === "no-preference" ? "" : `${motion}-`;
     await expect(
-      page.getByRole("button", { name: "Search or jump to", exact: true })
+      page.getByRole("button", { name: "Search or jump to…", exact: true })
     ).toBeVisible({ visible: motion !== "mobile" });
     await capturePage(page, `${prefix}database-page`);
     await openExplorer(page);

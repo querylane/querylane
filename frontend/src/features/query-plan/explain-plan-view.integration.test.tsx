@@ -4,7 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { ExplainPlanView } from "@/features/query-plan/explain-plan-view";
 import { EXPLAIN_ANALYZE_FIXTURE } from "@/test/fixtures/explain-plan-fixture";
 
+const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
+const SHIPMENT_ITEMS_NODE_NAME =
+  /^(?:Inspect )?Index Scan\b.*\bshipment_items\b/u;
+
+const HASH_MAP_NODE_NAME = /^1 input Hash /u;
+const HASH_JOIN_MAP_NODE_NAME = /^2 inputs\b.*\bHash Join\b/u;
 const SHIPMENTS_ROW = /Seq Scan.*shipments/u;
+const LAST_PARTITION_NODE_NAME = /^Seq Scan partition_59(?: |$)/u;
 const ROW_MISMATCH = /more rows|fewer rows/u;
 
 afterEach(cleanup);
@@ -24,7 +31,7 @@ test("operator search reveals collapsed matches and recovers from an empty resul
   await user.click(
     within(screen.getByRole("list", { name: "Matching operators" })).getByRole(
       "button",
-      { name: "Inspect Seq Scan on shipments" }
+      { name: SHIPMENTS_NODE_NAME }
     )
   );
   expect(
@@ -41,7 +48,7 @@ test("operator search reveals collapsed matches and recovers from an empty resul
   await user.clear(search);
   expect(screen.queryByRole("list", { name: "Matching operators" })).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Inspect Seq Scan on shipments" })
+    screen.getByRole("button", { name: SHIPMENTS_NODE_NAME })
   ).not.toBeNull();
 });
 
@@ -55,7 +62,7 @@ test("findings reveal their operator even inside a collapsed branch", async () =
   await user.click(screen.getByRole("button", { name: "Plan findings" }));
   await user.click(
     screen.getByRole("menuitem", {
-      name: "Seq Scan on shipments: 100× more rows",
+      name: "100× more rows Seq Scan on shipments",
     })
   );
   expect(
@@ -78,13 +85,13 @@ test("timing ranks attributed work and shares operator selection with the map", 
     throw new Error("expected ranked work");
   }
   expect(
-    within(first).getByRole("button", { name: "Inspect Seq Scan on shipments" })
+    within(first).getByRole("button", { name: SHIPMENTS_NODE_NAME })
   ).not.toBeNull();
   await user.click(within(work).getByRole("button", { name: "Inspect Hash" }));
   await user.click(screen.getByRole("tab", { name: "Map" }));
   expect(
     screen
-      .getByRole("button", { name: "Inspect Hash" })
+      .getByRole("button", { name: HASH_MAP_NODE_NAME })
       .getAttribute("aria-pressed")
   ).toBe("true");
 });
@@ -129,9 +136,7 @@ test("inspects a hotspot, changes metrics, collapses branches and preserves raw 
   render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
   await user.click(screen.getByRole("tab", { name: "Operators" }));
 
-  await user.click(
-    screen.getByRole("button", { name: "Inspect Seq Scan on shipments" })
-  );
+  await user.click(screen.getByRole("button", { name: SHIPMENTS_NODE_NAME }));
   const inspector = screen.getByRole("complementary", {
     name: "Plan node details",
   });
@@ -153,7 +158,7 @@ test("inspects a hotspot, changes metrics, collapses branches and preserves raw 
     screen.getByRole("button", { name: "Collapse Hash Join branch" })
   );
   expect(
-    screen.queryByRole("button", { name: "Inspect Seq Scan on shipments" })
+    screen.queryByRole("button", { name: SHIPMENTS_NODE_NAME })
   ).toBeNull();
   expect(
     within(inspector).getByRole("heading", { name: "Hash Join" })
@@ -162,7 +167,7 @@ test("inspects a hotspot, changes metrics, collapses branches and preserves raw 
     screen.getByRole("button", { name: "Expand Hash Join branch" })
   );
   expect(
-    screen.getByRole("button", { name: "Inspect Seq Scan on shipments" })
+    screen.getByRole("button", { name: SHIPMENTS_NODE_NAME })
   ).not.toBeNull();
 
   await user.click(screen.getByRole("tab", { name: "JSON" }));
@@ -176,7 +181,7 @@ test("compares rows per loop, not multiplied by the number of executions", async
   render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
   await user.click(
     screen.getByRole("button", {
-      name: "Inspect Index Scan on shipment_items using shipment_items_shipment_id_idx",
+      name: SHIPMENT_ITEMS_NODE_NAME,
     })
   );
   const inspector = screen.getByRole("complementary", {
@@ -192,9 +197,7 @@ test("a new plan resets selection, metric availability and JSON fallback", async
   const view = render(
     <ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />
   );
-  await user.click(
-    screen.getByRole("button", { name: "Inspect Seq Scan on shipments" })
-  );
+  await user.click(screen.getByRole("button", { name: SHIPMENTS_NODE_NAME }));
   const rawPlan = JSON.stringify([
     { Plan: { "Node Type": "Result", "Plan Rows": 0, "Total Cost": 0 } },
   ]);
@@ -238,19 +241,21 @@ test("starts with expensive work and keeps map, operators and focus selection li
   expect(
     within(inspector()).getByRole("heading", { name: "Seq Scan" })
   ).not.toBeNull();
-  await user.click(screen.getByRole("button", { name: "Inspect Hash Join" }));
+  await user.click(
+    screen.getByRole("button", { name: HASH_JOIN_MAP_NODE_NAME })
+  );
   expect(within(inspector()).getByText("(s.carrier_id = c.id)")).not.toBeNull();
   await user.click(screen.getByRole("tab", { name: "Operators" }));
   await user.click(
     screen.getByRole("button", {
-      name: "Inspect Index Scan on shipment_items using shipment_items_shipment_id_idx",
+      name: SHIPMENT_ITEMS_NODE_NAME,
     })
   );
   await user.click(screen.getByRole("tab", { name: "Map" }));
   expect(
     screen
       .getByRole("button", {
-        name: "Inspect Index Scan on shipment_items using shipment_items_shipment_id_idx",
+        name: SHIPMENT_ITEMS_NODE_NAME,
       })
       .getAttribute("aria-pressed")
   ).toBe("true");
@@ -288,7 +293,7 @@ test("keeps large plans readable and never attributes parallel work to self time
     screen.getByRole("tab", { name: "Operators" }).getAttribute("aria-selected")
   ).toBe("true");
   await user.click(
-    screen.getByRole("button", { name: "Inspect Seq Scan on partition_59" })
+    screen.getByRole("button", { name: LAST_PARTITION_NODE_NAME })
   );
   expect(
     within(
