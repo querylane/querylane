@@ -131,7 +131,7 @@
     "@biomejs/biome": "2.6.4",
     "@changesets/cli": "3.0.3",
     "@lhci/cli": "0.15.1",
-    "@rsbuild/core": "2.2.14",
+    "@rsbuild/core": "2.3.0",
     "@rsbuild/plugin-react": "2.1.1",
     "@rsbuild/plugin-tailwindcss": "2.0.3",
     "@rsdoctor/core": "2.0.1",

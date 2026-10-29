@@ -106,6 +106,10 @@ const managedSplitChunksConfig = {
   hidePathInfo: true,
   maxAsyncRequests: MAX_ASYNC_CHUNK_REQUESTS,
   maxInitialRequests: MAX_INITIAL_CHUNK_REQUESTS,
+  // Route wrappers intentionally stay tiny after shared code is extracted.
+  // Rspack 2.3 now enforces minRemainingSize; preserve the previous behavior
+  // instead of duplicating shared pages to keep each wrapper above minSize.
+  minRemainingSize: 0,
   minSize: MIN_SPLIT_SIZE_KIB * KIB,
   preset: "default",
 } satisfies SplitChunksConfig;
