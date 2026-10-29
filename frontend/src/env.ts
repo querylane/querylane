@@ -1,13 +1,14 @@
 import { createEnv } from "@t3-oss/env-core";
-import { z } from "zod";
+import "@/lib/zod-locale";
+import { z } from "zod/mini";
 
 export const env = createEnv({
   client: {
-    PUBLIC_API_BASE_URL: z
-      .union([z.url(), z.literal("")])
-      .optional()
-      .transform((value) => value ?? ""),
-    PUBLIC_GITHUB_REPO: z.string().optional(),
+    PUBLIC_API_BASE_URL: z.pipe(
+      z.optional(z.union([z.url(), z.literal("")])),
+      z.transform((value) => value ?? "")
+    ),
+    PUBLIC_GITHUB_REPO: z.optional(z.string()),
   },
   clientPrefix: "PUBLIC_",
   runtimeEnv: {

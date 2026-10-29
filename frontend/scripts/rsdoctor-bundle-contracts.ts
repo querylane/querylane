@@ -1,5 +1,5 @@
 import { defineRule } from "@rsdoctor/core";
-import { Err, type Linter, type SDK } from "@rsdoctor/shared/types";
+import type { SDK } from "@rsdoctor/shared/types";
 
 // Keep this list limited to intentionally deferred feature dependencies, not
 // every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
@@ -7,6 +7,8 @@ const HEAVY_PACKAGE =
   /\/node_modules\/(?<capture1>@tanstack\/charts|@xyflow\/[^/]+|d3-[^/]+|react-data-grid|chrono-node|shiki|@shikijs\/[^/]+|oniguruma-to-es|oniguruma-parser)\//u;
 const SHIKI_ONIGURUMA =
   /\/node_modules\/(?:@shikijs\/engine-oniguruma\/|shiki\/dist\/(?:engine\/oniguruma\.mjs|wasm\.mjs|onig\.wasm)(?:$|[?#]))/u;
+const NATIVE_REACT_RUNTIME = /\/node_modules\/(?:react|react-dom|scheduler)\//u;
+const REDACT_RUNTIME = /\/node_modules\/@tanstack\/redact\//u;
 // Representative landing, form, overview, and explorer boundaries. Deliberate
 // sentinels: unrelated async vendor chunks cannot satisfy route splitting.
 const REQUIRED_ROUTE_SPLITS = [
@@ -34,27 +36,6 @@ function* emittedModules(chunkGraph: SDK.ChunkGraphInstance) {
   }
 }
 
-function enforceBundleContracts({
-  validateResult,
-}: Pick<Linter.RuleCheckerContextForCheckEnd, "validateResult">): void {
-  // Rsdoctor 1.6.4 forwards even Error findings to compilation.warnings.
-  // Fail only our contracts, after every rule has reported its diagnostics.
-  const titles = new Set(
-    bundleContractRules.map((rule) => rule.meta.title.toUpperCase())
-  );
-  const failures = validateResult.errors.filter(
-    (error) =>
-      error.severity === Err.ErrorLevel.Error && titles.has(error.title)
-  );
-  if (failures.length > 0) {
-    throw new Error(
-      failures
-        .map((error) => `[${error.title.toLowerCase()}] ${error.message}`)
-        .join("\n")
-    );
-  }
-}
-
 function routeComponentPath(modulePath: string) {
   const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
   // TanStack encodes grouped split targets with `---` separators.
@@ -70,13 +51,59 @@ function* initialChunks(chunks: Iterable<SDK.ChunkInstance>) {
   }
 }
 
+function inspectRendererModules(
+  chunkGraph: SDK.ChunkGraphInstance,
+  renderer: "react" | "redact"
+) {
+  const expected = renderer === "react" ? NATIVE_REACT_RUNTIME : REDACT_RUNTIME;
+  const forbidden =
+    renderer === "react" ? REDACT_RUNTIME : NATIVE_REACT_RUNTIME;
+  const unexpected = new Set<string>();
+  let foundExpected = false;
+  for (const { module } of emittedModules(chunkGraph)) {
+    const path = module.path.replaceAll("\\", "/");
+    if (expected.test(path)) {
+      foundExpected = true;
+    }
+    if (forbidden.test(path)) {
+      unexpected.add(path);
+    }
+  }
+  return { foundExpected, unexpected };
+}
+
+export function rendererMatchesBuild(renderer: "react" | "redact") {
+  return defineRule(() => ({
+    meta: {
+      category: "bundle",
+      severity: "Error",
+      title: "querylane-renderer-matches-build",
+    },
+    check(context) {
+      const { foundExpected, unexpected } = inspectRendererModules(
+        context.chunkGraph,
+        renderer
+      );
+      if (!foundExpected) {
+        context.report({
+          message: `Selected renderer ${renderer} is missing from emitted chunks.`,
+        });
+      }
+      if (unexpected.size > 0) {
+        context.report({
+          message: `Selected renderer ${renderer} contains the other runtime: ${[...unexpected].join(", ")}. Check all React, JSX, compiler and DOM aliases.`,
+        });
+      }
+    },
+  }));
+}
+
 export const heavyPackagesStayDeferred = defineRule(() => ({
   meta: {
     category: "bundle",
     severity: "Error",
     title: "querylane-heavy-packages-stay-deferred",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph } = context;
     const reportedPackages = new Set<string>();
@@ -110,7 +137,6 @@ export const noShikiOniguruma = defineRule(() => ({
     severity: "Error",
     title: "querylane-no-shiki-oniguruma",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph } = context;
     const reported = new Set<string>();
@@ -132,7 +158,6 @@ export const routesStaySplit = defineRule(() => ({
     severity: "Error",
     title: "querylane-routes-stay-split",
   },
-  onCheckEnd: enforceBundleContracts,
   check(context) {
     const { chunkGraph, root } = context;
     const expected = new Map(

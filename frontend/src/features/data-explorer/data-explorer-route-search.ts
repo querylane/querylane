@@ -1,4 +1,5 @@
-import { z } from "zod";
+import "@/lib/zod-locale";
+import { z } from "zod/mini";
 
 const dataExplorerSearchSchema = z.object({
   category: z.optional(z.string()),

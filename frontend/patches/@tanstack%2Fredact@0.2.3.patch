@@ -1,0 +1,57 @@
+diff --git a/dist/core/attributes.js b/dist/core/attributes.js
+index e4060c70df64b8fa069d2e1336b64eeef64b9175..1f51cd63beaf96889de97c369e1756cf129dc129 100644
+--- a/dist/core/attributes.js
++++ b/dist/core/attributes.js
+@@ -5,7 +5,7 @@ function attributeName(name, isSvg) {
+     return "class";
+   if (name === "htmlFor")
+     return "for";
+-  if (isSvg && /^(clip|fill|stroke)/.test(name) || /^(httpEquiv|acceptCharset|maskType)$/.test(name)) {
++  if (isSvg && /^(clip|fill|stroke|stop)/.test(name) || /^(httpEquiv|acceptCharset|maskType|vectorEffect)$/.test(name)) {
+     return name.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+   }
+   if (name === "tabIndex" || name === "crossOrigin")
+diff --git a/dist/dom/dom.js b/dist/dom/dom.js
+index 1d2d3fd452246f08bc7d3f324ccb3d83ef1c4d11..286798671726a10af06e7113ee111ae2810c5373 100644
+--- a/dist/dom/dom.js
++++ b/dist/dom/dom.js
+@@ -102,7 +102,7 @@ function setEventHandler(el, name, next) {
+   const enabled = isFunction(next);
+   const capture = name.endsWith("Capture") && !name.endsWith("PointerCapture");
+   const lower = name.slice(2, capture ? -7 : void 0).toLowerCase();
+-  const events = lower === "change" && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" && !/^(checkbox|radio|file)$/.test(el.type)) ? ["input", "change"] : [lower === "focus" ? "focusin" : lower === "blur" ? "focusout" : lower === "doubleclick" ? "dblclick" : lower];
++  const events = lower === "change" && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" && !/^(checkbox|radio|file)$/.test(el.type)) ? ["input", "change"] : [lower === "change" && el.tagName === "INPUT" && /^(checkbox|radio)$/.test(el.type) ? "click" : lower === "focus" ? "focusin" : lower === "blur" ? "focusout" : lower === "doubleclick" ? "dblclick" : lower];
+   const handlers = el.__h ||= /* @__PURE__ */ Object.create(null);
+   let existing = handlers[name];
+   if (existing && (!enabled || existing.e[0] !== events[0])) {
+@@ -123,6 +123,7 @@ function setEventHandler(el, name, next) {
+         el.__v = e.type === "input" ? value : void 0;
+       }
+       const event = createSyntheticEvent(e);
++      if (lower === "change" || lower === "focus" || lower === "blur") event.type = lower;
+       try {
+         if (process.env.NODE_ENV !== "production") {
+           const previous = devToolsMetadata.current;
+diff --git a/dist/dom/reconcile.js b/dist/dom/reconcile.js
+index 42c5f7b6c7d9b79e4fb5182b3377e76d10e4ec10..ef53b51f00c8d0e821f919e39d6f54a187529872 100644
+--- a/dist/dom/reconcile.js
++++ b/dist/dom/reconcile.js
+@@ -821,7 +821,7 @@ function renderHost(fiber) {
+   const props = fiber.v ?? {};
+   const prev = fiber.m;
+   const type = fiber.type;
+-  const isSvg = type === "svg" || domParent.namespaceURI === "http://www.w3.org/2000/svg";
++  const isSvg = type === "svg" || (domParent.namespaceURI === "http://www.w3.org/2000/svg" && domParent.localName !== "foreignObject");
+   const singleton = !isSvg && documentSingleton(fiber);
+   const isResource = fiber.t === 14;
+   const canAcquire = !isSvg && (isResource || !fiber.m) && resourceKind(type, props);
+@@ -1232,6 +1232,9 @@ function defaultReadContext(_f, ctx) {
+   return ctx._currentValue;
+ }
+ function reconcileRaw(fiber, children) {
++  if (children !== null && isObject(children) && ACCEPTED_ELEMENT_MARKERS.has(children.$$typeof) && children.type === REACT_FRAGMENT_TYPE && children.key == null && children.ref == null) {
++    children = children.props.children;
++  }
+   reconcile(fiber, childrenToArray(children));
+ }
+ export {

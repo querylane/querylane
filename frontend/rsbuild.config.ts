@@ -9,6 +9,7 @@ import { createEnv } from "@t3-oss/env-core";
 import { tanstackRouter } from "@tanstack/router-plugin/rspack";
 import { pluginDevtoolsJson } from "rsbuild-plugin-devtools-json";
 import { z } from "zod";
+import packageJson from "./package.json" with { type: "json" };
 import {
   createBuildCacheDigest,
   createPreconnectOrigins,
@@ -16,7 +17,10 @@ import {
   productionOptimizationOverrides,
 } from "./rsbuild.performance.ts";
 import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts";
-import { bundleContractRules } from "./scripts/rsdoctor-bundle-contracts.ts";
+import {
+  bundleContractRules,
+  rendererMatchesBuild,
+} from "./scripts/rsdoctor-bundle-contracts.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
 // Rsbuild tracks this config and its static imports automatically. Keep only
@@ -26,13 +30,16 @@ const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, "bun.lock"),
   path.resolve(import.meta.dirname, "index.html"),
   path.resolve(import.meta.dirname, "package.json"),
+  ...Object.values(packageJson.patchedDependencies).map((patch) =>
+    path.resolve(import.meta.dirname, patch)
+  ),
   path.resolve(import.meta.dirname, "postcss.config.mjs"),
   path.resolve(import.meta.dirname, "tsconfig.json"),
   path.resolve(import.meta.dirname, "tsconfig.ui.json"),
 ];
 type RsdoctorPluginOptions = NonNullable<
   ConstructorParameters<
-    typeof RsdoctorRspackPlugin<typeof bundleContractRules>
+    typeof RsdoctorRspackPlugin<typeof buildBundleContractRules>
   >[0]
 >;
 
@@ -60,6 +67,11 @@ const reactPerformanceMode = resolveReactPerformanceMode({
   env,
   isProduction,
 });
+
+const buildBundleContractRules = [
+  ...bundleContractRules,
+  rendererMatchesBuild(reactPerformanceMode.renderer),
+];
 
 const buildCacheDigest = [
   ...createBuildCacheDigest({
@@ -90,7 +102,7 @@ const rsdoctorPluginOptions = {
     treeShaking: true,
   },
   linter: {
-    extends: bundleContractRules,
+    extends: buildBundleContractRules,
     rules: {
       // The app itself is intentionally split by TanStack Router route chunks;
       // Rsdoctor models local src files as the Querylane frontend package and
@@ -210,6 +222,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      ...reactPerformanceMode.aliases,
     },
   },
   source: {
