@@ -6,7 +6,8 @@ Querylane stays client-side only. Measure performance in 4 layers instead of tru
 
 ```bash
 cd frontend
-bun run build                    # hard gzip bundle budgets
+bun run build                    # native React + hard gzip bundle budgets
+bun run build:redact             # opt-in TanStack Redact, same budgets
 bun run dev:scan                 # local React Scan + default global Compiler
 bun run perf:lighthouse          # build, run Lighthouse CI, print summary
 bun run perf:lighthouse:public   # one run, upload public Google report links
@@ -103,7 +104,8 @@ Rsbuild 2.2.10 and Rspack 2.2.9 reported:
 
 ### Implemented validation-runtime improvements
 
-The normal production build now reports **326.3 KiB initial gzip**, **292.0 KiB
+Before the October 29 dependency refresh, the normal production build reported
+**326.3 KiB initial gzip**, **292.0 KiB
 initial JavaScript gzip**, and **1371.7 KiB total application HTML/JS/CSS gzip**.
 The initial script/style request count stays at five. Compared with the baseline,
 that removes **11,301 initial gzip bytes (3.27%)** and **24,414 total gzip bytes
@@ -143,6 +145,25 @@ English multi-error output, existing search/draft tests, and a failing-before
 startup byte-budget gate. The 28 generated encoded file descriptors are unchanged;
 only dependency imports and generator-produced TypeScript declarations changed.
 
+### Current dependency baseline: October 29, 2026
+
+Main's dependency refresh (`03e61c9e`) upgrades React/DOM to 19.3.1 and Rsbuild to
+2.2.14. Paired normal builds with those pinned dependencies report:
+
+| Gzip output | Updated main | This PR, native React |
+| --- | ---: | ---: |
+| Initial scripts/styles | 346,496 bytes | 335,170 bytes |
+| Initial JavaScript | 311,313 bytes | 299,987 bytes |
+| All application HTML/JS/CSS | 1,448,972 bytes | 1,424,670 bytes |
+
+The validation changes still remove **11,326 initial bytes** and **24,302 total
+bytes** on this baseline. Startup grew about 1 KiB in both revisions versus the
+previous dependency set. Accordingly this PR's new startup caps are 328/294 KiB
+instead of 327/293: the same approximately 0.7/1.0 KiB headroom, still below
+main's 450/400 KiB caps. Other byte caps and both latency limits are unchanged.
+Do not compare a current build directly with the historical dependency baseline
+and attribute every byte to this PR.
+
 ### Further experiments: rejected, not shipped
 
 A follow-up pass compared normal builds against `8d8b8a64`, using the same byte
@@ -163,7 +184,7 @@ the ceiling. Rsdoctor confirmed the cause: the factory split emitted the infinit
 query observer in five chunks and the extension descriptor in three; the shared
 group removed those duplicates but did not offset the remaining output growth.
 The import-only variant also missed the ceiling. All candidate code and cache
-groups were discarded; the implemented measurements above remain unchanged.
+groups were discarded; that experiment did not change the implementation above.
 
 The narrower import-only variant would benefit setup and empty deployments, not
 necessarily existing-instance startup: instance loaders already import that same
@@ -174,6 +195,88 @@ payload gates passed on the retained implementation without relaxed limits.
 A Tailwind compiler probe restricting source detection to `src` produced a
 negligible CSS reduction and was also discarded. Investigation reports stay local
 because they contain absolute paths and source/configuration details.
+
+
+## Opt-in TanStack Redact
+
+Native React remains the default. `QUERYLANE_RENDERER=redact` selects the pinned
+`@tanstack/redact` 0.2.3 runtime at build/test time, not through a public runtime
+flag. `bun run build:redact` is the production shortcut. Unset the variable or
+set it to `react` to return to native React. Invalid values fail immediately.
+
+The shared build-mode resolver supplies exact React, DOM, JSX, Compiler,
+scheduler and external-store aliases to both Rsbuild and Rstest. Keep Redact's
+full feature registration; no nano preset or feature stubs. React Compiler
+remains in infer mode, targeting React 19. Runtime mode, compatibility version,
+lockfile, and package patches participate in cache invalidation. Rsdoctor's
+emitted-chunk rule rejects a missing selected renderer or any retained mixture
+of native React/DOM/scheduler and Redact.
+
+Paired **normal production** builds on the current dependency baseline:
+
+| Metric | Native React | Patched Redact | Change |
+| --- | ---: | ---: | ---: |
+| Initial scripts/styles, gzip | 335,170 bytes | 294,103 bytes | −41,067 / −12.25% |
+| Initial JavaScript, gzip | 299,987 bytes | 258,920 bytes | −41,067 / −13.69% |
+| All application HTML/JS/CSS, gzip | 1,424,670 bytes | 1,378,019 bytes | −46,651 / −3.27% |
+| Initial script/style requests | 5 | 4 | −1 |
+
+Method: same source, locked packages, macOS arm64, Bun 1.4.4 / Node 26.12.1,
+Rsbuild 2.2.14, and `collectBundleBudgetStats`; profiler assets excluded. The
+predeclared threshold was at least 30 KiB initial savings and no total growth.
+This meets that byte threshold. It does **not** establish a load-time, INP,
+rendering-speed or build-speed improvement. Earlier local readiness samples had
+failures under shared-host contention; retain those failures, and keep the
+1200/1000 ms journey limits unchanged rather than promoting the opt-in runtime.
+
+### Compatibility patch and verification
+
+The checked-in Bun patch keeps the dependency license and fixes three observed
+React-compatibility gaps in 0.2.3, rather than changing application behavior to
+fit the runtime:
+
+- HTML children of SVG `foreignObject` need the XHTML namespace. Existing schema
+  diagrams otherwise create non-native buttons and lose visible controls.
+- Checkbox/radio change handlers need the native click event (including Shift),
+  while synthetic change/focus/blur event names must match React. The underlying
+  native event remains intact.
+- One unkeyed, ref-free Fragment wrapper is transparent to child identity.
+  Without this, reopening a facet replaces its trigger and loses the original
+  focus target. Keyed and deeper Fragment wrappers must still reset identity.
+
+Minimal regression tests were red before the respective fixes and pass with
+both runtimes. They cover SVG control interaction, focus event names, and
+single/nested/keyed Fragment identity; existing grid Shift-selection and facet
+keyboard/focus tests exercise the real controls. Both runtime browser suites
+pass 231 tests per light/dark theme. CI requires browser, E2E, production build,
+and all visual shards for **both** runtimes, without skipped gates, relaxed
+latency assertions or rewritten screenshot baselines.
+
+Fresh interleaved production checks (three native/Redact pairs) pass **12/12**
+existing Data Explorer latency/payload assertions. These establish budget
+compatibility, not a speed improvement. Full local E2E passes **123/124 with each
+runtime**; both fail the same JavaScript-disabled, Linux-only pixel baseline on
+macOS. Docker is unavailable locally, so canonical visual/E2E results must come
+from CI. No screenshot or tolerance was changed.
+
+Run compatibility checks explicitly:
+
+```bash
+QUERYLANE_RENDERER=react bun run test:browser
+QUERYLANE_RENDERER=redact bun run test:browser
+QUERYLANE_RENDERER=redact bash scripts/playwright-container.sh bun run test:e2e:ci
+QUERYLANE_RENDERER=react bun run build:profile
+QUERYLANE_RENDERER=redact bun run build:profile
+```
+
+Redact renders synchronously; its transitions do not provide native React's
+concurrent scheduling. This is a CSR/Chromium compatibility experiment, not a
+claim of full React, SSR/hydration, other-browser or assistive-technology parity.
+Review the [official overview](https://tanstack.com/redact/latest/docs/overview)
+and [compatibility guide](https://tanstack.com/redact/latest/docs/compatibility)
+before expanding use. Keep the pin and regression tests when refreshing or
+removing the patch. The canonical container wrapper forwards the selected
+renderer; its CLI regression checks cover unset, native, and Redact selections.
 
 
 ## Accessibility manual-check evidence
@@ -234,7 +337,7 @@ The Lighthouse command uses 3 desktop runs and median assertions against a mocke
 | Cumulative layout shift | Hard fail above 0.01 |
 | Data Explorer direct ready | Hard fail at 1200 ms in Playwright perf spec |
 | Data Explorer overview click | Hard fail at 1000 ms in Playwright perf spec |
-| Data Explorer cold payload | Hard fail at 160 KiB gzip in Playwright perf spec |
+| Data Explorer cold payload | Hard fail at 164 KiB gzip in Playwright perf spec |
 
 ## Next high-confidence upgrades
 

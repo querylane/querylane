@@ -7,6 +7,7 @@
     "analyze": "rsdoctor-agent",
     "budget:check": "bun run scripts/check-bundle-budget.ts",
     "build": "rsbuild build && bun run budget:check",
+    "build:redact": "QUERYLANE_RENDERER=redact bun run build",
     "build:profile": "rm -rf dist && RSDOCTOR=1 rsbuild build && bun run budget:check",
     "changeset": "changeset",
     "changeset:tag": "changeset git-tag",
@@ -105,6 +106,7 @@
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-table": "9.3.1",
+    "@tanstack/redact": "0.2.3",
     "@tanstack/router-plugin": "1.168.48",
     "@tanstack/virtual-core": "3.19.8",
     "@xyflow/react": "12.12.0",
@@ -166,5 +168,8 @@
   "packageManager": "bun@1.4.4",
   "engines": {
     "node": ">=24.15.0"
+  },
+  "patchedDependencies": {
+    "@tanstack/redact@0.2.3": "patches/@tanstack%2Fredact@0.2.3.patch"
   }
 }

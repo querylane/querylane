@@ -101,44 +101,64 @@ test.beforeEach(async ({ page }) => {
   await mockOverviewSupportData(page);
 });
 
-test("perf: direct Data Explorer route becomes ready within budget", {
-  tag: ["@perf", "@feat:data-explorer"],
-}, async ({ page }) => {
-  await mockDataExplorerApp(page);
+test(
+  "perf: direct Data Explorer route becomes ready within budget",
+  {
+    tag: ["@perf", "@feat:data-explorer"],
+  },
+  async ({ page }, testInfo) => {
+    await mockDataExplorerApp(page);
 
-  const startedAt = Date.now();
-  await page.goto(DATA_EXPLORER_TABLE_URL);
-  await expect(
-    page.getByRole("heading", { name: ORDERS_HEADING_RE })
-  ).toBeVisible();
-  await expect(page.getByText("ada@example.com")).toBeVisible();
-  const readyMs = Date.now() - startedAt;
+    const startedAt = Date.now();
+    await page.goto(DATA_EXPLORER_TABLE_URL);
+    await expect(
+      page.getByRole("heading", { name: ORDERS_HEADING_RE })
+    ).toBeVisible();
+    await expect(page.getByText("ada@example.com")).toBeVisible();
+    const readyMs = Date.now() - startedAt;
 
-  expect(readyMs).toBeLessThanOrEqual(
-    FRONTEND_PERF_BUDGETS["data-explorer-direct-ready-ms"]
-  );
-});
+    await testInfo.attach("data-explorer-direct-performance", {
+      body: JSON.stringify({ readyMs }),
+      contentType: "application/json",
+    });
 
-test("perf: database overview opens Data Explorer within payload and latency budgets", {
-  tag: ["@perf", "@feat:data-explorer"],
-}, async ({ page }) => {
-  await mockDataExplorerApp(page);
-  const recorder = createAssetPayloadRecorder(page);
-  await page.goto(DATABASE_OVERVIEW_URL);
-  await expect(page.getByRole("heading", { name: "appdb" })).toBeVisible();
-  await recorder.drain();
-  recorder.start();
-  const startedAt = Date.now();
-  await page.getByRole("link", { name: "Data explorer", exact: true }).click();
-  await expect(page).toHaveURL(DATA_EXPLORER_URL_RE);
-  await expect(page.getByRole("heading", { name: "public" })).toBeVisible();
-  const readyMs = Date.now() - startedAt;
-  const payloadGzipBytes = await recorder.stop();
+    expect(readyMs).toBeLessThanOrEqual(
+      FRONTEND_PERF_BUDGETS["data-explorer-direct-ready-ms"]
+    );
+  }
+);
 
-  expect(readyMs).toBeLessThanOrEqual(
-    FRONTEND_PERF_BUDGETS["data-explorer-overview-click-ms"]
-  );
-  expect(payloadGzipBytes).toBeLessThanOrEqual(
-    FRONTEND_PERF_BUDGETS["data-explorer-cold-payload-gzip-bytes"]
-  );
-});
+test(
+  "perf: database overview opens Data Explorer within payload and latency budgets",
+  {
+    tag: ["@perf", "@feat:data-explorer"],
+  },
+  async ({ page }, testInfo) => {
+    await mockDataExplorerApp(page);
+    const recorder = createAssetPayloadRecorder(page);
+    await page.goto(DATABASE_OVERVIEW_URL);
+    await expect(page.getByRole("heading", { name: "appdb" })).toBeVisible();
+    await recorder.drain();
+    recorder.start();
+    const startedAt = Date.now();
+    await page
+      .getByRole("link", { name: "Data explorer", exact: true })
+      .click();
+    await expect(page).toHaveURL(DATA_EXPLORER_URL_RE);
+    await expect(page.getByRole("heading", { name: "public" })).toBeVisible();
+    const readyMs = Date.now() - startedAt;
+    const payloadGzipBytes = await recorder.stop();
+
+    await testInfo.attach("data-explorer-navigation-performance", {
+      body: JSON.stringify({ payloadGzipBytes, readyMs }),
+      contentType: "application/json",
+    });
+
+    expect(readyMs).toBeLessThanOrEqual(
+      FRONTEND_PERF_BUDGETS["data-explorer-overview-click-ms"]
+    );
+    expect(payloadGzipBytes).toBeLessThanOrEqual(
+      FRONTEND_PERF_BUDGETS["data-explorer-cold-payload-gzip-bytes"]
+    );
+  }
+);

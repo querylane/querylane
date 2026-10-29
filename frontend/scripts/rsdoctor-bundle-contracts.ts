@@ -7,6 +7,8 @@ const HEAVY_PACKAGE =
   /\/node_modules\/(?<capture1>@tanstack\/charts|@xyflow\/[^/]+|d3-[^/]+|react-data-grid|chrono-node|shiki|@shikijs\/[^/]+|oniguruma-to-es|oniguruma-parser)\//u;
 const SHIKI_ONIGURUMA =
   /\/node_modules\/(?:@shikijs\/engine-oniguruma\/|shiki\/dist\/(?:engine\/oniguruma\.mjs|wasm\.mjs|onig\.wasm)(?:$|[?#]))/u;
+const NATIVE_REACT_RUNTIME = /\/node_modules\/(?:react|react-dom|scheduler)\//u;
+const REDACT_RUNTIME = /\/node_modules\/@tanstack\/redact\//u;
 // Representative landing, form, overview, and explorer boundaries. Deliberate
 // sentinels: unrelated async vendor chunks cannot satisfy route splitting.
 const REQUIRED_ROUTE_SPLITS = [
@@ -47,6 +49,53 @@ function* initialChunks(chunks: Iterable<SDK.ChunkInstance>) {
       yield chunk;
     }
   }
+}
+
+function inspectRendererModules(
+  chunkGraph: SDK.ChunkGraphInstance,
+  renderer: "react" | "redact"
+) {
+  const expected = renderer === "react" ? NATIVE_REACT_RUNTIME : REDACT_RUNTIME;
+  const forbidden =
+    renderer === "react" ? REDACT_RUNTIME : NATIVE_REACT_RUNTIME;
+  const unexpected = new Set<string>();
+  let foundExpected = false;
+  for (const { module } of emittedModules(chunkGraph)) {
+    const path = module.path.replaceAll("\\", "/");
+    if (expected.test(path)) {
+      foundExpected = true;
+    }
+    if (forbidden.test(path)) {
+      unexpected.add(path);
+    }
+  }
+  return { foundExpected, unexpected };
+}
+
+export function rendererMatchesBuild(renderer: "react" | "redact") {
+  return defineRule(() => ({
+    meta: {
+      category: "bundle",
+      severity: "Error",
+      title: "querylane-renderer-matches-build",
+    },
+    check(context) {
+      const { foundExpected, unexpected } = inspectRendererModules(
+        context.chunkGraph,
+        renderer
+      );
+      if (!foundExpected) {
+        context.report({
+          message: `Selected renderer ${renderer} is missing from emitted chunks.`,
+        });
+      }
+      if (unexpected.size > 0) {
+        context.report({
+          message: `Selected renderer ${renderer} contains the other runtime: ${[...unexpected].join(", ")}. Check all React, JSX, compiler and DOM aliases.`,
+        });
+      }
+    },
+  }));
 }
 
 export const heavyPackagesStayDeferred = defineRule(() => ({

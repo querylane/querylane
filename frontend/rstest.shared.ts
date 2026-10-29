@@ -1,5 +1,8 @@
 import path from "node:path";
+import { env } from "node:process";
 import { pluginReact } from "@rsbuild/plugin-react";
+import packageJson from "./package.json" with { type: "json" };
+import { resolveReactPerformanceMode } from "./scripts/react-performance-mode";
 
 export const RSTEST_MAX_WORKERS = 4;
 
@@ -24,14 +27,25 @@ export const RSTEST_PROJECT_NAMES = {
 } as const;
 
 export function createQuerylaneRstestBuildConfig() {
+  const mode = resolveReactPerformanceMode({ env, isProduction: false });
   return {
     performance: {
-      buildCache: true,
+      buildCache: {
+        buildDependencies: [
+          path.resolve(import.meta.dirname, "bun.lock"),
+          path.resolve(import.meta.dirname, "package.json"),
+          ...Object.values(packageJson.patchedDependencies).map((patch) =>
+            path.resolve(import.meta.dirname, patch)
+          ),
+        ],
+        cacheDigest: [mode.buildCacheKey],
+      },
     },
     plugins: [pluginReact({ reactCompiler: false })],
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),
+        ...mode.aliases,
       },
     },
   };
