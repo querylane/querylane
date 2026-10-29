@@ -10,7 +10,9 @@ const PRIMARY_FONT = /\/geist-latin-wght-normal\.[\w]+\.woff2$/u;
 async function holdReact(page: Page) {
   const gate = Promise.withResolvers<void>();
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+  });
   page.on("console", (message) => {
     if (message.type() === "error") {
       errors.push(message.text());

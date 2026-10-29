@@ -15,7 +15,9 @@ type Motion =
 
 async function openDatabase(page: Page, motion: Motion) {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+  });
   page.on("response", (response) => {
     if (response.status() >= 400) {
       errors.push(`${response.status()} ${response.url()}`);

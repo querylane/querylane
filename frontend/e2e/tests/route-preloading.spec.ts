@@ -34,7 +34,9 @@ for (const scenario of [
     const scripts: string[] = [];
     const pending = new Set<Request>();
     const errors: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("pageerror", (error) => {
+      errors.push(error.message);
+    });
     page.on("response", (response) => {
       if (response.status() >= 400) {
         errors.push(`${response.status()} ${response.url()}`);

@@ -18,6 +18,86 @@ const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
 
 test.each([
   {
+    name: "console argument spacing",
+    rule: "noConsoleSpaces",
+    suffix: "unit.test.ts",
+    invalid: 'console.error("message ", "details");\n',
+    valid: 'console.error("message", "details");\n',
+  },
+  {
+    name: "documented array flattening depth",
+    rule: "noMagicArrayFlatDepth",
+    suffix: "unit.test.ts",
+    invalid: 'export const values = [[["a"]]].flat(2);\n',
+    valid:
+      'export const values = [[["a"]]].flat(/* Remove both nested list layers. */ 2);\n',
+  },
+  {
+    name: "array mutation return values",
+    rule: "noReturnArrayPush",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function append(items: string[], item: string): number { return items.push(item); }\n",
+    valid:
+      "export function append(items: string[], item: string): void { items.push(item); }\n",
+  },
+  {
+    name: "readable immediate evaluation",
+    rule: "noUnreadableIife",
+    suffix: "unit.test.ts",
+    invalid:
+      'export const label = ((value: boolean) => (value ? "yes" : "no"))(true);\n',
+    valid:
+      'function label(value: boolean): string { return value ? "yes" : "no"; }\nexport const result = label(true);\n',
+  },
+  {
+    name: "bounded stack use",
+    rule: "noUselessRecursion",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function countdown(value: number): number { if (value <= 0) { return value; } return countdown(value - 1); }\n",
+    valid:
+      "export function countdown(value: number): number { let remaining = value; while (remaining > 0) { remaining -= 1; } return remaining; }\n",
+  },
+  {
+    name: "explicit loop conditions",
+    rule: "useWhileLoopCondition",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function count(values: readonly string[]): number { let total = 0; while (true) { if (total >= values.length) { break; } total += 1; } return total; }\n",
+    valid:
+      "export function count(values: readonly string[]): number { let total = 0; while (total < values.length) { total += 1; } return total; }\n",
+  },
+  {
+    name: "textual YAML keys",
+    rule: "noYamlBooleanKeys",
+    suffix: "yaml",
+    invalid: "true: enabled\n",
+    valid: '"true": enabled\n',
+  },
+])("biome enforces $name without rejecting valid alternatives", (probe) => {
+  const directory = mkdtempSync(join(root, "scripts", "quality-probe-"));
+  const file = join(directory, `probe.${probe.suffix}`);
+  const lint = () =>
+    spawnSync(join(root, "node_modules/.bin/biome"), ["lint", file], {
+      cwd: root,
+      encoding: "utf8",
+    });
+  try {
+    writeFileSync(file, probe.invalid);
+    const invalid = lint();
+    expect(invalid.status).toBe(1);
+    expect(invalid.stdout + invalid.stderr).toContain(probe.rule);
+    writeFileSync(file, probe.valid);
+    const valid = lint();
+    expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test.each([
+  {
     name: "readonly inputs",
     rule: "typescript(prefer-readonly-parameter-types)",
     source:
@@ -198,6 +278,12 @@ test.each([
       "function Child() { return <div />; }\nexport function Parent() { return <Child />; }\n",
   },
   {
+    name: "explicit nullable platform contracts",
+    suffix: "ts",
+    rule: null,
+    source: "export function absent(): string | null { return null; }\n",
+  },
+  {
     name: "missing Playwright await",
     suffix: "spec.ts",
     rule: "noPlaywrightMissingAwait",
@@ -235,7 +321,9 @@ test.each([
       ["lint", file],
       { cwd: root, encoding: "utf8" }
     );
-    expect(result.status).toBe(rule === null ? 0 : 1);
+    expect(result.status, result.stdout + result.stderr).toBe(
+      rule === null ? 0 : 1
+    );
     expect(result.stdout + result.stderr).toContain(rule ?? "Checked 1 file");
   } finally {
     rmSync(directory, { recursive: true });

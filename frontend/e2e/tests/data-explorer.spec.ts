@@ -292,7 +292,9 @@ test("data explorer: sorting and pagination update ReadRows inputs", {
   const readRowsBodies: Record<string, unknown>[] = [];
   await mockExplorerShell(page);
   await mockTableCatalog(page);
-  await mockPaginatedReadRows(page, (body) => readRowsBodies.push(body));
+  await mockPaginatedReadRows(page, (body) => {
+    readRowsBodies.push(body);
+  });
 
   await page.goto(
     "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders"

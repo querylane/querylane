@@ -1,6 +1,6 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.3",
+    "@biomejs/biome": "2.6.4",
     "ultracite": "8.1.0",
     "oxlint": "1.90.0",
     "@shadcn/lint": "0.2.3",
@@ -3856,6 +3856,186 @@
       "decision": "inapplicable",
       "reason": "Querylane is a React web application; this framework is not installed.",
       "docs": "https://biomejs.dev/linter/rules/use-vue-v-on-exact"
+    },
+    {
+      "rule": "nursery/noConsoleSpaces",
+      "decision": "error",
+      "reason": "Console methods already separate arguments; prevent accidental duplicate spacing while retaining intentional indentation.",
+      "docs": "https://biomejs.dev/linter/rules/no-console-spaces/"
+    },
+    {
+      "rule": "nursery/noMagicArrayFlatDepth",
+      "decision": "error",
+      "reason": "Require a descriptive depth variable or explanation for non-default array flattening, preserving intentional nested-data contracts.",
+      "docs": "https://biomejs.dev/linter/rules/no-magic-array-flat-depth/"
+    },
+    {
+      "rule": "nursery/noNull",
+      "decision": "inapplicable",
+      "reason": "Preserve explicit null sentinels required by DOM, React refs and external JSON/RPC contracts; replacing them with undefined can change behavior.",
+      "docs": "https://biomejs.dev/linter/rules/no-null/"
+    },
+    {
+      "rule": "nursery/noReturnArrayPush",
+      "decision": "error",
+      "reason": "Do not mistake the length returned by array mutation for an item or array; read length explicitly when needed.",
+      "docs": "https://biomejs.dev/linter/rules/no-return-array-push/"
+    },
+    {
+      "rule": "nursery/noUnreadableIife",
+      "decision": "error",
+      "reason": "Keep immediate evaluation readable without nested expression parentheses; named helpers or block-bodied IIFEs remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-unreadable-iife/"
+    },
+    {
+      "rule": "nursery/noUselessRecursion",
+      "decision": "error",
+      "reason": "Use bounded-stack iteration instead of direct tail self-recursion; branching recursion and disposal-sensitive cases remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-recursion/"
+    },
+    {
+      "rule": "nursery/noVueComputedPropertiesInData",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-computed-properties-in-data/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedDeleteSet",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-delete-set/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedListeners",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-listeners/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedRouterLinkTagProp",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-router-link-tag-prop/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedScopeAttribute",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-scope-attribute/"
+    },
+    {
+      "rule": "nursery/noVueMultipleSlotArgs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-multiple-slot-args/"
+    },
+    {
+      "rule": "nursery/noVueMutatingProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-mutating-props/"
+    },
+    {
+      "rule": "nursery/noVueSideEffectsInComputed",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-side-effects-in-computed/"
+    },
+    {
+      "rule": "nursery/noVueUnusedRefs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-unused-refs/"
+    },
+    {
+      "rule": "nursery/noYamlBooleanKeys",
+      "decision": "error",
+      "reason": "Require textual YAML keys instead of accidental boolean keys; explicit quoted or string-tagged keys remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-yaml-boolean-keys/"
+    },
+    {
+      "rule": "nursery/useSvelteEventDispatcherTypes",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-event-dispatcher-types/"
+    },
+    {
+      "rule": "nursery/useVueDefineOptions",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-define-options/"
+    },
+    {
+      "rule": "nursery/useVueDefinePropsDestructuring",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-define-props-destructuring/"
+    },
+    {
+      "rule": "nursery/useVueTemplateRef",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-template-ref/"
+    },
+    {
+      "rule": "nursery/useVueTypedProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-typed-props/"
+    },
+    {
+      "rule": "nursery/useVueVModel",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-v-model/"
+    },
+    {
+      "rule": "nursery/useVueValidDefineEmits",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-define-emits/"
+    },
+    {
+      "rule": "nursery/useVueValidDefineProps",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-define-props/"
+    },
+    {
+      "rule": "nursery/useVueValidVIs",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-is/"
+    },
+    {
+      "rule": "nursery/useVueValidVMemo",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-memo/"
+    },
+    {
+      "rule": "nursery/useVueValidVModel",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-model/"
+    },
+    {
+      "rule": "nursery/useVueValidVShow",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-show/"
+    },
+    {
+      "rule": "nursery/useVueValidVSlot",
+      "decision": "inapplicable",
+      "reason": "Querylane is a React web application; this Vue or Svelte framework is not installed.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-v-slot/"
+    },
+    {
+      "rule": "nursery/useWhileLoopCondition",
+      "decision": "error",
+      "reason": "Make simple stopping conditions visible in loop headers; mid-loop checks and multiple exits remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/use-while-loop-condition/"
     }
   ],
   "oxlint": [
