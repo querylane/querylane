@@ -103,3 +103,32 @@ test.each([
     expect(document.querySelector("button") === originalButton).toBe(retained);
   }
 );
+
+test("preserves SVG gradient colors, opacity, and stroke scaling", async () => {
+  await render(
+    <svg height="100" width="100">
+      <title>Gradient preview</title>
+      <defs>
+        <linearGradient id="renderer-compat-gradient">
+          <stop offset="0" stopColor="currentColor" stopOpacity={0.25} />
+        </linearGradient>
+      </defs>
+      <rect
+        fill="url(#renderer-compat-gradient)"
+        height="100"
+        vectorEffect="non-scaling-stroke"
+        width="100"
+      />
+    </svg>
+  );
+  expect(document.querySelector("rect")?.getAttribute("vector-effect")).toBe(
+    "non-scaling-stroke"
+  );
+  const stops = document.querySelectorAll("stop");
+  expect(stops).toHaveLength(1);
+  for (const stop of stops) {
+    expect(stop.getAttribute("stop-color")).toBe("currentColor");
+    expect(stop.getAttribute("stop-opacity")).toBe("0.25");
+    expect(getComputedStyle(stop).stopOpacity).toBe("0.25");
+  }
+});

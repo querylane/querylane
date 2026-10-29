@@ -1,3 +1,16 @@
+diff --git a/dist/core/attributes.js b/dist/core/attributes.js
+index e4060c70df64b8fa069d2e1336b64eeef64b9175..1f51cd63beaf96889de97c369e1756cf129dc129 100644
+--- a/dist/core/attributes.js
++++ b/dist/core/attributes.js
+@@ -5,7 +5,7 @@ function attributeName(name, isSvg) {
+     return "class";
+   if (name === "htmlFor")
+     return "for";
+-  if (isSvg && /^(clip|fill|stroke)/.test(name) || /^(httpEquiv|acceptCharset|maskType)$/.test(name)) {
++  if (isSvg && /^(clip|fill|stroke|stop)/.test(name) || /^(httpEquiv|acceptCharset|maskType|vectorEffect)$/.test(name)) {
+     return name.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+   }
+   if (name === "tabIndex" || name === "crossOrigin")
 diff --git a/dist/dom/dom.js b/dist/dom/dom.js
 index 1d2d3fd452246f08bc7d3f324ccb3d83ef1c4d11..286798671726a10af06e7113ee111ae2810c5373 100644
 --- a/dist/dom/dom.js

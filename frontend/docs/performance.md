@@ -216,9 +216,9 @@ Paired **normal production** builds on the current dependency baseline:
 
 | Metric | Native React | Patched Redact | Change |
 | --- | ---: | ---: | ---: |
-| Initial scripts/styles, gzip | 335,170 bytes | 294,103 bytes | −41,067 / −12.25% |
-| Initial JavaScript, gzip | 299,987 bytes | 258,920 bytes | −41,067 / −13.69% |
-| All application HTML/JS/CSS, gzip | 1,424,670 bytes | 1,378,019 bytes | −46,651 / −3.27% |
+| Initial scripts/styles, gzip | 335,170 bytes | 294,110 bytes | −41,060 / −12.25% |
+| Initial JavaScript, gzip | 299,987 bytes | 258,927 bytes | −41,060 / −13.69% |
+| All application HTML/JS/CSS, gzip | 1,424,670 bytes | 1,378,026 bytes | −46,644 / −3.27% |
 | Initial script/style requests | 5 | 4 | −1 |
 
 Method: same source, locked packages, macOS arm64, Bun 1.4.4 / Node 26.12.1,
@@ -231,10 +231,13 @@ failures under shared-host contention; retain those failures, and keep the
 
 ### Compatibility patch and verification
 
-The checked-in Bun patch keeps the dependency license and fixes three observed
+The checked-in Bun patch keeps the dependency license and fixes four observed
 React-compatibility gaps in 0.2.3, rather than changing application behavior to
 fit the runtime:
 
+- SVG presentation properties need native attribute names: `stopColor`,
+  `stopOpacity`, and `vectorEffect` map to their hyphenated attributes. Otherwise
+  mobile stat sparklines render opaque gray fills and incorrect stroke scaling.
 - HTML children of SVG `foreignObject` need the XHTML namespace. Existing schema
   diagrams otherwise create non-native buttons and lose visible controls.
 - Checkbox/radio change handlers need the native click event (including Shift),
@@ -245,10 +248,10 @@ fit the runtime:
   focus target. Keyed and deeper Fragment wrappers must still reset identity.
 
 Minimal regression tests were red before the respective fixes and pass with
-both runtimes. They cover SVG control interaction, focus event names, and
+both runtimes. They cover SVG namespaces/presentation, focus event names, and
 single/nested/keyed Fragment identity; existing grid Shift-selection and facet
 keyboard/focus tests exercise the real controls. Both runtime browser suites
-pass 231 tests per light/dark theme. CI requires browser, E2E, production build,
+pass 232 tests per light/dark theme. CI requires browser, E2E, production build,
 and all visual shards for **both** runtimes, without skipped gates, relaxed
 latency assertions or rewritten screenshot baselines.
 
