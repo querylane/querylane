@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	"github.com/querylane/querylane/backend/aip"
 	"github.com/querylane/querylane/backend/engine"
@@ -852,6 +853,41 @@ func TestListPublicGrants(t *testing.T) {
 			svc := NewService(tt.opener)
 			res, err := svc.ListPublicGrants(context.Background(), connect.NewRequest(tt.req))
 			tt.assertion(t, tt.opener, res, err)
+		})
+	}
+}
+
+func TestListRolesReadMask(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		paths   []string
+		invalid bool
+	}{
+		{name: "resource fields", paths: []string{"name", "role_name"}},
+		{name: "invalid mask rejected before connection", paths: []string{"unknown"}, invalid: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			session := &fakeRoleSession{roles: []engine.Role{{Name: "alice", Comment: "hidden"}}, token: "next-page"}
+			opener := &fakeOpener{sess: session}
+			response, err := NewService(opener).ListRoles(context.Background(), connect.NewRequest(&v1alpha1.ListRolesRequest{
+				Parent: "instances/prod", ReadMask: &fieldmaskpb.FieldMask{Paths: tt.paths}, Filter: "name:alice", PageSize: 10,
+			}))
+			if tt.invalid {
+				require.Error(t, err)
+				assert.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				assert.Empty(t, opener.opened.InstanceID)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, response.Msg.Roles, 1)
+			assert.Equal(t, "alice", response.Msg.Roles[0].RoleName)
+			assert.Empty(t, response.Msg.Roles[0].Comment)
+			assert.Equal(t, "next-page", response.Msg.NextPageToken)
+			assert.Equal(t, "name:alice", session.params.Filter)
+			assert.Equal(t, "hidden", session.roles[0].Comment)
 		})
 	}
 }

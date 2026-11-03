@@ -15,6 +15,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -810,7 +811,11 @@ type ListRolesRequest struct {
 	// Examples:
 	//   - "name asc"
 	//   - "name desc"
-	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// Optional. Resource fields to return, relative to each role.
+	// Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+	// Does not change filtering, ordering, pagination, or catalog synchronization.
+	ReadMask      *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -878,6 +883,13 @@ func (x *ListRolesRequest) GetOrderBy() string {
 		return x.OrderBy
 	}
 	return ""
+}
+
+func (x *ListRolesRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.ReadMask
+	}
+	return nil
 }
 
 type ListRolesResponse struct {
@@ -1672,7 +1684,7 @@ var File_querylane_console_v1alpha1_role_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_role_proto_rawDesc = "" +
 	"\n" +
-	"%querylane/console/v1alpha1/role.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfe\x02\n" +
+	"%querylane/console/v1alpha1/role.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfe\x02\n" +
 	"\x04Role\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12 \n" +
 	"\trole_name\x18\x02 \x01(\tB\x03\xe0A\x03R\broleName\x12O\n" +
@@ -1733,7 +1745,7 @@ const file_querylane_console_v1alpha1_role_proto_rawDesc = "" +
 	"\vschema_name\x18\x04 \x01(\tB\x03\xe0A\x03R\n" +
 	"schemaName\x12!\n" +
 	"\tprivilege\x18\x05 \x01(\tB\x03\xe0A\x03R\tprivilege\x12/\n" +
-	"\x11with_grant_option\x18\x06 \x01(\bB\x03\xe0A\x03R\x0fwithGrantOption\"\x96\x02\n" +
+	"\x11with_grant_option\x18\x06 \x01(\bB\x03\xe0A\x03R\x0fwithGrantOption\"\xd4\x02\n" +
 	"\x10ListRolesRequest\x12u\n" +
 	"\x06parent\x18\x01 \x01(\tB]\xe0A\x02\xfaA \n" +
 	"\x1econsole.querylane.dev/Instance\xbaH4r220^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$R\x06parent\x12*\n" +
@@ -1741,7 +1753,8 @@ const file_querylane_console_v1alpha1_role_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
 	"\x06filter\x18\x04 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
-	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"s\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\x12<\n" +
+	"\tread_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\breadMask\"s\n" +
 	"\x11ListRolesResponse\x126\n" +
 	"\x05roles\x18\x01 \x03(\v2 .querylane.console.v1alpha1.RoleR\x05roles\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x8e\x01\n" +
@@ -1864,6 +1877,7 @@ var file_querylane_console_v1alpha1_role_proto_goTypes = []any{
 	(*ListPublicGrantsRequest)(nil),           // 18: querylane.console.v1alpha1.ListPublicGrantsRequest
 	(*ListPublicGrantsResponse)(nil),          // 19: querylane.console.v1alpha1.ListPublicGrantsResponse
 	(*timestamppb.Timestamp)(nil),             // 20: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),             // 21: google.protobuf.FieldMask
 }
 var file_querylane_console_v1alpha1_role_proto_depIdxs = []int32{
 	3,  // 0: querylane.console.v1alpha1.Role.attributes:type_name -> querylane.console.v1alpha1.RoleAttributes
@@ -1872,29 +1886,30 @@ var file_querylane_console_v1alpha1_role_proto_depIdxs = []int32{
 	0,  // 3: querylane.console.v1alpha1.ObjectGrant.object_type:type_name -> querylane.console.v1alpha1.GrantObjectType
 	0,  // 4: querylane.console.v1alpha1.OwnedObject.object_type:type_name -> querylane.console.v1alpha1.GrantObjectType
 	1,  // 5: querylane.console.v1alpha1.RoleDefaultPrivilege.object_type:type_name -> querylane.console.v1alpha1.DefaultPrivilegeObjectType
-	2,  // 6: querylane.console.v1alpha1.ListRolesResponse.roles:type_name -> querylane.console.v1alpha1.Role
-	2,  // 7: querylane.console.v1alpha1.GetRoleResponse.role:type_name -> querylane.console.v1alpha1.Role
-	5,  // 8: querylane.console.v1alpha1.ListRoleGrantsResponse.grants:type_name -> querylane.console.v1alpha1.ObjectGrant
-	6,  // 9: querylane.console.v1alpha1.ListRoleOwnedObjectsResponse.owned_objects:type_name -> querylane.console.v1alpha1.OwnedObject
-	7,  // 10: querylane.console.v1alpha1.ListRoleDefaultPrivilegesResponse.default_privileges:type_name -> querylane.console.v1alpha1.RoleDefaultPrivilege
-	5,  // 11: querylane.console.v1alpha1.ListPublicGrantsResponse.grants:type_name -> querylane.console.v1alpha1.ObjectGrant
-	8,  // 12: querylane.console.v1alpha1.RoleService.ListRoles:input_type -> querylane.console.v1alpha1.ListRolesRequest
-	10, // 13: querylane.console.v1alpha1.RoleService.GetRole:input_type -> querylane.console.v1alpha1.GetRoleRequest
-	12, // 14: querylane.console.v1alpha1.RoleService.ListRoleGrants:input_type -> querylane.console.v1alpha1.ListRoleGrantsRequest
-	14, // 15: querylane.console.v1alpha1.RoleService.ListRoleOwnedObjects:input_type -> querylane.console.v1alpha1.ListRoleOwnedObjectsRequest
-	16, // 16: querylane.console.v1alpha1.RoleService.ListRoleDefaultPrivileges:input_type -> querylane.console.v1alpha1.ListRoleDefaultPrivilegesRequest
-	18, // 17: querylane.console.v1alpha1.RoleService.ListPublicGrants:input_type -> querylane.console.v1alpha1.ListPublicGrantsRequest
-	9,  // 18: querylane.console.v1alpha1.RoleService.ListRoles:output_type -> querylane.console.v1alpha1.ListRolesResponse
-	11, // 19: querylane.console.v1alpha1.RoleService.GetRole:output_type -> querylane.console.v1alpha1.GetRoleResponse
-	13, // 20: querylane.console.v1alpha1.RoleService.ListRoleGrants:output_type -> querylane.console.v1alpha1.ListRoleGrantsResponse
-	15, // 21: querylane.console.v1alpha1.RoleService.ListRoleOwnedObjects:output_type -> querylane.console.v1alpha1.ListRoleOwnedObjectsResponse
-	17, // 22: querylane.console.v1alpha1.RoleService.ListRoleDefaultPrivileges:output_type -> querylane.console.v1alpha1.ListRoleDefaultPrivilegesResponse
-	19, // 23: querylane.console.v1alpha1.RoleService.ListPublicGrants:output_type -> querylane.console.v1alpha1.ListPublicGrantsResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	21, // 6: querylane.console.v1alpha1.ListRolesRequest.read_mask:type_name -> google.protobuf.FieldMask
+	2,  // 7: querylane.console.v1alpha1.ListRolesResponse.roles:type_name -> querylane.console.v1alpha1.Role
+	2,  // 8: querylane.console.v1alpha1.GetRoleResponse.role:type_name -> querylane.console.v1alpha1.Role
+	5,  // 9: querylane.console.v1alpha1.ListRoleGrantsResponse.grants:type_name -> querylane.console.v1alpha1.ObjectGrant
+	6,  // 10: querylane.console.v1alpha1.ListRoleOwnedObjectsResponse.owned_objects:type_name -> querylane.console.v1alpha1.OwnedObject
+	7,  // 11: querylane.console.v1alpha1.ListRoleDefaultPrivilegesResponse.default_privileges:type_name -> querylane.console.v1alpha1.RoleDefaultPrivilege
+	5,  // 12: querylane.console.v1alpha1.ListPublicGrantsResponse.grants:type_name -> querylane.console.v1alpha1.ObjectGrant
+	8,  // 13: querylane.console.v1alpha1.RoleService.ListRoles:input_type -> querylane.console.v1alpha1.ListRolesRequest
+	10, // 14: querylane.console.v1alpha1.RoleService.GetRole:input_type -> querylane.console.v1alpha1.GetRoleRequest
+	12, // 15: querylane.console.v1alpha1.RoleService.ListRoleGrants:input_type -> querylane.console.v1alpha1.ListRoleGrantsRequest
+	14, // 16: querylane.console.v1alpha1.RoleService.ListRoleOwnedObjects:input_type -> querylane.console.v1alpha1.ListRoleOwnedObjectsRequest
+	16, // 17: querylane.console.v1alpha1.RoleService.ListRoleDefaultPrivileges:input_type -> querylane.console.v1alpha1.ListRoleDefaultPrivilegesRequest
+	18, // 18: querylane.console.v1alpha1.RoleService.ListPublicGrants:input_type -> querylane.console.v1alpha1.ListPublicGrantsRequest
+	9,  // 19: querylane.console.v1alpha1.RoleService.ListRoles:output_type -> querylane.console.v1alpha1.ListRolesResponse
+	11, // 20: querylane.console.v1alpha1.RoleService.GetRole:output_type -> querylane.console.v1alpha1.GetRoleResponse
+	13, // 21: querylane.console.v1alpha1.RoleService.ListRoleGrants:output_type -> querylane.console.v1alpha1.ListRoleGrantsResponse
+	15, // 22: querylane.console.v1alpha1.RoleService.ListRoleOwnedObjects:output_type -> querylane.console.v1alpha1.ListRoleOwnedObjectsResponse
+	17, // 23: querylane.console.v1alpha1.RoleService.ListRoleDefaultPrivileges:output_type -> querylane.console.v1alpha1.ListRoleDefaultPrivilegesResponse
+	19, // 24: querylane.console.v1alpha1.RoleService.ListPublicGrants:output_type -> querylane.console.v1alpha1.ListPublicGrantsResponse
+	19, // [19:25] is the sub-list for method output_type
+	13, // [13:19] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_role_proto_init() }

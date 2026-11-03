@@ -16,6 +16,7 @@ import (
 	status "google.golang.org/genproto/googleapis/rpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -170,7 +171,11 @@ type ListDatabasesRequest struct {
 	//   - "name asc"
 	//   - "last_ddl_time desc, name asc"
 	//   - "create_time desc"
-	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// Optional. Resource fields to return, relative to each database.
+	// Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+	// Does not change filtering, ordering, pagination, or catalog synchronization.
+	ReadMask      *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -238,6 +243,13 @@ func (x *ListDatabasesRequest) GetOrderBy() string {
 		return x.OrderBy
 	}
 	return ""
+}
+
+func (x *ListDatabasesRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.ReadMask
+	}
+	return nil
 }
 
 type ListDatabasesResponse struct {
@@ -874,7 +886,7 @@ var File_querylane_console_v1alpha1_database_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\n" +
-	")querylane/console/v1alpha1/database.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\"\xd5\x03\n" +
+	")querylane/console/v1alpha1/database.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\"\xd5\x03\n" +
 	"\bDatabase\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12(\n" +
@@ -885,7 +897,7 @@ const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\x12is_system_database\x18\b \x01(\bB\x03\xe0A\x03R\x10isSystemDatabase\x12@\n" +
 	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime:c\xeaA`\n" +
-	"\x1econsole.querylane.dev/Database\x12)instances/{instance}/databases/{database}*\tdatabases2\bdatabase\"\x9a\x02\n" +
+	"\x1econsole.querylane.dev/Database\x12)instances/{instance}/databases/{database}*\tdatabases2\bdatabase\"\xd8\x02\n" +
 	"\x14ListDatabasesRequest\x12u\n" +
 	"\x06parent\x18\x01 \x01(\tB]\xe0A\x02\xfaA \n" +
 	"\x1econsole.querylane.dev/Instance\xbaH4r220^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$R\x06parent\x12*\n" +
@@ -893,7 +905,8 @@ const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
 	"\x06filter\x18\x04 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
-	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"\x83\x01\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\x12<\n" +
+	"\tread_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\breadMask\"\x83\x01\n" +
 	"\x15ListDatabasesResponse\x12B\n" +
 	"\tdatabases\x18\x01 \x03(\v2$.querylane.console.v1alpha1.DatabaseR\tdatabases\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x9b\x01\n" +
@@ -985,30 +998,32 @@ var file_querylane_console_v1alpha1_database_proto_goTypes = []any{
 	(*SequentialScanHotspot)(nil),            // 9: querylane.console.v1alpha1.SequentialScanHotspot
 	(*TableCacheHitInsight)(nil),             // 10: querylane.console.v1alpha1.TableCacheHitInsight
 	(*timestamppb.Timestamp)(nil),            // 11: google.protobuf.Timestamp
-	(*status.Status)(nil),                    // 12: google.rpc.Status
+	(*fieldmaskpb.FieldMask)(nil),            // 12: google.protobuf.FieldMask
+	(*status.Status)(nil),                    // 13: google.rpc.Status
 }
 var file_querylane_console_v1alpha1_database_proto_depIdxs = []int32{
 	11, // 0: querylane.console.v1alpha1.Database.last_ddl_time:type_name -> google.protobuf.Timestamp
 	11, // 1: querylane.console.v1alpha1.Database.create_time:type_name -> google.protobuf.Timestamp
-	0,  // 2: querylane.console.v1alpha1.ListDatabasesResponse.databases:type_name -> querylane.console.v1alpha1.Database
-	0,  // 3: querylane.console.v1alpha1.GetDatabaseResponse.database:type_name -> querylane.console.v1alpha1.Database
-	7,  // 4: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.query_insights:type_name -> querylane.console.v1alpha1.DatabaseQueryInsights
-	12, // 5: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.partial_errors:type_name -> google.rpc.Status
-	8,  // 6: querylane.console.v1alpha1.DatabaseQueryInsights.top_queries:type_name -> querylane.console.v1alpha1.QueryRuntimeInsight
-	9,  // 7: querylane.console.v1alpha1.DatabaseQueryInsights.sequential_scan_hotspots:type_name -> querylane.console.v1alpha1.SequentialScanHotspot
-	10, // 8: querylane.console.v1alpha1.DatabaseQueryInsights.table_cache_hits:type_name -> querylane.console.v1alpha1.TableCacheHitInsight
-	11, // 9: querylane.console.v1alpha1.DatabaseQueryInsights.observed_at:type_name -> google.protobuf.Timestamp
-	1,  // 10: querylane.console.v1alpha1.DatabaseService.ListDatabases:input_type -> querylane.console.v1alpha1.ListDatabasesRequest
-	3,  // 11: querylane.console.v1alpha1.DatabaseService.GetDatabase:input_type -> querylane.console.v1alpha1.GetDatabaseRequest
-	5,  // 12: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:input_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsRequest
-	2,  // 13: querylane.console.v1alpha1.DatabaseService.ListDatabases:output_type -> querylane.console.v1alpha1.ListDatabasesResponse
-	4,  // 14: querylane.console.v1alpha1.DatabaseService.GetDatabase:output_type -> querylane.console.v1alpha1.GetDatabaseResponse
-	6,  // 15: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:output_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse
-	13, // [13:16] is the sub-list for method output_type
-	10, // [10:13] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	12, // 2: querylane.console.v1alpha1.ListDatabasesRequest.read_mask:type_name -> google.protobuf.FieldMask
+	0,  // 3: querylane.console.v1alpha1.ListDatabasesResponse.databases:type_name -> querylane.console.v1alpha1.Database
+	0,  // 4: querylane.console.v1alpha1.GetDatabaseResponse.database:type_name -> querylane.console.v1alpha1.Database
+	7,  // 5: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.query_insights:type_name -> querylane.console.v1alpha1.DatabaseQueryInsights
+	13, // 6: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.partial_errors:type_name -> google.rpc.Status
+	8,  // 7: querylane.console.v1alpha1.DatabaseQueryInsights.top_queries:type_name -> querylane.console.v1alpha1.QueryRuntimeInsight
+	9,  // 8: querylane.console.v1alpha1.DatabaseQueryInsights.sequential_scan_hotspots:type_name -> querylane.console.v1alpha1.SequentialScanHotspot
+	10, // 9: querylane.console.v1alpha1.DatabaseQueryInsights.table_cache_hits:type_name -> querylane.console.v1alpha1.TableCacheHitInsight
+	11, // 10: querylane.console.v1alpha1.DatabaseQueryInsights.observed_at:type_name -> google.protobuf.Timestamp
+	1,  // 11: querylane.console.v1alpha1.DatabaseService.ListDatabases:input_type -> querylane.console.v1alpha1.ListDatabasesRequest
+	3,  // 12: querylane.console.v1alpha1.DatabaseService.GetDatabase:input_type -> querylane.console.v1alpha1.GetDatabaseRequest
+	5,  // 13: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:input_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsRequest
+	2,  // 14: querylane.console.v1alpha1.DatabaseService.ListDatabases:output_type -> querylane.console.v1alpha1.ListDatabasesResponse
+	4,  // 15: querylane.console.v1alpha1.DatabaseService.GetDatabase:output_type -> querylane.console.v1alpha1.GetDatabaseResponse
+	6,  // 16: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:output_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_database_proto_init() }

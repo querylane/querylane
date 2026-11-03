@@ -5,6 +5,7 @@ package querylane.console.v1alpha1;
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 // --------------------------------------------------------------------------
@@ -351,6 +352,11 @@ message ListRolesRequest {
   //   - "name asc"
   //   - "name desc"
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Resource fields to return, relative to each role.
+  // Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+  // Does not change filtering, ordering, pagination, or catalog synchronization.
+  google.protobuf.FieldMask read_mask = 6 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message ListRolesResponse {

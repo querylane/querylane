@@ -18,6 +18,7 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/service/readmask"
 )
 
 // Ensure Service implements the DatabaseServiceHandler interface at compile time.
@@ -50,6 +51,10 @@ func NewService(catalog databaseCatalog, queryInsights databaseQueryInsightsProv
 
 // ListDatabases returns a paginated list of databases within the specified instance.
 func (s *Service) ListDatabases(ctx context.Context, req *connect.Request[v1alpha1.ListDatabasesRequest]) (*connect.Response[v1alpha1.ListDatabasesResponse], error) {
+	projection, maskErr := readmask.New(req.Msg.GetReadMask(), &v1alpha1.Database{})
+	if maskErr != nil {
+		return nil, maskErr
+	}
 	// Parse the parent instance name
 	instanceResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseInstanceName)
 	if connErr != nil {
@@ -74,6 +79,10 @@ func (s *Service) ListDatabases(ctx context.Context, req *connect.Request[v1alph
 
 	// Convert to protobuf format
 	pbDatabases := s.convertDatabases(databases, instanceResource.InstanceID)
+
+	for _, resource := range pbDatabases {
+		projection.Apply(resource)
+	}
 
 	res := &v1alpha1.ListDatabasesResponse{
 		Databases:     pbDatabases,

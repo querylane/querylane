@@ -21,6 +21,7 @@ Allowed by default:
 
 Allowed case-by-case:
 
+- `columns` for user-selected visible list columns, keyed by stable list identity; default selections are omitted
 - `tab` when the tab is a meaningful sub-view
 - `view` when it represents the primary page mode
 - `range`, `from`, and `to` for observability or time-series pages
@@ -49,3 +50,5 @@ Typing into simple search fields should use `history: replace` or equivalent beh
 - Data Explorer must not add pagination, page size, selected row drawers, advanced table filters, sort, category expansion, or full grid replay state as part of this policy.
 - Instance database and role list search use `q`, omit empty values, and update with replacement history.
 - Role list kind filtering uses `type`; map-tab visualization filters stay local.
+
+- List column visibility is explicitly shareable. Table-data column visibility may override personal layout preferences without serializing column order, projection preference, or the rest of the grid state. See [list response read masks](list-response-read-masks.md).

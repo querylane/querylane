@@ -541,6 +541,7 @@ export type {
   RoleAccessMapResourcesResult,
 };
 export {
+  listAllRolesQueryOptions,
   rolesForInstanceQueryInput,
   useListAllRolesQuery,
   useListRolesQuery,

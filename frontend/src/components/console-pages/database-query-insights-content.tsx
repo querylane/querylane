@@ -42,6 +42,7 @@ import {
   type DataTableFilterFacet,
   DataTableFilterToolbar,
 } from "@/components/ui/data-table-filter-toolbar";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   Select,
   SelectContent,
@@ -50,6 +51,10 @@ import {
 } from "@/components/ui/select";
 import { useGetDatabaseQueryInsightsQuery } from "@/hooks/api/database";
 import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
+import {
+  type ListColumnOption,
+  useListColumnSelection,
+} from "@/lib/list-columns";
 import {
   DEFAULT_PAGE_SIZE,
   isPageSize,
@@ -526,6 +531,14 @@ function MetricUnavailableNotice({
   );
 }
 
+const TOP_QUERY_COLUMNS = [
+  { id: "query", label: "Query", required: true },
+  { id: "calls", label: "Calls" },
+  { id: "mean", label: "Mean" },
+  { id: "total", label: "Total" },
+  { id: "relative", label: "Relative" },
+] satisfies ListColumnOption[];
+
 function TopQueriesTable({
   onSelectQuery,
   queries,
@@ -535,6 +548,11 @@ function TopQueriesTable({
   queries: IndexedQueryRuntimeInsight[];
   selectedQueryKey: string | null;
 }) {
+  const columnSelection = useListColumnSelection(
+    "database-top-queries",
+    TOP_QUERY_COLUMNS
+  );
+  const visible = new Set(columnSelection.visibleIds);
   if (queries.length === 0) {
     return (
       <div className="text-muted-foreground px-5 py-8 text-sm">
@@ -544,78 +562,109 @@ function TopQueriesTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow presentation="static">
-          <TableHead presentation="insight-leading">Query</TableHead>
-          <TableHead className="text-right" presentation="insight">
-            Calls
-          </TableHead>
-          <TableHead className="text-right" presentation="insight">
-            Mean
-          </TableHead>
-          <TableHead className="text-right" presentation="insight">
-            Total
-          </TableHead>
-          <TableHead className="w-28" presentation="insight">
-            Relative
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {queries.map((entry) => {
-          const { query } = entry;
-          const queryLabel = queryInsightLabel(query);
-          const rowSelectionKey = entry.selectionKey;
-          const selected = selectedQueryKey === rowSelectionKey;
-          return (
-            <TableRow
-              key={entry.selectionKey}
-              presentation={selected ? "selected" : undefined}
-            >
-              <TableCell
-                className="max-w-[34rem] min-w-0"
-                presentation="insight-leading"
+    <div>
+      <div className="flex justify-end p-2">
+        <ListColumnSelector columns={TOP_QUERY_COLUMNS} {...columnSelection} />
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow presentation="static">
+            {visible.has("query") && (
+              <TableHead presentation="insight-leading">Query</TableHead>
+            )}
+            {visible.has("calls") && (
+              <TableHead className="text-right" presentation="insight">
+                Calls
+              </TableHead>
+            )}
+            {visible.has("mean") && (
+              <TableHead className="text-right" presentation="insight">
+                Mean
+              </TableHead>
+            )}
+            {visible.has("total") && (
+              <TableHead className="text-right" presentation="insight">
+                Total
+              </TableHead>
+            )}
+            {visible.has("relative") && (
+              <TableHead className="w-28" presentation="insight">
+                Relative
+              </TableHead>
+            )}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {queries.map((entry) => {
+            const { query } = entry;
+            const queryLabel = queryInsightLabel(query);
+            const rowSelectionKey = entry.selectionKey;
+            const selected = selectedQueryKey === rowSelectionKey;
+            return (
+              <TableRow
+                key={entry.selectionKey}
+                presentation={selected ? "selected" : undefined}
               >
-                <Button
-                  aria-label={queryLabel}
-                  aria-pressed={selected}
-                  className="h-auto w-full justify-start overflow-hidden text-left"
-                  onClick={() => {
-                    onSelectQuery(entry);
-                  }}
-                  presentation="query"
-                  type="button"
-                  variant="ghost"
-                >
-                  <SqlCodeBlock
-                    copyable={false}
-                    sql={queryLabel}
-                    variant="inline"
-                  />
-                </Button>
-              </TableCell>
-              <TableCell className="text-right" presentation="numeric-muted">
-                {formatInsightInteger(query.calls)}
-              </TableCell>
-              <TableCell className="text-right" presentation="numeric-muted">
-                {formatInsightMs(query.meanTimeMs)}
-              </TableCell>
-              <TableCell className="text-right" presentation="numeric">
-                {formatInsightMs(query.totalTimeMs)}
-              </TableCell>
-              <TableCell>
-                <Progress
-                  aria-label={`Runtime relative to top query for ${queryLabel}`}
-                  density="compact"
-                  value={insightProgressValue(query.totalTimeRatio)}
-                />
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                {visible.has("query") && (
+                  <TableCell
+                    className="max-w-[34rem] min-w-0"
+                    presentation="insight-leading"
+                  >
+                    <Button
+                      aria-label={queryLabel}
+                      aria-pressed={selected}
+                      className="h-auto w-full justify-start overflow-hidden text-left"
+                      onClick={() => {
+                        onSelectQuery(entry);
+                      }}
+                      presentation="query"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <SqlCodeBlock
+                        copyable={false}
+                        sql={queryLabel}
+                        variant="inline"
+                      />
+                    </Button>
+                  </TableCell>
+                )}
+                {visible.has("calls") && (
+                  <TableCell
+                    className="text-right"
+                    presentation="numeric-muted"
+                  >
+                    {formatInsightInteger(query.calls)}
+                  </TableCell>
+                )}
+                {visible.has("mean") && (
+                  <TableCell
+                    className="text-right"
+                    presentation="numeric-muted"
+                  >
+                    {formatInsightMs(query.meanTimeMs)}
+                  </TableCell>
+                )}
+                {visible.has("total") && (
+                  <TableCell className="text-right" presentation="numeric">
+                    {formatInsightMs(query.totalTimeMs)}
+                  </TableCell>
+                )}
+                {visible.has("relative") && (
+                  <TableCell>
+                    <Progress
+                      aria-label={`Runtime relative to top query for ${queryLabel}`}
+                      density="compact"
+                      value={insightProgressValue(query.totalTimeRatio)}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

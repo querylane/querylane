@@ -158,3 +158,20 @@ describe("database extensions page", () => {
     ).toBeNull();
   });
 });
+
+test("extension list columns can be selected without losing extension actions", async () => {
+  state.extensionsQuery.data = extensionsResponse();
+  const user = userEvent.setup();
+  render(
+    <BackendDatabaseExtensionsPage
+      databaseId="customer-events"
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/databases/$databaseId/extensions"
+    />
+  );
+  await user.click(screen.getByRole("button", { name: "Columns" }));
+  await user.click(screen.getByRole("menuitemcheckbox", { name: "Version" }));
+  expect(screen.queryByRole("columnheader", { name: "Version" })).toBeNull();
+  await user.keyboard("{Escape}");
+  expect(screen.getByRole("button", { name: "pg_trgm" })).toBeTruthy();
+});

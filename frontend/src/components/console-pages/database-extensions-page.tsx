@@ -37,6 +37,7 @@ import {
   TableRow,
 } from "@/components/querylane-ui/table";
 import { Badge } from "@/components/ui/badge";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   Select,
   SelectContent,
@@ -49,6 +50,10 @@ import {
   extensionsForDatabaseQueryInput,
   useListAllExtensionsQuery,
 } from "@/hooks/api/extension";
+import {
+  type ListColumnOption,
+  useListColumnSelection,
+} from "@/lib/list-columns";
 import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
@@ -57,6 +62,14 @@ import {
 import { cn } from "@/lib/utils";
 
 const EMPTY_VALUE = "—";
+
+const EXTENSION_COLUMNS = [
+  { id: "name", label: "Name", required: true },
+  { id: "status", label: "Status" },
+  { id: "version", label: "Version" },
+  { id: "category", label: "Category" },
+  { id: "description", label: "Description" },
+] satisfies ListColumnOption[];
 
 function StatusCell({ extension }: { extension: PresentedExtension }) {
   const installed = extension.statusFilter === "installed";
@@ -85,10 +98,12 @@ function StatusCell({ extension }: { extension: PresentedExtension }) {
 
 function LedgerRow({
   extension,
+  visible,
   isSelected,
   onSelect,
 }: {
   extension: PresentedExtension;
+  visible: ReadonlySet<string>;
   isSelected: boolean;
   onSelect: (key: string) => void;
 }) {
@@ -101,38 +116,48 @@ function LedgerRow({
       }}
       presentation={installed ? "extension-installed" : "extension-available"}
     >
-      <TableCell>
-        <Button
-          aria-expanded={isSelected}
-          aria-haspopup="dialog"
-          className="h-auto min-h-0 justify-start whitespace-normal"
-          onClick={(event) => {
-            event.stopPropagation();
-            onSelect(extension.key);
-          }}
-          presentation="extension"
-          size="xs"
-          type="button"
-          variant="ghost"
+      {visible.has("name") && (
+        <TableCell>
+          <Button
+            aria-expanded={isSelected}
+            aria-haspopup="dialog"
+            className="h-auto min-h-0 justify-start whitespace-normal"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(extension.key);
+            }}
+            presentation="extension"
+            size="xs"
+            type="button"
+            variant="ghost"
+          >
+            {extension.displayName}
+          </Button>
+        </TableCell>
+      )}
+      {visible.has("status") && (
+        <TableCell>
+          <StatusCell extension={extension} />
+        </TableCell>
+      )}
+      {visible.has("version") && (
+        <TableCell presentation="numeric-muted">
+          {extension.versionLabel}
+        </TableCell>
+      )}
+      {visible.has("category") && (
+        <TableCell presentation="muted-small">
+          {extension.category ?? EMPTY_VALUE}
+        </TableCell>
+      )}
+      {visible.has("description") && (
+        <TableCell
+          className="hidden max-w-md lg:table-cell"
+          presentation="description"
         >
-          {extension.displayName}
-        </Button>
-      </TableCell>
-      <TableCell>
-        <StatusCell extension={extension} />
-      </TableCell>
-      <TableCell presentation="numeric-muted">
-        {extension.versionLabel}
-      </TableCell>
-      <TableCell presentation="muted-small">
-        {extension.category ?? EMPTY_VALUE}
-      </TableCell>
-      <TableCell
-        className="hidden max-w-md lg:table-cell"
-        presentation="description"
-      >
-        {extension.description}
-      </TableCell>
+          {extension.description}
+        </TableCell>
+      )}
     </TableRow>
   );
 }
@@ -423,6 +448,11 @@ function ExtensionsLedger({
   extensions: PresentedExtension[];
   searchRoute: UrlTableSearchRoute;
 }) {
+  const columnSelection = useListColumnSelection(
+    "database-extensions",
+    EXTENSION_COLUMNS
+  );
+  const visible = new Set(columnSelection.visibleIds);
   const [search, setSearch] = useUrlTableSearch(searchRoute);
   const [status, setStatus] = useState<ExtensionStatusFilter>("All");
   const [category, setCategory] = useState("All");
@@ -440,6 +470,9 @@ function ExtensionsLedger({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <ListColumnSelector columns={EXTENSION_COLUMNS} {...columnSelection} />
+      </div>
       <LedgerToolbar
         category={category}
         categoryOptions={categoryOptions}
@@ -462,13 +495,15 @@ function ExtensionsLedger({
           <Table>
             <TableHeader>
               <TableRow presentation="inspector">
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="hidden lg:table-cell">
-                  Description
-                </TableHead>
+                {visible.has("name") && <TableHead>Name</TableHead>}
+                {visible.has("status") && <TableHead>Status</TableHead>}
+                {visible.has("version") && <TableHead>Version</TableHead>}
+                {visible.has("category") && <TableHead>Category</TableHead>}
+                {visible.has("description") && (
+                  <TableHead className="hidden lg:table-cell">
+                    Description
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -482,6 +517,7 @@ function ExtensionsLedger({
                       currentKey === key ? null : key
                     );
                   }}
+                  visible={visible}
                 />
               ))}
             </TableBody>

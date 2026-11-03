@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { FieldMaskSchema } from "@bufbuild/protobuf/wkt";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -204,6 +205,18 @@ describe("instance roles page", () => {
     expect(mocks.roleQueryInputs).not.toContainEqual({
       filter: 'role_name:"post"',
       parent: "instances/prod",
+      readMask: create(FieldMaskSchema, {
+        paths: [
+          "attributes.can_login",
+          "attributes.can_replicate",
+          "attributes.connection_limit",
+          "attributes.is_superuser",
+          "comment",
+          "is_system_role",
+          "name",
+          "role_name",
+        ],
+      }),
     });
     await act(async () => {
       rs.advanceTimersByTime(200);
@@ -211,6 +224,18 @@ describe("instance roles page", () => {
     expect(mocks.roleQueryInputs).toContainEqual({
       filter: 'role_name:"post"',
       parent: "instances/prod",
+      readMask: create(FieldMaskSchema, {
+        paths: [
+          "attributes.can_login",
+          "attributes.can_replicate",
+          "attributes.connection_limit",
+          "attributes.is_superuser",
+          "comment",
+          "is_system_role",
+          "name",
+          "role_name",
+        ],
+      }),
     });
   });
 

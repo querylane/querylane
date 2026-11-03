@@ -16,6 +16,7 @@ import (
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/service/catalogsync"
+	"github.com/querylane/querylane/backend/service/readmask"
 )
 
 // Ensure Service implements the SchemaServiceHandler interface at compile time.
@@ -42,6 +43,10 @@ func NewService(catalog schemaCatalog) *Service {
 
 // ListSchemas returns a paginated list of schemas within the specified database.
 func (s *Service) ListSchemas(ctx context.Context, req *connect.Request[v1alpha1.ListSchemasRequest]) (*connect.Response[v1alpha1.ListSchemasResponse], error) {
+	projection, maskErr := readmask.New(req.Msg.GetReadMask(), &v1alpha1.Schema{})
+	if maskErr != nil {
+		return nil, maskErr
+	}
 	// Parse the parent database name
 	databaseResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseDatabaseName)
 	if connErr != nil {
@@ -66,6 +71,10 @@ func (s *Service) ListSchemas(ctx context.Context, req *connect.Request[v1alpha1
 
 	// Convert to protobuf format
 	pbSchemas := s.convertSchemas(schemas, databaseResource)
+
+	for _, resource := range pbSchemas {
+		projection.Apply(resource)
+	}
 
 	res := &v1alpha1.ListSchemasResponse{
 		Schemas:       pbSchemas,

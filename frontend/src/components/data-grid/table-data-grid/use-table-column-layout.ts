@@ -5,6 +5,7 @@ import {
   resolveTableColumnLayout,
   useTableColumnLayoutSettingsStore,
 } from "@/features/user-settings/table-column-layout-settings";
+import { resolveListColumns, useListColumns } from "@/lib/list-columns";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 /** What the result grid needs from a column layout, persisted or not. */
@@ -30,10 +31,13 @@ interface UseTableColumnLayoutOptions {
 }
 
 function useSelectedTableColumns(tableName: string): string[] {
+  const { selection } = useListColumns(`table-data:${tableName}`);
   const savedLayout = useTableColumnLayoutSettingsStore(
     (state) => state.layouts[tableName]
   );
-  return resolveSelectedColumns(savedLayout);
+  return selection !== undefined && savedLayout?.fetchVisibleColumns === true
+    ? selection
+    : resolveSelectedColumns(savedLayout);
 }
 
 function useTableColumnLayout({
@@ -42,6 +46,7 @@ function useTableColumnLayout({
   hasColumnMetadata,
   tableName,
 }: UseTableColumnLayoutOptions): TableColumnLayoutController {
+  const { selection, setSelection } = useListColumns(`table-data:${tableName}`);
   const savedLayout = useTableColumnLayoutSettingsStore(
     (state) => state.layouts[tableName]
   );
@@ -57,7 +62,21 @@ function useTableColumnLayout({
   const availableColumnNames = availableColumns.map(
     (column) => column.columnName
   );
-  const layout = resolveTableColumnLayout(availableColumnNames, savedLayout);
+  const selected = new Set(resolveListColumns(selection, availableColumnNames));
+  const effectiveLayout =
+    selection === undefined
+      ? savedLayout
+      : {
+          ...savedLayout,
+          order: savedLayout?.order ?? availableColumnNames,
+          hiddenColumns: availableColumnNames.filter(
+            (name) => !selected.has(name)
+          ),
+        };
+  const layout = resolveTableColumnLayout(
+    availableColumnNames,
+    effectiveLayout
+  );
   const hiddenColumnKeys = new Set(layout.hiddenColumns);
   const columnByName = new Map(
     columns.map((column) => [column.columnName, column])
@@ -96,6 +115,14 @@ function useTableColumnLayout({
     } else {
       nextHiddenColumns.add(columnKey);
     }
+    const nextVisibleColumns = layout.order.filter(
+      (columnName) => !nextHiddenColumns.has(columnName)
+    );
+    setSelection(
+      nextVisibleColumns.length === layout.order.length
+        ? undefined
+        : nextVisibleColumns
+    );
     setLayout(tableName, {
       ...nextProjectionSetting(),
       hiddenColumns: layout.order.filter((columnName) =>
@@ -144,6 +171,7 @@ function useTableColumnLayout({
     isCustomized: Boolean(layout.fetchVisibleColumns) || hasColumnCustomization,
     reorderColumns,
     reset: () => {
+      setSelection(undefined);
       resetLayout(tableName);
     },
     setColumnOrder,

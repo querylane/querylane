@@ -40,6 +40,8 @@ import {
   isInstanceRolesTab,
   isInstanceRolesType,
 } from "@/lib/instance-roles-search";
+import { useListColumns } from "@/lib/list-columns";
+import { listReadMask } from "@/lib/list-read-mask";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import {
   deriveRoleKind,
@@ -171,7 +173,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
     header: ({ column }) => (
       <SortableHeader column={column}>Role</SortableHeader>
     ),
-    meta: { headerClassName: "pl-3" },
+    meta: { headerClassName: "pl-3", label: "Role" },
   },
   {
     cell: ({ row }) => <LoginCell role={row.original} />,
@@ -190,6 +192,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
       <SortableHeader column={column}>Conn limit</SortableHeader>
     ),
     id: "connLimit",
+    meta: { label: "Conn limit" },
     sortFn: "basic",
   },
 ];
@@ -351,6 +354,17 @@ function selectRoleMapData({
   };
 }
 
+function roleSummaryQueryInput(
+  instanceId: string,
+  tab: InstanceRolesTab,
+  readMask: ReturnType<typeof listReadMask>
+) {
+  return {
+    ...rolesForInstanceQueryInput(instanceId),
+    ...(tab === "details" ? { readMask } : {}),
+  };
+}
+
 export function InstanceRolesPage({
   instanceId,
   searchRoute,
@@ -372,8 +386,26 @@ export function InstanceRolesPage({
     useState<InstanceRolesTab>("details");
   const activeTab = tab ?? optimisticTab;
 
+  const { selection: selectedColumns } = useListColumns("instance-roles");
+  const readMask = listReadMask(
+    selectedColumns,
+    {
+      roleName: ["comment"],
+      login: [],
+      connLimit: [],
+    },
+    [
+      "name",
+      "role_name",
+      "is_system_role",
+      "attributes.can_login",
+      "attributes.is_superuser",
+      "attributes.can_replicate",
+      "attributes.connection_limit",
+    ]
+  );
   const rolesQuery = useListAllRolesQuery(
-    rolesForInstanceQueryInput(instanceId)
+    roleSummaryQueryInput(instanceId, activeTab, readMask)
   );
   const roles = rolesQuery.data?.roles ?? [];
 
@@ -382,6 +414,7 @@ export function InstanceRolesPage({
   const filteredRolesQuery = useListAllRolesQuery(
     {
       ...rolesForInstanceQueryInput(instanceId),
+      readMask,
       ...(isNonEmptyString(serverFilter) ? { filter: serverFilter } : {}),
     },
     { enabled: activeTab === "details" }

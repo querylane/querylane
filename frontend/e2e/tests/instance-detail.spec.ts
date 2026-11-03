@@ -21,6 +21,7 @@ import {
 } from "./helpers";
 import { readRpcRequestBody } from "./read-rpc-request-body";
 
+const COLUMNS_URL_RE = /columns=/u;
 const NEW_INSTANCE_URL_RE = /\/new-instance$/u;
 const REPLICATOR_ROLE_RE = /replicator/u;
 const AUDITOR_ROLE_RE = /auditor/u;
@@ -660,4 +661,53 @@ test("instance configuration: cancel delete keeps instance page open", {
   await expect(
     page.getByRole("heading", { name: "Production Postgres" })
   ).toBeVisible();
+});
+
+test("list columns: bookmark, reload and reset preserve the roles view", async ({
+  page,
+}) => {
+  await mockReadyAppWithDeletableInstance(page);
+  await mockRoles(page);
+  const requests: Record<string, unknown>[] = [];
+  page.on("request", (request) => {
+    if (request.url().endsWith("/ListRoles") && request.method() === "POST") {
+      requests.push(readRpcRequestBody(request.postDataJSON()));
+    }
+  });
+  await page.goto("/instances/production/roles");
+  const table = page.getByRole("table");
+  await expect(table.getByRole("columnheader", { name: "Role" })).toBeVisible();
+  await page.getByRole("button", { name: "Columns", exact: true }).click();
+  await page
+    .getByRole("menuitemcheckbox", { name: "Role", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
+  await expect(table.getByRole("columnheader", { name: "Role" })).toHaveCount(
+    0
+  );
+  await expect(page).toHaveURL(COLUMNS_URL_RE);
+  await expect
+    .poll(() =>
+      requests.some(
+        (request) =>
+          typeof request["readMask"] === "string" &&
+          !request["readMask"].includes("comment")
+      )
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: "/tmp/querylane-list-columns-selected.png",
+    fullPage: true,
+  });
+  await page.reload();
+  await expect(
+    table.getByRole("columnheader", { name: "Login" })
+  ).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Role" })).toHaveCount(
+    0
+  );
+  await page.getByRole("button", { name: "Columns", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Reset columns" }).click();
+  await expect(table.getByRole("columnheader", { name: "Role" })).toBeVisible();
+  await expect(page).not.toHaveURL(COLUMNS_URL_RE);
 });
