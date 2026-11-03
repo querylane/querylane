@@ -695,10 +695,6 @@ test("list columns: bookmark, reload and reset preserve the roles view", async (
       )
     )
     .toBe(true);
-  await page.screenshot({
-    path: "/tmp/querylane-list-columns-selected.png",
-    fullPage: true,
-  });
   await page.reload();
   await expect(
     table.getByRole("columnheader", { name: "Login" })
