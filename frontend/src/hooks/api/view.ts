@@ -163,6 +163,7 @@ function viewsForSchemaQueryInput({
   schemaId: string;
 }) {
   return {
+    view: ViewView.BASIC,
     ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "name asc",
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,

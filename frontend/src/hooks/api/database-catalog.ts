@@ -2,6 +2,10 @@ import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { useQuery } from "@tanstack/react-query";
 import {
+  SCHEMA_LIST_READ_MASK,
+  TABLE_LIST_READ_MASK,
+} from "@/hooks/api/catalog-list-projection";
+import {
   buildDatabaseName,
   buildSchemaName,
   normalizeEstimatedRowCount,
@@ -22,6 +26,7 @@ import {
   type View,
   View_ViewType,
   ViewService,
+  ViewView,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
 // The catalog APIs expose no database-level aggregates. Keep overview work
@@ -130,6 +135,7 @@ function viewToObject(view: View, schemaId: string): CatalogObject {
 function fetchSchemasPage(transport: Transport, parent: string) {
   const client = createClient(SchemaService, transport);
   return client.listSchemas({
+    readMask: SCHEMA_LIST_READ_MASK,
     orderBy: "name asc",
     pageSize: CATALOG_SCHEMA_LIMIT,
     parent,
@@ -143,6 +149,7 @@ function fetchTablesPage(
 ) {
   const client = createClient(TableService, transport);
   return client.listTables({
+    readMask: TABLE_LIST_READ_MASK,
     orderBy: "name asc",
     pageSize,
     parent,
@@ -156,6 +163,7 @@ function fetchViewsPage(
 ) {
   const client = createClient(ViewService, transport);
   return client.listViews({
+    view: ViewView.BASIC,
     orderBy: "name asc",
     pageSize,
     parent,
@@ -358,8 +366,8 @@ async function fetchDatabaseCatalogSearch(
       parent,
     } as const;
     const [tables, views] = await Promise.all([
-      tableClient.listTables(request),
-      viewClient.listViews(request),
+      tableClient.listTables({ ...request, readMask: TABLE_LIST_READ_MASK }),
+      viewClient.listViews({ ...request, view: ViewView.BASIC }),
     ]);
     objects.push(
       ...tables.tables.map((table) => tableToObject(table, schemaId)),

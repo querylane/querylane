@@ -123,6 +123,24 @@ describe("useDatabaseCatalogQuery", () => {
     expect(schemaRequests).toHaveLength(1);
     expect(tableRequests).toHaveLength(1);
     expect(viewRequests).toHaveLength(1);
+    expect(schemaRequests[0]?.readMask?.paths).toEqual([
+      "display_name",
+      "is_system_schema",
+      "last_ddl_time",
+      "name",
+      "owner",
+    ]);
+    expect(tableRequests[0]?.readMask?.paths).toEqual([
+      "comment",
+      "display_name",
+      "is_system_table",
+      "last_ddl_time",
+      "name",
+      "owner",
+      "row_count",
+      "size_bytes",
+      "table_type",
+    ]);
     expect(schemaRequests[0]?.pageSize).toBeGreaterThan(0);
     expect(tableRequests[0]?.pageSize).toBeGreaterThan(0);
     expect(viewRequests[0]?.pageSize).toBeGreaterThan(0);

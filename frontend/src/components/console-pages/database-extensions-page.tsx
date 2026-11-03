@@ -151,10 +151,7 @@ function LedgerRow({
         </TableCell>
       )}
       {visible.has("description") && (
-        <TableCell
-          className="hidden max-w-md lg:table-cell"
-          presentation="description"
-        >
+        <TableCell className="max-w-md" presentation="description">
           {extension.description}
         </TableCell>
       )}
@@ -500,9 +497,7 @@ function ExtensionsLedger({
                 {visible.has("version") && <TableHead>Version</TableHead>}
                 {visible.has("category") && <TableHead>Category</TableHead>}
                 {visible.has("description") && (
-                  <TableHead className="hidden lg:table-cell">
-                    Description
-                  </TableHead>
+                  <TableHead>Description</TableHead>
                 )}
               </TableRow>
             </TableHeader>

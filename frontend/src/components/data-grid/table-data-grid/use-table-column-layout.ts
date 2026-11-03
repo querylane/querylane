@@ -187,9 +187,9 @@ function ignoreLayoutChange() {
 }
 
 /**
- * The layout of a grid that offers no column controls (query results): the
- * columns exactly as returned, in order, none hidden. The setters are never
- * reachable from the UI there.
+ * Read-only baseline for grids without a managed layout: original order,
+ * no hidden columns. SQL results override presentation visibility while
+ * retaining the complete backing result. These setters are not UI actions.
  */
 function staticColumnLayout(
   columns: readonly TableResultColumn[]
