@@ -22,9 +22,17 @@ function ListColumnSelector({
   const visible = new Set(visibleIds);
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label="Columns"
+            title="Columns"
+            variant="outline"
+            size="icon-sm"
+          />
+        }
+      >
         <Columns3 aria-hidden="true" className="size-3.5" />
-        Columns
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         {columns.map((column) => (

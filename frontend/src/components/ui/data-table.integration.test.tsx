@@ -14,7 +14,9 @@ const columns: DataTableColumnDef<Row>[] = [
 test("column selection hides headers and cells without removing rows", async () => {
   const user = userEvent.setup();
   render(<DataTable columns={columns} data={[{ name: "analytics", owner: "postgres" }]} tableKey="databases" />);
-  await user.click(screen.getByRole("button", { name: "Columns" }));
+  const columnControl = screen.getByRole("button", { name: "Columns" });
+  expect(columnControl.textContent).toBe("");
+  await user.click(columnControl);
   await user.click(screen.getByRole("menuitemcheckbox", { name: "Owner" }));
   expect(screen.queryByRole("columnheader", { name: "Owner" })).toBeNull();
   expect(within(screen.getByRole("table")).queryByText("postgres")).toBeNull();

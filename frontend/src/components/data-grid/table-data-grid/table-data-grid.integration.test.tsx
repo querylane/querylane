@@ -1411,7 +1411,9 @@ describe("table data grid column layout", () => {
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
     );
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    const columnControl = screen.getByRole("button", { name: "Columns" });
+    expect(columnControl.textContent).toBe("");
+    await user.click(columnControl);
 
     const projection = screen.getByRole("switch", {
       name: "Fetch visible columns only",
