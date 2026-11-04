@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "budget:check": "bun run scripts/check-bundle-budget.ts",
+    "budget:governance": "bun run scripts/check-budget-governance.ts",
     "build": "rsbuild build && bun run budget:check",
     "build:profile": "rm -rf dist && RSDOCTOR=1 rsbuild build",
     "changeset": "changeset",

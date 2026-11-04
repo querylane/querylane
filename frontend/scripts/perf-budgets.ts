@@ -2,12 +2,12 @@
 
 import process from "node:process";
 import { isNonEmptyString } from "../src/lib/value-guards";
+import budgetPolicy from "./bundle-budget-policy.json" with { type: "json" };
 
 const BYTES_PER_KIB = 1024;
 const BUILD_REAL_TIME_BUDGET_MS = 5500;
 // Latest grid dependencies: measured 161.4 KiB for the deferred overview click.
 // This is not the initial-load budget; keep the approved refresh tightly bounded.
-const DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB = 164;
 const DATA_EXPLORER_DIRECT_READY_BUDGET_MS = 1200;
 const DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS = 1000;
 const FAILURE_EXIT_CODE = 1;
@@ -23,7 +23,7 @@ type PerformanceMetricUnit = "bytes" | "ms";
 const FRONTEND_PERF_BUDGETS: Readonly<Record<PerformanceMetricName, number>> = {
   "build-real-ms": BUILD_REAL_TIME_BUDGET_MS,
   "data-explorer-cold-payload-gzip-bytes":
-    DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB * BYTES_PER_KIB,
+    budgetPolicy.caps.maxExplorerColdPayloadGzipBytes,
   "data-explorer-direct-ready-ms": DATA_EXPLORER_DIRECT_READY_BUDGET_MS,
   "data-explorer-overview-click-ms": DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS,
 };

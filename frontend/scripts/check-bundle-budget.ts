@@ -4,6 +4,7 @@ import process from "node:process";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { z } from "zod";
 import { isNonEmptyString } from "../src/lib/value-guards";
+import budgetPolicy from "./bundle-budget-policy.json" with { type: "json" };
 
 const BYTES_PER_KIB = 1024;
 const SCRIPT_DIR = import.meta.dirname;
@@ -16,9 +17,7 @@ const LEADING_SLASH_PATTERN = /^\//u;
 // dependency from a barrel or adapter import. D3 used by React Flow is separate.
 const UNUSED_CHART_CAPABILITY_PATTERN =
   /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/u;
-const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
-const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
-const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
+// Numeric caps live in bundle-budget-policy.json. Historical rationale follows.
 // CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
@@ -26,14 +25,10 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // Measured with Bun 1.4.3: 201.3 KiB. Initial/largest-chunk caps are unchanged.
 // 205 (was 203): latest sql-formatter and panel releases add deferred code.
 // Paired Bun 1.4.4 builds: SQL editor 199.3 -> 203.5 KiB gzip.
-const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
 // TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
 // with the instance health section redesign.
-const MAX_DEFERRED_CHARTS_GZIP_KIB = 145;
-const MAX_INITIAL_GZIP_KIB = 450;
-const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 975 (was 970): the data explorer's grid interaction layer became a shared
 // ResultDataGrid chunk used by the SQL workbench too (~3 KiB of optional
 // capability props and chunk overhead; the logic itself did not grow).
@@ -59,7 +54,6 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 1043 (was 1027): approved latest-dependency refresh, primarily the grid.
 // Paired Bun 1.4.4 builds: core 1025.9 -> 1040.7 KiB gzip (+1.4%).
 // Initial-load and largest-async caps stay unchanged.
-const MAX_TOTAL_GZIP_KIB = 1043;
 
 interface BundleBudgetAsset {
   brotli: number;
@@ -111,19 +105,7 @@ interface CollectBundleBudgetStatsInput {
   indexHtmlPath?: string | undefined;
 }
 
-const budgets = {
-  maxAsyncScriptGzipBytes: MAX_ASYNC_SCRIPT_GZIP_KIB * BYTES_PER_KIB,
-  maxDeferredChartsGzipBytes: MAX_DEFERRED_CHARTS_GZIP_KIB * BYTES_PER_KIB,
-  maxDeferredSqlEditorGzipBytes:
-    MAX_DEFERRED_SQL_EDITOR_GZIP_KIB * BYTES_PER_KIB,
-  maxDeferredSqlHighlighterGzipBytes:
-    MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB * BYTES_PER_KIB,
-  maxDeferredVisualizationGzipBytes:
-    MAX_DEFERRED_VISUALIZATION_GZIP_KIB * BYTES_PER_KIB,
-  maxInitialGzipBytes: MAX_INITIAL_GZIP_KIB * BYTES_PER_KIB,
-  maxInitialScriptGzipBytes: MAX_INITIAL_SCRIPT_GZIP_KIB * BYTES_PER_KIB,
-  maxTotalGzipBytes: MAX_TOTAL_GZIP_KIB * BYTES_PER_KIB,
-};
+const budgets = budgetPolicy.caps;
 
 const kib = (bytes: number) => bytes / BYTES_PER_KIB;
 const formatKiB = (bytes: number) => `${kib(bytes).toFixed(1)} KiB`;

@@ -11,5 +11,9 @@
     "allowJs": false,
     "checkJs": false
   },
-  "include": ["scripts/perf-budgets.ts", "src/lib/value-guards.ts"]
+  "include": [
+    "scripts/perf-budgets.ts",
+    "src/lib/value-guards.ts",
+    "scripts/bundle-budget-policy.json"
+  ]
 }

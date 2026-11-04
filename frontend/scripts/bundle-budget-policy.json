@@ -1,0 +1,14 @@
+{
+  "caps": {
+    "maxAsyncScriptGzipBytes": 133120,
+    "maxDeferredChartsGzipBytes": 148480,
+    "maxDeferredSqlEditorGzipBytes": 209920,
+    "maxDeferredSqlHighlighterGzipBytes": 92160,
+    "maxDeferredVisualizationGzipBytes": 93184,
+    "maxInitialGzipBytes": 460800,
+    "maxInitialScriptGzipBytes": 409600,
+    "maxTotalGzipBytes": 1068032,
+    "maxExplorerColdPayloadGzipBytes": 167936
+  },
+  "exceptions": []
+}

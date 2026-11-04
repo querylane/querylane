@@ -86,6 +86,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Verify production bundle cap changes against the PR base
+        env:
+          BUDGET_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bun run budget:governance "$BUDGET_BASE_SHA"
       - name: Run full frontend lint and policy checks
         env:
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
