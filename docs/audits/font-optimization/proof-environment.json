@@ -13,5 +13,7 @@
     "height": 800
   },
   "color_scheme": "light",
-  "locale": "en-US"
+  "locale": "en-US",
+  "candidate_revision": "505f6eaccc5cee2b5fdd3c30e3aa09bdd29d285a",
+  "scope": "Historical macOS proof before the Linux prep-table repair"
 }

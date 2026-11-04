@@ -1,37 +1,37 @@
 [
   {
     "id": "app-sans",
-    "shipping_core": 25692,
-    "shipping_total": 27744,
-    "limited_axes_core": 23864,
-    "limited_axes_total": 25692,
-    "minimal_core": 16996,
-    "minimal_total": 29520
+    "shipping_core": 25764,
+    "shipping_total": 27848,
+    "limited_axes_core": 23896,
+    "limited_axes_total": 25796,
+    "minimal_core": 17008,
+    "minimal_total": 29532
   },
   {
     "id": "app-mono",
-    "shipping_core": 20360,
-    "shipping_total": 22236,
-    "limited_axes_core": 18904,
-    "limited_axes_total": 20620,
-    "minimal_core": 12404,
-    "minimal_total": 23808
+    "shipping_core": 20428,
+    "shipping_total": 22376,
+    "limited_axes_core": 18844,
+    "limited_axes_total": 20584,
+    "minimal_core": 12460,
+    "minimal_total": 23904
   },
   {
     "id": "docs-sans-italic",
     "shipping_core": 27224,
-    "shipping_total": 29420,
+    "shipping_total": 29404,
     "limited_axes_core": 19360,
-    "limited_axes_total": 21028,
+    "limited_axes_total": 21020,
     "minimal_core": 18060,
     "minimal_total": 31272
   },
   {
     "id": "docs-sans-normal",
     "shipping_core": 25776,
-    "shipping_total": 27840,
+    "shipping_total": 27844,
     "limited_axes_core": 18540,
-    "limited_axes_total": 20156,
+    "limited_axes_total": 20132,
     "minimal_core": 16980,
     "minimal_total": 29404
   },

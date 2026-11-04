@@ -1,58 +1,58 @@
 [
   {
     "name": "ascii",
+    "text": "Querylane SELECT count(*) “quotes” — …",
     "fonts": [
       {
-        "bytes": 25692,
-        "url": "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-ascii"
+        "url": "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=ascii",
+        "bytes": 25764
       }
     ],
     "preloads": [
-      "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-ascii"
-    ],
-    "text": "Querylane SELECT count(*) “quotes” — …"
+      "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=ascii"
+    ]
   },
   {
     "name": "accented",
+    "text": "Querylane café naïve Ångström",
     "fonts": [
       {
-        "bytes": 25692,
-        "url": "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-accented"
+        "url": "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=accented",
+        "bytes": 25764
       }
     ],
     "preloads": [
-      "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-accented"
-    ],
-    "text": "Querylane café naïve Ångström"
+      "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=accented"
+    ]
   },
   {
     "name": "cjk",
+    "text": "Querylane 東京 中文 한국어",
     "fonts": [
       {
-        "bytes": 25692,
-        "url": "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-cjk"
+        "url": "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=cjk",
+        "bytes": 25764
       }
     ],
     "preloads": [
-      "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-cjk"
-    ],
-    "text": "Querylane 東京 中文 한국어"
+      "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=cjk"
+    ]
   },
   {
     "name": "extended",
+    "text": "Querylane ™ 2′",
     "fonts": [
       {
-        "bytes": 25692,
-        "url": "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-extended"
+        "url": "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=extended",
+        "bytes": 25764
       },
       {
-        "bytes": 2052,
-        "url": "http://127.0.0.1:4173/static/font/app-sans-extended.62eb380d8f.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-extended"
+        "url": "http://127.0.0.1:4173/static/font/app-sans-extended.3e49cadb29.woff2?ci-font-proof=extended",
+        "bytes": 2084
       }
     ],
     "preloads": [
-      "http://127.0.0.1:4173/static/font/app-sans-core.0d69be0fdc.woff2?font-proof=ed296f249d5746f0bd193a8777c7e530-extended"
-    ],
-    "text": "Querylane ™ 2′"
+      "http://127.0.0.1:4173/static/font/app-sans-core.548c997690.woff2?ci-font-proof=extended"
+    ]
   }
 ]

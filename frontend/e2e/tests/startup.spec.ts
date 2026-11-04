@@ -3,7 +3,7 @@ import { expect, test } from "./base";
 import { mockReadyEmptyApp } from "./helpers";
 
 const SCRIPT_CSP = "script-src 'self'; object-src 'none'; base-uri 'self'";
-const PRIMARY_FONT = /\/geist-latin-wght-normal\.[\w]+\.woff2$/u;
+const PRIMARY_FONT = /\/app-sans-core\.[\w]+\.woff2$/u;
 
 // Exercise the emitted HTML before any React bundle can execute. A latch,
 // rather than a timed delay, also lets the same page prove the React handoff.

@@ -49,7 +49,7 @@ def inspect(path):
     }
 
 
-def write_font(source, destination, points, family, bounds, keep_hinting=False):
+def write_font(source, destination, points, family, bounds, keep_hinting=True):
     font = TTFont(source, recalcTimestamp=False)
     # Bounds are deliberately configurable: partial instancing can round outlines.
     if bounds:
@@ -96,7 +96,7 @@ def write_font(source, destination, points, family, bounds, keep_hinting=False):
     return result
 
 
-def generate(full_axes=True, keep_hinting=False):
+def generate(full_axes=True, keep_hinting=True):
     if __version__ != '4.68.0':
         raise ValueError('Use the pinned scripts/fonts/requirements.txt toolchain.')
     for source in json.loads((ROOT / 'scripts/fonts/sources.json').read_text()):
@@ -170,6 +170,6 @@ def face(family, style, weight, url, points):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--limit-axes', action='store_true', help='EXPERIMENT: smaller fonts, changes pixels. Never commit without visual approval.')
-    parser.add_argument('--keep-hinting', action='store_true', help='Preserve hinting when a target rasterizer needs it.')
+    parser.add_argument('--drop-hinting', action='store_true', help='EXPERIMENT: drops rasterizer policy and changes Linux pixels. Never commit without visual approval.')
     args = parser.parse_args()
-    generate(not args.limit_axes, args.keep_hinting)
+    generate(not args.limit_axes, not args.drop_hinting)

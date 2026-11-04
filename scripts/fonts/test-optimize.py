@@ -40,6 +40,18 @@ class FontArtifactsTest(unittest.TestCase):
             self.assertNotIn(0x2010, points[0] | points[1])
 
 
+    def test_default_rasterizer_programs_are_unchanged(self):
+        manifest = json.loads((ROOT / 'frontend/src/fonts/manifest.json').read_text())
+        pairs = [(family['source'], output) for family in manifest['families'] for output in family['outputs']]
+        pairs += [(face['source'], face['output']) for face in manifest['supplemental']]
+        for original, output in pairs:
+            source = TTFont(ROOT / original['path'])
+            font = TTFont(ROOT / output['path'])
+            for tag in ('prep', 'gasp'):
+                if tag in source:
+                    self.assertIn(tag, font, output['path'])
+                    self.assertEqual(source[tag].compile(source), font[tag].compile(font))
+
     def test_default_outlines_and_metrics_are_unchanged(self):
         manifest = json.loads((ROOT / 'frontend/src/fonts/manifest.json').read_text())
         self.assertTrue(manifest['full_axes'])
