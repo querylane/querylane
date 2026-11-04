@@ -62,10 +62,10 @@ export function useListSchemasInfiniteQuery(
     string
   >({
     enabled: options?.enabled ?? true,
+    queryFn: ({ pageParam }) => fetchSchemasPage(transport, input, pageParam),
+    initialPageParam: "",
     getNextPageParam: (lastPage: ListSchemasResponse) =>
       lastPage.nextPageToken || undefined,
-    initialPageParam: "",
-    queryFn: ({ pageParam }) => fetchSchemasPage(transport, input, pageParam),
     queryKey: ["console", "schemas", "list-pages", input ?? null] as const,
     ...RESOURCE_QUERY_OPTIONS.schemaList,
   });

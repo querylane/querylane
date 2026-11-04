@@ -327,7 +327,7 @@ function CreateInstanceSslModeField({
         >
           <SslModeSelectValue value={formState.sslMode} />
         </SelectTrigger>
-        <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+        <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
           <SslModeSelectItems />
         </SelectContent>
       </Select>
@@ -377,7 +377,7 @@ function CreateInstanceSslNegotiationField({
         >
           <SslNegotiationSelectValue value={formState.sslNegotiation} />
         </SelectTrigger>
-        <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+        <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
           <SslNegotiationSelectItems />
         </SelectContent>
       </Select>

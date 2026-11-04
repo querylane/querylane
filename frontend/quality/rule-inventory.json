@@ -1,6 +1,6 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.4",
+    "@biomejs/biome": "2.6.5",
     "ultracite": "8.1.1",
     "oxlint": "1.91.0",
     "@shadcn/lint": "0.2.5",
@@ -1277,9 +1277,13 @@
     },
     {
       "rule": "nursery/noBaseToString",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-base-to-string/"
+      "decision": "delegated",
+      "reason": "Biome 2.6.5 misclassifies the narrowed clipboard text string as an object. Type-aware Oxlint owns stringification checks with the compiler graph.",
+      "docs": "https://biomejs.dev/linter/rules/no-base-to-string/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-base-to-string"
+      }
     },
     {
       "rule": "nursery/noBunModules",
@@ -4036,6 +4040,528 @@
       "decision": "error",
       "reason": "Make simple stopping conditions visible in loop headers; mid-loop checks and multiple exits remain valid.",
       "docs": "https://biomejs.dev/linter/rules/use-while-loop-condition/"
+    },
+    {
+      "rule": "nursery/noArrayForEach",
+      "decision": "delegated",
+      "reason": "The existing broader noForEach error already requires for...of loops, including array callbacks.",
+      "docs": "https://biomejs.dev/linter/rules/no-array-for-each/",
+      "owner": {
+        "tool": "biome",
+        "rule": "complexity/noForEach"
+      }
+    },
+    {
+      "rule": "nursery/noAwaitInPromiseMethods",
+      "decision": "error",
+      "reason": "Disallow using await inside the array passed to Promise.all(), Promise.allSettled(), Promise.any(), or Promise.race().",
+      "docs": "https://biomejs.dev/linter/rules/no-await-in-promise-methods/"
+    },
+    {
+      "rule": "nursery/noChainedComparison",
+      "decision": "error",
+      "reason": "Disallow chaining comparisons, as in a \\< b \\< c.",
+      "docs": "https://biomejs.dev/linter/rules/no-chained-comparison/"
+    },
+    {
+      "rule": "nursery/noDynamicDelete",
+      "decision": "delegated",
+      "reason": "Typed Oxlint owns computed property deletion with the TypeScript project graph.",
+      "docs": "https://biomejs.dev/linter/rules/no-dynamic-delete/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-dynamic-delete"
+      }
+    },
+    {
+      "rule": "nursery/noExcessiveNestedBlocks",
+      "decision": "error",
+      "reason": "Enforce a maximum depth that blocks can be nested.",
+      "docs": "https://biomejs.dev/linter/rules/no-excessive-nested-blocks/"
+    },
+    {
+      "rule": "nursery/noInvalidRemoveEventListener",
+      "decision": "error",
+      "reason": "Disallow passing a newly created function to removeEventListener().",
+      "docs": "https://biomejs.dev/linter/rules/no-invalid-remove-event-listener/"
+    },
+    {
+      "rule": "nursery/noLateEventControl",
+      "decision": "error",
+      "reason": "Disallow calling preventDefault(), stopPropagation(), or stopImmediatePropagation() after the browser has finished handling the event.",
+      "docs": "https://biomejs.dev/linter/rules/no-late-event-control/"
+    },
+    {
+      "rule": "nursery/noMapSpread",
+      "decision": "inapplicable",
+      "reason": "Immutable per-item object copies are intentional in React state and RPC transformations. Object.assign still copies each item and can invoke setters; it is not a general performance fix.",
+      "docs": "https://biomejs.dev/linter/rules/no-map-spread/"
+    },
+    {
+      "rule": "nursery/noMismatchedMapKey",
+      "decision": "error",
+      "reason": "Disallow checking a map for one key and then using a different key.",
+      "docs": "https://biomejs.dev/linter/rules/no-mismatched-map-key/"
+    },
+    {
+      "rule": "nursery/noMissingScssInterpolation",
+      "decision": "error",
+      "reason": "Disallow Sass variables and function calls in custom property values without #{} interpolation.",
+      "docs": "https://biomejs.dev/linter/rules/no-missing-scss-interpolation/"
+    },
+    {
+      "rule": "nursery/noMissingThrow",
+      "decision": "error",
+      "reason": "Disallow creating an error with new without throwing it.",
+      "docs": "https://biomejs.dev/linter/rules/no-missing-throw/"
+    },
+    {
+      "rule": "nursery/noObjectLiteralComparison",
+      "decision": "error",
+      "reason": "Disallow comparing a value with an empty object {} or an empty array \\[].",
+      "docs": "https://biomejs.dev/linter/rules/no-object-literal-comparison/"
+    },
+    {
+      "rule": "nursery/noPlaywrightUnsafeReferences",
+      "decision": "error",
+      "reason": "Disallow using variables from outside the function passed to page.evaluate() and page.addInitScript().",
+      "docs": "https://biomejs.dev/linter/rules/no-playwright-unsafe-references/"
+    },
+    {
+      "rule": "nursery/noPseudoElementInFunctionalPseudoClass",
+      "decision": "error",
+      "reason": "Disallow pseudo-elements inside :is(), :where(), :not() and :has().",
+      "docs": "https://biomejs.dev/linter/rules/no-pseudo-element-in-functional-pseudo-class/"
+    },
+    {
+      "rule": "nursery/noSinglePromiseInPromiseMethods",
+      "decision": "error",
+      "reason": "Disallow passing an array with a single element to Promise.all(), Promise.any(), or Promise.race().",
+      "docs": "https://biomejs.dev/linter/rules/no-single-promise-in-promise-methods/"
+    },
+    {
+      "rule": "nursery/noSvelteBindValueOnCheckableInputs",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Svelte; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-bind-value-on-checkable-inputs/"
+    },
+    {
+      "rule": "nursery/noSyncMethods",
+      "decision": "inapplicable",
+      "reason": "One-shot build, lint and test CLIs intentionally use synchronous filesystem and child-process operations for deterministic setup and failure propagation. Browser Node/Bun module restrictions remain errors.",
+      "docs": "https://biomejs.dev/linter/rules/no-sync-methods/"
+    },
+    {
+      "rule": "nursery/noTanstackQueryVoidQueryFn",
+      "decision": "error",
+      "reason": "Disallow TanStack Query functions that don't return any data.",
+      "docs": "https://biomejs.dev/linter/rules/no-tanstack-query-void-query-fn/"
+    },
+    {
+      "rule": "nursery/noUnnecessaryStringTrim",
+      "decision": "error",
+      "reason": "Disallow trim() before startsWith() or endsWith() when only one side of the string matters.",
+      "docs": "https://biomejs.dev/linter/rules/no-unnecessary-string-trim/"
+    },
+    {
+      "rule": "nursery/noUselessAwait",
+      "decision": "error",
+      "reason": "Disallow await on values that are never promises.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-await/"
+    },
+    {
+      "rule": "nursery/noUselessLengthCheck",
+      "decision": "error",
+      "reason": "Disallow checking the length of an array when the result doesn't depend on it.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-length-check/"
+    },
+    {
+      "rule": "nursery/noUselessTypeAssertion",
+      "decision": "delegated",
+      "reason": "Typed Oxlint owns unnecessary type assertions with the actual compiler graph.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-type-assertion/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-unnecessary-type-assertion"
+      }
+    },
+    {
+      "rule": "nursery/noVueChildContent",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-child-content/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedConfigKeyCodes",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-config-key-codes/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedDestroyedLifecycle",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-destroyed-lifecycle/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedEventsApi",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-events-api/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedFunctionalTemplate",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-functional-template/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedHtmlElementIs",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-html-element-is/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedInlineTemplate",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-inline-template/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedModelDefinition",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-model-definition/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedPropsDefaultThis",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-props-default-this/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedSlotAttribute",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-slot-attribute/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedSlotScope",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-slot-scope/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedVBindSync",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-v-bind-sync/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedVOnNativeModifier",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-v-on-native-modifier/"
+    },
+    {
+      "rule": "nursery/noVueExcessiveProps",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-excessive-props/"
+    },
+    {
+      "rule": "nursery/noVueLoneTemplate",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-lone-template/"
+    },
+    {
+      "rule": "nursery/noVueMixin",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-mixin/"
+    },
+    {
+      "rule": "nursery/noVueMultipleObjectsInClass",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-multiple-objects-in-class/"
+    },
+    {
+      "rule": "nursery/noVueRefObjectReactivityLoss",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-ref-object-reactivity-loss/"
+    },
+    {
+      "rule": "nursery/noVueRestrictedCallAfterAwait",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-restricted-call-after-await/"
+    },
+    {
+      "rule": "nursery/noVueRestrictedVOn",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-restricted-v-on/"
+    },
+    {
+      "rule": "nursery/noVueTemplateKey",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-template-key/"
+    },
+    {
+      "rule": "nursery/noVueTemplateShadow",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-template-shadow/"
+    },
+    {
+      "rule": "nursery/noVueTextareaMustache",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-textarea-mustache/"
+    },
+    {
+      "rule": "nursery/noVueThisInBeforeRouteEnter",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-this-in-before-route-enter/"
+    },
+    {
+      "rule": "nursery/noVueThisInTemplate",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-this-in-template/"
+    },
+    {
+      "rule": "nursery/noVueUndeclaredEmits",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-undeclared-emits/"
+    },
+    {
+      "rule": "nursery/noVueUndeclaredProperties",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-undeclared-properties/"
+    },
+    {
+      "rule": "nursery/noVueUndeclaredSlots",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-undeclared-slots/"
+    },
+    {
+      "rule": "nursery/noVueUselessTemplateAttributes",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-useless-template-attributes/"
+    },
+    {
+      "rule": "nursery/noVueUselessVBind",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-useless-v-bind/"
+    },
+    {
+      "rule": "nursery/noVueVForTemplateKeyOnChild",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-v-for-template-key-on-child/"
+    },
+    {
+      "rule": "nursery/useAccessorPairs",
+      "decision": "error",
+      "reason": "Require a getter for every setter in objects and classes.",
+      "docs": "https://biomejs.dev/linter/rules/use-accessor-pairs/"
+    },
+    {
+      "rule": "nursery/useObjectFromEntries",
+      "decision": "error",
+      "reason": "Enforce using Object.fromEntries() to build an object from a list of key-value pairs.",
+      "docs": "https://biomejs.dev/linter/rules/use-object-from-entries/"
+    },
+    {
+      "rule": "nursery/useSetSize",
+      "decision": "error",
+      "reason": "Prefer reading the size property of a Set over converting the Set to an array to read its length.",
+      "docs": "https://biomejs.dev/linter/rules/use-set-size/"
+    },
+    {
+      "rule": "nursery/useSvelteStoreInitialValue",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Svelte; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-svelte-store-initial-value/"
+    },
+    {
+      "rule": "nursery/useTailwindVariablesShorthand",
+      "decision": "error",
+      "reason": "Enforce the shorthand syntax for CSS variables in Tailwind CSS classes.",
+      "docs": "https://biomejs.dev/linter/rules/use-tailwind-variables-shorthand/"
+    },
+    {
+      "rule": "nursery/useTanstackQueryInfiniteQueryPropertyOrder",
+      "decision": "error",
+      "reason": "Enforce a consistent property order in the options of TanStack Query infinite query functions.",
+      "docs": "https://biomejs.dev/linter/rules/use-tanstack-query-infinite-query-property-order/"
+    },
+    {
+      "rule": "nursery/useTanstackQueryStableQueryClient",
+      "decision": "error",
+      "reason": "Require the TanStack Query QueryClient to be created once, not on every render.",
+      "docs": "https://biomejs.dev/linter/rules/use-tanstack-query-stable-query-client/"
+    },
+    {
+      "rule": "nursery/useVueBlockOrder",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-block-order/"
+    },
+    {
+      "rule": "nursery/useVueBooleanPropTypeFirst",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-boolean-prop-type-first/"
+    },
+    {
+      "rule": "nursery/useVueComputedPropertyReturn",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-computed-property-return/"
+    },
+    {
+      "rule": "nursery/useVueConsistentBooleanPropStyle",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-boolean-prop-style/"
+    },
+    {
+      "rule": "nursery/useVueConsistentDefineEmitsDeclaration",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-define-emits-declaration/"
+    },
+    {
+      "rule": "nursery/useVueConsistentPropNameCasing",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-prop-name-casing/"
+    },
+    {
+      "rule": "nursery/useVueConsistentVForDelimiter",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-v-for-delimiter/"
+    },
+    {
+      "rule": "nursery/useVueConsistentVSlotStyle",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-v-slot-style/"
+    },
+    {
+      "rule": "nursery/useVueDefaultExport",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-default-export/"
+    },
+    {
+      "rule": "nursery/useVueDefaultProp",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-default-prop/"
+    },
+    {
+      "rule": "nursery/useVueEmitValidator",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-emit-validator/"
+    },
+    {
+      "rule": "nursery/useVueEmitsValidatorReturn",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-emits-validator-return/"
+    },
+    {
+      "rule": "nursery/useVueMacroVariableName",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-macro-variable-name/"
+    },
+    {
+      "rule": "nursery/useVueOneComponentPerFile",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-one-component-per-file/"
+    },
+    {
+      "rule": "nursery/useVuePropTypeConstructor",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-prop-type-constructor/"
+    },
+    {
+      "rule": "nursery/useVueRenderReturn",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-render-return/"
+    },
+    {
+      "rule": "nursery/useVueSeparateStaticClass",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-separate-static-class/"
+    },
+    {
+      "rule": "nursery/useVueSingleEventPayload",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-single-event-payload/"
+    },
+    {
+      "rule": "nursery/useVueSlotNameCasing",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-slot-name-casing/"
+    },
+    {
+      "rule": "nursery/useVueSlotsAsFunctions",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-slots-as-functions/"
+    },
+    {
+      "rule": "nursery/useVueTypedObjectProps",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-typed-object-props/"
+    },
+    {
+      "rule": "nursery/useVueValidAttributeName",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-attribute-name/"
+    },
+    {
+      "rule": "nursery/useVueValidDefaultProp",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-default-prop/"
+    },
+    {
+      "rule": "nursery/useVueValidDefineOptions",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-define-options/"
+    },
+    {
+      "rule": "nursery/useVueValidNextTick",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-valid-next-tick/"
     }
   ],
   "oxlint": [

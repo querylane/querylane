@@ -71,10 +71,10 @@ export function useListTablesInfiniteQuery(
     string
   >({
     enabled: options?.enabled ?? true,
+    queryFn: ({ pageParam }) => fetchTablesPage(transport, input, pageParam),
+    initialPageParam: "",
     getNextPageParam: (lastPage: ListTablesResponse) =>
       lastPage.nextPageToken || undefined,
-    initialPageParam: "",
-    queryFn: ({ pageParam }) => fetchTablesPage(transport, input, pageParam),
     queryKey: ["console", "tables", "list-pages", input ?? null] as const,
     ...RESOURCE_QUERY_OPTIONS.tableMetadata,
   });
