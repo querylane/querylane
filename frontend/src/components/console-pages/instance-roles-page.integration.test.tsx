@@ -14,9 +14,15 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 import { actSynchronous } from "@/test/async-act";
 
+const MATCH_PATTERN_1 = /Role/u;
+const MATCH_PATTERN_2 = /0 roles/u;
+const MATCH_PATTERN_3 = /Page 1 of/u;
+
 const mocks = rs.hoisted(
   (): {
     accessMapPending: boolean;
+    rolesPending: boolean;
+    rolesError: Error | null;
     accessMapRoleNames: string[];
     budgetSkippedRequestCount: number;
     failedRequestCount: number;
@@ -35,6 +41,8 @@ const mocks = rs.hoisted(
     truncatedRequestCount: number;
   } => ({
     accessMapPending: false,
+    rolesPending: false,
+    rolesError: null,
     accessMapRoleNames: [] as string[],
     budgetSkippedRequestCount: 0,
     failedRequestCount: 0,
@@ -53,7 +61,10 @@ rs.mock("@tanstack/react-router", () => ({
 }));
 
 rs.mock("@/lib/url-search-state", () => ({
-  useUrlTableSearch: () => [mocks.tableSearch, rs.fn()] as const,
+  useUrlTableSearch: () =>
+    [mocks.tableSearch, rs.fn(), rs.fn(() => Promise.resolve(true))] as const,
+  useUrlTableSorting: () =>
+    [[{ id: "roleName", desc: false }], rs.fn()] as const,
 }));
 
 rs.mock("@/hooks/api/role", () => ({
@@ -63,49 +74,52 @@ rs.mock("@/hooks/api/role", () => ({
   useListAllRolesQuery: (input: { filter?: string; parent: string }) => {
     mocks.roleQueryInputs.push(input);
     return {
-      data: {
-        roles: [
-          create(RoleSchema, {
-            attributes: create(RoleAttributesSchema, { canLogin: true }),
-            memberOf: [
-              create(RoleMembershipSchema, {
-                role: "instances/prod/roles/app_group",
+      data: mocks.rolesPending
+        ? undefined
+        : {
+            roles: [
+              create(RoleSchema, {
+                attributes: create(RoleAttributesSchema, { canLogin: true }),
+                memberOf: [
+                  create(RoleMembershipSchema, {
+                    role: "instances/prod/roles/app_group",
+                    roleName: "app_group",
+                  }),
+                ],
+                name: "instances/prod/roles/app_user",
+                roleName: "app_user",
+              }),
+              create(RoleSchema, {
+                attributes: create(RoleAttributesSchema, { canLogin: false }),
+                name: "instances/prod/roles/app_group",
                 roleName: "app_group",
               }),
+              create(RoleSchema, {
+                attributes: create(RoleAttributesSchema, {
+                  canLogin: true,
+                  canReplicate: true,
+                }),
+                name: "instances/prod/roles/replicator",
+                roleName: "replicator",
+              }),
+              create(RoleSchema, {
+                attributes: create(RoleAttributesSchema, {
+                  canLogin: true,
+                  isSuperuser: true,
+                }),
+                name: "instances/prod/roles/postgres",
+                roleName: "postgres",
+              }),
+              create(RoleSchema, {
+                isSystemRole: true,
+                name: "instances/prod/roles/pg_read_all_data",
+                roleName: "pg_read_all_data",
+              }),
             ],
-            name: "instances/prod/roles/app_user",
-            roleName: "app_user",
-          }),
-          create(RoleSchema, {
-            attributes: create(RoleAttributesSchema, { canLogin: false }),
-            name: "instances/prod/roles/app_group",
-            roleName: "app_group",
-          }),
-          create(RoleSchema, {
-            attributes: create(RoleAttributesSchema, {
-              canLogin: true,
-              canReplicate: true,
-            }),
-            name: "instances/prod/roles/replicator",
-            roleName: "replicator",
-          }),
-          create(RoleSchema, {
-            attributes: create(RoleAttributesSchema, {
-              canLogin: true,
-              isSuperuser: true,
-            }),
-            name: "instances/prod/roles/postgres",
-            roleName: "postgres",
-          }),
-          create(RoleSchema, {
-            isSystemRole: true,
-            name: "instances/prod/roles/pg_read_all_data",
-            roleName: "pg_read_all_data",
-          }),
-        ],
-      },
-      error: null,
-      isPending: false,
+          },
+      error: mocks.rolesError,
+      isPending: mocks.rolesPending,
+      isFetching: mocks.rolesPending,
       refetch: rs.fn(() => Promise.resolve(undefined)),
     };
   },
@@ -170,6 +184,8 @@ rs.mock("@/hooks/api/role", () => ({
 afterEach(() => {
   rs.useRealTimers();
   mocks.accessMapPending = false;
+  mocks.rolesPending = false;
+  mocks.rolesError = null;
   mocks.accessMapRoleNames = [];
   mocks.budgetSkippedRequestCount = 0;
   mocks.failedRequestCount = 0;
@@ -272,9 +288,15 @@ describe("instance roles page", () => {
       throw new Error("Expected navigation call");
     }
     expect(
-      navigateCall.search({ q: "app", tab: "map", type: "login" })
+      navigateCall.search({
+        q: "app",
+        sort: "connLimit:desc",
+        tab: "map",
+        type: "login",
+      })
     ).toEqual({
       q: "app",
+      sort: "connLimit:desc",
       tab: undefined,
       type: "login",
     });
@@ -301,4 +323,46 @@ describe("instance roles page", () => {
     expect(canvas.textContent).toContain("pg_read_all_data");
     expect(mocks.accessMapRoleNames).toContain("pg_read_all_data");
   });
+});
+
+test("initial role loading keeps search, headers and reserved footer without false counts, then recovers", () => {
+  mocks.rolesPending = true;
+  const { rerender } = render(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+    />
+  );
+  const search = screen.getByRole("textbox", { name: "Search roles…" });
+  search.focus();
+  expect(document.activeElement).toBe(search);
+  expect(
+    screen.getByRole("columnheader", { name: MATCH_PATTERN_1 })
+  ).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toBe(
+    "Loading matching roles…"
+  );
+  expect(screen.queryByText(MATCH_PATTERN_2)).toBeNull();
+  expect(screen.queryByText(MATCH_PATTERN_3)).toBeNull();
+  mocks.rolesPending = false;
+  rerender(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+    />
+  );
+  expect(screen.getByText("app_user")).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Search roles…" })).toBe(search);
+  expect(search.isConnected).toBe(true);
+  expect(document.activeElement).toBe(search);
+  mocks.rolesError = new Error("roles unavailable");
+  rerender(
+    <InstanceRolesPage
+      instanceId="prod"
+      searchRoute="/instances/$instanceId/roles/"
+    />
+  );
+  expect(screen.getByRole("alert").textContent).toBe(
+    "Could not load matching roles."
+  );
 });

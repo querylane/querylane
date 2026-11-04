@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import { ColumnSelectionContext } from "@/lib/list-columns";
 import type { ListSort } from "@/lib/list-layout";
 import { handleNavigationError } from "@/lib/navigation-errors";
@@ -19,6 +19,8 @@ function withEntry<T>(
 }
 
 function UrlListColumnsProvider({ children }: { children: ReactNode }) {
+  const ownerId = useId();
+  const revisionRef = useRef(0);
   const { columns, columnOrder, listSort } = useSearch({ from: "__root__" });
   const pathname = useLocation({ select: (location) => location.pathname });
   const navigate = useNavigate({ from: "/" });
@@ -30,7 +32,11 @@ function UrlListColumnsProvider({ children }: { children: ReactNode }) {
       sorting?: ListSort[] | undefined;
     }
   ) {
+    revisionRef.current += 1;
+    const marker = `${ownerId}:${revisionRef.current}`;
     navigate({
+      hash: true,
+      state: (previous) => ({ ...previous, querylaneListColumns: marker }),
       to: pathname,
       replace: true,
       resetScroll: false,

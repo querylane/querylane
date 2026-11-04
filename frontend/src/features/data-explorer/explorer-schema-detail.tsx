@@ -10,17 +10,15 @@ import {
   catalogObjectKindValue,
   presentCatalogObjectKindOptions,
 } from "@/components/console-pages/database-overview-filters";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import { DataTableFilterToolbar } from "@/components/querylane-ui/data-table-filter-toolbar";
+import type {
+  DataTableFilterFacet,
+  FacetedFilterOption,
+} from "@/components/querylane-ui/data-table-filter-types";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";

@@ -27,6 +27,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/querylane-ui/card";
+import { DataTableFilterToolbar } from "@/components/querylane-ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/querylane-ui/data-table-filter-types";
 import { Progress } from "@/components/querylane-ui/progress";
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import {
@@ -40,10 +42,6 @@ import {
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { SelectValue } from "@/components/select-extensions";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   Select,
