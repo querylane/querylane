@@ -1,6 +1,7 @@
 import type { Transport } from "@connectrpc/connect";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext } from "@tanstack/react-router";
+import { listColumnsSearchSchema } from "@/lib/list-columns";
 import {
   RootComponent,
   RootErrorComponent,
@@ -13,6 +14,7 @@ interface AppRouterContext {
 }
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
+  validateSearch: listColumnsSearchSchema,
   component: RootComponent,
   errorComponent: RootErrorComponent,
   notFoundComponent: RootNotFoundComponent,

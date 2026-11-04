@@ -33,6 +33,7 @@ import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data
 import { useRefreshSettingsStore } from "@/features/user-settings/refresh-settings";
 import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
 import type { useReadRowsQuery } from "@/hooks/api/table-data";
+import { ColumnSelectionContext } from "@/lib/list-columns";
 import {
   type ReadRowsResponse,
   ReadRowsResponseSchema,
@@ -1410,7 +1411,9 @@ describe("table data grid column layout", () => {
     render(
       <TableDataGrid name="instances/prod/databases/app/schemas/public/tables/measurements" />
     );
-    await user.click(screen.getByRole("button", { name: "Columns" }));
+    const columnControl = screen.getByRole("button", { name: "Columns" });
+    expect(columnControl.textContent).toBe("");
+    await user.click(columnControl);
 
     const projection = screen.getByRole("switch", {
       name: "Fetch visible columns only",
@@ -1756,5 +1759,62 @@ describe("table data grid error recovery", () => {
       expect(request).toBeDefined();
       expect(request?.filter).toBeUndefined();
     });
+  });
+});
+
+describe("bookmarked table data columns", () => {
+  beforeEach(setupTableDataGridIntegrationTest);
+  afterEach(teardownTableDataGridIntegrationTest);
+  test("restoring all columns omits the default URL selection", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    const tableName =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    const setSelection = rs.fn();
+    render(
+      <ColumnSelectionContext
+        value={{
+          selections: { [`table-data:${tableName}`]: ["measurement"] },
+          setSelection,
+        }}
+      >
+        <TableDataGrid name={tableName} />
+      </ColumnSelectionContext>
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "observed_at" }));
+    expect(setSelection).toHaveBeenCalledWith(
+      `table-data:${tableName}`,
+      undefined
+    );
+  });
+  test("bookmarked columns override personal hidden columns", () => {
+    seedRowsQueryWithRawClipboardValues();
+    const tableName =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
+      order: ["measurement", "observed_at"],
+      hiddenColumns: ["measurement"],
+    });
+    render(
+      <ColumnSelectionContext
+        value={{
+          selections: { [`table-data:${tableName}`]: ["measurement"] },
+          setSelection: rs.fn(),
+        }}
+      >
+        <TableDataGrid name={tableName} />
+      </ColumnSelectionContext>
+    );
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.map((column) => column.key)
+    ).not.toContain("observed_at");
+    expect(
+      reactDataGrid.dataGrid.mock.calls
+        .at(-1)?.[0]
+        ?.columns?.map((column) => column.key)
+    ).toContain("measurement");
   });
 });

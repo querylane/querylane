@@ -15,6 +15,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -149,7 +150,11 @@ type ListSchemasRequest struct {
 	//   - "name asc"
 	//   - "last_ddl_time desc, name asc"
 	//   - "owner desc"
-	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// Optional. Resource fields to return, relative to each schema.
+	// Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+	// Does not change filtering, ordering, pagination, or catalog synchronization.
+	ReadMask      *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,6 +222,13 @@ func (x *ListSchemasRequest) GetOrderBy() string {
 		return x.OrderBy
 	}
 	return ""
+}
+
+func (x *ListSchemasRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.ReadMask
+	}
+	return nil
 }
 
 type ListSchemasResponse struct {
@@ -378,7 +390,7 @@ var File_querylane_console_v1alpha1_schema_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_schema_proto_rawDesc = "" +
 	"\n" +
-	"'querylane/console/v1alpha1/schema.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\x8d\x03\n" +
+	"'querylane/console/v1alpha1/schema.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\x8d\x03\n" +
 	"\x06Schema\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12\x19\n" +
@@ -387,7 +399,7 @@ const file_querylane_console_v1alpha1_schema_proto_rawDesc = "" +
 	"\rlast_ddl_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vlastDdlTime\x12@\n" +
 	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime:n\xeaAk\n" +
-	"\x1cconsole.querylane.dev/Schema\x12:instances/{instance}/databases/{database}/schemas/{schema}*\aschemas2\x06schema\"\xa9\x02\n" +
+	"\x1cconsole.querylane.dev/Schema\x12:instances/{instance}/databases/{database}/schemas/{schema}*\aschemas2\x06schema\"\xe7\x02\n" +
 	"\x12ListSchemasRequest\x12\x85\x01\n" +
 	"\x06parent\x18\x01 \x01(\tBm\xe0A\x02\xfaA \n" +
 	"\x1econsole.querylane.dev/Database\xbaHDrB2@^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$R\x06parent\x12*\n" +
@@ -395,7 +407,8 @@ const file_querylane_console_v1alpha1_schema_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
 	"\x06filter\x18\x04 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
-	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"\xd6\x01\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\x12<\n" +
+	"\tread_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\breadMask\"\xd6\x01\n" +
 	"\x13ListSchemasResponse\x12<\n" +
 	"\aschemas\x18\x01 \x03(\v2\".querylane.console.v1alpha1.SchemaR\aschemas\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12Y\n" +
@@ -430,23 +443,25 @@ var file_querylane_console_v1alpha1_schema_proto_goTypes = []any{
 	(*GetSchemaRequest)(nil),      // 3: querylane.console.v1alpha1.GetSchemaRequest
 	(*GetSchemaResponse)(nil),     // 4: querylane.console.v1alpha1.GetSchemaResponse
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
-	(*CatalogSyncMetadata)(nil),   // 6: querylane.console.v1alpha1.CatalogSyncMetadata
+	(*fieldmaskpb.FieldMask)(nil), // 6: google.protobuf.FieldMask
+	(*CatalogSyncMetadata)(nil),   // 7: querylane.console.v1alpha1.CatalogSyncMetadata
 }
 var file_querylane_console_v1alpha1_schema_proto_depIdxs = []int32{
 	5, // 0: querylane.console.v1alpha1.Schema.last_ddl_time:type_name -> google.protobuf.Timestamp
 	5, // 1: querylane.console.v1alpha1.Schema.create_time:type_name -> google.protobuf.Timestamp
-	0, // 2: querylane.console.v1alpha1.ListSchemasResponse.schemas:type_name -> querylane.console.v1alpha1.Schema
-	6, // 3: querylane.console.v1alpha1.ListSchemasResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
-	0, // 4: querylane.console.v1alpha1.GetSchemaResponse.schema:type_name -> querylane.console.v1alpha1.Schema
-	1, // 5: querylane.console.v1alpha1.SchemaService.ListSchemas:input_type -> querylane.console.v1alpha1.ListSchemasRequest
-	3, // 6: querylane.console.v1alpha1.SchemaService.GetSchema:input_type -> querylane.console.v1alpha1.GetSchemaRequest
-	2, // 7: querylane.console.v1alpha1.SchemaService.ListSchemas:output_type -> querylane.console.v1alpha1.ListSchemasResponse
-	4, // 8: querylane.console.v1alpha1.SchemaService.GetSchema:output_type -> querylane.console.v1alpha1.GetSchemaResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 2: querylane.console.v1alpha1.ListSchemasRequest.read_mask:type_name -> google.protobuf.FieldMask
+	0, // 3: querylane.console.v1alpha1.ListSchemasResponse.schemas:type_name -> querylane.console.v1alpha1.Schema
+	7, // 4: querylane.console.v1alpha1.ListSchemasResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
+	0, // 5: querylane.console.v1alpha1.GetSchemaResponse.schema:type_name -> querylane.console.v1alpha1.Schema
+	1, // 6: querylane.console.v1alpha1.SchemaService.ListSchemas:input_type -> querylane.console.v1alpha1.ListSchemasRequest
+	3, // 7: querylane.console.v1alpha1.SchemaService.GetSchema:input_type -> querylane.console.v1alpha1.GetSchemaRequest
+	2, // 8: querylane.console.v1alpha1.SchemaService.ListSchemas:output_type -> querylane.console.v1alpha1.ListSchemasResponse
+	4, // 9: querylane.console.v1alpha1.SchemaService.GetSchema:output_type -> querylane.console.v1alpha1.GetSchemaResponse
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_schema_proto_init() }

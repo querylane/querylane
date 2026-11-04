@@ -5,11 +5,13 @@ import {
   type Column,
   type ColumnDef,
   type ColumnFiltersState,
+  type ColumnVisibilityState,
   type PaginationState,
   type RowData,
   type SortingState,
   Subscribe,
   columnFilteringFeature,
+  columnVisibilityFeature,
   createFilteredRowModel,
   createPaginatedRowModel,
   createSortedRowModel,
@@ -23,14 +25,14 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronsUpDown,
-  Search,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { SearchEmptyState } from "@/components/search-empty-state";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
+import {
+  useListColumnSelection,
+  type ListColumnOption,
+} from "@/lib/list-columns";
 import { Input } from "@/components/ui/input";
 import { RefreshControl } from "@/components/ui/refresh-control";
 import {
@@ -51,10 +53,12 @@ import { cn } from "@/lib/utils";
 interface DataTableColumnMeta {
   cellClassName?: string;
   headerClassName?: string;
+  label?: string;
 }
 
 const dataTableFeatures = tableFeatures({
   columnFilteringFeature,
+  columnVisibilityFeature,
   columnMeta: metaHelper<DataTableColumnMeta>(),
   rowPaginationFeature,
   rowSortingFeature,
@@ -77,6 +81,7 @@ type DataTableColumnDef<TData extends RowData> = ColumnDef<
 >;
 
 interface DataTableState {
+  columnVisibility: ColumnVisibilityState;
   columnFilters: ColumnFiltersState;
   pagination: PaginationState;
   sorting: SortingState;
@@ -156,9 +161,7 @@ function SortableHeader<TData extends RowData>({
   return (
     <Subscribe
       selector={(sorting) => {
-        const sort = sorting.find(
-          (sortState) => sortState.id === column.id,
-        );
+        const sort = sorting.find((sortState) => sortState.id === column.id);
         return sort == null ? false : sort.desc ? "desc" : "asc";
       }}
       source={column.table.atoms.sorting}
@@ -176,7 +179,7 @@ function SortableHeader<TData extends RowData>({
             aria-label={`${label}, ${sortStateLabel}`}
             className={cn(
               "inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground",
-              className,
+              className
             )}
             onClick={() => column.toggleSorting()}
             title="Sort column"
@@ -209,6 +212,38 @@ function SortableHeader<TData extends RowData>({
   );
 }
 
+function listColumnDefinitions<TData extends RowData>(
+  columns: readonly DataTableColumnDef<TData>[]
+): ListColumnOption[] {
+  return columns.flatMap((column) => {
+    if ("columns" in column && column.columns) {
+      return listColumnDefinitions(column.columns);
+    }
+    const id =
+      column.id ??
+      ("accessorKey" in column
+        ? String(column.accessorKey).replaceAll(".", "_")
+        : typeof column.header === "string"
+          ? column.header
+          : undefined);
+    return id === undefined
+      ? []
+      : [
+          {
+            id,
+            required: column.enableHiding === false,
+            label:
+              column.meta?.label ??
+              (typeof column.header === "string"
+                ? column.header
+                : id
+                    .replace(/([a-z])([A-Z])/g, "$1 $2")
+                    .replaceAll("_", " ")
+                    .replace(/^./, (letter) => letter.toUpperCase())),
+          },
+        ];
+  });
+}
 
 function DataTable<TData extends RowData>({
   columns,
@@ -234,6 +269,15 @@ function DataTable<TData extends RowData>({
   const controlled = filterColumn != null && onFilterChange != null;
   const controlledFilterValue = controlled ? (filterValue ?? "") : undefined;
 
+  const definitions = listColumnDefinitions(columns);
+  const { visibleIds, setSelection } = useListColumnSelection(
+    tableKey,
+    definitions
+  );
+  const visible = new Set(visibleIds);
+  const columnVisibility = Object.fromEntries(
+    definitions.map((column) => [column.id, visible.has(column.id)])
+  );
   const table = useTable<DataTableFeatures, TData, DataTableState>(
     {
       features: dataTableFeatures,
@@ -241,6 +285,7 @@ function DataTable<TData extends RowData>({
       columns,
       data,
       enableSortingRemoval: true,
+      state: { columnVisibility },
       initialState: {
         pagination: { pageIndex: 0, pageSize },
         sorting: initialSorting ?? [],
@@ -251,9 +296,10 @@ function DataTable<TData extends RowData>({
     },
     (state) => ({
       columnFilters: state.columnFilters,
+      columnVisibility: state.columnVisibility,
       pagination: state.pagination,
       sorting: state.sorting,
-    }),
+    })
   );
   useEffect(
     function syncControlledFilterValue() {
@@ -277,6 +323,14 @@ function DataTable<TData extends RowData>({
     },
     [controlled, controlledFilterValue, filterColumn, table]
   );
+
+  const columnSelector = tableKey ? (
+    <ListColumnSelector
+      columns={definitions}
+      visibleIds={visibleIds}
+      setSelection={setSelection}
+    />
+  ) : null;
 
   const pageCount = Math.max(1, table.getPageCount());
   const totalRows = table.getFilteredRowModel().rows.length;
@@ -331,7 +385,7 @@ function DataTable<TData extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      {toolbarControls || refreshControl ? (
+      {toolbarControls || refreshControl || columnSelector ? (
         <div
           className={cn(
             "flex min-h-8 flex-wrap items-center gap-2",
@@ -339,7 +393,10 @@ function DataTable<TData extends RowData>({
           )}
         >
           {toolbarControls}
-          {refreshControl}
+          <div className="flex items-center gap-2">
+            {columnSelector}
+            {refreshControl}
+          </div>
         </div>
       ) : null}
 
@@ -355,13 +412,13 @@ function DataTable<TData extends RowData>({
                   <TableHead
                     className={cn(
                       "text-muted-foreground text-xs",
-                      header.column.columnDef.meta?.headerClassName,
+                      header.column.columnDef.meta?.headerClassName
                     )}
                     key={header.id}
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : <table.FlexRender header={header} />}
+                    {header.isPlaceholder ? null : (
+                      <table.FlexRender header={header} />
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -372,7 +429,7 @@ function DataTable<TData extends RowData>({
               <TableRow className="border-border">
                 <TableCell
                   className="p-0"
-                  colSpan={columns.length}
+                  colSpan={table.getVisibleLeafColumns().length}
                 >
                   <SearchEmptyState
                     className="min-h-24 py-8"
@@ -392,7 +449,7 @@ function DataTable<TData extends RowData>({
                     className={cn(
                       "border-border",
                       onRowClick &&
-                        "cursor-pointer group transition-colors hover:bg-muted/50",
+                        "cursor-pointer group transition-colors hover:bg-muted/50"
                     )}
                     key={row.id}
                     onClick={(event) => {
@@ -414,10 +471,10 @@ function DataTable<TData extends RowData>({
                     role={onRowClick ? "button" : undefined}
                     tabIndex={onRowClick ? 0 : undefined}
                   >
-                    {row.getAllCells().map((cell) => (
+                    {row.getVisibleCells().map((cell) => (
                       <TableCell
                         className={cn(
-                          cell.column.columnDef.meta?.cellClassName,
+                          cell.column.columnDef.meta?.cellClassName
                         )}
                         key={cell.id}
                       >

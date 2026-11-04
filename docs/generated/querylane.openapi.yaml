@@ -4489,6 +4489,13 @@ components:
                - "name asc"
                - "last_ddl_time desc, name asc"
                - "create_time desc"
+        readMask:
+          title: read_mask
+          description: |-
+            Optional. Resource fields to return, relative to each database.
+             Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+             Does not change filtering, ordering, pagination, or catalog synchronization.
+          type: string
       title: ListDatabasesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListDatabasesResponse:
@@ -4996,6 +5003,13 @@ components:
              Examples:
                - "name asc"
                - "name desc"
+        readMask:
+          title: read_mask
+          description: |-
+            Optional. Resource fields to return, relative to each role.
+             Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+             Does not change filtering, ordering, pagination, or catalog synchronization.
+          type: string
       title: ListRolesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListRolesResponse:
@@ -5103,6 +5117,13 @@ components:
                - "name asc"
                - "last_ddl_time desc, name asc"
                - "owner desc"
+        readMask:
+          title: read_mask
+          description: |-
+            Optional. Resource fields to return, relative to each schema.
+             Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+             Does not change filtering, ordering, pagination, or catalog synchronization.
+          type: string
       title: ListSchemasRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListSchemasResponse:
@@ -5290,6 +5311,13 @@ components:
              Examples:
                - "name asc"
                - "table_type desc, name asc"
+        readMask:
+          title: read_mask
+          description: |-
+            Optional. Resource fields to return, relative to each table.
+             Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+             Does not change filtering, ordering, pagination, or catalog synchronization.
+          type: string
       title: ListTablesRequest
       additionalProperties: false
     querylane.console.v1alpha1.ListTablesResponse:

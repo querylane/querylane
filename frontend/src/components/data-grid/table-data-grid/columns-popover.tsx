@@ -70,9 +70,14 @@ function ColumnsPopover({
     <Popover>
       <PopoverTrigger
         render={
-          <Button size="sm" type="button" variant="outline">
-            <Columns3 className="size-3.5" />
-            Columns
+          <Button
+            aria-label="Columns"
+            size={hiddenColumnKeys.size > 0 ? "sm" : "icon-sm"}
+            title="Columns"
+            type="button"
+            variant="outline"
+          >
+            <Columns3 aria-hidden="true" className="size-3.5" />
             {hiddenColumnKeys.size > 0 ? (
               <Badge
                 aria-hidden={true}

@@ -15,6 +15,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -1007,7 +1008,11 @@ type ListTablesRequest struct {
 	// Examples:
 	//   - "name asc"
 	//   - "table_type desc, name asc"
-	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// Optional. Resource fields to return, relative to each table.
+	// Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+	// Does not change filtering, ordering, pagination, or catalog synchronization.
+	ReadMask      *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1075,6 +1080,13 @@ func (x *ListTablesRequest) GetOrderBy() string {
 		return x.OrderBy
 	}
 	return ""
+}
+
+func (x *ListTablesRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.ReadMask
+	}
+	return nil
 }
 
 type ListTablesResponse struct {
@@ -2312,7 +2324,7 @@ var File_querylane_console_v1alpha1_table_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\n" +
-	"&querylane/console/v1alpha1/table.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\xb5\x05\n" +
+	"&querylane/console/v1alpha1/table.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\xb5\x05\n" +
 	"\x06Column\x12$\n" +
 	"\vcolumn_name\x18\x01 \x01(\tB\x03\xe0A\x03R\n" +
 	"columnName\x12.\n" +
@@ -2368,7 +2380,7 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x0fpartition_bound\x18\x03 \x01(\tB\x03\xe0A\x03R\x0epartitionBound\x12*\n" +
 	"\x0eestimated_rows\x18\x04 \x01(\x03B\x03\xe0A\x03R\restimatedRows\x12\"\n" +
 	"\n" +
-	"size_bytes\x18\x05 \x01(\x03B\x03\xe0A\x03R\tsizeBytes\"\xb4\x02\n" +
+	"size_bytes\x18\x05 \x01(\x03B\x03\xe0A\x03R\tsizeBytes\"\xf2\x02\n" +
 	"\x11ListTablesRequest\x12\x91\x01\n" +
 	"\x06parent\x18\x01 \x01(\tBy\xe0A\x02\xfaA\x1e\n" +
 	"\x1cconsole.querylane.dev/Schema\xbaHRrP2N^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+$R\x06parent\x12*\n" +
@@ -2376,7 +2388,8 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1b\n" +
 	"\x06filter\x18\x04 \x01(\tB\x03\xe0A\x01R\x06filter\x12\x1e\n" +
-	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\"\xd2\x01\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01R\aorderBy\x12<\n" +
+	"\tread_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\breadMask\"\xd2\x01\n" +
 	"\x12ListTablesResponse\x129\n" +
 	"\x06tables\x18\x01 \x03(\v2!.querylane.console.v1alpha1.TableR\x06tables\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12Y\n" +
@@ -2589,7 +2602,8 @@ var file_querylane_console_v1alpha1_table_proto_goTypes = []any{
 	(*TableTrigger)(nil),                      // 31: querylane.console.v1alpha1.TableTrigger
 	(*RowIdentity)(nil),                       // 32: querylane.console.v1alpha1.RowIdentity
 	(*timestamppb.Timestamp)(nil),             // 33: google.protobuf.Timestamp
-	(*CatalogSyncMetadata)(nil),               // 34: querylane.console.v1alpha1.CatalogSyncMetadata
+	(*fieldmaskpb.FieldMask)(nil),             // 34: google.protobuf.FieldMask
+	(*CatalogSyncMetadata)(nil),               // 35: querylane.console.v1alpha1.CatalogSyncMetadata
 }
 var file_querylane_console_v1alpha1_table_proto_depIdxs = []int32{
 	0,  // 0: querylane.console.v1alpha1.Column.data_type:type_name -> querylane.console.v1alpha1.DataType
@@ -2598,42 +2612,43 @@ var file_querylane_console_v1alpha1_table_proto_depIdxs = []int32{
 	33, // 3: querylane.console.v1alpha1.Table.create_time:type_name -> google.protobuf.Timestamp
 	33, // 4: querylane.console.v1alpha1.Table.last_ddl_time:type_name -> google.protobuf.Timestamp
 	11, // 5: querylane.console.v1alpha1.TablePartitionMetadata.child_partitions:type_name -> querylane.console.v1alpha1.TablePartition
-	9,  // 6: querylane.console.v1alpha1.ListTablesResponse.tables:type_name -> querylane.console.v1alpha1.Table
-	34, // 7: querylane.console.v1alpha1.ListTablesResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
-	9,  // 8: querylane.console.v1alpha1.GetTableResponse.table:type_name -> querylane.console.v1alpha1.Table
-	10, // 9: querylane.console.v1alpha1.GetTablePartitionMetadataResponse.partition_metadata:type_name -> querylane.console.v1alpha1.TablePartitionMetadata
-	8,  // 10: querylane.console.v1alpha1.ListTableColumnsResponse.columns:type_name -> querylane.console.v1alpha1.Column
-	28, // 11: querylane.console.v1alpha1.ListTableConstraintsResponse.constraints:type_name -> querylane.console.v1alpha1.TableConstraint
-	29, // 12: querylane.console.v1alpha1.ListTableIndexesResponse.indexes:type_name -> querylane.console.v1alpha1.TableIndex
-	30, // 13: querylane.console.v1alpha1.ListTablePoliciesResponse.policies:type_name -> querylane.console.v1alpha1.TablePolicy
-	31, // 14: querylane.console.v1alpha1.ListTableTriggersResponse.triggers:type_name -> querylane.console.v1alpha1.TableTrigger
-	2,  // 15: querylane.console.v1alpha1.TableConstraint.type:type_name -> querylane.console.v1alpha1.ConstraintType
-	3,  // 16: querylane.console.v1alpha1.TableConstraint.on_update:type_name -> querylane.console.v1alpha1.ReferentialAction
-	3,  // 17: querylane.console.v1alpha1.TableConstraint.on_delete:type_name -> querylane.console.v1alpha1.ReferentialAction
-	4,  // 18: querylane.console.v1alpha1.TablePolicy.mode:type_name -> querylane.console.v1alpha1.PolicyMode
-	5,  // 19: querylane.console.v1alpha1.TablePolicy.command:type_name -> querylane.console.v1alpha1.PolicyCommand
-	7,  // 20: querylane.console.v1alpha1.RowIdentity.source:type_name -> querylane.console.v1alpha1.RowIdentity.Source
-	12, // 21: querylane.console.v1alpha1.TableService.ListTables:input_type -> querylane.console.v1alpha1.ListTablesRequest
-	14, // 22: querylane.console.v1alpha1.TableService.GetTable:input_type -> querylane.console.v1alpha1.GetTableRequest
-	16, // 23: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:input_type -> querylane.console.v1alpha1.GetTablePartitionMetadataRequest
-	18, // 24: querylane.console.v1alpha1.TableService.ListTableColumns:input_type -> querylane.console.v1alpha1.ListTableColumnsRequest
-	20, // 25: querylane.console.v1alpha1.TableService.ListTableConstraints:input_type -> querylane.console.v1alpha1.ListTableConstraintsRequest
-	22, // 26: querylane.console.v1alpha1.TableService.ListTableIndexes:input_type -> querylane.console.v1alpha1.ListTableIndexesRequest
-	24, // 27: querylane.console.v1alpha1.TableService.ListTablePolicies:input_type -> querylane.console.v1alpha1.ListTablePoliciesRequest
-	26, // 28: querylane.console.v1alpha1.TableService.ListTableTriggers:input_type -> querylane.console.v1alpha1.ListTableTriggersRequest
-	13, // 29: querylane.console.v1alpha1.TableService.ListTables:output_type -> querylane.console.v1alpha1.ListTablesResponse
-	15, // 30: querylane.console.v1alpha1.TableService.GetTable:output_type -> querylane.console.v1alpha1.GetTableResponse
-	17, // 31: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:output_type -> querylane.console.v1alpha1.GetTablePartitionMetadataResponse
-	19, // 32: querylane.console.v1alpha1.TableService.ListTableColumns:output_type -> querylane.console.v1alpha1.ListTableColumnsResponse
-	21, // 33: querylane.console.v1alpha1.TableService.ListTableConstraints:output_type -> querylane.console.v1alpha1.ListTableConstraintsResponse
-	23, // 34: querylane.console.v1alpha1.TableService.ListTableIndexes:output_type -> querylane.console.v1alpha1.ListTableIndexesResponse
-	25, // 35: querylane.console.v1alpha1.TableService.ListTablePolicies:output_type -> querylane.console.v1alpha1.ListTablePoliciesResponse
-	27, // 36: querylane.console.v1alpha1.TableService.ListTableTriggers:output_type -> querylane.console.v1alpha1.ListTableTriggersResponse
-	29, // [29:37] is the sub-list for method output_type
-	21, // [21:29] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	34, // 6: querylane.console.v1alpha1.ListTablesRequest.read_mask:type_name -> google.protobuf.FieldMask
+	9,  // 7: querylane.console.v1alpha1.ListTablesResponse.tables:type_name -> querylane.console.v1alpha1.Table
+	35, // 8: querylane.console.v1alpha1.ListTablesResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
+	9,  // 9: querylane.console.v1alpha1.GetTableResponse.table:type_name -> querylane.console.v1alpha1.Table
+	10, // 10: querylane.console.v1alpha1.GetTablePartitionMetadataResponse.partition_metadata:type_name -> querylane.console.v1alpha1.TablePartitionMetadata
+	8,  // 11: querylane.console.v1alpha1.ListTableColumnsResponse.columns:type_name -> querylane.console.v1alpha1.Column
+	28, // 12: querylane.console.v1alpha1.ListTableConstraintsResponse.constraints:type_name -> querylane.console.v1alpha1.TableConstraint
+	29, // 13: querylane.console.v1alpha1.ListTableIndexesResponse.indexes:type_name -> querylane.console.v1alpha1.TableIndex
+	30, // 14: querylane.console.v1alpha1.ListTablePoliciesResponse.policies:type_name -> querylane.console.v1alpha1.TablePolicy
+	31, // 15: querylane.console.v1alpha1.ListTableTriggersResponse.triggers:type_name -> querylane.console.v1alpha1.TableTrigger
+	2,  // 16: querylane.console.v1alpha1.TableConstraint.type:type_name -> querylane.console.v1alpha1.ConstraintType
+	3,  // 17: querylane.console.v1alpha1.TableConstraint.on_update:type_name -> querylane.console.v1alpha1.ReferentialAction
+	3,  // 18: querylane.console.v1alpha1.TableConstraint.on_delete:type_name -> querylane.console.v1alpha1.ReferentialAction
+	4,  // 19: querylane.console.v1alpha1.TablePolicy.mode:type_name -> querylane.console.v1alpha1.PolicyMode
+	5,  // 20: querylane.console.v1alpha1.TablePolicy.command:type_name -> querylane.console.v1alpha1.PolicyCommand
+	7,  // 21: querylane.console.v1alpha1.RowIdentity.source:type_name -> querylane.console.v1alpha1.RowIdentity.Source
+	12, // 22: querylane.console.v1alpha1.TableService.ListTables:input_type -> querylane.console.v1alpha1.ListTablesRequest
+	14, // 23: querylane.console.v1alpha1.TableService.GetTable:input_type -> querylane.console.v1alpha1.GetTableRequest
+	16, // 24: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:input_type -> querylane.console.v1alpha1.GetTablePartitionMetadataRequest
+	18, // 25: querylane.console.v1alpha1.TableService.ListTableColumns:input_type -> querylane.console.v1alpha1.ListTableColumnsRequest
+	20, // 26: querylane.console.v1alpha1.TableService.ListTableConstraints:input_type -> querylane.console.v1alpha1.ListTableConstraintsRequest
+	22, // 27: querylane.console.v1alpha1.TableService.ListTableIndexes:input_type -> querylane.console.v1alpha1.ListTableIndexesRequest
+	24, // 28: querylane.console.v1alpha1.TableService.ListTablePolicies:input_type -> querylane.console.v1alpha1.ListTablePoliciesRequest
+	26, // 29: querylane.console.v1alpha1.TableService.ListTableTriggers:input_type -> querylane.console.v1alpha1.ListTableTriggersRequest
+	13, // 30: querylane.console.v1alpha1.TableService.ListTables:output_type -> querylane.console.v1alpha1.ListTablesResponse
+	15, // 31: querylane.console.v1alpha1.TableService.GetTable:output_type -> querylane.console.v1alpha1.GetTableResponse
+	17, // 32: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:output_type -> querylane.console.v1alpha1.GetTablePartitionMetadataResponse
+	19, // 33: querylane.console.v1alpha1.TableService.ListTableColumns:output_type -> querylane.console.v1alpha1.ListTableColumnsResponse
+	21, // 34: querylane.console.v1alpha1.TableService.ListTableConstraints:output_type -> querylane.console.v1alpha1.ListTableConstraintsResponse
+	23, // 35: querylane.console.v1alpha1.TableService.ListTableIndexes:output_type -> querylane.console.v1alpha1.ListTableIndexesResponse
+	25, // 36: querylane.console.v1alpha1.TableService.ListTablePolicies:output_type -> querylane.console.v1alpha1.ListTablePoliciesResponse
+	27, // 37: querylane.console.v1alpha1.TableService.ListTableTriggers:output_type -> querylane.console.v1alpha1.ListTableTriggersResponse
+	30, // [30:38] is the sub-list for method output_type
+	22, // [22:30] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_table_proto_init() }

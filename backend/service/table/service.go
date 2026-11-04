@@ -18,6 +18,7 @@ import (
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
 	"github.com/querylane/querylane/backend/service/catalogsync"
+	"github.com/querylane/querylane/backend/service/readmask"
 )
 
 // Ensure Service implements the TableServiceHandler interface at compile time.
@@ -60,6 +61,10 @@ func NewService(catalog tableCatalog, liveQueries liveQueryLimiter) *Service {
 
 // ListTables returns a paginated list of tables within the specified schema.
 func (s *Service) ListTables(ctx context.Context, req *connect.Request[v1alpha1.ListTablesRequest]) (*connect.Response[v1alpha1.ListTablesResponse], error) {
+	projection, maskErr := readmask.New(req.Msg.GetReadMask(), &v1alpha1.Table{})
+	if maskErr != nil {
+		return nil, maskErr
+	}
 	schemaResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseSchemaName)
 	if connErr != nil {
 		return nil, connErr
@@ -83,6 +88,10 @@ func (s *Service) ListTables(ctx context.Context, req *connect.Request[v1alpha1.
 
 	// Convert to protobuf format
 	pbTables := s.convertTables(tables, schemaResource)
+
+	for _, resource := range pbTables {
+		projection.Apply(resource)
+	}
 
 	res := &v1alpha1.ListTablesResponse{
 		Tables:        pbTables,

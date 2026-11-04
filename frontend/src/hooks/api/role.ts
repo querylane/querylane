@@ -8,6 +8,7 @@ import {
   queryOptions,
   useQuery as useTanstackQuery,
 } from "@tanstack/react-query";
+import { DATABASE_LIST_READ_MASK } from "@/hooks/api/catalog-list-projection";
 import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import {
   buildDatabaseName,
@@ -197,6 +198,7 @@ async function fetchRoleAccessMapResources(
   const databases = await paginateAll(
     (pageToken) =>
       databaseClient.listDatabases({
+        readMask: DATABASE_LIST_READ_MASK,
         orderBy: "name asc",
         pageSize: 1000,
         pageToken: pageToken ?? "",
@@ -541,6 +543,7 @@ export type {
   RoleAccessMapResourcesResult,
 };
 export {
+  listAllRolesQueryOptions,
   rolesForInstanceQueryInput,
   useListAllRolesQuery,
   useListRolesQuery,

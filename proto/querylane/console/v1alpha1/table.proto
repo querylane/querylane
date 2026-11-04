@@ -5,6 +5,7 @@ package querylane.console.v1alpha1;
 import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "querylane/console/v1alpha1/catalog_sync.proto";
 
@@ -312,6 +313,11 @@ message ListTablesRequest {
   //   - "name asc"
   //   - "table_type desc, name asc"
   string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Resource fields to return, relative to each table.
+  // Omitted, empty, or "*" returns all fields. Unknown paths are rejected.
+  // Does not change filtering, ordering, pagination, or catalog synchronization.
+  google.protobuf.FieldMask read_mask = 6 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message ListTablesResponse {

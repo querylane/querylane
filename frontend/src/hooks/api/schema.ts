@@ -5,6 +5,7 @@ import {
   useTransport,
 } from "@connectrpc/connect-query";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
+import { SCHEMA_LIST_READ_MASK } from "@/hooks/api/catalog-list-projection";
 import { buildDatabaseName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { isNonEmptyString } from "@/lib/value-guards";
@@ -80,6 +81,7 @@ export function schemasForDatabaseQueryInput({
   instanceId: string;
 }) {
   return {
+    readMask: SCHEMA_LIST_READ_MASK,
     ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy: "name asc",
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,

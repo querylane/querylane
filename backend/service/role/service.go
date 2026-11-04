@@ -14,6 +14,7 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	v1connect "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1/consolev1alpha1connect"
 	"github.com/querylane/querylane/backend/resource"
+	"github.com/querylane/querylane/backend/service/readmask"
 )
 
 var _ v1connect.RoleServiceHandler = (*Service)(nil)
@@ -34,6 +35,10 @@ func NewService(connManager instanceOpener) *Service {
 
 // ListRoles returns a paginated list of server-level roles within an instance.
 func (s *Service) ListRoles(ctx context.Context, req *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error) {
+	projection, maskErr := readmask.New(req.Msg.GetReadMask(), &v1alpha1.Role{})
+	if maskErr != nil {
+		return nil, maskErr
+	}
 	instanceResource, connErr := apierrors.ParseResourceWithError(req.Msg.GetParent(), "parent", resource.ParseInstanceName)
 	if connErr != nil {
 		return nil, connErr
@@ -63,8 +68,13 @@ func (s *Service) ListRoles(ctx context.Context, req *connect.Request[v1alpha1.L
 		})
 	}
 
+	pbRoles := convertRoles(roles, instanceResource.InstanceID)
+	for _, resource := range pbRoles {
+		projection.Apply(resource)
+	}
+
 	return connect.NewResponse(&v1alpha1.ListRolesResponse{
-		Roles:         convertRoles(roles, instanceResource.InstanceID),
+		Roles:         pbRoles,
 		NextPageToken: nextToken,
 	}), nil
 }

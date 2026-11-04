@@ -8,6 +8,7 @@ import {
 import type { SkipToken } from "@connectrpc/connect-query-core";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
+import { TABLE_LIST_READ_MASK } from "@/hooks/api/catalog-list-projection";
 import { buildSchemaName, buildTableName } from "@/lib/console-resources";
 import { RESOURCE_QUERY_OPTIONS } from "@/lib/query-policy";
 import { isNonEmptyString } from "@/lib/value-guards";
@@ -93,6 +94,7 @@ export function tablesForSchemaQueryInput({
   schemaId: string;
 }) {
   return {
+    readMask: TABLE_LIST_READ_MASK,
     ...(isNonEmptyString(filter) ? { filter } : {}),
     orderBy,
     pageSize: EXPLORER_CATALOG_PAGE_SIZE,

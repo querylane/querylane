@@ -16,6 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/querylane-ui/table";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
+import {
+  type ListColumnOption,
+  useListColumnSelection,
+} from "@/lib/list-columns";
 import { formatElapsedDuration } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
@@ -61,7 +66,11 @@ const MS_PER_SECOND = 1000;
 const MAX_APPLICATION_ROWS = 10;
 /** Sentinel the backend emits for backends that set no application_name. */
 const UNNAMED_APPLICATION = "(unnamed)";
-const LEDGER_COLUMNS = CONNECTION_STATES.length + 2;
+const LEDGER_COLUMNS = [
+  { id: "application", label: "Application", required: true },
+  ...CONNECTION_STATES.map((state) => ({ id: state.key, label: state.label })),
+  { id: "total", label: "Total" },
+] satisfies ListColumnOption[];
 
 function sharePercent(count: number, total: number): number {
   return total <= 0 ? 0 : Math.round((count / total) * PERCENT);
@@ -190,15 +199,17 @@ function ActivitySignals({ activity }: { activity: ConnectionActivityHealth }) {
 }
 
 /** Names the swatch-only column headers below. */
-function StateLegend() {
+function StateLegend({ visible }: { visible: ReadonlySet<string> }) {
   return (
     <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-      {CONNECTION_STATES.map((state) => (
-        <span className="flex items-center gap-1.5" key={state.key}>
-          <Swatch className={state.className} />
-          {state.short}
-        </span>
-      ))}
+      {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
+        (state) => (
+          <span className="flex items-center gap-1.5" key={state.key}>
+            <Swatch className={state.className} />
+            {state.short}
+          </span>
+        )
+      )}
     </div>
   );
 }
@@ -240,58 +251,78 @@ function Count({ bold = false, value }: { bold?: boolean; value: number }) {
  * Swatch-only state headers: at the card's fixed column width, text headers
  * left no room for application names.
  */
-function LedgerHeader() {
+function LedgerHeader({ visible }: { visible: ReadonlySet<string> }) {
   return (
     <TableHeader>
       <TableRow presentation="static">
         <TableHead className="h-7" presentation="connection-leading">
           Application
         </TableHead>
-        {CONNECTION_STATES.map((state) => (
+        {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
+          (state) => (
+            <TableHead
+              className="h-7 w-9 text-right"
+              key={state.key}
+              presentation="connection"
+              title={state.label}
+            >
+              <Swatch className={state.className} />
+              <span className="sr-only">{state.label}</span>
+            </TableHead>
+          )
+        )}
+        {visible.has("total") && (
           <TableHead
             className="h-7 w-9 text-right"
-            key={state.key}
-            presentation="connection"
-            title={state.label}
+            presentation="connection-trailing"
           >
-            <Swatch className={state.className} />
-            <span className="sr-only">{state.label}</span>
+            Total
           </TableHead>
-        ))}
-        <TableHead
-          className="h-7 w-9 text-right"
-          presentation="connection-trailing"
-        >
-          Total
-        </TableHead>
+        )}
       </TableRow>
     </TableHeader>
   );
 }
 
-function LedgerRow({ app }: { app: ApplicationConnections }) {
+function LedgerRow({
+  app,
+  visible,
+}: {
+  app: ApplicationConnections;
+  visible: ReadonlySet<string>;
+}) {
   return (
     <TableRow>
       <TableCell className="w-full max-w-0" presentation="connection-name">
         <ApplicationLabel name={app.applicationName} />
       </TableCell>
-      {CONNECTION_STATES.map((state) => (
-        <TableCell
-          className="w-9 text-right"
-          key={state.key}
-          presentation="connection-value"
-        >
-          <Count value={app[state.key]} />
+      {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
+        (state) => (
+          <TableCell
+            className="w-9 text-right"
+            key={state.key}
+            presentation="connection-value"
+          >
+            <Count value={app[state.key]} />
+          </TableCell>
+        )
+      )}
+      {visible.has("total") && (
+        <TableCell className="w-9 text-right" presentation="connection-total">
+          <Count bold={true} value={app.totalConnections} />
         </TableCell>
-      ))}
-      <TableCell className="w-9 text-right" presentation="connection-total">
-        <Count bold={true} value={app.totalConnections} />
-      </TableCell>
+      )}
     </TableRow>
   );
 }
 
-function LedgerFooter({ activity }: { activity: ConnectionActivityHealth }) {
+function LedgerFooter({
+  activity,
+  visible,
+}: {
+  activity: ConnectionActivityHealth;
+  visible: ReadonlySet<string>;
+}) {
   return (
     <TableFooter presentation="transparent">
       <TableRow presentation="static">
@@ -301,21 +332,25 @@ function LedgerFooter({ activity }: { activity: ConnectionActivityHealth }) {
         >
           Total
         </TableCell>
-        {CONNECTION_STATES.map((state) => (
+        {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
+          (state) => (
+            <TableCell
+              className="w-9 text-right"
+              key={state.key}
+              presentation="connection-value-summary"
+            >
+              <Count bold={true} value={activity[state.key]} />
+            </TableCell>
+          )
+        )}
+        {visible.has("total") && (
           <TableCell
             className="w-9 text-right"
-            key={state.key}
-            presentation="connection-value-summary"
+            presentation="connection-total-summary"
           >
-            <Count bold={true} value={activity[state.key]} />
+            <Count bold={true} value={activity.totalConnections} />
           </TableCell>
-        ))}
-        <TableCell
-          className="w-9 text-right"
-          presentation="connection-total-summary"
-        >
-          <Count bold={true} value={activity.totalConnections} />
-        </TableCell>
+        )}
       </TableRow>
     </TableFooter>
   );
@@ -331,28 +366,45 @@ function ApplicationLedger({
 }: {
   activity: ConnectionActivityHealth;
 }) {
+  const columnSelection = useListColumnSelection(
+    "instance-applications",
+    LEDGER_COLUMNS
+  );
+  const visible = new Set(columnSelection.visibleIds);
   const shown = activity.byApplication.slice(0, MAX_APPLICATION_ROWS);
 
   return (
-    <Table presentation="compact">
-      <LedgerHeader />
-      <TableBody>
-        {shown.length === 0 ? (
-          <TableRow presentation="static">
-            <TableCell
-              className="text-center"
-              colSpan={LEDGER_COLUMNS}
-              presentation="empty"
-            >
-              No client connections right now.
-            </TableCell>
-          </TableRow>
-        ) : (
-          shown.map((app) => <LedgerRow app={app} key={app.applicationName} />)
-        )}
-      </TableBody>
-      <LedgerFooter activity={activity} />
-    </Table>
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <StateLegend visible={visible} />
+        <ListColumnSelector columns={LEDGER_COLUMNS} {...columnSelection} />
+      </div>
+      <Table presentation="compact">
+        <LedgerHeader visible={visible} />
+        <TableBody>
+          {shown.length === 0 ? (
+            <TableRow presentation="static">
+              <TableCell
+                className="text-center"
+                colSpan={columnSelection.visibleIds.length}
+                presentation="empty"
+              >
+                No client connections right now.
+              </TableCell>
+            </TableRow>
+          ) : (
+            shown.map((app) => (
+              <LedgerRow
+                app={app}
+                key={app.applicationName}
+                visible={visible}
+              />
+            ))
+          )}
+        </TableBody>
+        <LedgerFooter activity={activity} visible={visible} />
+      </Table>
+    </>
   );
 }
 
@@ -426,7 +478,6 @@ function ConnectionsCardBody({
       <CapacityLine activity={activity} />
       <ActivitySignals activity={activity} />
       <div className="flex flex-col gap-2">
-        <StateLegend />
         <ApplicationLedger activity={activity} />
       </div>
     </>

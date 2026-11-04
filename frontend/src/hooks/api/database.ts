@@ -8,6 +8,7 @@ import {
 import type { SkipToken } from "@connectrpc/connect-query-core";
 import { createQueryOptions } from "@connectrpc/connect-query-core";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { DATABASE_LIST_READ_MASK } from "@/hooks/api/catalog-list-projection";
 import { createConnectListAllQueryKey } from "@/lib/connect-query-key";
 import { buildDatabaseName, buildInstanceName } from "@/lib/console-resources";
 import { paginateAll } from "@/lib/paginate-all";
@@ -105,6 +106,7 @@ export function databaseQueryInsightsQueryOptions({
 
 export function databasesForInstanceQueryInput(instanceId: string) {
   return {
+    readMask: DATABASE_LIST_READ_MASK,
     orderBy: "name asc",
     pageSize: 1000,
     parent: buildInstanceName(instanceId),

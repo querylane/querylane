@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/querylane-ui/table";
 import { StatusBadge } from "@/components/status-badge";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,10 @@ import {
   summarizePartitionDisplayRows,
 } from "@/features/data-explorer/explorer-table-partitions";
 import type { useGetTablePartitionMetadataQuery } from "@/hooks/api/table";
+import {
+  type ListColumnOption,
+  useListColumnSelection,
+} from "@/lib/list-columns";
 import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
@@ -117,6 +122,14 @@ function PartitionsToolbar({
   );
 }
 
+const PARTITION_COLUMNS = [
+  { id: "partition", label: "Partition", required: true },
+  { id: "bounds", label: "Bounds" },
+  { id: "rows", label: "Est. rows" },
+  { id: "size", label: "Size" },
+  { id: "share", label: "Share of rows" },
+] satisfies ListColumnOption[];
+
 function PartitionRowsTable({
   rows,
   totalPartitionCount,
@@ -128,78 +141,116 @@ function PartitionRowsTable({
   totalRowsLabel: string;
   totalSizeLabel: string;
 }) {
+  const columnSelection = useListColumnSelection(
+    "table-partitions",
+    PARTITION_COLUMNS
+  );
+  const visible = new Set(columnSelection.visibleIds);
   return (
     <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
+      <div className="flex justify-end p-2">
+        <ListColumnSelector columns={PARTITION_COLUMNS} {...columnSelection} />
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead presentation="inset">Partition</TableHead>
-            <TableHead>Bounds</TableHead>
-            <TableHead className="text-right">Est. rows</TableHead>
-            <TableHead className="text-right">Size</TableHead>
-            <TableHead className="w-48">Share of rows</TableHead>
+            {visible.has("partition") && (
+              <TableHead presentation="inset">Partition</TableHead>
+            )}
+            {visible.has("bounds") && <TableHead>Bounds</TableHead>}
+            {visible.has("rows") && (
+              <TableHead className="text-right">Est. rows</TableHead>
+            )}
+            {visible.has("size") && (
+              <TableHead className="text-right">Size</TableHead>
+            )}
+            {visible.has("share") && (
+              <TableHead className="w-48">Share of rows</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.table}>
-              <TableCell presentation="inset">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate font-mono text-sm font-medium">
-                    {row.name}
-                  </span>
-                  {row.isCurrent ? (
-                    <StatusBadge variant="success">CURRENT</StatusBadge>
-                  ) : null}
-                  {row.isDefault ? (
-                    <StatusBadge variant="warning">DEFAULT</StatusBadge>
-                  ) : null}
-                </div>
-              </TableCell>
-              <TableCell
-                className="max-w-[28rem] wrap-break-word whitespace-normal"
-                presentation="identifier-muted-small"
-                title={row.partitionBound}
-              >
-                {row.boundLabel}
-              </TableCell>
-              <TableCell className="text-right" presentation="identifier">
-                {row.rowsLabel}
-              </TableCell>
-              <TableCell className="text-right" presentation="identifier-muted">
-                {row.sizeLabel}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        row.shareWidthClassName,
-                        partitionShareToneClass(row)
-                      )}
-                    />
+              {visible.has("partition") && (
+                <TableCell presentation="inset">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-mono text-sm font-medium">
+                      {row.name}
+                    </span>
+                    {row.isCurrent ? (
+                      <StatusBadge variant="success">CURRENT</StatusBadge>
+                    ) : null}
+                    {row.isDefault ? (
+                      <StatusBadge variant="warning">DEFAULT</StatusBadge>
+                    ) : null}
                   </div>
-                  <span className="text-muted-foreground w-9 text-right font-mono text-xs">
-                    {row.shareLabel}
-                  </span>
-                </div>
-              </TableCell>
+                </TableCell>
+              )}
+              {visible.has("bounds") && (
+                <TableCell
+                  className="max-w-[28rem] wrap-break-word whitespace-normal"
+                  presentation="identifier-muted-small"
+                  title={row.partitionBound}
+                >
+                  {row.boundLabel}
+                </TableCell>
+              )}
+              {visible.has("rows") && (
+                <TableCell className="text-right" presentation="identifier">
+                  {row.rowsLabel}
+                </TableCell>
+              )}
+              {visible.has("size") && (
+                <TableCell
+                  className="text-right"
+                  presentation="identifier-muted"
+                >
+                  {row.sizeLabel}
+                </TableCell>
+              )}
+              {visible.has("share") && (
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          row.shareWidthClassName,
+                          partitionShareToneClass(row)
+                        )}
+                      />
+                    </div>
+                    <span className="text-muted-foreground w-9 text-right font-mono text-xs">
+                      {row.shareLabel}
+                    </span>
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={2} presentation="inset-muted">
-              Total · {totalPartitionCount.toLocaleString()} partitions
-            </TableCell>
-            <TableCell className="text-right" presentation="identifier">
-              {totalRowsLabel}
-            </TableCell>
-            <TableCell className="text-right" presentation="identifier">
-              {totalSizeLabel}
-            </TableCell>
-            <TableCell />
+            {visible.has("partition") && (
+              <TableCell
+                colSpan={visible.has("bounds") ? 2 : 1}
+                presentation="inset-muted"
+              >
+                Total · {totalPartitionCount.toLocaleString()} partitions
+              </TableCell>
+            )}
+            {visible.has("rows") && (
+              <TableCell className="text-right" presentation="identifier">
+                {totalRowsLabel}
+              </TableCell>
+            )}
+            {visible.has("size") && (
+              <TableCell className="text-right" presentation="identifier">
+                {totalSizeLabel}
+              </TableCell>
+            )}
+            {visible.has("share") && <TableCell />}
           </TableRow>
         </TableFooter>
       </Table>

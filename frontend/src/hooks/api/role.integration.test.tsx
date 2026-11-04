@@ -5,9 +5,11 @@ import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
+  listAllRolesQueryOptions,
   useListAllRolesQuery,
   useRolesAccessMapResourcesQuery,
 } from "@/hooks/api/role";
+import { listReadMask } from "@/lib/list-read-mask";
 import {
   DatabaseService,
   ListDatabasesResponseSchema,
@@ -195,4 +197,47 @@ describe("useRolesAccessMapResourcesQuery request budget", () => {
     expect(result.current.data?.truncatedRequestCount).toBe(2);
     expect(result.current.data?.budgetSkippedRequestCount).toBe(102);
   }, 15_000);
+});
+
+test("masked role inputs reuse equivalent Connect keys without poisoning full responses", async () => {
+  const requests: ListRolesRequest[] = [];
+  const transport = createTestRouterTransport(({ service }) => {
+    service(RoleService, {
+      listRoles(request) {
+        requests.push(request);
+        return create(ListRolesResponseSchema, {
+          roles: [
+            { roleName: "alice", comment: request.readMask ? "" : "full" },
+          ],
+        });
+      },
+    });
+  });
+  const queryClient = createTestQueryClient();
+  activeQueryClients.push(queryClient);
+  const fields = { name: ["role_name"], login: ["attributes.can_login"] };
+  const load = (selection: string[]) =>
+    queryClient.query(
+      listAllRolesQueryOptions({
+        transport,
+        input: {
+          parent: "instances/local",
+          readMask: listReadMask(selection, fields, ["name"]),
+        },
+      })
+    );
+  await load(["name", "login"]);
+  await load(["login", "name"]);
+  expect(requests).toHaveLength(1);
+  await load(["name"]);
+  expect(requests).toHaveLength(2);
+  expect(requests[1]?.readMask?.paths).toEqual(["name", "role_name"]);
+  const full = await queryClient.query(
+    listAllRolesQueryOptions({
+      transport,
+      input: { parent: "instances/local" },
+    })
+  );
+  expect(full.roles[0]?.comment).toBe("full");
+  expect(requests).toHaveLength(3);
 });

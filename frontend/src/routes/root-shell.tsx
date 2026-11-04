@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { AppErrorRedirectController } from "@/components/app-error-redirect-controller";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BootGate } from "@/components/boot-gate";
+import { UrlListColumnsProvider } from "@/components/list-columns-provider";
 import { NotFoundState } from "@/components/not-found-state";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { RouteErrorView } from "@/components/route-error-view";
@@ -51,11 +52,13 @@ export function RootComponent() {
       <TooltipProvider>
         <RouteAnnouncer />
         <AppErrorRedirectController />
-        <BootGate>
-          <DbProvider>
-            <Outlet />
-          </DbProvider>
-        </BootGate>
+        <UrlListColumnsProvider>
+          <BootGate>
+            <DbProvider>
+              <Outlet />
+            </DbProvider>
+          </BootGate>
+        </UrlListColumnsProvider>
         <DeferredToaster />
       </TooltipProvider>
     </ThemeProvider>
