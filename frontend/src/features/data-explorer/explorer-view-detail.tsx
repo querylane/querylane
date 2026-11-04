@@ -2,11 +2,11 @@
 
 import { Link } from "@tanstack/react-router";
 import {
-  CheckCircle2,
+  CircleCheck,
   Eye,
   RefreshCw,
   Rows3,
-  TriangleAlert,
+  TriangleExclamationPoint,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -502,7 +502,7 @@ function DependenciesTab({
   if (query.error && !query.data) {
     return (
       <Alert variant="destructive">
-        <TriangleAlert />
+        <TriangleExclamationPoint />
         <AlertTitle>Could not load dependencies</AlertTitle>
         <AlertDescription presentation="stacked">
           <p>{query.error.message}</p>
@@ -550,7 +550,7 @@ function DependenciesTab({
       </div>
       {query.error ? (
         <Alert variant="destructive">
-          <TriangleAlert />
+          <TriangleExclamationPoint />
           <AlertTitle>Could not load more dependencies</AlertTitle>
           <AlertDescription>{query.error.message}</AlertDescription>
         </Alert>
@@ -743,7 +743,7 @@ function ConcurrentReadinessAlert({
   if (readiness === "ready") {
     return (
       <Alert>
-        <CheckCircle2 />
+        <CircleCheck />
         <AlertTitle>Concurrent refresh ready</AlertTitle>
         <AlertDescription>
           A valid plain-column unique index allows reads to continue during
@@ -755,7 +755,7 @@ function ConcurrentReadinessAlert({
 
   return (
     <Alert>
-      <TriangleAlert />
+      <TriangleExclamationPoint />
       <AlertTitle>Standard refresh only</AlertTitle>
       <AlertDescription>
         Add a valid, non-partial unique index over plain columns to enable

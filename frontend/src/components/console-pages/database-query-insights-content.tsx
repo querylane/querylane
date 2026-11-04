@@ -2,10 +2,10 @@
 
 import { anyUnpack } from "@bufbuild/protobuf/wkt";
 import {
-  AlertCircle,
   ChartNoAxesColumnIncreasing,
   ChevronLeft,
   ChevronRight,
+  CircleExclamationPoint,
   X,
 } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
@@ -516,7 +516,7 @@ function MetricUnavailableNotice({
       presentation={status ? "insights-error" : "insights"}
       variant={status ? "destructive" : "default"}
     >
-      {status ? <AlertCircle aria-hidden="true" /> : null}
+      {status ? <CircleExclamationPoint aria-hidden="true" /> : null}
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{(status?.message ?? "") || fallback}</AlertDescription>
       <AlertAction className="static col-span-full mt-2 justify-self-start">

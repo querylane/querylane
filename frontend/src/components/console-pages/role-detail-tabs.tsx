@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { RoleDefinitionTab } from "@/components/console-pages/role-detail-definition-tab";
 import { RoleGrantsTab } from "@/components/console-pages/role-detail-grants-tab";
@@ -29,7 +29,7 @@ function RoleAccessMapFallback() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center" presentation="section">
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
+          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading access map
         </CardTitle>
       </CardHeader>

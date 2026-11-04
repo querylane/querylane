@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { TriangleExclamationPoint } from "lucide-react";
 import type { catalogSyncNotice } from "@/features/data-explorer/use-data-explorer-state";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,10 @@ function CatalogSyncNotice({
       )}
       role={role}
     >
-      <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      <TriangleExclamationPoint
+        aria-hidden="true"
+        className="mt-0.5 size-4 shrink-0"
+      />
       <span>{notice.message}</span>
     </div>
   );

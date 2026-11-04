@@ -1,6 +1,11 @@
 "use client";
 
-import { Activity, AlertTriangle, LockKeyhole, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  LockKeyhole,
+  RefreshCw,
+  TriangleExclamationPoint,
+} from "lucide-react";
 import { useState } from "react";
 import { AsyncSectionState } from "@/components/async-section-state";
 import {
@@ -632,7 +637,7 @@ function ActivityUnavailable({
   return (
     <EmptyState
       description={activityPartialErrorMessage(partialErrors)}
-      icon={AlertTriangle}
+      icon={TriangleExclamationPoint}
       title="Activity data unavailable"
     />
   );

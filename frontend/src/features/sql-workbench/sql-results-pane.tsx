@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  AlertTriangle,
   Ban,
   CircleCheck,
   Download,
-  Loader2,
+  LoaderCircle,
   MessageSquareText,
   Table2,
+  TriangleExclamationPoint,
   Waypoints,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -89,7 +89,7 @@ function elapsedMs(execution: SqlExecution): number {
 function RunningStatus({ execution }: { execution: SqlExecution }) {
   return (
     <span className="text-muted-foreground flex items-center gap-2">
-      <Loader2
+      <LoaderCircle
         aria-hidden="true"
         className="size-3.5 motion-safe:animate-spin"
       />
@@ -121,7 +121,7 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
       </span>
       {execution.stats?.truncated === true ? (
         <span className="text-chart-4 flex items-center gap-1">
-          <AlertTriangle aria-hidden="true" className="size-3.5" />
+          <TriangleExclamationPoint aria-hidden="true" className="size-3.5" />
           Stopped at the {formatCount(execution.rowLimit)} row limit
         </span>
       ) : null}
@@ -152,7 +152,7 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
     case "error":
       return (
         <span className="text-destructive flex items-center gap-1.5">
-          <AlertTriangle aria-hidden="true" className="size-3.5" />
+          <TriangleExclamationPoint aria-hidden="true" className="size-3.5" />
           {execution.error?.title ?? "Query failed"}
         </span>
       );
@@ -313,7 +313,7 @@ function ResultsBody({
     return (
       <ResultsPlaceholder
         description="Waiting for the first rows from PostgreSQL."
-        icon={Loader2}
+        icon={LoaderCircle}
         title="Running"
       />
     );
@@ -400,7 +400,7 @@ function PlanBody({ explain }: { explain: SqlExplain | undefined }) {
             ? "Running the statement to measure the plan."
             : "Asking PostgreSQL for the plan."
         }
-        icon={Loader2}
+        icon={LoaderCircle}
         title="Explaining"
       />
     );
@@ -426,7 +426,7 @@ function PlanBody({ explain }: { explain: SqlExplain | undefined }) {
       fallback={
         <ResultsPlaceholder
           description="Loading the plan explorer."
-          icon={Loader2}
+          icon={LoaderCircle}
           title="Loading plan"
         />
       }

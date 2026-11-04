@@ -1,4 +1,10 @@
-import { Copy, ShieldAlert, ShieldCheck, User, Users } from "lucide-react";
+import {
+  Copy,
+  ShieldCheck,
+  ShieldExclamationPoint,
+  User,
+  Users,
+} from "lucide-react";
 import type { ComponentType } from "react";
 import { Avatar, AvatarFallback } from "@/components/querylane-ui/avatar";
 import type { RoleKind } from "@/lib/role-display";
@@ -8,7 +14,7 @@ const KIND_ICON: Record<RoleKind, ComponentType<{ className?: string }>> = {
   group: Users,
   login: User,
   repl: Copy,
-  super: ShieldAlert,
+  super: ShieldExclamationPoint,
 };
 
 const ICON_SIZE: Record<"sm" | "default" | "lg", string> = {

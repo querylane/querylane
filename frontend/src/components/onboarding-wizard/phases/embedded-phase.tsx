@@ -1,5 +1,9 @@
 import { create as createProto } from "@bufbuild/protobuf";
-import { AlertTriangle, ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronRight,
+  TriangleExclamationPoint,
+} from "lucide-react";
 import { useOnboardingWizardControllerContext } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller-context";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import {
@@ -63,7 +67,7 @@ export function EmbeddedPhase() {
       <div className="space-y-4">
         {persistenceAvailable ? null : (
           <Alert presentation="onboarding-notice" role="alert">
-            <AlertTriangle className="text-warning-400" />
+            <TriangleExclamationPoint className="text-warning-400" />
             <AlertTitle presentation="onboarding-warning">
               Data will not persist
             </AlertTitle>

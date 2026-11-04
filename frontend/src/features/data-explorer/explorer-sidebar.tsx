@@ -8,7 +8,13 @@ import {
   type VirtualItem,
   Virtualizer,
 } from "@tanstack/virtual-core";
-import { AlertTriangle, ChevronRight, Folder, Search, X } from "lucide-react";
+import {
+  ChevronRight,
+  Folder,
+  Search,
+  TriangleExclamationPoint,
+  X,
+} from "lucide-react";
 import {
   type ReactNode,
   useEffect,
@@ -1013,7 +1019,10 @@ function SidebarResourceError({
   return (
     <div className="border-destructive/30 bg-destructive/5 mx-2 mb-2 flex flex-col gap-2 rounded-md border p-2.5 text-sm">
       <div className="text-destructive flex items-start gap-2">
-        <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        <TriangleExclamationPoint
+          aria-hidden="true"
+          className="mt-0.5 size-4 shrink-0"
+        />
         <span>{`Failed to load ${label}.`}</span>
       </div>
       <RetryActionButton

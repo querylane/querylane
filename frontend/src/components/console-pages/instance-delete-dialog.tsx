@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Trash } from "lucide-react";
 import { useId, useState } from "react";
 import { InlineCode } from "@/components/querylane-ui/inline-code";
 import {
@@ -74,7 +74,7 @@ export function InstanceDeleteDialog({
             onClick={onConfirm}
             variant="destructive"
           >
-            <Trash2 className="size-4" />
+            <Trash className="size-4" />
             Delete instance
           </AlertDialogAction>
         </AlertDialogFooter>

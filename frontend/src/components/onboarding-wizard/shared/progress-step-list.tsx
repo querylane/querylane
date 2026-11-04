@@ -1,4 +1,4 @@
-import { Check, Circle, Loader2, X } from "lucide-react";
+import { Check, Circle, LoaderCircle, X } from "lucide-react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
@@ -55,7 +55,7 @@ function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.IN_PROGRESS) {
     return (
       <span className="flex size-8 items-center justify-center rounded-full border border-white/30 bg-white/8 text-white">
-        <Loader2
+        <LoaderCircle
           aria-hidden="true"
           className="size-4 animate-spin motion-reduce:animate-none"
         />

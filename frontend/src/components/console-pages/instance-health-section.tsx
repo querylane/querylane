@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { ChevronDown, CircleExclamationPoint } from "lucide-react";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import type { InstanceRecord } from "@/components/console-pages/instance-config-model";
 import {
@@ -55,7 +55,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
           presentation="health"
         >
           {row.tone === "error" ? (
-            <AlertCircle
+            <CircleExclamationPoint
               aria-hidden="true"
               className="text-destructive size-4 shrink-0"
             />

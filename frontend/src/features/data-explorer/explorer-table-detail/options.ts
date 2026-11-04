@@ -1,6 +1,6 @@
 import {
   Columns3,
-  FileCode2,
+  FileCodeCorner,
   GitBranch,
   KeyRound,
   ListTree,
@@ -70,7 +70,7 @@ const TABLE_DETAIL_TAB_DEFINITIONS: Record<
   columns: { icon: Columns3, label: "Columns" },
   constraints: { icon: GitBranch, label: "Constraints" },
   data: { icon: Rows3, label: "Data" },
-  definition: { icon: FileCode2, label: "Definition" },
+  definition: { icon: FileCodeCorner, label: "Definition" },
   indexes: { icon: ListTree, label: "Indexes" },
   keys: { icon: KeyRound, label: "Keys" },
   partitions: { icon: Network, label: "Partitions" },
