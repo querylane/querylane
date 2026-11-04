@@ -176,15 +176,7 @@ function loadLighthouseReports(reportDir: string) {
         : []
     )
     .toSorted()
-    .flatMap((path) => {
-      try {
-        return [JSON.parse(readFileSync(path, "utf-8")) as unknown];
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`Skipping invalid Lighthouse report ${path}: ${message}`);
-        return [];
-      }
-    });
+    .map((path): unknown => JSON.parse(readFileSync(path, "utf-8")));
 }
 
 function runLighthouseSummaryCli(argv: readonly string[]) {

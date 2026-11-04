@@ -2,7 +2,10 @@
 const { env } = require("node:process");
 
 const runtimeEnv = new Map(Object.entries(env));
-const LIGHTHOUSE_PORT = 4173;
+const DEFAULT_LIGHTHOUSE_PORT = 4173;
+const MAX_PORT = 65_535;
+const DECIMAL_PORT = /^\d+$/u;
+const LIGHTHOUSE_PORT = readLighthousePort();
 const PERF_DEMO_PATH = [
   "instances",
   "production",
@@ -20,6 +23,22 @@ const FILESYSTEM_UPLOAD_TARGET = "filesystem";
 const PUBLIC_UPLOAD_TARGET = "temporary-public-storage";
 const DEFAULT_LIGHTHOUSE_RUNS = 3;
 const MIN_LIGHTHOUSE_RUNS = 1;
+
+function readLighthousePort() {
+  const raw = runtimeEnv.get("PORT");
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_LIGHTHOUSE_PORT;
+  }
+  const port = Number(raw);
+  if (
+    !(DECIMAL_PORT.test(raw.trim()) && Number.isInteger(port)) ||
+    port < 1 ||
+    port > MAX_PORT
+  ) {
+    throw new Error("PORT must be an integer between 1 and 65535");
+  }
+  return port;
+}
 
 function readLighthouseRuns() {
   const rawRuns = runtimeEnv.get("LIGHTHOUSE_RUNS")?.trim();
