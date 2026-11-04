@@ -1,9 +1,10 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import { cn } from "@/lib/utils";
+import { OptionalHighlight, PlaintextCode } from "./plaintext-code";
 
 const sqlCodeBlockPresentations = cva("", {
   variants: {
@@ -50,12 +51,16 @@ type SqlCodeBlockProps = {
   wrap?: boolean;
 } & VariantProps<typeof sqlCodeBlockPresentations>;
 
+function UnavailableSql({ sql }: { sql: string }) {
+  return <PlaintextCode failed={true} language="sql" source={sql} />;
+}
+
+// Resolve a failed enhancement to plaintext once. Rerendering a rejected lazy
+// import cannot reload its cached promise; do not offer a misleading retry.
 const HighlightedSql = lazy(() =>
-  import("@/components/querylane-ui/sql-syntax-highlight-content").then(
-    (module) => ({
-      default: module.SqlSyntaxHighlight,
-    })
-  )
+  import("@/components/querylane-ui/sql-syntax-highlight-content")
+    .then((module) => ({ default: module.SqlSyntaxHighlight }))
+    .catch(() => ({ default: UnavailableSql }))
 );
 
 function observeSqlScrollFocus(node: HTMLPreElement | null) {
@@ -99,15 +104,9 @@ function observeSqlScrollFocus(node: HTMLPreElement | null) {
 /** Keep SQL readable and copyable while the syntax highlighter loads. */
 export function SqlSyntaxHighlight({ sql }: { sql: string }) {
   return (
-    <Suspense
-      fallback={
-        <code className="language-sql" data-language="sql">
-          {sql}
-        </code>
-      }
-    >
+    <OptionalHighlight language="sql" source={sql}>
       <HighlightedSql sql={sql} />
-    </Suspense>
+    </OptionalHighlight>
   );
 }
 
