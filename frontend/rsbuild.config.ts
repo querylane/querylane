@@ -188,7 +188,7 @@ export default defineConfig({
     // Only the immediately used UI face; leave mono and other subsets on demand.
     // Match emitted assets so the hint reuses CSS's content-hashed font URL.
     preload: {
-      include: /\/app-sans-core(?:\.[\w]+)?\.woff2$/u,
+      include: /\/sans-core(?:\.[\w]+)?\.woff2$/u,
       type: "all-assets",
     },
     buildCache: {

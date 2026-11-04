@@ -1,0 +1,82 @@
+[
+	{
+		"source": "scripts/fonts/sources/docs-sans-italic.woff2",
+		"path": "docs/fonts/docs-sans-italic-core.woff2",
+		"sha256": "878cf17ca8437cc2c197c5d458d015621c5d89b68815f5c561999f5280038d0b",
+		"unicodeRange": "U+0020-007E,U+00A0-00AC,U+00AE-00FF,U+0131,U+0152-0153,U+0304,U+0308,U+2010,U+2013-2014,U+2018-2019,U+201C-201D,U+2022,U+2026,U+20AC,U+2191,U+2193,U+2212",
+		"family": "Geist",
+		"style": "italic",
+		"weight": "400 700",
+		"subset": "latin"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-sans-italic.woff2",
+		"path": "docs/fonts/docs-sans-italic-extended.woff2",
+		"sha256": "aa1df2c2c33d80b5057da8221ae66ec16a4cf23ab27c18c775213686e0affb69",
+		"unicodeRange": "U+02BC,U+02C6,U+02DA,U+02DC,U+201A,U+201E,U+2032-2033,U+2039-203A,U+2044,U+2122",
+		"family": "Geist",
+		"style": "italic",
+		"weight": "400 700",
+		"subset": "extended"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-sans-normal.woff2",
+		"path": "docs/fonts/docs-sans-normal-core.woff2",
+		"sha256": "adbf9db445d04b974e5d649e1126f5564f446dd9605f2aba0abd2268cbe1a03f",
+		"unicodeRange": "U+0020-007E,U+00A0-00AC,U+00AE-00FF,U+0131,U+0152-0153,U+0304,U+0308,U+2010,U+2013-2014,U+2018-2019,U+201C-201D,U+2022,U+2026,U+20AC,U+2191,U+2193,U+2212",
+		"family": "Geist",
+		"style": "normal",
+		"weight": "400 700",
+		"subset": "latin"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-sans-normal.woff2",
+		"path": "docs/fonts/docs-sans-normal-extended.woff2",
+		"sha256": "557cc659701f369bb315c9458e3b8af4d64245174246ab2b44c910c9f5792eb8",
+		"unicodeRange": "U+02BC,U+02C6,U+02DA,U+02DC,U+201A,U+201E,U+2032-2033,U+2039-203A,U+2044,U+2122",
+		"family": "Geist",
+		"style": "normal",
+		"weight": "400 700",
+		"subset": "extended"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-mono-italic.woff2",
+		"path": "docs/fonts/docs-mono-italic-core.woff2",
+		"sha256": "2735e683ad0a204b955f974699fe45a751bd85d9437a61c2f13979bb9e2a6033",
+		"unicodeRange": "U+0020-007E,U+00A0-00AC,U+00AE-00FF,U+0131,U+0152-0153,U+0304,U+0308,U+2010,U+2013-2014,U+2018-2019,U+201C-201D,U+2022,U+2026,U+20AC,U+2191,U+2193,U+2212",
+		"family": "Geist Mono",
+		"style": "italic",
+		"weight": "400 600",
+		"subset": "latin"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-mono-italic.woff2",
+		"path": "docs/fonts/docs-mono-italic-extended.woff2",
+		"sha256": "ec844d7d7ee792640972ff4803a6cfa1c99bfffc0b85a49b6e473e79d9ada39e",
+		"unicodeRange": "U+02BC,U+02C6,U+02DA,U+02DC,U+201A,U+201E,U+2032-2033,U+2039-203A,U+2044,U+2122",
+		"family": "Geist Mono",
+		"style": "italic",
+		"weight": "400 600",
+		"subset": "extended"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-mono-normal.woff2",
+		"path": "docs/fonts/docs-mono-normal-core.woff2",
+		"sha256": "9f4112f63ab7e3916927e5f03de03d3ee3f3d810e210bf0b1b80b3a63864712f",
+		"unicodeRange": "U+0020-007E,U+00A0-00AC,U+00AE-00FF,U+0131,U+0152-0153,U+0304,U+0308,U+2010,U+2013-2014,U+2018-2019,U+201C-201D,U+2022,U+2026,U+20AC,U+2191,U+2193,U+2212",
+		"family": "Geist Mono",
+		"style": "normal",
+		"weight": "400 600",
+		"subset": "latin"
+	},
+	{
+		"source": "scripts/fonts/sources/docs-mono-normal.woff2",
+		"path": "docs/fonts/docs-mono-normal-extended.woff2",
+		"sha256": "36b8493e16dcfdeeabf63369395dd90c8a15d2b01f5b9f74591c1e32b8f9c65e",
+		"unicodeRange": "U+02BC,U+02C6,U+02DA,U+02DC,U+201A,U+201E,U+2032-2033,U+2039-203A,U+2044,U+2122",
+		"family": "Geist Mono",
+		"style": "normal",
+		"weight": "400 600",
+		"subset": "extended"
+	}
+]
