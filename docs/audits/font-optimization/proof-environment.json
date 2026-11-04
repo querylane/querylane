@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-04",
+  "baseline_revision": "33f17083544ba28f7f7a5cef26eb1fffa4e2296c",
+  "browser": "Chromium 152.0.7977.169 / Electron 44.10.0",
+  "platform": "MacIntel",
+  "device_pixel_ratio": 2,
+  "viewport": {
+    "width": 1402,
+    "height": 877
+  },
+  "capture": {
+    "width": 1280,
+    "height": 800
+  },
+  "color_scheme": "light",
+  "locale": "en-US"
+}

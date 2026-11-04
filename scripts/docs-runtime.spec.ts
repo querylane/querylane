@@ -226,3 +226,48 @@ test("API pages render all 18 native sample languages", async () => {
 		"dart",
 	]);
 });
+
+test("font subsets retain fallback metrics and only preload normal cores", async () => {
+	const html = await (await fetch(`${baseUrl}/get-started`)).text();
+	const document = parse(html);
+	const fonts = document.querySelectorAll('link[rel="preload"][as="font"]');
+	expect(fonts).toHaveLength(2);
+	const faces = [...html.matchAll(/@font-face\{([^}]+)\}/gu)].map(
+		(match) => match[1],
+	);
+	// Source order matters: Astro derives one fallback metric set per family.
+	expect(
+		faces.some(
+			(face) =>
+				face?.includes('local("Arial")') &&
+				face.includes("size-adjust:103.1851%"),
+		),
+	).toBe(true);
+	expect(
+		faces.some(
+			(face) =>
+				face?.includes('local("Courier New")') &&
+				face.includes("size-adjust:99.9837%"),
+		),
+	).toBe(true);
+	for (const link of fonts) {
+		const href = link.getAttribute("href");
+		expect(href).toBeTruthy();
+		const face = faces.find((value) => href && value?.includes(href));
+		expect(face).toContain("font-style:normal");
+		expect(face).toContain("U+0020-007E");
+		expect(face).toContain("font-display:swap");
+	}
+	for (const family of new Set(
+		faces
+			.filter((face) => face?.includes("src:url"))
+			.map((face) => face?.split(";src:")[0]),
+	)) {
+		const familyFaces = faces.filter((face) => face?.startsWith(`${family};`));
+		expect(familyFaces).toHaveLength(4);
+		// Core and extended share one family, not separated by a fallback family.
+		for (const face of familyFaces) {
+			expect(face).toContain("font-display:swap");
+		}
+	}
+});
