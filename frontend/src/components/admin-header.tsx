@@ -751,6 +751,7 @@ function AdminHeaderActions({
   return (
     <div className="ml-auto flex shrink-0 items-center gap-1 lg:gap-2">
       <a
+        aria-label="Querylane on GitHub"
         className={cn(
           buttonVariants({
             size: "sm",

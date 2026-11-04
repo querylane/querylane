@@ -434,6 +434,15 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect.element(page.locator("header")).toBeAttached();
 });
 
+test("repository link has a stable accessible name independent of star counts and SVG titles", async () => {
+  await renderAdminShell();
+  await expect
+    .element(
+      page.getByRole("link", { name: "Querylane on GitHub", exact: true })
+    )
+    .toHaveAttribute("target", "_blank");
+});
+
 test("admin header truncates a long instance name without wrapping and exposes the full name", async () => {
   const longInstanceName =
     "katana-mcp (gear profiles + tone presets) with an extra long suffix";

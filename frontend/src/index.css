@@ -52,7 +52,7 @@
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.985 0 0);
   /* Cross-resource reference links (e.g. foreign key values in the grid). */
-  --reference: oklch(0.55 0.158 241.966);
+  --reference: oklch(0.51 0.158 241.966);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
