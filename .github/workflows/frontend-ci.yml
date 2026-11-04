@@ -2,7 +2,6 @@ name: frontend-ci
 
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
@@ -46,17 +45,7 @@ jobs:
           set -euo pipefail
           paths="$RUNNER_TEMP/frontend-paths"
           git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" > "$paths"
-          frontend=false
-          while IFS= read -r -d '' path; do
-            case "$path" in
-              frontend/*|.github/workflows/frontend-ci.yml)
-                frontend=true
-                ;;
-              */*) ;;
-              *) frontend=true ;;
-            esac
-          done < "$paths"
-          printf 'frontend=%s\n' "$frontend" >> "$GITHUB_OUTPUT"
+          bash frontend/scripts/frontend-changes.sh < "$paths" >> "$GITHUB_OUTPUT"
 
   static:
     needs: changes

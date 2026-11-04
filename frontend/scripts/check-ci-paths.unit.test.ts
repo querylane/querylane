@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { env } from "node:process";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@rstest/core";
 
 const DETECTION_SCRIPT = / {8}run: \|\n(?<script>(?: {10}.+\n)+)/u;
@@ -35,6 +36,7 @@ function detect(paths: string[], gitExit = "0") {
         `git() { cat "$PATH_FIXTURE"; return "$GIT_EXIT"; }\n${script.replaceAll(INDENT, "")}`,
       ],
       {
+        cwd: fileURLToPath(new URL("../../", import.meta.url)),
         encoding: "utf8",
         env: {
           ...env,
@@ -77,6 +79,14 @@ test("checks all NUL-delimited paths without a changed-file count limit", () => 
     output: "frontend=true\n",
   });
   expect(detect([".github/workflows/frontend-ci.yml"])).toEqual({
+    status: 0,
+    output: "frontend=true\n",
+  });
+  expect(detect([".github/workflows/frontend-lighthouse.yml"])).toEqual({
+    status: 0,
+    output: "frontend=true\n",
+  });
+  expect(detect([".github/workflows/frontend-browser-smoke.yml"])).toEqual({
     status: 0,
     output: "frontend=true\n",
   });
