@@ -459,37 +459,28 @@ function computeNodeRanks({
   return graph.ranks;
 }
 
-function firstIncomingOrder({
+function indexIncomingOrder({
   edges,
-  nodeId,
   orderById,
 }: {
   edges: VisualizationEdge[];
-  nodeId: string;
   orderById: Map<string, number>;
-}) {
-  return edges
-    .filter((edge) => edge.target === nodeId)
-    .reduce(
-      (minOrder, edge) =>
-        Math.min(minOrder, orderById.get(edge.source) ?? minOrder),
-      Number.POSITIVE_INFINITY
+}): Map<string, number> {
+  const incomingOrderByTarget = new Map<string, number>();
+  for (const { source, target } of edges) {
+    const sourceOrder = orderById.get(source);
+    if (sourceOrder === undefined) {
+      continue;
+    }
+    incomingOrderByTarget.set(
+      target,
+      Math.min(
+        incomingOrderByTarget.get(target) ?? Number.POSITIVE_INFINITY,
+        sourceOrder
+      )
     );
-}
-
-function incomingSortOrder({
-  edges,
-  node,
-  orderById,
-}: {
-  edges: VisualizationEdge[];
-  node: VisualizationNode;
-  orderById: Map<string, number>;
-}) {
-  const parentOrder = firstIncomingOrder({ edges, nodeId: node.id, orderById });
-  return Number.isFinite(parentOrder)
-    ? parentOrder
-    : (orderById.get(node.id) ?? 0);
+  }
+  return incomingOrderByTarget;
 }
 
 function positionRankNodes({
@@ -559,11 +550,17 @@ function positionNodes({
   const dimensions = flowDimensions(density);
   const ranks = computeNodeRanks({ edges, nodes });
   const orderById = new Map(nodes.map((node, index) => [node.id, index]));
+  const incomingOrderByTarget = indexIncomingOrder({ edges, orderById });
   const nodesByRank = new Map<number, VisualizationNode[]>();
 
   for (const node of nodes) {
     const rank = ranks.get(node.id) ?? FIRST_RANK;
-    nodesByRank.set(rank, [...(nodesByRank.get(rank) ?? []), node]);
+    const rankNodes = nodesByRank.get(rank);
+    if (rankNodes) {
+      rankNodes.push(node);
+    } else {
+      nodesByRank.set(rank, [node]);
+    }
   }
 
   const positionedNodes: PositionedVisualizationNode[] = [];
@@ -573,16 +570,10 @@ function positionNodes({
   )) {
     const rankNodes = nodesByRank.get(rank) ?? [];
     rankNodes.sort((left, right) => {
-      const leftParentOrder = incomingSortOrder({
-        edges,
-        node: left,
-        orderById,
-      });
-      const rightParentOrder = incomingSortOrder({
-        edges,
-        node: right,
-        orderById,
-      });
+      const leftParentOrder =
+        incomingOrderByTarget.get(left.id) ?? orderById.get(left.id) ?? 0;
+      const rightParentOrder =
+        incomingOrderByTarget.get(right.id) ?? orderById.get(right.id) ?? 0;
       return (
         leftParentOrder - rightParentOrder ||
         NODE_KIND_LAYOUT_ORDER[left.kind] -
