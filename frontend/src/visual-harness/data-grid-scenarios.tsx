@@ -4,12 +4,10 @@ import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-gri
 import { DataValueDialogProvider } from "@/components/data-grid/table-data-grid/data-value-dialog-provider";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import { DataTableFilterToolbar } from "@/components/querylane-ui/data-table-filter-toolbar";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import {

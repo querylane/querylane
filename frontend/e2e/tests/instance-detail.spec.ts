@@ -363,7 +363,9 @@ test("roles: empty list renders role-specific empty state", {
   await expect(
     page.getByText("0 roles · 0 can log in · 0 groups · 0 built-in")
   ).toBeVisible();
-  await expect(page.getByText("No roles found")).toBeVisible();
+  await expect(
+    page.getByText("No roles available.", { exact: true })
+  ).toBeVisible();
 });
 
 test("roles: backend error renders retryable route error", {

@@ -3,8 +3,9 @@ import { RefreshCw, X } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Button } from "@/components/querylane-ui/button";
-import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import { DataTableFacetedFilter } from "@/components/querylane-ui/data-table-faceted-filter";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {

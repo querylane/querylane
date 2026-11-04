@@ -16,9 +16,9 @@ import { useDeferredValue, useState } from "react";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
+import { DataTableFacetedFilter } from "@/components/querylane-ui/data-table-faceted-filter";
 import { Input } from "@/components/querylane-ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
 import {
   buildSchemaMapModel,
