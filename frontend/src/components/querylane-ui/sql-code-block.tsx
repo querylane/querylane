@@ -58,6 +58,44 @@ const HighlightedSql = lazy(() =>
   )
 );
 
+function observeSqlScrollFocus(node: HTMLPreElement | null) {
+  if (!node) {
+    return undefined;
+  }
+  const element = node;
+
+  function syncScrollFocus() {
+    const { overflowX } = getComputedStyle(element);
+    element.tabIndex =
+      (overflowX === "auto" || overflowX === "scroll") &&
+      element.scrollWidth > element.clientWidth
+        ? 0
+        : -1;
+  }
+
+  // Lazy highlighting, font delivery and container resizing can each change
+  // overflow. Only a genuinely scrollable snippet belongs in the tab order.
+  syncScrollFocus();
+  const resizeObserver =
+    typeof ResizeObserver === "undefined"
+      ? undefined
+      : new ResizeObserver(syncScrollFocus);
+  resizeObserver?.observe(element);
+  const mutationObserver = new MutationObserver(syncScrollFocus);
+  mutationObserver.observe(element, {
+    attributeFilter: ["class"],
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  document.fonts?.addEventListener("loadingdone", syncScrollFocus);
+  return () => {
+    resizeObserver?.disconnect();
+    mutationObserver.disconnect();
+    document.fonts?.removeEventListener("loadingdone", syncScrollFocus);
+  };
+}
+
 /** Keep SQL readable and copyable while the syntax highlighter loads. */
 export function SqlSyntaxHighlight({ sql }: { sql: string }) {
   return (
@@ -88,10 +126,13 @@ export function SqlCodeBlock({
     <div className={cn("relative max-w-full min-w-0", inline && "w-full")}>
       <pre
         className={cn(
+          "focus-visible:outline-primary focus-visible:outline-2 focus-visible:-outline-offset-2",
           sqlCodeBlockVariants({ variant, wrap, copyable }),
           sqlCodeBlockPresentations({ presentation }),
           className
         )}
+        ref={observeSqlScrollFocus}
+        tabIndex={-1}
       >
         <SqlSyntaxHighlight sql={sqlText} />
       </pre>
