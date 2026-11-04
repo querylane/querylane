@@ -46,6 +46,7 @@
     "test:browser": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.config.ts --bail=1 && NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.dark.config.ts --bail=1",
     "test:browser:changed": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.config.ts --changed ${QUALITY_BASE_REF:-origin/main} --passWithNoTests --bail=1 && NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.dark.config.ts --changed ${QUALITY_BASE_REF:-origin/main} --passWithNoTests --bail=1",
     "test:browser:ci": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.config.ts --bail=1 && NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest --config rstest.browser.dark.config.ts --bail=1",
+    "test:browser:smoke": "bun run build && env -u NO_COLOR QUERYLANE_E2E_SKIP_BUILD=1 NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/playwright.config.ts --project=smoke-firefox --project=smoke-webkit --workers=1",
     "test:browser:setup": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright install --with-deps --no-remove chromium",
     "test:browser:ui": "NODE_OPTIONS=--disable-warning=DEP0205 TZ=GMT rstest watch --config rstest.browser.config.ts --browser.headless=false",
     "test:docs": "env -u NO_COLOR NODE_OPTIONS=--disable-warning=DEP0205 playwright test --config=e2e/docs.config.ts",

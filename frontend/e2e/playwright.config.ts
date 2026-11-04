@@ -76,6 +76,14 @@ export default defineConfig({
         launchOptions: CHROMIUM_LAUNCH_OPTIONS,
       },
     },
+    // Advisory only: selected explicitly by the weekly/manual smoke workflow.
+    ...(["firefox", "webkit"] as const).map((browserName) => ({
+      name: `smoke-${browserName}`,
+      default: false,
+      testDir: "./tests",
+      testMatch: "browser-smoke.spec.ts",
+      use: { browserName },
+    })),
     ...(["light", "dark"] as const).map((colorScheme) => ({
       expect: {
         toHaveScreenshot: {
