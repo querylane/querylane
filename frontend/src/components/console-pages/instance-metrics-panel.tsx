@@ -343,6 +343,7 @@ function TabChart({
         formatValue={(value) => formatMetricValue(value, unit)}
         isRefreshing={isRefreshing}
         series={chartSeries}
+        seriesEmphasis={!isSingleSeries}
         thresholds={thresholds}
         {...(unit === MetricUnit.RATIO ? { yDomain: RATIO_Y_DOMAIN } : {})}
         yTickBase={metricTickBase(unit)}
