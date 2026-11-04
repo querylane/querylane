@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "budget:check": "bun run scripts/check-bundle-budget.ts",
+    "bundle:routes": "bun run scripts/route-bytes.ts",
     "build": "rsbuild build && bun run budget:check",
+    "build:profile:bundle": "rm -rf dist && RSDOCTOR=bundle rsbuild build",
     "build:profile": "rm -rf dist && RSDOCTOR=1 rsbuild build",
     "changeset": "changeset",
     "changeset:tag": "changeset git-tag",

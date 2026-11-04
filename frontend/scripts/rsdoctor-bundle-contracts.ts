@@ -1,5 +1,6 @@
 import { defineRule } from "@rsdoctor/core";
 import { Err, type Linter, type SDK } from "@rsdoctor/shared/types";
+import { routeComponentPath } from "./route-component-path";
 
 // Keep this list limited to intentionally deferred feature dependencies, not
 // every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
@@ -53,13 +54,6 @@ function enforceBundleContracts({
         .join("\n")
     );
   }
-}
-
-function routeComponentPath(modulePath: string) {
-  const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
-  // TanStack encodes grouped split targets with `---` separators.
-  const targets = new URLSearchParams(query).get("tsr-split")?.split("---");
-  return targets?.includes("component") === true ? path : "";
 }
 
 function* initialChunks(chunks: Iterable<SDK.ChunkInstance>) {

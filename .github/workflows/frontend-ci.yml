@@ -360,13 +360,22 @@ jobs:
           key: ${{ runner.os }}-rsbuild-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
           restore-keys: |
             ${{ runner.os }}-rsbuild-
-      - name: Build frontend
+      - name: Build production assets, verify contracts and record route gzip inventory
         env:
           PUBLIC_SENTRY_ENVIRONMENT: production
           PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
-        run: bun run build
-      - name: Verify emitted bundle contracts
-        run: bun run build:profile
+          ROUTE_INVENTORY: ${{ runner.temp }}/route-inventory-${{ github.sha }}.json
+        run: |
+          bun run bundle:routes build "$ROUTE_INVENTORY"
+          cat "$ROUTE_INVENTORY.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain detailed route inventory privately
+        if: github.event.repository.private
+        uses: *action_upload_artifact
+        with:
+          name: route-inventory-${{ github.sha }}
+          path: ${{ runner.temp }}/route-inventory-${{ github.sha }}.json*
+          retention-days: 7
+          if-no-files-found: error
       - name: Run full React Doctor analysis
         env:
           GITHUB_TOKEN: ${{ github.token }}

@@ -17,6 +17,7 @@ import {
 } from "./rsbuild.performance.ts";
 import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts";
 import { bundleContractRules } from "./scripts/rsdoctor-bundle-contracts.ts";
+import { resolveRsdoctorFeatures } from "./scripts/rsdoctor-features.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
 // Rsbuild tracks this config and its static imports automatically. Keep only
@@ -66,6 +67,8 @@ const buildCacheDigest = [
     env,
     rsdoctorEnabled: enableRsdoctor,
   }),
+  // Bundle observation and loader-timing interception cannot share cached modules.
+  `rsdoctor-mode:${buildEnv.RSDOCTOR ?? ""}`,
   reactPerformanceMode.buildCacheKey,
   `visual-harness:${String(enableVisualHarness)}`,
 ];
@@ -76,19 +79,8 @@ const preconnectOrigins = createPreconnectOrigins({
 
 const rsdoctorPluginOptions = {
   disableClientServer: true,
-  features: {
-    // Show which dependency or route group grows Querylane's JS payload.
-    bundle: true,
-    // Surface expensive loader transforms when frontend build time regresses.
-    loader: true,
-    // Attribute bundle changes to router, Tailwind, and React plugins.
-    plugins: true,
-    // Catch slow or CJS-fallback module resolution before it hits CI.
-    resolver: true,
-    // Verify Rspack's production tree-shaking actually removes unused
-    // UI/runtime code.
-    treeShaking: true,
-  },
+  // Full build-time profiling remains available through RSDOCTOR=1.
+  features: resolveRsdoctorFeatures(buildEnv.RSDOCTOR),
   linter: {
     extends: bundleContractRules,
     rules: {
