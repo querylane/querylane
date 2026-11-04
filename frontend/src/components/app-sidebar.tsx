@@ -189,6 +189,7 @@ function renderNavLink(link: NavLinkProps, router: RegisteredRouter) {
     case "/instances/$instanceId/databases/$databaseId/sql":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
@@ -197,6 +198,7 @@ function renderNavLink(link: NavLinkProps, router: RegisteredRouter) {
     case "/instances/$instanceId/databases/$databaseId/workbench":
       return (
         <Link
+          {...intent}
           params={link.params}
           search={(previous) => buildNavLinkSearch(link, previous)}
           to={link.to}
