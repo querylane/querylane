@@ -15,7 +15,10 @@ import {
   managedSplitChunksConfig,
   productionOptimizationOverrides,
 } from "./rsbuild.performance.ts";
-import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts";
+import {
+  normalReactOutputContract,
+  resolveReactPerformanceMode,
+} from "./scripts/react-performance-mode.ts";
 import { bundleContractRules } from "./scripts/rsdoctor-bundle-contracts.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
@@ -159,6 +162,12 @@ export default defineConfig({
   output: {
     // Extended subsets must stay on demand, not become base64 in the global CSS.
     dataUriLimit: { font: 0 },
+    ...(reactPerformanceMode.profile
+      ? {
+          distPath: { root: reactPerformanceMode.profile.output },
+          cleanDistPath: false,
+        }
+      : {}),
     // The explicit Scan command serves the pinned local asset before React.
     // Normal development and every production build omit it.
     ...(reactPerformanceMode.reactScanEnabled
@@ -194,7 +203,8 @@ export default defineConfig({
     buildCache: {
       buildDependencies: RSPACK_BUILD_DEPENDENCIES,
       cacheDigest: buildCacheDigest,
-      cacheDirectory: RSPACK_BUILD_CACHE_DIRECTORY,
+      cacheDirectory:
+        reactPerformanceMode.profile?.cache ?? RSPACK_BUILD_CACHE_DIRECTORY,
     },
     // Strip direct ad hoc diagnostics from production bundles while thrown
     // errors and explicit error handling stay intact.
@@ -202,6 +212,7 @@ export default defineConfig({
   },
   plugins: [
     pluginReact({
+      enableProfiler: Boolean(reactPerformanceMode.profile),
       // Global infer compilation is the default. Annotation exists only as a
       // local measurement control and uses an isolated persistent cache.
       reactCompiler: reactPerformanceMode.compiler,
@@ -211,15 +222,34 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      ...(reactPerformanceMode.profile
+        ? {
+            "@/lib/render-root$": path.resolve(
+              import.meta.dirname,
+              "./src/lib/react-profile-root.tsx"
+            ),
+          }
+        : {}),
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   source: {
+    ...(reactPerformanceMode.profile
+      ? {
+          define: {
+            QUERYLANE_REACT_PROFILE_BUILD: JSON.stringify(
+              reactPerformanceMode.profile.identity
+            ),
+          },
+        }
+      : {}),
     // PUBLIC_-prefixed env vars are exposed on import.meta.env automatically by
     // rsbuild (see rsbuild env-vars docs); src/env.ts reads them and defaults
     // PUBLIC_API_BASE_URL to "" via zod, so no manual `define` is needed.
     entry: {
-      index: "./src/main.tsx",
+      index: reactPerformanceMode.profile
+        ? "./src/react-profile-main.tsx"
+        : "./src/main.tsx",
       ...(enableVisualHarness
         ? { visual: "./src/visual-harness/main.tsx" }
         : {}),
@@ -230,6 +260,9 @@ export default defineConfig({
   tools: {
     rspack(config) {
       config.plugins ??= [];
+      if (!reactPerformanceMode.profile && isProduction) {
+        config.plugins.push(normalReactOutputContract);
+      }
       config.plugins.push(
         tanstackRouter({
           autoCodeSplitting: true,
