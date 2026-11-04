@@ -59,7 +59,10 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 1043 (was 1027): approved latest-dependency refresh, primarily the grid.
 // Paired Bun 1.4.4 builds: core 1025.9 -> 1040.7 KiB gzip (+1.4%).
 // Initial-load and largest-async caps stay unchanged.
-const MAX_TOTAL_GZIP_KIB = 1043;
+// 1045 (was 1043): approved dependency refresh on current main measures
+// 1043.3 KiB core gzip with Bun 1.4.4 on both macOS and Linux CI.
+// Leave modest headroom; every other bundle and latency cap is unchanged.
+const MAX_TOTAL_GZIP_KIB = 1045;
 
 interface BundleBudgetAsset {
   brotli: number;
