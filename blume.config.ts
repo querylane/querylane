@@ -1,8 +1,10 @@
 import { defineConfig } from "blume";
 import { node } from "blume/deploy";
 import { openapi } from "blume/reference";
+import { docsFonts } from "./scripts/docs-fonts";
 
 export default defineConfig({
+	integrations: [docsFonts],
 	title: "Querylane",
 	description: "Get started, configure, deploy, and operate Querylane safely.",
 	logo: "/icon.svg",

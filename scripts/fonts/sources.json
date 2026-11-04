@@ -1,0 +1,77 @@
+[
+  {
+    "path": "node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2",
+    "sha256": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2",
+    "sha256": "684ad5b531f81d43c1e8c7038262d5db7cdc1f68006e04d6c7769efa8d33c8cc",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "scripts/fonts/sources/docs-sans-italic.woff2",
+    "sha256": "7611b95ca318456c13dc38cc5763cfc1eff506f627ef8603c23521f52b68ca99",
+    "upstream": "https://fonts.gstatic.com/s/geist/v5/gyB8hwUxId8gMEwZKFeHP6bfRY8.woff2"
+  },
+  {
+    "path": "scripts/fonts/sources/docs-sans-normal.woff2",
+    "sha256": "9b6f5ff45b278c744b5f379a2c4ecbaf858a842b8eaf82ac8d21b699ca16c608",
+    "upstream": "https://fonts.gstatic.com/s/geist/v5/gyByhwUxId8gMEwcGFWNOITd.woff2"
+  },
+  {
+    "path": "scripts/fonts/sources/docs-mono-italic.woff2",
+    "sha256": "ba96582b1883578b88e73117ff9f5cceb9a7ef68e7b2840847a62b6344064be9",
+    "upstream": "https://fonts.gstatic.com/s/geistmono/v6/or3lQ6H-1_WfwkMZI_qYFrItmBvjrEgdbQ.woff2"
+  },
+  {
+    "path": "scripts/fonts/sources/docs-mono-normal.woff2",
+    "sha256": "5f3d6ad60f29d6cb708414ec6887163d63bf197377ef5417d2483ff31ace6c3b",
+    "upstream": "https://fonts.gstatic.com/s/geistmono/v6/or3nQ6H-1_WfwkMZI_qYFrcdmhHkjko.woff2"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist/files/geist-cyrillic-ext-wght-normal.woff2",
+    "sha256": "2317fa4bb293c9c0b110e18315d529235c47a0ddd3338cea3d8c7955e927899e",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist/files/geist-cyrillic-wght-normal.woff2",
+    "sha256": "6894439694946a589d157ece003086960a6a4013d74a813dab7602efdb3d8c09",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist/files/geist-vietnamese-wght-normal.woff2",
+    "sha256": "8fa40e5d248247735eb97a0bd593b8852440430600d6ba01364c31fe0abc1fe1",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2",
+    "sha256": "824f485b5d26e2f2da3c2b236132ece1bc8e4e43373452950bb0e40548b4313f",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-cyrillic-ext-wght-normal.woff2",
+    "sha256": "cd8800999070b729e1cc0bf7a48da6c3ac096a044251171b9a7574b56d96d4b4",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-cyrillic-wght-normal.woff2",
+    "sha256": "4866787fc952dbdbd591d6923d67bc21c2d894b93f34ab69d0cdf25d47bfb2df",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-symbols2-wght-normal.woff2",
+    "sha256": "5bb66d8319ba1602bb2eb67dce8d79c2b4687be8ce183a0574433e949b3c60ad",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-vietnamese-wght-normal.woff2",
+    "sha256": "d39b60889a94a527a7f73c7988a2d6efb6c081614aef683b0b386c02d74c2175",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  },
+  {
+    "path": "node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-ext-wght-normal.woff2",
+    "sha256": "1a189eb997c3e2ece68373e387afaec9e8617424186c4b1ab3cff7c54ba6223b",
+    "upstream": "npm @fontsource-variable 5.3.0 (root bun.lock)"
+  }
+]

@@ -18,11 +18,13 @@ COPY examples ./examples
 COPY theme.css ./
 COPY docs/components ./docs/components
 COPY docs/generated ./docs/generated
+COPY docs/fonts ./docs/fonts
 COPY docs/site ./docs/site
 COPY public ./public
 COPY proto ./proto
 COPY scripts/docs-content.test.ts ./scripts/docs-content.test.ts
 COPY scripts/docs-runtime.spec.ts ./scripts/docs-runtime.spec.ts
+COPY scripts/docs-fonts.ts ./scripts/docs-fonts.ts
 
 RUN bun run docs:test:content
 RUN bun run docs:check

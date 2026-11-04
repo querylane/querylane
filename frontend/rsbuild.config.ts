@@ -157,6 +157,8 @@ export default defineConfig({
     template: "./index.html",
   },
   output: {
+    // Extended subsets must stay on demand, not become base64 in the global CSS.
+    dataUriLimit: { font: 0 },
     // The explicit Scan command serves the pinned local asset before React.
     // Normal development and every production build omit it.
     ...(reactPerformanceMode.reactScanEnabled
@@ -186,7 +188,7 @@ export default defineConfig({
     // Only the immediately used UI face; leave mono and other subsets on demand.
     // Match emitted assets so the hint reuses CSS's content-hashed font URL.
     preload: {
-      include: /\/geist-latin-wght-normal(?:\.[\w]+)?\.woff2$/u,
+      include: /\/sans-core(?:\.[\w]+)?\.woff2$/u,
       type: "all-assets",
     },
     buildCache: {
