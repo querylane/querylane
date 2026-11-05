@@ -1,7 +1,12 @@
 "use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Database, RefreshCw, TriangleAlert } from "lucide-react";
+import {
+  ChevronRight,
+  Database,
+  RefreshCw,
+  TriangleExclamationPoint,
+} from "lucide-react";
 import {
   type Dispatch,
   lazy,
@@ -496,7 +501,7 @@ function InstancePageHeader({
         </div>
         {isNonEmptyString(serverInfoNotice) ? (
           <Alert>
-            <TriangleAlert aria-hidden="true" />
+            <TriangleExclamationPoint aria-hidden="true" />
             <AlertTitle>Server info unavailable</AlertTitle>
             <AlertDescription>
               Querylane is connected, but couldn’t load live server details:{" "}

@@ -1,12 +1,12 @@
 {
   "versions": {
     "@biomejs/biome": "2.6.4",
-    "ultracite": "8.1.0",
-    "oxlint": "1.90.0",
-    "@shadcn/lint": "0.2.3",
-    "react-doctor": "0.9.18",
-    "tsrs": "0.20.1-ts7.1.0-beta",
-    "typescript": "7.1.0-dev.20261028.1"
+    "ultracite": "8.1.1",
+    "oxlint": "1.91.0",
+    "@shadcn/lint": "0.2.5",
+    "react-doctor": "0.9.22",
+    "tsrs": "0.21.0-ts7.1.0-beta",
+    "typescript": "7.1.0-dev.20261104.1"
   },
   "biome": [
     {
@@ -9705,6 +9705,11 @@
       "rule": "react-doctor/forward-ref-uses-ref",
       "decision": "error",
       "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+    },
+    {
+      "rule": "react-doctor/forwarded-set-state-in-effect",
+      "decision": "error",
+      "reason": "Reviewed at error severity for forwarded synchronous state writes. This upstream bridge activates only when Doctor detects React Compiler and inherits the enabled set-state-in-effect severity and diagnostic key."
     },
     {
       "rule": "react-doctor/git-provider-url-injection-risk",

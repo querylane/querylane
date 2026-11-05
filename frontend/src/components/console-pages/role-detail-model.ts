@@ -11,8 +11,8 @@ import {
   KeyRound,
   LogIn,
   Network,
-  ShieldAlert,
   ShieldCheck,
+  ShieldExclamationPoint,
   ShieldOff,
   UserPlus,
 } from "lucide-react";
@@ -247,7 +247,7 @@ function capabilities(attributes: RoleAttributes | undefined): Capability[] {
     {
       danger: true,
       description: "Bypasses every permission check.",
-      icon: ShieldAlert,
+      icon: ShieldExclamationPoint,
       keyword: "SUPERUSER",
       on: Boolean(attributes?.isSuperuser),
     },
@@ -477,7 +477,7 @@ function buildAccessRows({
       detail: isSuperuser
         ? "Bypasses every permission check — full access to everything."
         : "Not a superuser.",
-      icon: ShieldAlert,
+      icon: ShieldExclamationPoint,
       label: "Superuser bypass",
       scope: "cluster",
       status: isSuperuser ? "Active" : "—",

@@ -5,7 +5,7 @@ import {
   LockKeyhole,
   Shield,
   ShieldOff,
-  ShieldQuestion,
+  ShieldQuestionMark,
 } from "lucide-react";
 import { SelectItem } from "@/components/querylane-ui/select";
 import {
@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const SSL_MODE_ICONS = {
-  allow: ShieldQuestion,
+  allow: ShieldQuestionMark,
   disable: ShieldOff,
   prefer: Shield,
   require: LockKeyhole,

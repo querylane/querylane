@@ -2,12 +2,12 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  CircleExclamationPoint,
   Columns3,
   Eye,
   GitBranch,
-  Layers3,
-  Loader2,
+  Layers,
+  LoaderCircle,
   Maximize2,
   Minimize2,
   SlidersHorizontal,
@@ -174,7 +174,7 @@ function StatCard({
   label,
   value,
 }: {
-  icon: typeof Layers3;
+  icon: typeof Layers;
   label: string;
   value: number;
 }) {
@@ -227,7 +227,7 @@ function DatabaseMapLoadingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center" presentation="section">
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
+          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading database map
         </CardTitle>
       </CardHeader>
@@ -698,7 +698,7 @@ function DatabaseStructureMap({
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          icon={Layers3}
+          icon={Layers}
           label="Schemas"
           value={model.summary.schemaCount}
         />
@@ -714,7 +714,7 @@ function DatabaseStructureMap({
           value={model.summary.foreignKeyCount}
         />
         <StatCard
-          icon={AlertCircle}
+          icon={CircleExclamationPoint}
           label="Policies"
           value={model.summary.policyCount}
         />
@@ -722,14 +722,14 @@ function DatabaseStructureMap({
 
       {Boolean(data.error) ? (
         <Alert variant="destructive">
-          <AlertCircle className="size-4" />
+          <CircleExclamationPoint className="size-4" />
           <AlertTitle>Map data failed to load</AlertTitle>
           <AlertDescription>{errorMessage(data.error)}</AlertDescription>
         </Alert>
       ) : null}
       {isNonEmptyString(data.truncatedReason) ? (
         <Alert>
-          <AlertCircle className="size-4" />
+          <CircleExclamationPoint className="size-4" />
           <AlertTitle>Partial map</AlertTitle>
           <AlertDescription>{data.truncatedReason}</AlertDescription>
         </Alert>

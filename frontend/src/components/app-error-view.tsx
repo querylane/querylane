@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bug, Copy, SearchCode } from "lucide-react";
+import { Bug, Copy, SearchCode, TriangleExclamationPoint } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/querylane-ui/card";
 import {
@@ -227,7 +227,7 @@ function AppPageError({
           presentation="recovery"
         >
           <div className="bg-destructive/10 flex size-12 items-center justify-center rounded-full">
-            <AlertTriangle className="text-destructive size-6" />
+            <TriangleExclamationPoint className="text-destructive size-6" />
           </div>
           <div className="space-y-1.5">
             <h2 className="text-lg font-semibold tracking-tight">
@@ -277,7 +277,7 @@ function AppCompactError({
         role="alert"
       >
         <div className="flex items-start gap-2.5">
-          <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+          <TriangleExclamationPoint className="text-destructive mt-0.5 size-4 shrink-0" />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm leading-snug font-medium">{error.title}</p>
             <p className="text-muted-foreground line-clamp-3 text-xs wrap-break-word">

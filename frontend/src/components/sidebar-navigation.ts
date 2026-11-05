@@ -1,6 +1,6 @@
 import {
   Activity,
-  Code2,
+  CodeXml,
   DatabaseZap,
   FolderTree,
   LayoutDashboard,
@@ -145,7 +145,7 @@ function getDatabaseNav({
           label: "Overview",
         },
         {
-          icon: Code2,
+          icon: CodeXml,
           isActive: active.databaseWorkbench,
           isDisabled: !isNonEmptyString(paths.databaseWorkbench),
           key: "database.workbench",

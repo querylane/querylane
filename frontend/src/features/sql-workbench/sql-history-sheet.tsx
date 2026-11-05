@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNowStrict } from "date-fns";
-import { Bookmark, History, Trash2 } from "lucide-react";
+import { Bookmark, RotateCcwClock, Trash } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
@@ -135,7 +135,7 @@ function SavedRow({
         type="button"
         variant="ghost"
       >
-        <Trash2 aria-hidden="true" className="size-3.5" />
+        <Trash aria-hidden="true" className="size-3.5" />
       </Button>
     </li>
   );
@@ -248,7 +248,7 @@ function SheetTabs({
     >
       <TabsList className="h-8">
         <TabsTrigger className="h-7" presentation="sql-compact" value="history">
-          <History aria-hidden="true" className="size-3.5" />
+          <RotateCcwClock aria-hidden="true" className="size-3.5" />
           History
           <Badge presentation="sql-count" variant="secondary">
             {historyCount}

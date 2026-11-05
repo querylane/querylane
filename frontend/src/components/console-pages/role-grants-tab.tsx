@@ -5,8 +5,8 @@ import {
   Copy,
   Database,
   Globe,
-  ShieldAlert,
   ShieldCheck,
+  ShieldExclamationPoint,
 } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
 import type { GrantsView } from "@/components/console-pages/role-detail-search";
@@ -457,7 +457,7 @@ function CharacterBanner({
   if (kind === "super") {
     return (
       <Alert>
-        <ShieldAlert aria-hidden="true" />
+        <ShieldExclamationPoint aria-hidden="true" />
         <AlertTitle>Superuser: object grants don&apos;t gate access</AlertTitle>
         <AlertDescription>
           <span className="font-mono">{roleName}</span> bypasses every

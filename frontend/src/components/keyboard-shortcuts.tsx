@@ -328,7 +328,9 @@ function KeyboardShortcutsProvider({
   }
 
   useEffect(function listenForKeyboardShortcuts() {
-    let pending: PendingKeyboardShortcut | undefined;
+    const shortcutState: { pending: PendingKeyboardShortcut | undefined } = {
+      pending: undefined,
+    };
 
     function openHelp(scope: KeyboardShortcutScope) {
       setHelpScope(scope);
@@ -339,9 +341,9 @@ function KeyboardShortcutsProvider({
       const resolution = resolveKeyboardShortcutEvent({
         event,
         handlers: handlersRef.current,
-        pending,
+        pending: shortcutState.pending,
       });
-      pending = pendingAfterResolution(resolution);
+      shortcutState.pending = pendingAfterResolution(resolution);
       if (resolution.status === "none") {
         return;
       }

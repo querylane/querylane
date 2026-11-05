@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Loader2, Plus, X } from "lucide-react";
+import { Bookmark, LoaderCircle, Plus, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
@@ -10,7 +10,7 @@ import { isNonEmptyString } from "@/lib/value-guards";
 function TabIcon({ isRunning, tab }: { isRunning: boolean; tab: SqlTab }) {
   if (isRunning) {
     return (
-      <Loader2
+      <LoaderCircle
         aria-label="Running"
         className="size-3 shrink-0 motion-safe:animate-spin"
       />

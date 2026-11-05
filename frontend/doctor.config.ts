@@ -52,6 +52,7 @@ export default defineConfig({
     "react-doctor/design-no-space-on-flex-children": "error",
     "react-doctor/design-no-three-period-ellipsis": "error",
     "react-doctor/design-no-vague-button-label": "error",
+    "react-doctor/forwarded-set-state-in-effect": "error",
     "react-doctor/no-all-caps-body-text": "error",
     "react-doctor/no-arbitrary-px-font-size": "error",
     "react-doctor/no-auto-scrolling-content": "error",

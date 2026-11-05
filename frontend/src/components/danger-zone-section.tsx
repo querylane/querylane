@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Trash } from "lucide-react";
 import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader } from "@/components/querylane-ui/card";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
@@ -59,7 +59,7 @@ function DangerZoneSection({
                 size="sm"
                 variant="destructive"
               >
-                <Trash2 data-icon="inline-start" />
+                <Trash data-icon="inline-start" />
                 {action.actionLabel}
               </DisabledReasonButton>
             </div>

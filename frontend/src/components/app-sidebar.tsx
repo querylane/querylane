@@ -7,12 +7,12 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   ArrowLeftIcon,
   ChevronsUpDown,
   HardDrive,
   InfoIcon,
   Search,
+  TriangleExclamationPoint,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
@@ -340,7 +340,7 @@ function SidebarFooterContent({
                 />
               }
             >
-              <AlertTriangle className="size-4" />
+              <TriangleExclamationPoint className="size-4" />
               <span className="sr-only">Build metadata error</span>
             </TooltipTrigger>
             <TooltipContent align="center" side="right">

@@ -1,4 +1,9 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  TriangleExclamationPoint,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { Input } from "@/components/querylane-ui/input";
@@ -474,7 +479,7 @@ function PartitionsTab({
       />
       {defaultPartition && defaultPartition.estimatedRows > 0 ? (
         <div className="bg-warning-500/10 flex items-start gap-2 rounded-lg p-3 text-sm leading-relaxed">
-          <AlertTriangle
+          <TriangleExclamationPoint
             aria-hidden="true"
             className="text-warning-600 dark:text-warning-300 mt-0.5 size-4 shrink-0"
           />

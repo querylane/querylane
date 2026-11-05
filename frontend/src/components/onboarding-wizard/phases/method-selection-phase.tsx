@@ -1,9 +1,9 @@
 import {
-  AlertTriangle,
   AppWindowMac,
   ChevronRight,
-  FileCode2,
+  FileCodeCorner,
   ServerCog,
+  TriangleExclamationPoint,
 } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
@@ -41,7 +41,7 @@ const METHOD_CONTENT: Record<
   manual_yaml: {
     description:
       "Edit the configuration file directly and let Querylane watch the path for changes as you save it.",
-    icon: FileCode2,
+    icon: FileCodeCorner,
   },
   ui_configured: {
     description:
@@ -220,7 +220,7 @@ export function MethodSelectionPhase() {
       />
       {onboardingState && !onboardingState.isHomeWritable ? (
         <Alert className="mb-5" presentation="onboarding-warning" role="status">
-          <AlertTriangle className="text-warning-400" />
+          <TriangleExclamationPoint className="text-warning-400" />
           <AlertTitle presentation="onboarding-warning">
             Automatic setup unavailable
           </AlertTitle>

@@ -1,4 +1,4 @@
-import { Copy, FileCode2, Rows3 } from "lucide-react";
+import { Copy, FileCodeCorner, Rows3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +66,7 @@ function CellContextMenu({
         </DropdownMenuItem>
         {onCopyRowAsSql ? (
           <DropdownMenuItem onClick={onCopyRowAsSql} presentation="compact">
-            <FileCode2 className="size-3.5" />
+            <FileCodeCorner className="size-3.5" />
             Copy row as INSERT
           </DropdownMenuItem>
         ) : null}

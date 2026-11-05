@@ -15,6 +15,28 @@ import { z } from "zod";
 const root = resolve(import.meta.dirname, "..");
 const compilers = ["tsrs", "tsc"];
 const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
+const NODE_VERSION_PATTERN =
+  /^ {2}NODE_VERSION: &node_version (?<version>\S+)$/mu;
+
+test("development and CI use Node 26 LTS with the same advertised minimum", () => {
+  const version = readFileSync(join(root, "../.node-version"), "utf8").trim();
+  expect(version).toBe("26.13.0");
+
+  const manifest = z
+    .object({ engines: z.object({ node: z.string() }) })
+    .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
+  expect(manifest.engines.node).toBe(`>=${version}`);
+
+  for (const workflow of ["frontend-ci.yml", "release.yml"]) {
+    const source = readFileSync(
+      join(root, "../.github/workflows", workflow),
+      "utf8"
+    );
+    expect(NODE_VERSION_PATTERN.exec(source)?.groups?.["version"]).toBe(
+      version
+    );
+  }
+});
 
 test.each([
   {
