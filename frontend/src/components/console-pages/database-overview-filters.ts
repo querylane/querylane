@@ -1,4 +1,4 @@
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
+import type { FacetedFilterOption } from "@/components/querylane-ui/data-table-filter-types";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 type CatalogObjectKindFilter =

@@ -40,6 +40,18 @@ const managedChunkCacheGroups = {
     // Keep validation engines out of the runtime used by ordinary RPC pages.
     test: /[/\\]node_modules[/\\](?:@bufbuild[/\\]protobuf|@connectrpc[/\\][^/\\]+)[/\\]/u,
   },
+  metadataUrlState: {
+    chunks: "async",
+    minChunks: 2,
+    // The publication controller is shared by three inventory routes but is
+    // smaller than the generic extraction threshold. Emit it once, still in
+    // core accounting, rather than copying it into each route's download.
+    minSize: 0,
+    name: "metadata-url-state",
+    priority: 28,
+    reuseExistingChunk: true,
+    test: /[/\\]src[/\\]lib[/\\]url-search-state\.ts$/u,
+  },
   sharedAsyncStyles: {
     chunks: "async",
     minChunks: 2,
@@ -49,6 +61,17 @@ const managedChunkCacheGroups = {
     priority: 40,
     reuseExistingChunk: true,
     type: "css/mini-extract",
+  },
+  sharedTablePagination: {
+    chunks: "async",
+    minChunks: 2,
+    // Both metadata tables and data grids use this footer. Join shared UI
+    // even below minSize instead of shipping five compiled copies.
+    minSize: 0,
+    name: "shared-ui",
+    priority: 28,
+    reuseExistingChunk: true,
+    test: /[/\\]src[/\\]components[/\\]data-grid[/\\]table-data-grid[/\\]pagination-footer\.tsx$/u,
   },
   sharedUi: {
     chunks: "async",

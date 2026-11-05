@@ -57,6 +57,9 @@ import {
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
+const MATCH_PATTERN_1 = /Name/u;
+const MATCH_PATTERN_2 = /Page 1 of/u;
+
 interface InstanceUpdateInput {
   instance: {
     config: {
@@ -83,6 +86,7 @@ const state = rs.hoisted(
   (): {
     activityQueryOptions: Record<string, unknown> | undefined;
     databases: PostgresDatabase[];
+    databasesPending: boolean;
     deleteInstance: ReturnType<typeof rs.fn>;
     extensionData: ListExtensionsResponse | undefined;
     extensionInput:
@@ -115,6 +119,7 @@ const state = rs.hoisted(
     >;
   } => ({
     activityQueryOptions: undefined as Record<string, unknown> | undefined,
+    databasesPending: false,
     databases: [] as PostgresDatabase[],
     deleteInstance: rs.fn(async () => undefined),
     extensionData: undefined as ListExtensionsResponse | undefined,
@@ -150,6 +155,14 @@ const state = rs.hoisted(
   })
 );
 
+const testLocation = rs.hoisted(() => ({
+  search: {},
+  state: {},
+  hash: "",
+  pathname: "/",
+  searchStr: "",
+}));
+
 rs.mock("@tanstack/react-router", () => ({
   ...Object.fromEntries([
     [
@@ -157,16 +170,14 @@ rs.mock("@tanstack/react-router", () => ({
       ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
     ],
   ]),
-  useLocation: ({
-    select,
-  }: {
-    select: (location: {
-      hash: string;
-      pathname: string;
-      searchStr: string;
-    }) => unknown;
-  }) => select({ hash: "", pathname: "/", searchStr: "" }),
+  useLocation: (options?: {
+    select?: (location: typeof testLocation) => unknown;
+  }) => (options?.select ? options.select(testLocation) : testLocation),
   useNavigate: () => state.navigate,
+  useRouter: () => ({
+    history: { subscribe: () => () => undefined },
+    state: { location: testLocation },
+  }),
   useSearch: ({
     select,
   }: {
@@ -302,9 +313,9 @@ rs.mock("@/lib/db-context", () => ({
       databases: {
         error: null,
         hasData: true,
-        hasResolved: true,
-        isFetching: false,
-        isPending: false,
+        hasResolved: !state.databasesPending,
+        isFetching: state.databasesPending,
+        isPending: state.databasesPending,
         isSuppressed: false,
         status: "success",
         suppressedReason: null,
@@ -562,6 +573,7 @@ function paginatedActivityHealthResponse() {
 beforeEach(() => {
   state.activityQueryOptions = undefined;
   state.databases = [];
+  state.databasesPending = false;
   state.deleteInstance.mockReset();
   state.deleteInstance.mockResolvedValue(undefined);
   state.extensionData = undefined;
@@ -1177,4 +1189,19 @@ describe("backend instance database list", () => {
       })
     ).toBeTruthy();
   });
+});
+
+test("database pending state retains its search toolbar and sortable headers, without empty data claims", () => {
+  state.selectedInstanceStatus = "connected";
+  state.databasesPending = true;
+  renderInstanceOverview();
+  expect(
+    screen.getByRole("textbox", { name: "Search databases…" })
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("columnheader", { name: MATCH_PATTERN_1 })
+  ).toBeTruthy();
+  expect(screen.getByText("Loading databases…")).toBeTruthy();
+  expect(screen.queryByText("No databases available.")).toBeNull();
+  expect(screen.queryByText(MATCH_PATTERN_2)).toBeNull();
 });

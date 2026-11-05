@@ -30,16 +30,14 @@ import type {
 } from "@/components/console-pages/role-grants-table-filter";
 import { selectRoleGrantsTableSlice } from "@/components/console-pages/role-grants-table-filter";
 import { Button } from "@/components/querylane-ui/button";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/querylane-ui/popover";
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   buildOwnedFilter,
