@@ -3,11 +3,11 @@
 import {
   Bookmark,
   ChevronDown,
-  History,
   ListOrdered,
-  Loader2,
+  LoaderCircle,
   Lock,
   Play,
+  RotateCcwClock,
   Square,
   WandSparkles,
   Waypoints,
@@ -283,7 +283,7 @@ function SqlWorkbenchToolbar({
           type="button"
           variant="ghost"
         >
-          <Loader2
+          <LoaderCircle
             aria-hidden="true"
             className="size-3.5 motion-safe:animate-spin"
           />
@@ -308,7 +308,7 @@ function SqlWorkbenchToolbar({
                 type="button"
                 variant="ghost"
               >
-                <History aria-hidden="true" />
+                <RotateCcwClock aria-hidden="true" />
                 {historyCount > 0 ? (
                   <span className="font-mono text-xs tabular-nums">
                     {historyCount}

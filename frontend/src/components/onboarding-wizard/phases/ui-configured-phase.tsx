@@ -3,7 +3,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-  Loader2,
+  LoaderCircle,
   Unplug,
   X,
 } from "lucide-react";
@@ -72,7 +72,7 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
   switch (status) {
     case "testing":
       return (
-        <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+        <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
       return <Check className="text-positive-400 size-4" />;

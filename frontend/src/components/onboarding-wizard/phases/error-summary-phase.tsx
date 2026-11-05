@@ -1,4 +1,9 @@
-import { AlertTriangle, ArrowLeft, RefreshCw, Settings2 } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  Settings2,
+  TriangleExclamationPoint,
+} from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
 import { DEFAULT_CONFIG_FILE_PATH } from "@/components/config-managed-guidance";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
@@ -103,7 +108,7 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
   if (errorKind === "configuration") {
     return (
       <div className="border-warning-400/20 bg-warning-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
-        <AlertTriangle className="text-warning-400 mt-0.5 size-4 shrink-0" />
+        <TriangleExclamationPoint className="text-warning-400 mt-0.5 size-4 shrink-0" />
         <div className="space-y-1">
           <div className="text-warning-100 text-base font-medium">
             Likely a configuration issue

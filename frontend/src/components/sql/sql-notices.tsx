@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import { TriangleExclamationPoint } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface SqlNoticesProps {
@@ -43,7 +43,7 @@ export function SqlNotices({
 
   return (
     <Alert>
-      <TriangleAlert aria-hidden="true" className="size-4" />
+      <TriangleExclamationPoint aria-hidden="true" className="size-4" />
       <AlertTitle aria-level={headingLevel} role="heading">
         {title}
       </AlertTitle>

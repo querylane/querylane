@@ -15,8 +15,149 @@ import { z } from "zod";
 const root = resolve(import.meta.dirname, "..");
 const compilers = ["tsrs", "tsc"];
 const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
+const NODE_VERSION_PATTERN =
+  /^ {2}NODE_VERSION: &node_version (?<version>\S+)$/mu;
+
+test("development and CI use Node 26 LTS with the same advertised minimum", () => {
+  const version = readFileSync(join(root, "../.node-version"), "utf8").trim();
+  expect(version).toBe("26.13.0");
+
+  const manifest = z
+    .object({ engines: z.object({ node: z.string() }) })
+    .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
+  expect(manifest.engines.node).toBe(`>=${version}`);
+
+  for (const workflow of ["frontend-ci.yml", "release.yml"]) {
+    const source = readFileSync(
+      join(root, "../.github/workflows", workflow),
+      "utf8"
+    );
+    expect(NODE_VERSION_PATTERN.exec(source)?.groups?.["version"]).toBe(
+      version
+    );
+  }
+});
+
+function lintBiome(file: string) {
+  const normal = spawnSync(
+    join(root, "node_modules/.bin/biome"),
+    ["lint", file],
+    {
+      cwd: root,
+      encoding: "utf8",
+    }
+  );
+  const supplemental = spawnSync("bun", ["run", "lint:biome:compat", file], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  return {
+    status: normal.status === 0 && supplemental.status === 0 ? 0 : 1,
+    stdout: normal.stdout + supplemental.stdout,
+    stderr: normal.stderr + supplemental.stderr,
+  };
+}
 
 test.each([
+  {
+    name: "unchained numeric comparisons",
+    rule: "noChainedComparison",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function between(a: number, b: number, c: number) { return a < b < c; }\n",
+    valid:
+      "export function between(a: number, b: number, c: number) { return a < b && b < c; }\n",
+  },
+  {
+    name: "concurrent promise batches",
+    rule: "noAwaitInPromiseMethods",
+    suffix: "unit.test.ts",
+    invalid:
+      "export async function load(first: Promise<string>, second: Promise<string>) { return Promise.all([await first, second]); }\n",
+    valid:
+      "export async function load(first: Promise<string>, second: Promise<string>) { return Promise.all([first, second]); }\n",
+  },
+  {
+    name: "matching event listener identities",
+    rule: "noInvalidRemoveEventListener",
+    suffix: "unit.test.ts",
+    invalid:
+      'export function detach(target: EventTarget) { target.removeEventListener("click", () => {}); }\n',
+    valid:
+      'export function detach(target: EventTarget, listener: EventListener) { target.removeEventListener("click", listener); }\n',
+  },
+  {
+    name: "synchronous event cancellation",
+    rule: "noLateEventControl",
+    suffix: "unit.test.ts",
+    invalid:
+      'document.addEventListener("click", async (event) => { await Promise.resolve(); event.preventDefault(); });\n',
+    valid:
+      'document.addEventListener("click", async (event) => { event.preventDefault(); await Promise.resolve(); });\n',
+  },
+  {
+    name: "consistent map lookup keys",
+    rule: "noMismatchedMapKey",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function lookup(values: Map<string, string>, key: string, other: string) { if (values.has(key)) { return values.get(other); } return undefined; }\n",
+    valid:
+      "export function lookup(values: Map<string, string>, key: string) { if (values.has(key)) { return values.get(key); } return undefined; }\n",
+  },
+  {
+    name: "thrown validation errors",
+    rule: "noMissingThrow",
+    suffix: "unit.test.ts",
+    invalid:
+      'export function validate(value: boolean) { if (!value) { new Error("Missing value"); } }\n',
+    valid:
+      'export function validate(value: boolean) { if (!value) { throw new Error("Missing value"); } }\n',
+  },
+  {
+    name: "reference-safe emptiness checks",
+    rule: "noObjectLiteralComparison",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function empty(value: string[]) { return value === []; }\n",
+    valid:
+      "export function empty(value: string[]) { return value.length === 0; }\n",
+  },
+  {
+    name: "Playwright browser isolation",
+    rule: "noPlaywrightUnsafeReferences",
+    suffix: "spec.ts",
+    invalid:
+      'const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate(() => label); expect(result).toBe(label); });\n',
+    valid:
+      'const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate((value) => value, label); expect(result).toBe(label); });\n',
+  },
+  {
+    name: "TanStack query return values",
+    rule: "noTanstackQueryVoidQueryFn",
+    suffix: "unit.test.ts",
+    invalid:
+      'import { useQuery } from "@tanstack/react-query"; export function useItems() { return useQuery({ queryKey: ["items"], queryFn: async () => { await Promise.resolve("ready"); } }); }\n',
+    valid:
+      'import { useQuery } from "@tanstack/react-query"; export function useItems() { return useQuery({ queryKey: ["items"], queryFn: async () => Promise.resolve("ready") }); }\n',
+  },
+  {
+    name: "stable query clients",
+    rule: "useTanstackQueryStableQueryClient",
+    suffix: "tsx",
+    invalid:
+      'import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; export function Provider() { const client = new QueryClient(); return <QueryClientProvider client={client} />; }\n',
+    valid:
+      'import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; const client = new QueryClient(); export function Provider() { return <QueryClientProvider client={client} />; }\n',
+  },
+  {
+    name: "direct set sizes",
+    rule: "useSetSize",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function size(values: Set<string>) { return [...values].length; }\n",
+    valid:
+      "export function size(values: Set<string>) { return values.size; }\n",
+  },
   {
     name: "console argument spacing",
     rule: "noConsoleSpaces",
@@ -78,11 +219,7 @@ test.each([
 ])("biome enforces $name without rejecting valid alternatives", (probe) => {
   const directory = mkdtempSync(join(root, "scripts", "quality-probe-"));
   const file = join(directory, `probe.${probe.suffix}`);
-  const lint = () =>
-    spawnSync(join(root, "node_modules/.bin/biome"), ["lint", file], {
-      cwd: root,
-      encoding: "utf8",
-    });
+  const lint = () => lintBiome(file);
   try {
     writeFileSync(file, probe.invalid);
     const invalid = lint();

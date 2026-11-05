@@ -271,14 +271,13 @@ function useWatchConfigChanges({
       return;
     }
 
-    let cancelled = false;
     const controller = new AbortController();
     const runId = retryTick;
 
     handleAsyncAction(() =>
       runWatchStreamWithRetries({
         controller,
-        isCancelled: () => cancelled || controller.signal.aborted,
+        isCancelled: () => controller.signal.aborted,
         onboardingStreamingClient,
         onComplete: () => {
           settleRetryState({
@@ -307,7 +306,7 @@ function useWatchConfigChanges({
         setManualRetryRequired,
       })
         .catch((error: unknown) => {
-          if (!(cancelled || controller.signal.aborted)) {
+          if (!controller.signal.aborted) {
             setManualRetryRequired(true);
             settleRetryState({
               retryPromiseRef,
@@ -318,14 +317,13 @@ function useWatchConfigChanges({
           }
         })
         .finally(() => {
-          if (!cancelled && runId === retryTickRef.current) {
+          if (!controller.signal.aborted && runId === retryTickRef.current) {
             setRun((current) => ({ ...current, isRunning: false }));
           }
         })
     )();
 
     return () => {
-      cancelled = true;
       controller.abort();
     };
   }, [enabled, onboardingStreamingClient, retryTick]);

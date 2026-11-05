@@ -431,9 +431,15 @@ function GridBody({
       }
       const activeGridRoot: HTMLDivElement = gridRoot;
       const activeGrid: HTMLElement = gridElement;
-      let activePointerId: number | undefined;
-      let animationFrameId: number | undefined;
-      let pointerPosition: { clientX: number; clientY: number } | undefined;
+      const pointerState: {
+        activePointerId: number | undefined;
+        animationFrameId: number | undefined;
+        position: { clientX: number; clientY: number } | undefined;
+      } = {
+        activePointerId: undefined,
+        animationFrameId: undefined,
+        position: undefined,
+      };
 
       function extendSelectionAtPoint(clientX: number, clientY: number) {
         const cell = document
@@ -467,32 +473,36 @@ function GridBody({
       }
 
       function autoScrollCellSelection() {
-        animationFrameId = undefined;
-        if (!pointerPosition) {
+        pointerState.animationFrameId = undefined;
+        if (!pointerState.position) {
           return;
         }
         const shouldContinue = runCellSelectionAutoScroll({
           cellSelectionStore,
           extendSelectionAtPoint,
           grid: activeGrid,
-          pointerPosition,
+          pointerPosition: pointerState.position,
         });
         if (!shouldContinue) {
           return;
         }
-        animationFrameId = requestAnimationFrame(autoScrollCellSelection);
+        pointerState.animationFrameId = requestAnimationFrame(
+          autoScrollCellSelection
+        );
       }
 
       function scheduleAutoScroll() {
-        animationFrameId ??= requestAnimationFrame(autoScrollCellSelection);
+        pointerState.animationFrameId ??= requestAnimationFrame(
+          autoScrollCellSelection
+        );
       }
 
       function beginPointerSelection(event: PointerEvent) {
         if (event.button !== 0) {
           return;
         }
-        activePointerId = event.pointerId;
-        pointerPosition = {
+        pointerState.activePointerId = event.pointerId;
+        pointerState.position = {
           clientX: event.clientX,
           clientY: event.clientY,
         };
@@ -500,12 +510,12 @@ function GridBody({
 
       function continuePointerSelection(event: PointerEvent) {
         if (
-          event.pointerId !== activePointerId ||
+          event.pointerId !== pointerState.activePointerId ||
           !cellSelectionStore.getState().isDragging
         ) {
           return;
         }
-        pointerPosition = {
+        pointerState.position = {
           clientX: event.clientX,
           clientY: event.clientY,
         };
@@ -514,19 +524,19 @@ function GridBody({
       }
 
       function finishSelection() {
-        activePointerId = undefined;
-        pointerPosition = undefined;
-        if (animationFrameId !== undefined) {
-          cancelAnimationFrame(animationFrameId);
-          animationFrameId = undefined;
+        pointerState.activePointerId = undefined;
+        pointerState.position = undefined;
+        if (pointerState.animationFrameId !== undefined) {
+          cancelAnimationFrame(pointerState.animationFrameId);
+          pointerState.animationFrameId = undefined;
         }
         cellSelectionStore.end();
       }
 
       function finishPointerSelection(event: PointerEvent) {
         if (
-          activePointerId !== undefined &&
-          event.pointerId !== activePointerId
+          pointerState.activePointerId !== undefined &&
+          event.pointerId !== pointerState.activePointerId
         ) {
           return;
         }

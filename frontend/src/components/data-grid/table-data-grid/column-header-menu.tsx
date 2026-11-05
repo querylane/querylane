@@ -5,7 +5,7 @@ import {
   Copy,
   EyeOff,
   Lock,
-  Unlock,
+  LockOpen,
 } from "lucide-react";
 import type { MouseEvent, PointerEvent } from "react";
 import { useId, useState } from "react";
@@ -117,7 +117,7 @@ function ColumnHeaderMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onToggleFreeze}>
           {isFrozen ? (
-            <Unlock className="size-3.5" />
+            <LockOpen className="size-3.5" />
           ) : (
             <Lock className="size-3.5" />
           )}

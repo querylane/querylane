@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2, Plus, Unplug } from "lucide-react";
+import { ArrowLeft, LoaderCircle, Plus, Unplug } from "lucide-react";
 import { useId } from "react";
 import { InstanceLabelRow } from "@/components/instance-label-row";
 import {
@@ -246,7 +246,7 @@ export function CreateInstanceActions({
       onClick={handleAsyncAction(handleCreate)}
     >
       {isPending ? (
-        <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+        <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
       ) : (
         <Plus className="size-4" />
       )}
@@ -261,7 +261,7 @@ export function CreateInstanceActions({
         variant="outline"
       >
         {isTesting ? (
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
         ) : (
           <Unplug className="size-4" />
         )}

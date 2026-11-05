@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import { TriangleExclamationPoint } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type RolesAccessMapNoticeProps =
@@ -28,7 +28,7 @@ function RolesAccessMapNotice(props: RolesAccessMapNoticeProps) {
   }
   return (
     <Alert role="status">
-      <TriangleAlert aria-hidden="true" />
+      <TriangleExclamationPoint aria-hidden="true" />
       <AlertTitle>Some access data is not shown</AlertTitle>
       <AlertDescription>
         The access map reached a result or request limit. It shows available

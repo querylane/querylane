@@ -15,7 +15,7 @@ env:
   ACTION_SETUP_NODE: &action_setup_node actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
   ACTION_UPLOAD_ARTIFACT: &action_upload_artifact actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
   BUN_VERSION: &bun_version 1.4.4
-  NODE_VERSION: &node_version 24
+  NODE_VERSION: &node_version 26.13.0
   # Keep in sync with the `playwright` version in frontend/package.json. The
   # visual job fails fast when they drift, because baselines depend on it.
   PLAYWRIGHT_IMAGE: &playwright_image mcr.microsoft.com/playwright:v1.64.1-noble
@@ -270,6 +270,9 @@ jobs:
       - uses: *action_checkout
         with:
           persist-credentials: false
+      - uses: *action_setup_node
+        with:
+          node-version: *node_version
       # Installed through npm, as in scripts/playwright-container.sh: the
       # Playwright image ships Node but not the unzip that setup-bun relies on.
       - name: Install Bun

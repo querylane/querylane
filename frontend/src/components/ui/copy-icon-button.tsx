@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, TriangleAlert } from "lucide-react";
+import { Check, Copy, TriangleExclamationPoint } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ function CopyIconButton({
   } else if (copyState === "failed") {
     content = (
       <>
-        <TriangleAlert className="size-3 text-destructive" />
+        <TriangleExclamationPoint className="size-3 text-destructive" />
         {children ? "Copy failed" : null}
       </>
     );

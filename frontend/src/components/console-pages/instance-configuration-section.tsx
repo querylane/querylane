@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Save } from "lucide-react";
+import { CircleCheck, CircleExclamationPoint, Save } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { SectionCard } from "@/components/console-pages/console-layout";
@@ -144,7 +144,7 @@ function InstanceCredentialAlert({
     : "Stored credentials can’t be read. Enter the password again to restore access.";
   return (
     <Alert presentation="responsive-action" variant="destructive">
-      <AlertCircle aria-hidden="true" />
+      <CircleExclamationPoint aria-hidden="true" />
       <AlertTitle>Credentials need attention</AlertTitle>
       <AlertDescription id={credentialGuidanceId}>
         {description}
@@ -350,7 +350,7 @@ function InstanceConfigurationFields({
             >
               <SslModeSelectValue value={sslMode} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+            <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
               <SslModeSelectItems />
             </SelectContent>
           </Select>
@@ -385,7 +385,7 @@ function InstanceConfigurationFields({
             >
               <SslNegotiationSelectValue value={sslNegotiation} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+            <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
               <SslNegotiationSelectItems />
             </SelectContent>
           </Select>
@@ -609,9 +609,9 @@ function InstanceConfigurationNotice({
       variant={formNotice.variant === "error" ? "destructive" : "default"}
     >
       {formNotice.variant === "error" ? (
-        <AlertCircle className="size-4" />
+        <CircleExclamationPoint className="size-4" />
       ) : (
-        <CheckCircle2 className="text-positive-600 size-4" />
+        <CircleCheck className="text-positive-600 size-4" />
       )}
       <AlertTitle>
         {formNotice.variant === "error" ? "Could not save" : "Saved"}

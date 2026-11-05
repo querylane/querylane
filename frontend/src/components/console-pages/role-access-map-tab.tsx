@@ -2,10 +2,10 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  CircleExclamationPoint,
   GitBranch,
   KeyRound,
-  Loader2,
+  LoaderCircle,
   Maximize2,
   Minimize2,
   ShieldCheck,
@@ -256,7 +256,7 @@ function AccessMapLoadingCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center" presentation="section">
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />{" "}
+          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />{" "}
           Loading access map
         </CardTitle>
       </CardHeader>
@@ -642,7 +642,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
         <Card>
           <CardContent className="flex items-center" presentation="canvas">
-            <AlertCircle className="text-primary size-5" />
+            <CircleExclamationPoint className="text-primary size-5" />
             <div>
               <p className="text-muted-foreground text-xs tracking-wider uppercase">
                 PUBLIC grants
@@ -664,14 +664,14 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
 
       {Boolean(props.grantsError) ? (
         <Alert variant="destructive">
-          <AlertCircle className="size-4" />
+          <CircleExclamationPoint className="size-4" />
           <AlertTitle>Access data failed to load</AlertTitle>
           <AlertDescription>{errorMessage(props.grantsError)}</AlertDescription>
         </Alert>
       ) : null}
       {loading ? (
         <Alert>
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
           <AlertTitle>Loading access facets</AlertTitle>
           <AlertDescription>
             The map updates as grants and ownership data arrive.

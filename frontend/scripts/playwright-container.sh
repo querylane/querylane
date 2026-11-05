@@ -6,6 +6,7 @@ set -euo pipefail
 frontend_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 playwright_version="$(bun -e 'console.log(require("playwright/package.json").version)')"
 bun_version="$(bun --version)"
+node_version="$(cat "${frontend_dir}/../.node-version")"
 image="mcr.microsoft.com/playwright:v${playwright_version}-noble"
 
 # Keep dependencies and build output private: a host build must not replace the
@@ -17,6 +18,6 @@ docker run --rm --ipc=host \
   --workdir /work \
   --env CI=1 \
   "${image}" \
-  bash -c "npm install --global --silent bun@${bun_version} \
+  bash -c "npm install --global --silent node@${node_version} bun@${bun_version} \
     && bun install --frozen-lockfile --ignore-scripts \
     && $*"

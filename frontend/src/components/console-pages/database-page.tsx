@@ -1,7 +1,12 @@
 "use client";
 
 import { Link } from "@tanstack/react-router";
-import { CircleAlert, CircleOff, FolderTree, Gauge } from "lucide-react";
+import {
+  CircleExclamationPoint,
+  CircleOff,
+  FolderTree,
+  Gauge,
+} from "lucide-react";
 import { useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { ResourcePageState } from "@/components/console-pages/console-layout";
@@ -172,7 +177,7 @@ function CatalogCoverageNotice({
   const schemaUnit = catalog.schemas.length === 1 ? "schema" : "schemas";
   return (
     <Alert aria-label="Some catalog data is not shown" role="status">
-      <CircleAlert aria-hidden="true" />
+      <CircleExclamationPoint aria-hidden="true" />
       <AlertTitle>Some catalog data is not shown</AlertTitle>
       <AlertDescription>
         Showing a bounded sample of {catalog.objects.length.toLocaleString()}{" "}
