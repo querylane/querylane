@@ -60,11 +60,11 @@ export function useAdminRunnerExecutionsInfiniteQuery(filter: string) {
     readonly ["admin", "runner-executions", "list-pages", string],
     string
   >({
-    getNextPageParam: (lastPage: ListAdminRunnerExecutionsResponse) =>
-      lastPage.nextPageToken || undefined,
-    initialPageParam: "",
     queryFn: ({ pageParam }) =>
       fetchRunnerExecutionsPage(transport, filter, pageParam),
+    initialPageParam: "",
+    getNextPageParam: (lastPage: ListAdminRunnerExecutionsResponse) =>
+      lastPage.nextPageToken || undefined,
     queryKey: ["admin", "runner-executions", "list-pages", filter] as const,
     refetchInterval: ADMIN_OPS_REFETCH_INTERVALS.jobQueue,
     ...RESOURCE_QUERY_OPTIONS.adminOps,

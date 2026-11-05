@@ -350,7 +350,7 @@ function InstanceConfigurationFields({
             >
               <SslModeSelectValue value={sslMode} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+            <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
               <SslModeSelectItems />
             </SelectContent>
           </Select>
@@ -385,7 +385,7 @@ function InstanceConfigurationFields({
             >
               <SslNegotiationSelectValue value={sslNegotiation} />
             </SelectTrigger>
-            <SelectContent className="w-[22rem] max-w-[var(--available-width)] min-w-0">
+            <SelectContent className="w-[22rem] max-w-(--available-width) min-w-0">
               <SslNegotiationSelectItems />
             </SelectContent>
           </Select>

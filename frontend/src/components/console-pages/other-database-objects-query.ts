@@ -353,9 +353,6 @@ function useOtherObjectsBrowseQuery({
 
   return useInfiniteQuery({
     enabled: enabled && cronProbeSettled,
-    getNextPageParam: (lastPage: OtherObjectsBrowsePage) =>
-      lastPage.hasMore ? (lastPage.objects.at(-1)?.sortKey ?? null) : null,
-    initialPageParam: "",
     queryFn: ({ pageParam }) =>
       fetchOtherObjectsBrowsePage({
         afterSortKey: pageParam || undefined,
@@ -365,6 +362,9 @@ function useOtherObjectsBrowseQuery({
         parent,
         search: search || undefined,
       }),
+    initialPageParam: "",
+    getNextPageParam: (lastPage: OtherObjectsBrowsePage) =>
+      lastPage.hasMore ? (lastPage.objects.at(-1)?.sortKey ?? null) : null,
     queryKey: [
       "console",
       "database",

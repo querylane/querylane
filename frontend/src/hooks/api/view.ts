@@ -71,8 +71,6 @@ function useListViewDependenciesQuery(parent: string | undefined) {
   >({
     ...RESOURCE_QUERY_OPTIONS.tableMetadata,
     enabled: Boolean(parent),
-    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
-    initialPageParam: "",
     queryFn: ({ pageParam }) => {
       const client = createClient(ViewService, transport);
       return client.listViewDependencies({
@@ -82,6 +80,8 @@ function useListViewDependenciesQuery(parent: string | undefined) {
         parent: parent ?? "",
       });
     },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
     queryKey: [
       "console",
       "view-dependencies",
@@ -142,10 +142,10 @@ function useListViewsInfiniteQuery(
     string
   >({
     enabled: options?.enabled ?? true,
+    queryFn: ({ pageParam }) => fetchViewsPage(transport, input, pageParam),
+    initialPageParam: "",
     getNextPageParam: (lastPage: ListViewsResponse) =>
       lastPage.nextPageToken || undefined,
-    initialPageParam: "",
-    queryFn: ({ pageParam }) => fetchViewsPage(transport, input, pageParam),
     queryKey: ["console", "views", "list-pages", input ?? null] as const,
     ...RESOURCE_QUERY_OPTIONS.tableMetadata,
   });
