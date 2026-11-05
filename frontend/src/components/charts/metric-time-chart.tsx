@@ -9,7 +9,7 @@ import { stack } from "@tanstack/charts/stack";
 import { text } from "@tanstack/charts/text";
 import { tooltip } from "@tanstack/charts/tooltip";
 import type { ChartGuideLineStyle } from "@tanstack/charts/types/core";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { ChartContainer } from "@/components/charts/chart-container";
 import type {
   ChartRow,
@@ -35,6 +35,8 @@ interface MetricTimeChartProps {
   formatValue: (value: number) => string;
   isRefreshing?: boolean | undefined;
   series: ChartSeries[];
+  /** Opt-in legend emphasis changes paint only, never data or scales. */
+  seriesEmphasis?: boolean | undefined;
   showLegend?: boolean | undefined;
   thresholds?: ChartThreshold[] | undefined;
   variant?: MetricTimeChartVariant | undefined;
@@ -54,6 +56,11 @@ interface MetricDatum {
 
 const INSET_CHART_MARGIN = { bottom: 28, left: 8, right: 4, top: 18 };
 const AREA_FILL_TOP_OPACITY = 0.16;
+const AREA_FILL_OPACITY = 0.2;
+const DIMMED_SERIES_OPACITY = 0.2;
+const PERCENT = 100;
+const MIN_SERIES_FOR_EMPHASIS = 2;
+
 const STACKED_FILL_OPACITY = 0.3;
 const DASHED_STROKE = "4 4";
 const SOLID_STROKE_WIDTH = 2;
@@ -67,6 +74,31 @@ const GRID_LINE: ChartGuideLineStyle = {
   stroke: "var(--color-border)",
   strokeOpacity: 1,
 };
+
+function useSeriesEmphasis(
+  series: ChartSeries[],
+  showLegend: boolean | undefined,
+  enabled: boolean
+) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const active =
+    enabled && showLegend !== false && series.length >= MIN_SERIES_FOR_EMPHASIS;
+  const emphasizedKey = active ? selectedKey : null;
+  return {
+    emphasizedKey,
+    handleChange: active ? setSelectedKey : undefined,
+    opacity: (key: string) =>
+      emphasizedKey === null || emphasizedKey === key
+        ? 1
+        : DIMMED_SERIES_OPACITY,
+  };
+}
+
+function emphasisColor(color: string, opacity: number) {
+  return opacity === 1
+    ? color
+    : `color-mix(in srgb, ${color} ${opacity * PERCENT}%, transparent)`;
+}
 
 function extentOf(data: ChartRow[]): [number, number] {
   const first = data[0]?.time ?? 0;
@@ -178,125 +210,10 @@ function resolveValueAxis({
   return { domain: [0, ticks.at(-1) ?? 1], ticks };
 }
 
-/**
- * A themed, responsive TanStack time-series chart. App-owned tick generation,
- * formatters, colors, missing-value gaps, thresholds, overlays, and legends
- * remain stable while TanStack owns the accessible SVG and interaction model.
- */
-function MetricTimeChart({
-  data,
-  domain,
-  formatDetailedValue,
-  formatValue,
-  isRefreshing,
-  series,
-  showLegend,
-  thresholds,
-  variant = "auto",
-  yAxisMode = "gutter",
-  yDomain,
-  yTickBase = 10,
-}: MetricTimeChartProps) {
-  const gradientPrefix = useId().replaceAll(/[^a-zA-Z0-9_-]/gu, "");
-  const [minMs, maxMs] = domain ?? extentOf(data);
-  const spanMs = maxMs - minMs;
-  const timeTicks = buildTimeTicks(minMs, maxMs);
-  const solidSeries = series.filter((item) => !(item.dashed === true));
-  const dashedSeries = series.filter((item) => item.dashed === true);
-  const drawMode = resolveVariant(variant, solidSeries.length);
-  const { domain: valueDomain, ticks: valueTicks } = resolveValueAxis({
-    data,
-    drawMode,
-    series,
-    thresholds,
-    yDomain,
-    yTickBase,
-  });
-  const detailedValue = formatDetailedValue ?? formatValue;
-  const seriesOrder = new Map(
-    series.map((item, index) => [item.key, index] as const)
-  );
-  const seriesByKey = new Map(series.map((item) => [item.key, item] as const));
-  const gradients =
-    drawMode === "area"
-      ? solidSeries.map((item) => ({
-          id: `${gradientPrefix}-${item.key}`,
-          stops: [
-            { color: item.color, offset: 0, opacity: 0 },
-            { color: item.color, offset: 1, opacity: AREA_FILL_TOP_OPACITY },
-          ],
-        }))
-      : [];
-
-  const solidMarks =
-    drawMode === "stacked"
-      ? [
-          areaY(
-            solidSeries.flatMap((item) => rowsForSeries(data, item.key)),
-            {
-              fill: (row) =>
-                seriesByKey.get(row.seriesKey)?.color ?? "currentColor",
-              fillOpacity: STACKED_FILL_OPACITY,
-              id: "stacked-series",
-              key: (row) => `${row.seriesKey}-${row.time}`,
-              layout: stack({ order: solidSeries.map((item) => item.key) }),
-              strokeWidth: 0,
-              x: "time",
-              y: "value",
-              z: "seriesKey",
-            }
-          ),
-        ]
-      : solidSeries.flatMap((item) => {
-          const rows = rowsForSeries(data, item.key);
-          if (drawMode === "line") {
-            return [
-              lineY(rows, {
-                id: item.key,
-                key: (row) => `${row.seriesKey}-${row.time}`,
-                stroke: item.color,
-                strokeWidth: SOLID_STROKE_WIDTH,
-                x: "time",
-                y: "value",
-                z: "seriesKey",
-              }),
-            ];
-          }
-          return [
-            decorative(
-              areaY(rows, {
-                fill: `url(#${gradientPrefix}-${item.key})`,
-                id: `${item.key}-fill`,
-                key: (row) => `${row.seriesKey}-${row.time}`,
-                strokeWidth: 0,
-                x: "time",
-                y: "value",
-              })
-            ),
-            lineY(rows, {
-              id: `${item.key}-stroke`,
-              key: (row) => `${row.seriesKey}-${row.time}`,
-              stroke: item.color,
-              strokeWidth: SOLID_STROKE_WIDTH,
-              x: "time",
-              y: "value",
-              z: "seriesKey",
-            }),
-          ];
-        });
-  const contextMarks = dashedSeries.map((item) =>
-    lineY(rowsForSeries(data, item.key), {
-      id: item.key,
-      key: (row) => `${row.seriesKey}-${row.time}`,
-      stroke: item.color,
-      strokeDasharray: DASHED_STROKE,
-      strokeOpacity: DASHED_STROKE_OPACITY,
-      strokeWidth: DASHED_STROKE_WIDTH,
-      x: "time",
-      y: "value",
-      z: "seriesKey",
-    })
-  );
+function buildThresholdMarks(
+  thresholds: ChartThreshold[] | undefined,
+  maxMs: number
+) {
   const thresholdRules = (thresholds ?? []).map((threshold) =>
     decorative(
       ruleY([threshold.value], {
@@ -334,6 +251,137 @@ function MetricTimeChart({
           ),
         ]
   );
+  return [...thresholdRules, ...thresholdLabels];
+}
+
+/**
+ * A themed, responsive TanStack time-series chart. App-owned tick generation,
+ * formatters, colors, missing-value gaps, thresholds, overlays, and legends
+ * remain stable while TanStack owns the accessible SVG and interaction model.
+ */
+function MetricTimeChartPlot({
+  data,
+  domain,
+  formatDetailedValue,
+  formatValue,
+  isRefreshing,
+  series,
+  showLegend,
+  seriesEmphasis = false,
+  thresholds,
+  variant = "auto",
+  yAxisMode = "gutter",
+  yDomain,
+  yTickBase = 10,
+}: MetricTimeChartProps) {
+  const emphasis = useSeriesEmphasis(series, showLegend, seriesEmphasis);
+  const gradientPrefix = useId().replaceAll(/[^a-zA-Z0-9_-]/gu, "");
+  const [minMs, maxMs] = domain ?? extentOf(data);
+  const spanMs = maxMs - minMs;
+  const timeTicks = buildTimeTicks(minMs, maxMs);
+  const solidSeries = series.filter((item) => !(item.dashed === true));
+  const dashedSeries = series.filter((item) => item.dashed === true);
+  const drawMode = resolveVariant(variant, solidSeries.length);
+  const { domain: valueDomain, ticks: valueTicks } = resolveValueAxis({
+    data,
+    drawMode,
+    series,
+    thresholds,
+    yDomain,
+    yTickBase,
+  });
+  const detailedValue = formatDetailedValue ?? formatValue;
+  const seriesOrder = new Map(
+    series.map((item, index) => [item.key, index] as const)
+  );
+  const seriesByKey = new Map(series.map((item) => [item.key, item] as const));
+  const gradients =
+    drawMode === "area"
+      ? solidSeries.map((item) => ({
+          id: `${gradientPrefix}-${item.key}`,
+          stops: [
+            { color: item.color, offset: 0, opacity: 0 },
+            { color: item.color, offset: 1, opacity: AREA_FILL_TOP_OPACITY },
+          ],
+        }))
+      : [];
+
+  const solidMarks =
+    drawMode === "stacked"
+      ? [
+          areaY(
+            solidSeries.flatMap((item) => rowsForSeries(data, item.key)),
+            {
+              fill: (row) => {
+                const color =
+                  seriesByKey.get(row.seriesKey)?.color ?? "currentColor";
+                return emphasisColor(color, emphasis.opacity(row.seriesKey));
+              },
+              fillOpacity: STACKED_FILL_OPACITY,
+              id: "stacked-series",
+              key: (row) => `${row.seriesKey}-${row.time}`,
+              layout: stack({ order: solidSeries.map((item) => item.key) }),
+              strokeWidth: 0,
+              x: "time",
+              y: "value",
+              z: "seriesKey",
+            }
+          ),
+        ]
+      : solidSeries.flatMap((item) => {
+          const rows = rowsForSeries(data, item.key);
+          if (drawMode === "line") {
+            return [
+              lineY(rows, {
+                id: item.key,
+                key: (row) => `${row.seriesKey}-${row.time}`,
+                stroke: item.color,
+                strokeOpacity: emphasis.opacity(item.key),
+                strokeWidth: SOLID_STROKE_WIDTH,
+                x: "time",
+                y: "value",
+                z: "seriesKey",
+              }),
+            ];
+          }
+          return [
+            decorative(
+              areaY(rows, {
+                fill: `url(#${gradientPrefix}-${item.key})`,
+                fillOpacity: AREA_FILL_OPACITY * emphasis.opacity(item.key),
+                id: `${item.key}-fill`,
+                key: (row) => `${row.seriesKey}-${row.time}`,
+                strokeWidth: 0,
+                x: "time",
+                y: "value",
+              })
+            ),
+            lineY(rows, {
+              id: `${item.key}-stroke`,
+              key: (row) => `${row.seriesKey}-${row.time}`,
+              stroke: item.color,
+              strokeOpacity: emphasis.opacity(item.key),
+              strokeWidth: SOLID_STROKE_WIDTH,
+              x: "time",
+              y: "value",
+              z: "seriesKey",
+            }),
+          ];
+        });
+  const contextMarks = dashedSeries.map((item) =>
+    lineY(rowsForSeries(data, item.key), {
+      id: item.key,
+      key: (row) => `${row.seriesKey}-${row.time}`,
+      stroke: item.color,
+      strokeDasharray: DASHED_STROKE,
+      strokeOpacity: DASHED_STROKE_OPACITY * emphasis.opacity(item.key),
+      strokeWidth: DASHED_STROKE_WIDTH,
+      x: "time",
+      y: "value",
+      z: "seriesKey",
+    })
+  );
+  const thresholdMarks = buildThresholdMarks(thresholds, maxMs);
   const insetLabels =
     yAxisMode === "inset"
       ? valueTicks.map((value) =>
@@ -358,8 +406,7 @@ function MetricTimeChart({
       marks: [
         ...solidMarks,
         ...contextMarks,
-        ...thresholdRules,
-        ...thresholdLabels,
+        ...thresholdMarks,
         ...insetLabels,
         crosshair({
           x: {
@@ -464,7 +511,9 @@ function MetricTimeChart({
   return (
     <ChartContainer
       className="cursor-crosshair"
+      emphasizedSeriesKey={emphasis.emphasizedKey}
       isRefreshing={isRefreshing}
+      onSeriesEmphasisChange={emphasis.handleChange}
       series={series}
       showLegend={showLegend}
     >
@@ -475,6 +524,18 @@ function MetricTimeChart({
       />
     </ChartContainer>
   );
+}
+
+/** Reconcile by semantic identity, never by array reference or display order. */
+function MetricTimeChart(props: MetricTimeChartProps) {
+  const identity =
+    props.seriesEmphasis === true
+      ? JSON.stringify([
+          props.showLegend !== false,
+          props.series.map((item) => item.key).toSorted(),
+        ])
+      : "default";
+  return <MetricTimeChartPlot key={identity} {...props} />;
 }
 
 export { MetricTimeChart };
