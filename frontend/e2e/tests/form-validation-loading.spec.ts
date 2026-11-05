@@ -14,7 +14,17 @@ import {
 const sourceMapSchema = z.object({ sources: z.array(z.string()) });
 const validationModulePattern =
   /node_modules\/(?:@bufbuild\/(?:protovalidate|cel|cel-spec)|react-hook-form)\//u;
+const sharedValidationDescriptor =
+  "node_modules/@bufbuild/protovalidate/dist/esm/gen/buf/validate/validate_pb.js";
 const distDirectory = join(import.meta.dirname, "../../dist");
+
+function isValidationEngineSource(source: string) {
+  // RPC schemas share this metadata eagerly. It is not the validator/CEL engine.
+  return (
+    validationModulePattern.test(source) &&
+    !source.endsWith(sharedValidationDescriptor)
+  );
+}
 
 function downloadedSources(scriptPaths: Set<string>) {
   return [...scriptPaths].flatMap((path) => {
@@ -65,8 +75,11 @@ test("instance overview defers form validation until configuration opens", {
     overviewSources.some((source) => source.includes("@connectrpc/"))
   ).toBe(true);
   expect(
-    overviewSources.filter((source) => validationModulePattern.test(source))
-  ).toEqual([]);
+    overviewSources.some((source) =>
+      source.endsWith(sharedValidationDescriptor)
+    )
+  ).toBe(true);
+  expect(overviewSources.filter(isValidationEngineSource)).toEqual([]);
 
   const validationDownload = Promise.withResolvers<void>();
   await page.route("**/form-validation.*.js", async (route) => {
@@ -85,7 +98,9 @@ test("instance overview defers form validation until configuration opens", {
   ).toBeVisible();
   expect(
     downloadedSources(scripts).some((source) =>
-      source.includes("@bufbuild/protovalidate/")
+      source.endsWith(
+        "node_modules/@bufbuild/protovalidate/dist/esm/validator.js"
+      )
     )
   ).toBe(true);
 

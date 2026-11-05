@@ -162,12 +162,18 @@ jobs:
   browser:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    name: Frontend Browser
+    name: Frontend Browser (${{ matrix.renderer }})
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [react, redact]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       actions: write
       contents: read
+    env:
+      QUERYLANE_RENDERER: ${{ matrix.renderer }}
     defaults:
       run:
         working-directory: frontend
@@ -207,13 +213,18 @@ jobs:
   e2e:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    name: Frontend E2E
+    name: Frontend E2E (${{ matrix.renderer }})
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [react, redact]
     runs-on: ubuntu-latest
     container:
       image: *playwright_image
       options: --ipc=host
     timeout-minutes: 8
     env:
+      QUERYLANE_RENDERER: ${{ matrix.renderer }}
       HOME: /root
     defaults:
       run:
@@ -251,7 +262,7 @@ jobs:
         if: failure()
         uses: *action_upload_artifact
         with:
-          name: e2e-failure-report
+          name: e2e-failure-report-${{ matrix.renderer }}
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -261,7 +272,7 @@ jobs:
   visual:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    name: Frontend Visual (${{ matrix.shard }}/3)
+    name: Frontend Visual (${{ matrix.renderer }}, ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Each Playwright test loads a full route; one 4-vCPU runner is CPU-bound,
@@ -270,10 +281,13 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
+        renderer: [react, redact]
     # Same image as `bun run test:visual:update`, so baselines match pixel for pixel.
     container:
       image: *playwright_image
       options: --ipc=host
+    env:
+      QUERYLANE_RENDERER: ${{ matrix.renderer }}
     defaults:
       run:
         working-directory: frontend
@@ -308,7 +322,7 @@ jobs:
         if: failure()
         uses: *action_upload_artifact
         with:
-          name: playwright-visual-report-${{ matrix.shard }}
+          name: playwright-visual-report-${{ matrix.renderer }}-${{ matrix.shard }}
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -319,7 +333,11 @@ jobs:
   build:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
-    name: Frontend Build
+    name: Frontend Build (${{ matrix.renderer }})
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [react, redact]
     runs-on: ubuntu-latest
     timeout-minutes: 6
     permissions:
@@ -328,6 +346,7 @@ jobs:
       pull-requests: write
       statuses: write
     env:
+      QUERYLANE_RENDERER: ${{ matrix.renderer }}
       SENTRY_AUTH_TOKEN: ${{ vars.SENTRY_AUTH_TOKEN != '' && vars.SENTRY_AUTH_TOKEN || secrets.SENTRY_AUTH_TOKEN || '' }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_ORG || secrets.SENTRY_ORG || '' }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT != '' && vars.SENTRY_PROJECT || secrets.SENTRY_PROJECT || '' }}
@@ -357,9 +376,9 @@ jobs:
         uses: *action_cache
         with:
           path: frontend/node_modules/.cache/rsbuild
-          key: ${{ runner.os }}-rsbuild-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
+          key: ${{ runner.os }}-rsbuild-${{ matrix.renderer }}-${{ hashFiles('frontend/bun.lock', 'frontend/package.json', 'frontend/rsbuild.config.ts', 'frontend/tsconfig.json') }}
           restore-keys: |
-            ${{ runner.os }}-rsbuild-
+            ${{ runner.os }}-rsbuild-${{ matrix.renderer }}-
       - name: Build frontend
         env:
           PUBLIC_SENTRY_ENVIRONMENT: production
@@ -369,7 +388,8 @@ jobs:
         run: bun run build:profile
       - name: Run full React Doctor analysis
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          # Both scan; only native publishes the shared PR comment/status.
+          GITHUB_TOKEN: ${{ matrix.renderer == 'react' && github.token || '' }}
           QUALITY_BASE_REF: origin/${{ github.base_ref }}
         run: bun run scripts/run-react-doctor-ci.ts
 

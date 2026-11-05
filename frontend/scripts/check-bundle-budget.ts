@@ -32,8 +32,12 @@ const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
 // 145 (was 140): the console-pages chunk shares these sources and also grew
 // with the instance health section redesign.
 const MAX_DEFERRED_CHARTS_GZIP_KIB = 145;
-const MAX_INITIAL_GZIP_KIB = 450;
-const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
+// Preserve the original lean-validation headroom after main's React/toolchain
+// refresh: paired current-base builds measure 338.4 -> 327.3 KiB initial and
+// 304.0 -> 293.0 KiB JS. Both grew ~1 KiB vs the previous dependency baseline;
+// move these PR-introduced caps by that same 1 KiB (upstream: 450 / 400).
+const MAX_INITIAL_GZIP_KIB = 328;
+const MAX_INITIAL_SCRIPT_GZIP_KIB = 294;
 // 975 (was 970): the data explorer's grid interaction layer became a shared
 // ResultDataGrid chunk used by the SQL workbench too (~3 KiB of optional
 // capability props and chunk overhead; the logic itself did not grow).
@@ -147,6 +151,11 @@ function allBuildAssets(directory: string, prefix = ""): string[] {
 
     if (entry.isDirectory()) {
       return allBuildAssets(absolutePath, relativePath);
+    }
+    // The opt-in profiler emits its own HTML app, not Querylane payload.
+    // Exclude only its configured root report; other app HTML still counts.
+    if (relativePath === "rsdoctor-report.html") {
+      return [];
     }
     return BUILD_ASSET_EXTENSION_PATTERN.test(entry.name) ? [relativePath] : [];
   });

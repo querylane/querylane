@@ -26,6 +26,31 @@ afterEach(() => {
 });
 
 describe("collectBundleBudgetStats", () => {
+  test("excludes profiler reports without hiding application HTML", () => {
+    const distDir = createDistDir();
+    writeAsset(distDir, "index.html", "<main>Querylane</main>");
+    writeAsset(distDir, "static/js/index.js", "export const app = true;");
+    writeAsset(distDir, "help.html", "<main>Application help</main>");
+    writeAsset(distDir, "rsdoctor-report.html", "<main>Profiler report</main>");
+    writeAsset(distDir, "rsdoctor-data.json", "{}");
+
+    const stats = collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    });
+
+    expect(stats.allAssets.map((asset) => asset.path).toSorted()).toEqual([
+      "help.html",
+      "index.html",
+      "static/js/index.js",
+    ]);
+    expect(stats.totalGzip).toBe(
+      gzipSync("<main>Querylane</main>").byteLength +
+        gzipSync("export const app = true;").byteLength +
+        gzipSync("<main>Application help</main>").byteLength
+    );
+  });
+
   test("rejects chart runtime in the initial download", () => {
     const distDir = createDistDir();
     writeAsset(

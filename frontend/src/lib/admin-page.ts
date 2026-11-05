@@ -1,6 +1,7 @@
 "use client";
 
-import { z } from "zod";
+import "@/lib/zod-locale";
+import { z } from "zod/mini";
 
 /**
  * Canonical admin page identifiers.

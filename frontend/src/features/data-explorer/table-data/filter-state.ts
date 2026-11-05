@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
-import { z } from "zod";
 import { isNonEmptyString } from "@/lib/value-guards";
+import "@/lib/zod-locale";
+import { z } from "zod/mini";
 import {
   type RowFilter,
   RowFilterGroup_Logic,
@@ -297,18 +298,18 @@ function parseIntegerTableValue(value: string): TableValue | undefined {
 }
 
 const compactRuleSearchSchema = z.object({
-  c: z.string().min(1),
-  i: z.string().min(1),
-  l: z.enum(FILTER_LOGICS).optional(),
-  n: z.boolean().optional(),
+  c: z.string().check(z.minLength(1)),
+  i: z.string().check(z.minLength(1)),
+  l: z.optional(z.enum(FILTER_LOGICS)),
+  n: z.optional(z.boolean()),
   o: z.enum(FILTER_OPERATORS),
-  v: z.string().default(""),
-  v2: z.string().optional(),
+  v: z._default(z.string(), ""),
+  v2: z.optional(z.string()),
 });
 
 const tableFilterSearchSchema = z.object({
-  l: z.enum(FILTER_LOGICS).default(DEFAULT_FILTER_LOGIC),
-  r: z.array(compactRuleSearchSchema).default([]),
+  l: z._default(z.enum(FILTER_LOGICS), DEFAULT_FILTER_LOGIC),
+  r: z._default(z.array(compactRuleSearchSchema), []),
 });
 
 function emptyFilterState(): TableFilterState {

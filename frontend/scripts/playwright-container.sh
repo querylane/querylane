@@ -16,6 +16,7 @@ docker run --rm --ipc=host \
   --volume /work/dist \
   --workdir /work \
   --env CI=1 \
+  --env "QUERYLANE_RENDERER=${QUERYLANE_RENDERER:-react}" \
   "${image}" \
   bash -c "npm install --global --silent bun@${bun_version} \
     && bun install --frozen-lockfile --ignore-scripts \

@@ -41,9 +41,13 @@ plugins:
     opt:
       - paths=source_relative
 
-  - remote: buf.build/bufbuild/es:v2.11.0
+  - remote: buf.build/bufbuild/es:v2.15.0
     out: frontend/src/protogen
-    opt: target=ts
+    opt:
+      - target=ts
+      # Share the runtime's canonical validation descriptors without removing
+      # any validation annotations from Querylane's generated messages.
+      - map_imports=buf/validate/:@bufbuild/protovalidate/gen
     include_imports: true
 
   - remote: buf.build/connectrpc/query-es:v2.2.0

@@ -6,7 +6,8 @@ Querylane stays client-side only. Measure performance in 4 layers instead of tru
 
 ```bash
 cd frontend
-bun run build                    # hard gzip bundle budgets
+bun run build                    # native React + hard gzip bundle budgets
+bun run build:redact             # opt-in TanStack Redact, same budgets
 bun run dev:scan                 # local React Scan + default global Compiler
 bun run perf:lighthouse          # build, run Lighthouse CI, print summary
 bun run perf:lighthouse:public   # one run, upload public Google report links
@@ -30,6 +31,256 @@ Public report links use Lighthouse CI temporary public storage. Those links are
 shareable and intended for CI logs or pull request comments. They are not the
 long-term source of truth; keep bundle budgets and local assertions as the hard
 gate.
+
+## Rsdoctor analysis loop
+
+Querylane already uses Rsbuild 2; it is one web app, not a Module Federation host.
+Rsdoctor 2 is opt-in through `build:profile`. Normal builds do not collect profiles.
+The pinned Agent CLI reads local reports without an MCP server or external upload.
+See the upstream [migration guide](https://rsdoctor.rs/guide/migration/migration-v2)
+and [Agent CLI documentation](https://rsdoctor.rs/guide/start/ai).
+
+From `frontend/`:
+
+```bash
+# Baseline before changing imports or chunking. This cleans dist, not the build cache.
+bun run build:profile
+# Keep the baseline outside dist: the next build replaces that directory.
+cp dist/rsdoctor-data.json /tmp/querylane-rsdoctor-baseline.json
+
+bun run analyze bundle optimize --data-file dist/rsdoctor-data.json
+bun run analyze tree-shaking summary --data-file dist/rsdoctor-data.json
+bun run analyze tree-shaking retained-modules --emitted-only --sort parsedSize --limit 25 --data-file dist/rsdoctor-data.json
+bun run analyze loaders hot-files --data-file dist/rsdoctor-data.json
+
+# Drill into a retained module, then trace the ID returned by this query.
+bun run analyze modules by-path --path chrono-node --data-file dist/rsdoctor-data.json
+# bun run analyze modules issuer --id <returned-id> --data-file dist/rsdoctor-data.json
+
+# After one evidence-backed change, rebuild and compare.
+bun run build:profile
+bun run analyze assets diff --baseline /tmp/querylane-rsdoctor-baseline.json --current dist/rsdoctor-data.json --data-file dist/rsdoctor-data.json
+```
+
+Open `dist/rsdoctor-report.html` for the visual overview, compilation analysis,
+and bundle tree. Use `bun run analyze --describe` and `--schema <group.command>`
+to inspect supported commands/options. A missing data file fails with a nonzero
+exit; regenerate it with `build:profile` before querying again.
+
+### Measurement boundaries
+
+- Module sizes help locate retained code, not estimate download savings. Concatenated
+  parent/child entries can describe the same emitted code. Do not sum module gzip sizes.
+- No rule alerts does not mean every retained module is needed. Inspect emitted chunks,
+  issuer chains, and source before making a change. Empty export data is not proof of
+  perfect tree-shaking.
+- Agent CLI 0.1.1's `assets diff` reported zero initial JS/CSS assets for this build
+  despite three initial chunks. Use `budget:check` for initial payload and request counts;
+  do not treat that CLI field as a first-load measurement.
+- Budgets use Node's default `gzipSync`/Brotli compression. Initial payload counts
+  scripts/styles referenced by `index.html`, including theme initialization, but not
+  fonts, HTML, API responses, or route-navigation downloads. Total payload counts app
+  HTML/JS/CSS, not the profiler's HTML/JSON, source maps, fonts, or images.
+- Profiling changes chunk IDs and adds analysis overhead. Compare normal production
+  builds for user payload or build-speed claims. For build timing, use the same machine,
+  environment and locked dependencies, clear `dist` and `node_modules/.cache/rsbuild`
+  before each run, and report the median of three runs per revision. Do not mix cold
+  and warm builds or include profiler timing in normal-build claims.
+- Keep only improvements that clear a declared worthwhile threshold. Re-run the same
+  route journey for navigation claims; this profile alone does not measure a journey.
+
+### Baseline: October 28, 2026
+
+At `e7196590`, a normal production build on macOS arm64, Bun 1.4.4, Node 26.12.1,
+Rsbuild 2.2.10 and Rspack 2.2.9 reported:
+
+| Metric | Baseline |
+| --- | ---: |
+| Initial scripts/styles, gzip | 337.4 KiB |
+| Initial JavaScript, gzip | 303.0 KiB |
+| Initial script/style requests | 5 |
+| All application HTML/JS/CSS, gzip | 1395.5 KiB |
+| Largest async script, gzip | 111.6 KiB |
+
+### Implemented validation-runtime improvements
+
+Before the October 29 dependency refresh, the normal production build reported
+**326.3 KiB initial gzip**, **292.0 KiB
+initial JavaScript gzip**, and **1371.7 KiB total application HTML/JS/CSS gzip**.
+The initial script/style request count stays at five. Compared with the baseline,
+that removes **11,301 initial gzip bytes (3.27%)** and **24,414 total gzip bytes
+(1.71%)**. These are emitted-payload measurements, not load-time or route-journey
+speed claims. The comparison uses the same machine, locked packages, production
+configuration and `collectBundleBudgetStats` compression; normal builds were
+measured separately from instrumented builds.
+
+Two changes implement the Rsdoctor findings:
+
+- Browser schemas use `zod/mini`'s functional API instead of Classic. They import
+  `@/lib/zod-locale` to retain English validation messages. Node-only tooling keeps
+  its existing Classic imports. URL search, persisted drafts, and public environment
+  variables retain their validation and transformation behavior.
+- `buf.gen.yaml` pins protoc-gen-es 2.15.0 and maps `buf/validate/` imports to
+  `@bufbuild/protovalidate/gen`. Generated API schemas and the validation runtime
+  therefore share one canonical descriptor. Validation annotations are preserved,
+  not stripped or deferred. Regenerate with `task proto:generate`; never edit
+  generated output. See the generator's [map_imports release notes](https://github.com/bufbuild/protobuf-es/releases/tag/v2.15.0)
+  and [Zod Mini documentation](https://zod.dev/packages/mini).
+
+The descriptor-only experiment reduced total gzip by 9,959 bytes but grew initial
+payload by 3,201 bytes. It missed the independent startup guardrail. The combined
+slice is retained because the Mini change more than offsets that cost while
+removing the duplicate descriptor overall. Do not describe descriptor sharing
+alone as a startup optimization.
+
+Rsdoctor's final emitted graph contains one canonical validation descriptor and no
+local validation-descriptor copy, Zod Classic modules, or Zod JSON-schema conversion
+modules. Its rule report has no alerts; that is not a general proof of perfect
+bundling. React DOM remains eager, while CodeMirror, charts, React Flow, the
+validation engine, and SQL highlighting remain deferred.
+
+Verification includes a failing-before descriptor-identity assertion, actual
+required-field/range and message-level CEL validation, binary/JSON round trips,
+English multi-error output, existing search/draft tests, and a failing-before
+startup byte-budget gate. The 28 generated encoded file descriptors are unchanged;
+only dependency imports and generator-produced TypeScript declarations changed.
+
+### Current dependency baseline: October 29, 2026
+
+Main's dependency refresh (`03e61c9e`) upgrades React/DOM to 19.3.1 and Rsbuild to
+2.2.14. Paired normal builds with those pinned dependencies report:
+
+| Gzip output | Updated main | This PR, native React |
+| --- | ---: | ---: |
+| Initial scripts/styles | 346,496 bytes | 335,170 bytes |
+| Initial JavaScript | 311,313 bytes | 299,987 bytes |
+| All application HTML/JS/CSS | 1,448,972 bytes | 1,424,670 bytes |
+
+The validation changes still remove **11,326 initial bytes** and **24,302 total
+bytes** on this baseline. Startup grew about 1 KiB in both revisions versus the
+previous dependency set. Accordingly this PR's new startup caps are 328/294 KiB
+instead of 327/293: the same approximately 0.7/1.0 KiB headroom, still below
+main's 450/400 KiB caps. Other byte caps and both latency limits are unchanged.
+Do not compare a current build directly with the historical dependency baseline
+and attribute every byte to this PR.
+
+### Further experiments: rejected, not shipped
+
+A follow-up pass compared normal builds against `8d8b8a64`, using the same byte
+collector and locked dependencies. Rsdoctor traced an eager import from the SQL
+workbench route to the shared prefetch registry, including table and extension
+RPC schemas. Deferring it lowered initial bytes, but duplicated small modules
+across async chunks. Initial bytes alone were not sufficient evidence to keep it.
+
+| Experiment | Initial gzip change | Total app gzip change | Decision |
+| --- | ---: | ---: | --- |
+| Dynamic workbench prefetch import only | −9,302 bytes | +8,217 bytes | Reverted |
+| Separate common, explorer and extension prefetch factories | −9,143 bytes | +8,763 bytes | Reverted |
+| Split factories plus targeted shared async query chunk | −9,102 bytes | +3,904 bytes | Reverted |
+
+Before the shared-chunk revision, the acceptance ceiling was set at 2 KiB total
+growth while retaining at least 5 KiB initial savings. That revision still missed
+the ceiling. Rsdoctor confirmed the cause: the factory split emitted the infinite
+query observer in five chunks and the extension descriptor in three; the shared
+group removed those duplicates but did not offset the remaining output growth.
+The import-only variant also missed the ceiling. All candidate code and cache
+groups were discarded; that experiment did not change the implementation above.
+
+The narrower import-only variant would benefit setup and empty deployments, not
+necessarily existing-instance startup: instance loaders already import that same
+registry. Moving bytes out of `index.html`'s initial assets does not prove a
+smaller cold route journey. Existing mocked Data Explorer readiness and navigation
+payload gates passed on the retained implementation without relaxed limits.
+
+A Tailwind compiler probe restricting source detection to `src` produced a
+negligible CSS reduction and was also discarded. Investigation reports stay local
+because they contain absolute paths and source/configuration details.
+
+
+## Opt-in TanStack Redact
+
+Native React remains the default. `QUERYLANE_RENDERER=redact` selects the pinned
+`@tanstack/redact` 0.2.3 runtime at build/test time, not through a public runtime
+flag. `bun run build:redact` is the production shortcut. Unset the variable or
+set it to `react` to return to native React. Invalid values fail immediately.
+
+The shared build-mode resolver supplies exact React, DOM, JSX, Compiler,
+scheduler and external-store aliases to both Rsbuild and Rstest. Keep Redact's
+full feature registration; no nano preset or feature stubs. React Compiler
+remains in infer mode, targeting React 19. Runtime mode, compatibility version,
+lockfile, and package patches participate in cache invalidation. Rsdoctor's
+emitted-chunk rule rejects a missing selected renderer or any retained mixture
+of native React/DOM/scheduler and Redact.
+
+Paired **normal production** builds on the current dependency baseline:
+
+| Metric | Native React | Patched Redact | Change |
+| --- | ---: | ---: | ---: |
+| Initial scripts/styles, gzip | 335,170 bytes | 294,110 bytes | −41,060 / −12.25% |
+| Initial JavaScript, gzip | 299,987 bytes | 258,927 bytes | −41,060 / −13.69% |
+| All application HTML/JS/CSS, gzip | 1,424,670 bytes | 1,378,026 bytes | −46,644 / −3.27% |
+| Initial script/style requests | 5 | 4 | −1 |
+
+Method: same source, locked packages, macOS arm64, Bun 1.4.4 / Node 26.12.1,
+Rsbuild 2.2.14, and `collectBundleBudgetStats`; profiler assets excluded. The
+predeclared threshold was at least 30 KiB initial savings and no total growth.
+This meets that byte threshold. It does **not** establish a load-time, INP,
+rendering-speed or build-speed improvement. Earlier local readiness samples had
+failures under shared-host contention; retain those failures, and keep the
+1200/1000 ms journey limits unchanged rather than promoting the opt-in runtime.
+
+### Compatibility patch and verification
+
+The checked-in Bun patch keeps the dependency license and fixes four observed
+React-compatibility gaps in 0.2.3, rather than changing application behavior to
+fit the runtime:
+
+- SVG presentation properties need native attribute names: `stopColor`,
+  `stopOpacity`, and `vectorEffect` map to their hyphenated attributes. Otherwise
+  mobile stat sparklines render opaque gray fills and incorrect stroke scaling.
+- HTML children of SVG `foreignObject` need the XHTML namespace. Existing schema
+  diagrams otherwise create non-native buttons and lose visible controls.
+- Checkbox/radio change handlers need the native click event (including Shift),
+  while synthetic change/focus/blur event names must match React. The underlying
+  native event remains intact.
+- One unkeyed, ref-free Fragment wrapper is transparent to child identity.
+  Without this, reopening a facet replaces its trigger and loses the original
+  focus target. Keyed and deeper Fragment wrappers must still reset identity.
+
+Minimal regression tests were red before the respective fixes and pass with
+both runtimes. They cover SVG namespaces/presentation, focus event names, and
+single/nested/keyed Fragment identity; existing grid Shift-selection and facet
+keyboard/focus tests exercise the real controls. Both runtime browser suites
+pass 232 tests per light/dark theme. CI requires browser, E2E, production build,
+and all visual shards for **both** runtimes, without skipped gates, relaxed
+latency assertions or rewritten screenshot baselines.
+
+Fresh interleaved production checks (three native/Redact pairs) pass **12/12**
+existing Data Explorer latency/payload assertions. These establish budget
+compatibility, not a speed improvement. Full local E2E passes **123/124 with each
+runtime**; both fail the same JavaScript-disabled, Linux-only pixel baseline on
+macOS. Docker is unavailable locally, so canonical visual/E2E results must come
+from CI. No screenshot or tolerance was changed.
+
+Run compatibility checks explicitly:
+
+```bash
+QUERYLANE_RENDERER=react bun run test:browser
+QUERYLANE_RENDERER=redact bun run test:browser
+QUERYLANE_RENDERER=redact bash scripts/playwright-container.sh bun run test:e2e:ci
+QUERYLANE_RENDERER=react bun run build:profile
+QUERYLANE_RENDERER=redact bun run build:profile
+```
+
+Redact renders synchronously; its transitions do not provide native React's
+concurrent scheduling. This is a CSR/Chromium compatibility experiment, not a
+claim of full React, SSR/hydration, other-browser or assistive-technology parity.
+Review the [official overview](https://tanstack.com/redact/latest/docs/overview)
+and [compatibility guide](https://tanstack.com/redact/latest/docs/compatibility)
+before expanding use. Keep the pin and regression tests when refreshing or
+removing the patch. The canonical container wrapper forwards the selected
+renderer; its CLI regression checks cover unset, native, and Redact selections.
+
 
 ## Accessibility manual-check evidence
 
@@ -70,13 +321,13 @@ The Lighthouse command uses 3 desktop runs and median assertions against a mocke
 
 ## Current thresholds
 
-| Metric | Initial policy |
+| Metric | Current limit |
 | --- | --- |
-| Initial gzip | Hard fail at 450 KiB |
-| Initial JavaScript gzip | Hard fail at 400 KiB |
-| Core gzip | Hard fail at 950 KiB |
+| Initial gzip | Hard fail at 327 KiB |
+| Initial JavaScript gzip | Hard fail at 293 KiB |
+| Core gzip | Hard fail at 1027 KiB |
 | Largest async JavaScript gzip | Hard fail at 130 KiB |
-| Deferred visualization gzip | Hard fail at 90 KiB |
+| Deferred visualization gzip | Hard fail at 91 KiB |
 | Lighthouse performance | Hard fail below 100 |
 | Lighthouse accessibility | Hard fail below 100 |
 | Lighthouse best practices | Hard fail below 100 |
@@ -89,7 +340,7 @@ The Lighthouse command uses 3 desktop runs and median assertions against a mocke
 | Cumulative layout shift | Hard fail above 0.01 |
 | Data Explorer direct ready | Hard fail at 1200 ms in Playwright perf spec |
 | Data Explorer overview click | Hard fail at 1000 ms in Playwright perf spec |
-| Data Explorer cold payload | Hard fail at 160 KiB gzip in Playwright perf spec |
+| Data Explorer cold payload | Hard fail at 164 KiB gzip in Playwright perf spec |
 
 ## Next high-confidence upgrades
 
