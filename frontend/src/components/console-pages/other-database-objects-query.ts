@@ -155,7 +155,9 @@ function queryRowToObject(row: QueryRow): OtherDatabaseObject | null {
   };
 }
 
-function parseObjectStatus(status: string | undefined) {
+function parseObjectStatus(
+  status: string | undefined
+): "failed" | "ok" | "warning" | undefined {
   switch (status) {
     case "failed":
     case "ok":
@@ -163,7 +165,7 @@ function parseObjectStatus(status: string | undefined) {
       return status;
     case "":
     case undefined:
-      return;
+      return undefined;
     default:
       return "warning";
   }
@@ -292,7 +294,7 @@ async function fetchOtherObjectsBrowsePage({
     hasMore: rows.length > BROWSE_PAGE_SIZE,
     objects: rows
       .slice(0, BROWSE_PAGE_SIZE)
-      .map(queryRowToObject)
+      .map((value) => queryRowToObject(value))
       .filter((object): object is OtherDatabaseObject => object !== null),
   };
 }

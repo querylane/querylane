@@ -4,9 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import {
   type ComponentProps,
-  createContext,
   type RefObject,
-  use,
   useEffect,
   useId,
   useRef,
@@ -19,6 +17,11 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "@/components/querylane-ui/drawer";
+import {
+  SidebarContext,
+  type SidebarContextProps,
+  useSidebar,
+} from "@/components/querylane-ui/sidebar-context";
 import { useIsMobile } from "@/components/querylane-ui/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -49,29 +52,6 @@ const SIDEBAR_FOCUSABLE_SELECTOR = [
   "[tabindex]",
   '[contenteditable="true"]',
 ].join(",");
-
-interface SidebarContextProps {
-  hoverRevealOpen: boolean;
-  isMobile: boolean;
-  open: boolean;
-  openMobile: boolean;
-  setHoverRevealOpen: (open: boolean) => void;
-  setOpen: (open: boolean) => void;
-  setOpenMobile: (open: boolean) => void;
-  state: "expanded" | "collapsed";
-  toggleSidebar: () => void;
-}
-
-const SidebarContext = createContext<SidebarContextProps | null>(null);
-
-function useSidebar() {
-  const context = use(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
-  }
-
-  return context;
-}
 
 function isHoverRevealPointer(event: PointerEvent) {
   return event.pointerType === "mouse" || event.pointerType === "pen";
@@ -118,10 +98,10 @@ function useHiddenSidebarFocusGuard({
   hidden: boolean;
 }) {
   useEffect(
-    function syncHiddenSidebarFocusability() {
+    function syncHiddenSidebarFocusability(): (() => void) | undefined {
       const container = containerRef.current;
       if (!(container && hidden)) {
-        return;
+        return undefined;
       }
 
       const changedElements = [
@@ -198,9 +178,9 @@ function useSidebarHoverReveal({
   }
 
   useEffect(
-    function revealSidebarFromScreenEdge() {
+    function revealSidebarFromScreenEdge(): (() => void) | undefined {
       if (!(enabled && !revealed)) {
-        return;
+        return undefined;
       }
 
       function handlePointerMove(event: PointerEvent) {
@@ -230,9 +210,9 @@ function useSidebarHoverReveal({
   );
 
   useEffect(
-    function retractSidebarAwayFromPointer() {
+    function retractSidebarAwayFromPointer(): (() => void) | undefined {
       if (!(enabled && revealed)) {
-        return;
+        return undefined;
       }
 
       function clearCloseTimer() {
@@ -1001,5 +981,4 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 };

@@ -4,7 +4,7 @@ import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 
 const expectedTheme =
-  import.meta.env["PUBLIC_TEST_BROWSER_THEME"] === "dark" ? "dark" : "light";
+  import.meta.env.PUBLIC_TEST_BROWSER_THEME === "dark" ? "dark" : "light";
 
 test("browser test setup applies the configured theme and reduced motion", () => {
   const root = document.documentElement;

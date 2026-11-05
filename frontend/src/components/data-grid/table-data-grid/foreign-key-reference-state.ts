@@ -44,11 +44,11 @@ function tableCellValueToFilterValue(
   cell: TableCell | undefined
 ): TableValue | undefined {
   if (cell?.truncated === true) {
-    return;
+    return undefined;
   }
   const value = cell?.value?.kind;
   if (!value) {
-    return;
+    return undefined;
   }
   let filterValue: TableValue | undefined;
   switch (value.case) {
@@ -92,7 +92,7 @@ function buildForeignKeyRequiredFilter({
   reference: TableForeignKeyReference;
   resultColumns: readonly TableResultColumn[];
   row: GridRow;
-}) {
+}): RowFilter | undefined {
   const children: RowFilter[] = [];
   const resultColumnsByName = Map.groupBy(
     resultColumns,
@@ -137,7 +137,7 @@ function buildForeignKeyRequiredFilter({
     children.length !== reference.sourceColumns.length ||
     children.length === 0
   ) {
-    return;
+    return undefined;
   }
 
   return create(RowFilterSchema, {
@@ -166,11 +166,11 @@ function buildForeignKeyReferencePreview({
     (column) => column.columnName === sourceColumn
   );
   if (!resultColumn) {
-    return;
+    return undefined;
   }
   const target = tryParseTableQualifiedName(reference.targetTableName);
   if (!target) {
-    return;
+    return undefined;
   }
   const cell = getGridCell(row, resultColumn);
   const formatted = formatTableCell(cell, resultColumn);
@@ -179,7 +179,7 @@ function buildForeignKeyReferencePreview({
     formatted.isTruncated ||
     formatted.display.trim() === ""
   ) {
-    return;
+    return undefined;
   }
 
   const requiredFilter = buildForeignKeyRequiredFilter({
@@ -188,7 +188,7 @@ function buildForeignKeyReferencePreview({
     row,
   });
   if (!requiredFilter) {
-    return;
+    return undefined;
   }
 
   return {

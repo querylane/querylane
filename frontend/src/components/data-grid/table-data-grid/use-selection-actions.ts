@@ -172,7 +172,7 @@ function useSelectionActions({
       }
       const buildSql = (sqlCells: Map<string, TableCell | undefined>) =>
         buildSelectionExport("sql", [{ cells: sqlCells }]);
-      if ([...cells.values()].some(cellNeedsFullValue)) {
+      if ([...cells.values()].some((value) => cellNeedsFullValue(value))) {
         writeClipboardDeferred(async () => {
           const result = buildSql(await resolveRowCells(cells, fetchFullCell));
           if (!result.ok) {

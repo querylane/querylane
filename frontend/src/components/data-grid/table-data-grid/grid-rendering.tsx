@@ -417,17 +417,17 @@ function GridBody({
     });
 
   useEffect(
-    function trackPointerCellSelection() {
+    function trackPointerCellSelection(): (() => void) | undefined {
       if (isLoading) {
-        return;
+        return undefined;
       }
       const gridRoot = gridRootRef.current;
       if (!gridRoot) {
-        return;
+        return undefined;
       }
       const gridElement = gridRoot.querySelector<HTMLElement>(".rdg");
       if (!gridElement) {
-        return;
+        return undefined;
       }
       const activeGridRoot: HTMLDivElement = gridRoot;
       const activeGrid: HTMLElement = gridElement;

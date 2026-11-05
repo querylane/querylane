@@ -33,12 +33,12 @@ function parsePersistedLayout(
   candidate: unknown
 ): TableColumnLayout | undefined {
   if (!(tableName && isObjectRecord(candidate))) {
-    return;
+    return undefined;
   }
   const hiddenColumns = parseStringArray(candidate["hiddenColumns"]);
   const order = parseStringArray(candidate["order"]);
   if (!(hiddenColumns && order)) {
-    return;
+    return undefined;
   }
   return {
     ...(candidate["fetchVisibleColumns"] === true

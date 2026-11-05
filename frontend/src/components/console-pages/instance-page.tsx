@@ -79,7 +79,7 @@ import {
   formatBytes,
   formatUptime,
 } from "@/lib/console-resources";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { createInstanceConnectionUiError } from "@/lib/instance-connection-error";
 import {
   getMetricPartialErrors,
@@ -232,9 +232,11 @@ function getLastRefreshedLabel(lastRefreshedAt: number): string | null {
     : null;
 }
 
-function getConnectionPct(overview: InstanceOverview | undefined) {
+function getConnectionPct(
+  overview: InstanceOverview | undefined
+): number | undefined {
   if (!(overview?.connections && overview.connections.maxConnections > 0)) {
-    return;
+    return undefined;
   }
 
   return (
@@ -274,9 +276,11 @@ interface InstancePageHeaderDatabasesState {
   isUnavailable: boolean;
 }
 
-function connectionsCaption(overview: InstanceOverview | undefined) {
+function connectionsCaption(
+  overview: InstanceOverview | undefined
+): string | undefined {
   if (!overview?.connections) {
-    return;
+    return undefined;
   }
   const pct = getConnectionPct(overview);
   const max = `of ${overview.connections.maxConnections.toLocaleString()} max`;
@@ -920,7 +924,7 @@ async function saveInstanceConfiguration(
   }
 ): Promise<unknown> {
   if (!instance || isConfigManaged) {
-    return;
+    return undefined;
   }
   setFormNotice(null);
   try {
@@ -1026,9 +1030,9 @@ function getConnectedOverview({
 }: {
   isConnected: boolean;
   overview: InstanceOverview | undefined;
-}) {
+}): InstanceOverview | undefined {
   if (!isConnected) {
-    return;
+    return undefined;
   }
   return overview;
 }
@@ -1049,9 +1053,9 @@ function getSettledMetricsResponse({
 }: {
   data: QueryMetricsResponse | undefined;
   isPlaceholderData: boolean;
-}) {
+}): QueryMetricsResponse | undefined {
   if (isPlaceholderData) {
-    return;
+    return undefined;
   }
   return data;
 }
@@ -1513,6 +1517,7 @@ function renderLoadedInstancePageContent({
               })}
               onRetry={() => {
                 onRefresh();
+
                 return undefined;
               }}
             />

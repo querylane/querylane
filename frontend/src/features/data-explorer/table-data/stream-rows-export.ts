@@ -260,12 +260,12 @@ async function createBrowserFileSink(
   details: ExportFileDetails
 ): Promise<ExportFileSink | undefined> {
   if (globalThis.window === undefined) {
-    return;
+    return undefined;
   }
 
   const { showSaveFilePicker: pickFile } = globalThis.window;
   if (!pickFile) {
-    return;
+    return undefined;
   }
 
   const [acceptMimeType] = details.mimeType.split(";");

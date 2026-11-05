@@ -14,7 +14,7 @@ function gridEmptyState({
   status: "cancelled" | "error" | "idle" | "running" | "success";
 }): GridEmptyMessage | undefined {
   if (rowCount > 0 || status === "running") {
-    return;
+    return undefined;
   }
   if (status === "cancelled") {
     return {

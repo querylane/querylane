@@ -2,10 +2,8 @@ import { beforeEach, expect, rs, test } from "@rstest/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts";
-import {
-  CommandPaletteProvider,
-  useCommandPalette,
-} from "@/components/querylane-ui/admin-command-palette";
+import { CommandPaletteProvider } from "@/components/querylane-ui/admin-command-palette";
+import { useCommandPalette } from "@/components/querylane-ui/command-palette-context";
 import { Button } from "@/components/ui/button";
 
 const navigateMock = rs.fn(() => Promise.resolve());
@@ -45,7 +43,7 @@ rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigateMock,
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({
     navigationIds: {
       databaseId: "customer-events",

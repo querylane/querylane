@@ -11,7 +11,7 @@ test("code-only preloading never runs loaders, including active parents", async 
   const parentLoader = rs.fn();
   const childLoader = rs.fn();
   const beforeLoad = rs.fn();
-  const preload = rs.fn(async () => undefined);
+  const preload = rs.fn(() => Promise.resolve(undefined));
   const root = createRootRoute();
   const parent = createRoute({
     getParentRoute: () => root,

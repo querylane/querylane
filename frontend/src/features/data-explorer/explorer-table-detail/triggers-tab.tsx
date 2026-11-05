@@ -150,9 +150,9 @@ function TriggerSqlCopyButton({
     "idle"
   );
 
-  useEffect(() => {
+  useEffect((): (() => void) | undefined => {
     if (copyState === "idle") {
-      return;
+      return undefined;
     }
     const timeout = globalThis.setTimeout(function resetTriggerSqlCopyState() {
       setCopyState("idle");
@@ -323,7 +323,7 @@ function TriggersTab({
   }
   const filteredTriggers = filterTableTriggers(triggers, {
     search,
-    states: stateFilters.filter(isTriggerStateFilter),
+    states: stateFilters.filter((value) => isTriggerStateFilter(value)),
   });
   const pageCount = Math.max(1, Math.ceil(filteredTriggers.length / pageSize));
   const currentPageIndex = Math.min(pageIndex, pageCount - 1);

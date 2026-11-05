@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { createContext, use, useState } from "react";
+import { useState } from "react";
 import {
   Command,
   CommandDialog,
@@ -12,6 +12,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/querylane-ui/command";
+import {
+  CommandPaletteContext,
+  type CommandPaletteController,
+} from "@/components/querylane-ui/command-palette-context";
 import { formatRows } from "@/features/data-explorer/format-rows";
 import { useDatabaseCatalogSearchQuery } from "@/hooks/api/database-catalog";
 import {
@@ -26,7 +30,7 @@ import {
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
 import { normalizeEstimatedRowCount } from "@/lib/console-resources";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import {
   buildRoleFilter,
   MIN_SERVER_SUBSTRING_LENGTH,
@@ -465,14 +469,6 @@ function AdminCommandPaletteContent({
   );
 }
 
-interface CommandPaletteController {
-  openPalette: () => void;
-}
-
-const CommandPaletteContext = createContext<CommandPaletteController | null>(
-  null
-);
-
 /**
  * Provides a single command-palette dialog for the whole shell and the ⌘K
  * shortcut that toggles it. Both the sidebar search trigger and any other
@@ -508,14 +504,4 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useCommandPalette(): CommandPaletteController {
-  const controller = use(CommandPaletteContext);
-  if (!controller) {
-    throw new Error(
-      "useCommandPalette must be used within a CommandPaletteProvider."
-    );
-  }
-  return controller;
-}
-
-export { CommandPaletteProvider, useCommandPalette };
+export { CommandPaletteProvider };

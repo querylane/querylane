@@ -29,7 +29,7 @@ beforeEach(() => {
       new ConnectError("deadline exceeded", Code.DeadlineExceeded),
       { source: "boot" }
     ),
-    bootstrap: rs.fn(async () => undefined),
+    bootstrap: rs.fn(() => Promise.resolve(undefined)),
     status: "boot_error",
   });
 });

@@ -99,9 +99,9 @@ function useAutoRefresh({
   });
 
   useEffect(
-    function scheduleAutoRefresh() {
+    function scheduleAutoRefresh(): (() => void) | undefined {
       if (intervalMs === null || isFetching) {
-        return;
+        return undefined;
       }
       const startAt = timerEpochMs > 0 ? timerEpochMs : Date.now();
       const remaining = Math.max(0, startAt + intervalMs - Date.now());

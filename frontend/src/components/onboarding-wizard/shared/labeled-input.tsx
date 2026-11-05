@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import { type ComponentProps, useId } from "react";
 import { PasswordInput } from "@/components/password-input";
 import { Input } from "@/components/querylane-ui/input";
 import { Label } from "@/components/querylane-ui/label";
@@ -23,13 +23,15 @@ export function LabeledInput({
   ref,
   ...inputProps
 }: LabeledInputProps) {
-  const errorId = isNonEmptyString(error) ? `${id}-error` : undefined;
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const errorId = isNonEmptyString(error) ? `${inputId}-error` : undefined;
   const invalid = isNonEmptyString(error) ? true : undefined;
 
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="space-y-0.5">
-        <Label htmlFor={id} presentation="onboarding">
+        <Label htmlFor={inputId} presentation="onboarding">
           {label}
         </Label>
         {isNonEmptyString(description) ? (
@@ -41,7 +43,7 @@ export function LabeledInput({
           aria-describedby={errorId}
           aria-invalid={invalid}
           className="h-9"
-          id={id}
+          id={inputId}
           presentation="onboarding"
           ref={ref}
           validation={isNonEmptyString(error) ? "error" : undefined}
@@ -52,7 +54,7 @@ export function LabeledInput({
           aria-describedby={errorId}
           aria-invalid={invalid}
           className="h-9"
-          id={id}
+          id={inputId}
           presentation="onboarding"
           ref={ref}
           type={type}

@@ -111,7 +111,7 @@ function createInstanceUpdate(
     persisted.credentialState === Instance_CredentialState.UNREADABLE &&
     changedPaths.includes("config.password");
   const updatePaths = repairsUnreadableCredentials
-    ? [...new Set(changedPaths.map(widenConfigPath))]
+    ? [...new Set(changedPaths.map((value) => widenConfigPath(value)))]
     : changedPaths;
   return { instance, updatePaths };
 }
@@ -122,7 +122,7 @@ function widenConfigPath(path: string) {
 
 function findFirstErrorMessage(value: unknown): string | undefined {
   if (!(value !== null && typeof value === "object")) {
-    return;
+    return undefined;
   }
   if ("message" in value && typeof value.message === "string") {
     return value.message;

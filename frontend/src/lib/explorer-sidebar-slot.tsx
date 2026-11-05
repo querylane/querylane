@@ -1,15 +1,8 @@
 "use client";
 
-import { createContext, use, useState } from "react";
+import { use, useState } from "react";
 import { createPortal } from "react-dom";
-
-interface ExplorerSidebarSlotContextValue {
-  setTarget: (element: HTMLElement | null) => void;
-  target: HTMLElement | null;
-}
-
-const ExplorerSidebarSlotContext =
-  createContext<ExplorerSidebarSlotContextValue | null>(null);
+import { ExplorerSidebarSlotContext } from "@/lib/explorer-sidebar-slot-context";
 
 /**
  * Bridges the shared sidebar rail and the lazily loaded Data Explorer: the
@@ -31,17 +24,6 @@ function ExplorerSidebarSlotProvider({
 }
 
 /** Ref callback for the rail element that hosts the portaled explorer tree. */
-function useExplorerSidebarSlotRegistration(): (
-  element: HTMLElement | null
-) => void {
-  const context = use(ExplorerSidebarSlotContext);
-  if (!context) {
-    throw new Error(
-      "useExplorerSidebarSlotRegistration requires ExplorerSidebarSlotProvider"
-    );
-  }
-  return context.setTarget;
-}
 
 /**
  * Renders children into the registered rail slot. Renders nothing while no
@@ -57,8 +39,4 @@ function ExplorerSidebarPortal({ children }: { children: React.ReactNode }) {
   return createPortal(children, context.target);
 }
 
-export {
-  ExplorerSidebarPortal,
-  ExplorerSidebarSlotProvider,
-  useExplorerSidebarSlotRegistration,
-};
+export { ExplorerSidebarPortal, ExplorerSidebarSlotProvider };

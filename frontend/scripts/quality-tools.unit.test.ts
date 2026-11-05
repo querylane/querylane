@@ -58,7 +58,40 @@ function lintBiome(file: string) {
   };
 }
 
+test("rejects oversized authored files instead of passing a skipped scan", () => {
+  const directory = mkdtempSync(join(root, "scripts/quality-probe-"));
+  const file = join(directory, "oversized.ts");
+  try {
+    writeFileSync(join(directory, "valid.ts"), "export const ready = true;\n");
+    writeFileSync(file, `//${" ".repeat(1_048_576)}\n`);
+    const result = spawnSync("bun", ["run", "lint:biome:compat", directory], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain(
+      "exceeds the configured maximum"
+    );
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test.each([
+  {
+    name: "bounded CSS selector classes",
+    rule: "noExcessiveSelectorClasses",
+    suffix: "css",
+    invalid: ".one.two.three.four.five.six { color: inherit; }\n",
+    valid: ".one.two.three.four.five { color: inherit; }\n",
+  },
+  {
+    name: "safe Tailwind shorthand classes",
+    rule: "useTailwindShorthandClasses",
+    suffix: "tsx",
+    invalid: 'export const icon = <span className="h-4 w-4 divide-y" />;\n',
+    valid: 'export const icon = <span className="size-4 divide-y" />;\n',
+  },
   {
     name: "unchained numeric comparisons",
     rule: "noChainedComparison",

@@ -1,0 +1,447 @@
+{
+  "biome": {
+    "rules": {
+      "complexity/noExcessiveCognitiveComplexity": {
+        "maxAllowedComplexity": 10
+      },
+      "complexity/noExcessiveLinesPerFunction": {
+        "maxLines": 250,
+        "skipBlankLines": true,
+        "skipIifes": true
+      },
+      "complexity/useMaxParams": {
+        "max": 3
+      },
+      "complexity/noExcessiveSelectorClasses": {
+        "maxClasses": 5
+      },
+      "correctness/noPrivateImports": {
+        "defaultVisibility": "public"
+      },
+      "correctness/noRestrictedElements": {
+        "elements": {
+          "button": "Use <Button> from src/components/ui/button instead.",
+          "input": "Use <Input> from src/components/ui/input instead.",
+          "select": "Use <Select> or <NativeSelect> from src/components/ui instead.",
+          "textarea": "Use <Textarea> from src/components/ui/textarea instead."
+        }
+      },
+      "correctness/noUndeclaredDependencies": {
+        "devDependencies": [
+          "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+          "**/__tests__/**",
+          "**/e2e/**",
+          "**/tests/**",
+          "**/scripts/**",
+          "**/*.config.{ts,js,mts,cts,mjs,cjs}",
+          "**/playwright.config.*",
+          "**/rstest.*.{ts,js,mts,cts,mjs,cjs}",
+          "**/rsbuild.config.*",
+          "src/import-meta-env.d.ts"
+        ],
+        "peerDependencies": true,
+        "optionalDependencies": true
+      },
+      "correctness/useImportExtensions": {
+        "forceJsExtensions": false
+      },
+      "nursery/useConsistentFunctionStyle": {
+        "style": "declaration",
+        "allowArrowFunctions": true
+      },
+      "nursery/noExcessiveStatementsPerFunction": {
+        "max": 50
+      },
+      "nursery/useLowercaseTestTitle": {
+        "allowedPrefixes": [
+          "AIP ",
+          "Cmd+",
+          "DSN-",
+          "GitHub ",
+          "Go ",
+          "PostgreSQL ",
+          "SQL ",
+          "SSL ",
+          "UI-"
+        ]
+      },
+      "nursery/useConsistentLightnessNotation": {
+        "notation": "number"
+      },
+      "security/noSecrets": {
+        "entropyThreshold": 50
+      },
+      "style/noRestrictedImports": {
+        "paths": {
+          "zod/v4": "Import from \"zod\" instead."
+        }
+      },
+      "style/useComponentExportOnlyModules": {
+        "allowConstantExport": true,
+        "allowExportNames": []
+      },
+      "style/useNamingConvention": {
+        "requireAscii": true,
+        "strictCase": true,
+        "conventions": [
+          {
+            "selector": {
+              "kind": "objectLiteralProperty"
+            },
+            "formats": [
+              "camelCase",
+              "PascalCase",
+              "snake_case",
+              "CONSTANT_CASE"
+            ]
+          },
+          {
+            "selector": {
+              "kind": "typeProperty"
+            },
+            "formats": ["camelCase", "snake_case", "CONSTANT_CASE"]
+          }
+        ]
+      },
+      "style/useConsistentTestIt": {
+        "function": "test",
+        "withinDescribe": "test"
+      },
+      "suspicious/noImportCycles": {
+        "ignoreTypes": true
+      },
+      "suspicious/useRequiredScripts": {
+        "requiredScripts": [
+          "lint",
+          "lint:fix",
+          "quality:gate",
+          "type:check",
+          "build",
+          "test"
+        ]
+      },
+      "suspicious/useBaseline": {
+        "available": "newly"
+      }
+    },
+    "overrides": [
+      {
+        "scope": [
+          "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+          "**/__tests__/**/*"
+        ],
+        "rules": {
+          "nursery/noExcessiveStatementsPerFunction": {
+            "max": 100
+          }
+        }
+      }
+    ],
+    "assist": {
+      "actions": {
+        "source": {
+          "organizeImports": "on",
+          "useSortedAttributes": "on",
+          "useSortedKeys": "off",
+          "useSortedEnumMembers": "off",
+          "noDuplicateClasses": "on",
+          "useSortedInterfaceMembers": "on",
+          "useSortedProperties": "off",
+          "useSortedTypeFields": "on",
+          "useSortedSelectionSet": "off",
+          "useSortedPackageJson": "on",
+          "preset": "all"
+        }
+      }
+    },
+    "jsonAssist": {
+      "enabled": true
+    }
+  },
+  "oxlint": {
+    "rules": {
+      "arrow-body-style": ["as-needed"],
+      "func-style": [
+        "declaration",
+        {
+          "allowArrowFunctions": true
+        }
+      ],
+      "max-depth": [4],
+      "no-duplicate-imports": [
+        {
+          "allowSeparateTypeImports": true
+        }
+      ],
+      "no-unmodified-loop-condition": [
+        {
+          "checkConditionalExpressions": true
+        }
+      ],
+      "no-void": [
+        {
+          "allowAsStatement": true
+        }
+      ],
+      "one-var": ["never"],
+      "prefer-arrow-callback": [
+        {
+          "allowNamedFunctions": true
+        }
+      ],
+      "import/consistent-type-specifier-style": [
+        "prefer-top-level-if-only-type-imports"
+      ],
+      "typescript/array-type": [
+        {
+          "default": "array"
+        }
+      ],
+      "typescript/dot-notation": [
+        {
+          "allowIndexSignaturePropertyAccess": true
+        }
+      ],
+      "typescript/no-empty-interface": [
+        {
+          "allowSingleExtends": true
+        }
+      ],
+      "typescript/no-empty-object-type": [
+        {
+          "allowInterfaces": "with-single-extends"
+        }
+      ],
+      "typescript/no-floating-promises": [
+        {
+          "ignoreVoid": false,
+          "checkThenables": true
+        }
+      ],
+      "typescript/only-throw-error": [
+        {
+          "allowThrowingAny": false,
+          "allowThrowingUnknown": false,
+          "allowRethrowing": true,
+          "allow": [
+            {
+              "from": "package",
+              "name": "Redirect",
+              "package": "@tanstack/router-core"
+            }
+          ]
+        }
+      ],
+      "typescript/restrict-plus-operands": [
+        {
+          "allowAny": false,
+          "allowBoolean": false,
+          "allowNullish": false,
+          "allowNumberAndString": false,
+          "allowRegExp": false
+        }
+      ],
+      "typescript/restrict-template-expressions": [
+        {
+          "allowAny": false,
+          "allowBoolean": false,
+          "allowNullish": false,
+          "allowRegExp": false,
+          "allowNumber": true,
+          "allowArray": false,
+          "allowNever": false
+        }
+      ],
+      "typescript/return-await": ["always"],
+      "unicorn/filename-case": [
+        {
+          "case": "kebabCase",
+          "ignore": ["^\\$"]
+        }
+      ],
+      "unicorn/import-style": [
+        {
+          "styles": {
+            "node:path": {
+              "named": true
+            }
+          }
+        }
+      ],
+      "unicorn/switch-case-braces": ["avoid"],
+      "jsx-a11y/label-has-associated-control": [
+        {
+          "controlComponents": [
+            "Input",
+            "Select",
+            "Textarea",
+            "Checkbox",
+            "Radio"
+          ],
+          "depth": 3,
+          "labelComponents": ["Label"]
+        }
+      ],
+      "react/function-component-definition": [
+        {
+          "namedComponents": "function-declaration",
+          "unnamedComponents": "arrow-function"
+        }
+      ],
+      "react/jsx-key": [
+        {
+          "checkFragmentShorthand": true,
+          "warnOnDuplicates": true,
+          "checkKeyMustBeforeSpread": true
+        }
+      ],
+      "react/jsx-no-target-blank": [
+        {
+          "forms": true
+        }
+      ],
+      "shadcn/no-arbitrary-values": [
+        {
+          "allow": ["layout"]
+        }
+      ],
+      "shadcn/no-restyle": [
+        {
+          "allow": ["layout"],
+          "contracts": [
+            {
+              "pattern": "^TooltipTrigger$",
+              "allow": [
+                "layout",
+                "typography",
+                "color",
+                "spacing",
+                "shape",
+                "effects",
+                "motion"
+              ]
+            }
+          ]
+        }
+      ],
+      "shadcn/no-unknown-classes": [
+        {
+          "allow": [
+            "rdg",
+            "rdg-light",
+            "rdg-cell",
+            "rdg-row",
+            "rdg-header-row",
+            "rdg-expand-button",
+            "nodrag",
+            "nopan",
+            "language-sql",
+            "language-bash",
+            "toaster",
+            "selected-header-edge-fixture"
+          ]
+        }
+      ]
+    },
+    "overrides": [
+      {
+        "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"],
+        "rules": {
+          "no-restricted-imports": [
+            {
+              "patterns": [
+                {
+                  "group": ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"],
+                  "allowTypeImports": true,
+                  "message": "Pure value modules may only import domain values and shared value guards."
+                },
+                {
+                  "group": [
+                    "../**",
+                    "react",
+                    "react/**",
+                    "react-dom",
+                    "react-dom/**",
+                    "@connectrpc/**",
+                    "@tanstack/**",
+                    "zustand",
+                    "zustand/**"
+                  ],
+                  "allowTypeImports": true,
+                  "message": "Keep stateful adapters outside the pure domain role; use direct domain imports."
+                }
+              ]
+            }
+          ],
+          "no-restricted-globals": [
+            {
+              "globals": [
+                "globalThis",
+                "global",
+                "window",
+                "self",
+                "document",
+                "navigator",
+                "location",
+                "history",
+                "localStorage",
+                "sessionStorage",
+                "indexedDB",
+                "caches",
+                "fetch",
+                "reportError",
+                "WebSocket",
+                "Worker",
+                "MessageChannel",
+                "setTimeout",
+                "setInterval",
+                "requestAnimationFrame"
+              ],
+              "checkGlobalObject": false
+            }
+          ]
+        }
+      }
+    ],
+    "settings": {
+      "shadcn": {
+        "ui": ["@/components/ui", "@/components/querylane-ui"]
+      }
+    }
+  },
+  "doctor": {
+    "surfaces": {
+      "prComment": {
+        "includeTags": ["design"]
+      },
+      "score": {
+        "includeTags": ["design"]
+      },
+      "ciFailure": {
+        "includeFileContexts": ["test", "story"],
+        "includeTags": ["design"]
+      }
+    }
+  },
+  "entrypoints": {
+    "lint": "bun run quality:rules && ultracite check --error-on-warnings && bun run lint:biome:compat && bun run lint:shadcn && bun run suppressions:check",
+    "lint:fix": "biome format --write . && ultracite fix --error-on-warnings && bun run lint:biome:compat --write . && bun run lint:shadcn && bun run suppressions:check",
+    "lint:biome": "biome check --error-on-warnings . && bun run lint:biome:compat",
+    "lint:biome:compat": "bun run scripts/check-biome-compat.ts",
+    "lint:oxlint": "oxlint --config oxlint.config.ts --type-aware --deny-warnings --disable-nested-config --report-unused-disable-directives-severity error",
+    "lint:shadcn": "bun run lint:oxlint",
+    "lint:changed": "bun run scripts/lint-changed.ts && bun run lint:biome:compat && bun run lint:shadcn && bun run suppressions:check",
+    "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
+    "doctor:full": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
+    "doctor:ci": "bun run doctor:full",
+    "doctor:dead-code": "react-doctor . -y --scope full --no-lint --blocking warning --no-respect-inline-disables --no-score",
+    "quality:gate": "bun run lint && bun run doctor && bun run type:check && bun run build && bun run test:unit && bun run test:integration",
+    "quality:changed": "bun run lint:changed && bun run doctor:changed && bun run type:check && bun run test:unit:changed && bun run test:integration:changed && bun run test:browser:changed",
+    "quality:rules": "bun run scripts/check-rule-inventory.ts",
+    "type:check": "bun run type:check:ui && tsrs -p tsconfig.node.json --pretty false && tsrs -p tsconfig.browser-js.json --pretty false && tsrs -p tsconfig.authored-declarations.json --pretty false && tsrs -b tsconfig.declarations.json --pretty false && tsrs -p tsconfig.json --incremental false --pretty false && bun run type:check:canary",
+    "type:check:ui": "tsrs -p tsconfig.ui.json --pretty false",
+    "type:check:canary": "tsc -p tsconfig.ui.json --outDir node_modules/.tmp/tsconfig.ui-canary --pretty false && tsc -p tsconfig.node.json --pretty false && tsc -p tsconfig.browser-js.json --pretty false && tsc -p tsconfig.authored-declarations.json --pretty false && tsc -b tsconfig.declarations.json --pretty false && tsc -p tsconfig.json --incremental false --pretty false",
+    "build": "rsbuild build && bun run budget:check",
+    "dev:scan": "QUERYLANE_REACT_SCAN=1 bun run dev"
+  }
+}

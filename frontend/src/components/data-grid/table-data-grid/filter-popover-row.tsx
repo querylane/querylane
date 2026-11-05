@@ -83,9 +83,9 @@ function useDebouncedRuleValue(
   }
 
   useEffect(
-    function commitDraftAfterTypingPause() {
+    function commitDraftAfterTypingPause(): (() => void) | undefined {
       if (draft === committedValue) {
-        return;
+        return undefined;
       }
       const timeoutId = globalThis.window.setTimeout(() => {
         commitDraft(draft);

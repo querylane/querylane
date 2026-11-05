@@ -588,9 +588,9 @@ function MaterializedRefreshControl({
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   useEffect(
-    function updateRefreshElapsedTime() {
+    function updateRefreshElapsedTime(): (() => void) | undefined {
       if (!(refreshing && startedAt !== null)) {
-        return;
+        return undefined;
       }
       const intervalId = globalThis.setInterval(() => {
         setElapsedSeconds(

@@ -78,7 +78,7 @@ const state = rs.hoisted(
     databasesQuery: {} as { data?: unknown; isPending?: boolean },
     extensionsQuery: {} as { data?: unknown; isPending?: boolean },
     metricsQuery: {} as { data?: unknown; isPending?: boolean },
-    navigate: rs.fn(async () => undefined),
+    navigate: rs.fn(() => Promise.resolve(undefined)),
     otherObjectsQuery: {} as {
       data?: unknown;
       error?: unknown;
@@ -160,7 +160,8 @@ rs.mock("@/hooks/api/database", () => ({
     error: state.databaseQuery.error ?? null,
     isFetching: state.databaseQuery.isFetching ?? false,
     isPending: state.databaseQuery.isPending ?? false,
-    refetch: state.databaseQuery.refetch ?? rs.fn(async () => undefined),
+    refetch:
+      state.databaseQuery.refetch ?? rs.fn(() => Promise.resolve(undefined)),
   }),
   useGetDatabaseQueryInsightsQuery: () => {
     state.queryInsightsHook();
@@ -169,7 +170,9 @@ rs.mock("@/hooks/api/database", () => ({
       error: state.queryInsightsQuery.error ?? null,
       isFetching: state.queryInsightsQuery.isFetching ?? false,
       isPending: state.queryInsightsQuery.isPending ?? false,
-      refetch: state.queryInsightsQuery.refetch ?? rs.fn(async () => undefined),
+      refetch:
+        state.queryInsightsQuery.refetch ??
+        rs.fn(() => Promise.resolve(undefined)),
     };
   },
 }));
@@ -179,7 +182,7 @@ rs.mock("@/hooks/api/database-catalog", () => ({
     data: state.catalogQuery.data,
     error: state.catalogQuery.error ?? null,
     isPending: state.catalogQuery.isPending ?? false,
-    refetch: rs.fn(async () => undefined),
+    refetch: rs.fn(() => Promise.resolve(undefined)),
   }),
 }));
 
@@ -188,7 +191,7 @@ rs.mock("@/components/console-pages/other-database-objects-query", () => ({
     data: state.otherObjectsQuery.data,
     error: state.otherObjectsQuery.error ?? null,
     isLoading: state.otherObjectsQuery.isLoading ?? false,
-    refetch: rs.fn(async () => undefined),
+    refetch: rs.fn(() => Promise.resolve(undefined)),
   }),
   useOtherObjectsBrowseQuery: () => ({
     data: { pages: [] },
@@ -197,7 +200,7 @@ rs.mock("@/components/console-pages/other-database-objects-query", () => ({
     hasNextPage: false,
     isFetchingNextPage: false,
     isLoading: false,
-    refetch: rs.fn(async () => undefined),
+    refetch: rs.fn(() => Promise.resolve(undefined)),
   }),
 }));
 
@@ -1159,7 +1162,7 @@ describe("database query insights resilience", () => {
 
     state.queryInsightsQuery = {
       error: new Error("query insights unavailable"),
-      refetch: rs.fn(async () => undefined),
+      refetch: rs.fn(() => Promise.resolve(undefined)),
     };
     rerender(
       <QueryInsightsDrawerForTest
@@ -1173,7 +1176,7 @@ describe("database query insights resilience", () => {
 
   test("shows partial metric failures with retry while retaining other data", async () => {
     const user = userEvent.setup();
-    const refetch = rs.fn(async () => undefined);
+    const refetch = rs.fn(() => Promise.resolve(undefined));
     state.queryInsightsQuery = {
       data: queryInsightsWithPartialError("query_stats"),
       refetch,

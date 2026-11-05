@@ -25,7 +25,7 @@ const state = rs.hoisted(
     configFilePath: "",
     instancesError: null as Error | null,
     instances: [] as PostgresInstance[],
-    navigate: rs.fn(async () => undefined),
+    navigate: rs.fn(() => Promise.resolve(undefined)),
     search: {} as { instanceId?: string | undefined },
     showDegradedBanner: false,
   })
@@ -49,7 +49,7 @@ rs.mock("@/hooks/api/console", () => ({
   }),
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({
     instances: state.instances,
     queryStates: {
@@ -58,7 +58,7 @@ rs.mock("@/lib/db-context", () => ({
         hasResolved: true,
       },
     },
-    retryInstanceCatalog: rs.fn(async () => undefined),
+    retryInstanceCatalog: rs.fn(() => Promise.resolve(undefined)),
   }),
 }));
 

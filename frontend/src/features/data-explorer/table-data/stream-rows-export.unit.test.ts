@@ -19,6 +19,7 @@ import {
   TableValueSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { streamOf } from "@/test/async-stream";
 import {
   buildStreamRowsExportPayload,
   buildStreamRowsExportRequest,
@@ -63,17 +64,6 @@ const EXPORT_FORMAT_SAVE_PICKER_CASES = [
   filenamePattern: RegExp;
   payloadMimeType: string;
 }[];
-
-function streamOf<T>(...items: T[]): AsyncIterable<T> {
-  return {
-    [Symbol.asyncIterator]() {
-      const iterator = items[Symbol.iterator]();
-      return {
-        next: () => Promise.resolve(iterator.next()),
-      };
-    },
-  };
-}
 
 function column(name: string) {
   return create(TableResultColumnSchema, {
@@ -292,18 +282,21 @@ describe("exportStreamRows", () => {
         }),
       };
       const showSaveFilePicker = rs.fn(
-        async (options: SaveFilePickerOptions) => {
-          const acceptTypes = options.types.flatMap((type) =>
-            Object.keys(type.accept)
-          );
-          const invalidType = acceptTypes.find((type) => type.includes(";"));
-          if (isNonEmptyString(invalidType)) {
-            throw new TypeError(`Invalid type: ${invalidType}`);
-          }
-          return {
-            createWritable: () => Promise.resolve(writable),
-          };
-        }
+        (options: SaveFilePickerOptions) =>
+          new Promise<{ createWritable: () => Promise<typeof writable> }>(
+            (resolve) => {
+              const acceptTypes = options.types.flatMap((type) =>
+                Object.keys(type.accept)
+              );
+              const invalidType = acceptTypes.find((type) =>
+                type.includes(";")
+              );
+              if (isNonEmptyString(invalidType)) {
+                throw new TypeError(`Invalid type: ${invalidType}`);
+              }
+              resolve({ createWritable: () => Promise.resolve(writable) });
+            }
+          )
       );
       Object.defineProperty(globalThis.window, "showSaveFilePicker", {
         configurable: true,

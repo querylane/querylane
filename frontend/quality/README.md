@@ -33,20 +33,24 @@ Versions are pinned in [package.json](../package.json), its lockfile, and [the i
 | Biome / Ultracite | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries. |
 | Oxlint / tsgolint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings. |
 | shadcn lint | Token colors, known utilities, component styling, static classes, and inline-style contracts. |
-| React Doctor | Full-project security, bugs, accessibility, performance, maintainability, and supply-chain checks. |
+| React Doctor | Full-project selected security, bugs, accessibility, performance and graph checks. Test/story/design findings block. Retired/capability-gated IDs and fail-open Socket coverage are not counted as complete enforcement. |
 | tsrs / TypeScript | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS. |
-| React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan. |
+| React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan; bundle checks reject emitted Scan/bippy instrumentation. |
 | Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
 
 Biome's formatting settings are materialized from Ultracite. Its configuration explicitly extends `ultracite/biome/playwright` and restores `noEmptyPattern` for tests instead of accepting the preset's fixture waiver. Oxlint copies preset rules, not preset overrides. Upstream test/declaration waivers and broad generated-file globs cannot silently weaken coverage.
 
 ## Reviewed rule policy
 
-The inventory records each installed Biome, native Oxlint, Doctor, and shadcn rule. `bun run quality:rules` rejects unreviewed catalog changes, duplicates, changed pins, severity drift, and narrowed file-role scopes. Every delegated decision names an enforced owner: another error rule, a compiler option, a Biome assist, or its formatter. Recorded global disabled levels cannot silently change or fall back to inherited defaults. The gate also compares every installed Playwright preset rule with the explicit project errors. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
+The inventory records each installed Biome, native Oxlint, Doctor, shadcn and project-plugin rule. `bun run quality:rules` rejects unreviewed catalog changes, duplicates, changed pins, severity drift, and narrowed file-role scopes. Every delegated decision names an enforced owner: another error rule, a compiler option, a Biome assist, or its formatter. Recorded global disabled levels cannot silently change or fall back to inherited defaults. The gate also compares every installed Playwright preset rule with the explicit project errors. Disabled Biome linting and Doctor rule/tag/per-file suppression lists fail the gate. Review new rules individually on upgrade. Keep an error unless another tool owns the same contract, the framework does not apply, or a concrete false positive changes valid behavior.
 
 [Configuration boundaries](../scripts/quality-boundaries.ts) run before tool catalogs. They reject hidden overrides, broadened waiver roles, authored-source exclusions, disabled engines, and unreviewed preset inheritance. The inventory's `overrideExceptions` records only the existing Node, test, route, and primitive-author roles; it adds no new waivers. Biome keeps the explicit Playwright preset, while Oxlint presets remain materialized without inherited overrides.
 
-The gate inspects all five compiler projects through the real `tsc --showConfig`. Both local and inherited include/exclude settings must retain source coverage. Effective strict options, unchecked indexing, exact optional properties, and checked public JavaScript cannot be weakened in a child configuration. This protects the configuration used by both compiler runs, not just the shared base file.
+The gate inspects all six compiler projects through the real `tsc --showConfig`. Both local and inherited include/exclude settings must retain source coverage. Effective strict options, unchecked indexing, exact optional properties, and checked public JavaScript cannot be weakened in a child configuration. This protects the configuration used by both compiler runs, not just the shared base file.
+
+[Reviewed rule options and entrypoints](rule-options.json) are compared by the executable inventory gate. To review a change, run `bun scripts/quality-options.ts` from `frontend`, compare its JSON with the snapshot, and update both policy and regressions deliberately. This includes script bodies, not just labels. Installed versions and real plugin identity are checked. Biome warnings, including file-size skips, are fatal. YAML/SCSS/GraphQL suppressions are also rejected.
+
+Authored declaration roots have a separate `skipLibCheck:false` role, including `env.d.ts` which same-stem `env.ts` shadows during normal discovery. The live guard rejects new authored declaration files absent from that role, preventing the same coverage hole from returning. Global dependency declarations still need `skipLibCheck:true` because the pinned third-party graph has reproducible errors. Typed lint uses the root project; six independent compiler roles retain their own environment contracts. Doctor does not adopt this TypeScript Oxlint config or detect the Rsbuild compiler; the standalone typed invocation is mandatory. The retired Doctor memoization rule is replaced by the scope-aware project plugin.
 
 The canonical Playwright container owns its dependency and `dist` volumes. A concurrent host build cannot replace its visual harness or lazy chunks. Reports and source snapshots still reach the host checkout; ordinary verification never regenerates baselines.
 
@@ -74,7 +78,8 @@ Some deliberate decisions:
 - Router redirects are documented control-flow sentinels, not application errors.
 - The native void rule rejects valid generic calls. Biome still checks confusing void types.
 - Biome's leaked-render rule rejects safe string-valued ternaries. Typed boolean checks still reject unsafe conditions.
-- Biome's Tailwind shorthand fixer produces invalid `divide` from valid `divide-y`. Shadcn still validates utilities.
+- Biome 2.6.5 fixes the old shorthand `divide-y` regression; shorthand enforcement is enabled and protects valid `divide-y`.
+- Explicit undefined returns preserve typed optional-value and Promise callback contracts. The conflicting undefined-return style fixer remains off.
 - Secret patterns remain enabled. The global entropy threshold is 50 because long selectors and Tailwind variants are not credentials. Deliberate test credentials are fixture data, not shipped secrets. See [Biome's documented entropy tuning](https://biomejs.dev/linter/rules/no-secrets/javascript/#entropythreshold).
 
 The exact thresholds and options live in the configurations, not this document. Syntax bans that contradict supported JavaScript, React composition, or externally defined callback signatures are not enabled merely to increase the count.
@@ -99,7 +104,7 @@ Hook regressions also cover non-string paths, missing files, the repository root
 
 - No app, protobuf-form implementation, test, script, or E2E directory has a blanket quality exclusion.
 - Generated protobuf/route files are generator-owned. Do not edit them manually.
-- `src/components/ui` is vendored registry output. Its source is strictly typechecked and CI verifies registry sync. Put owned variants in `src/components/querylane-ui`, not the registry directory.
+- `src/components/ui` is vendored registry output. Its source is strictly typechecked and CI verifies registry sync. Put owned variants and authored tests in `src/components/querylane-ui`, not the registry directory; authored tests in the vendor namespace are rejected.
 - Owned primitives define appearance. Their consumers cannot restyle them. Primitives still get raw-color, utility, inline-style, type, and correctness checks.
 - Node tooling can use Node APIs and CLI output. Browser source cannot. Test fixtures can contain representative numeric values and test credentials. These are file-role contracts, not one-off file waivers.
 - Artifact/dependency directories are not source. The suppression guard rejects reserved artifact directories nested inside authored paths, source symlinks, nested quality configurations, ignore files, and generated-looking authored filenames.

@@ -16,6 +16,8 @@ const LEADING_SLASH_PATTERN = /^\//u;
 // dependency from a barrel or adapter import. D3 used by React Flow is separate.
 const UNUSED_CHART_CAPABILITY_PATTERN =
   /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/u;
+const DEVELOPMENT_PROFILER_PATTERN =
+  /(?:^|[/@])(?:react-scan|bippy)(?:[./@-]|$)/u;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
@@ -104,6 +106,7 @@ interface BundleBudgetStats {
   initialScriptGzip: number;
   initialScriptRaw: number;
   maxAsyncScript: BundleBudgetAsset | undefined;
+  productionContractViolations: string[];
   totalBrotli: number;
   totalGzip: number;
   totalRaw: number;
@@ -187,6 +190,40 @@ function sourceMapSources(distDir: string, relativePath: string): string[] {
     .looseObject({ sources: z.array(z.string()) })
     .parse(JSON.parse(readFileSync(sourceMapPath, "utf-8")));
   return sourceMap.sources;
+}
+
+function productionContractViolations(
+  distDir: string,
+  indexHtml: string,
+  assets: readonly BundleBudgetAsset[]
+): string[] {
+  const violations: string[] = [];
+  for (const match of indexHtml.matchAll(
+    /<script\b[^>]+src=["'](?<source>[^"']+)["']/gu
+  )) {
+    const source = match.groups?.["source"];
+    if (source !== undefined && DEVELOPMENT_PROFILER_PATTERN.test(source)) {
+      violations.push(`Development profiler script in index.html: ${source}`);
+    }
+  }
+  return [
+    ...violations,
+    ...assets.flatMap((asset) =>
+      productionAssetViolations(distDir, asset.path)
+    ),
+  ];
+}
+
+function productionAssetViolations(distDir: string, path: string): string[] {
+  const violations = DEVELOPMENT_PROFILER_PATTERN.test(path)
+    ? [`Development profiler asset: ${path}`]
+    : [];
+  for (const source of sourceMapSources(distDir, path)) {
+    if (DEVELOPMENT_PROFILER_PATTERN.test(source.replaceAll("\\", "/"))) {
+      violations.push(`Development profiler in ${path}: ${source}`);
+    }
+  }
+  return violations;
 }
 
 function isDeferredVisualizationAsset(distDir: string, relativePath: string) {
@@ -384,6 +421,11 @@ function collectBundleBudgetStats({
     allAssets,
     asyncScripts,
     chartContractViolations,
+    productionContractViolations: productionContractViolations(
+      distDir,
+      indexHtml,
+      allAssets
+    ),
     coreAssets,
     coreTotalBrotli,
     coreTotalGzip,
@@ -437,7 +479,10 @@ function check({
 
 function runBundleBudgetCheck() {
   const stats = collectBundleBudgetStats();
-  const failures = [...stats.chartContractViolations];
+  const failures = [
+    ...stats.chartContractViolations,
+    ...stats.productionContractViolations,
+  ];
 
   check({
     failures,

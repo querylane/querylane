@@ -207,8 +207,8 @@ function buildCompletionNamespace({
       namespace[relation.schema] = schema;
     }
     schema.children[relation.name] = {
-      children: (columns.get(relationKey(relation)) ?? []).map(
-        columnCompletion
+      children: (columns.get(relationKey(relation)) ?? []).map((value) =>
+        columnCompletion(value)
       ),
       self: relationCompletion(relation),
     };

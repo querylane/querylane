@@ -34,7 +34,7 @@ const initialSetupState = useSetupStore.getState();
 beforeEach(() => {
   useSetupStore.setState({
     ...initialSetupState,
-    bootstrap: rs.fn(async () => undefined),
+    bootstrap: rs.fn(() => Promise.resolve(undefined)),
     status: "verifying",
   });
 });

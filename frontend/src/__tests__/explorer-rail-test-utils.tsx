@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import {
-  ExplorerSidebarSlotProvider,
-  useExplorerSidebarSlotRegistration,
-} from "@/lib/explorer-sidebar-slot";
+import { ExplorerSidebarSlotProvider } from "@/lib/explorer-sidebar-slot";
+import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot-context";
 
 function ExplorerRailSlot() {
   const registerSlotTarget = useExplorerSidebarSlotRegistration();

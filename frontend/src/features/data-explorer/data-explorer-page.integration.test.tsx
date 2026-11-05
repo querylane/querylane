@@ -18,10 +18,8 @@ import {
 
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
-import {
-  ExplorerSidebarSlotProvider,
-  useExplorerSidebarSlotRegistration,
-} from "@/lib/explorer-sidebar-slot";
+import { ExplorerSidebarSlotProvider } from "@/lib/explorer-sidebar-slot";
+import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot-context";
 
 const ACCOUNTS_BUTTON_NAME = /^accounts 48 KB$/iu;
 
@@ -192,7 +190,7 @@ rs.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-rs.mock("@/components/querylane-ui/sidebar", () => ({
+rs.mock("@/components/querylane-ui/sidebar-context", () => ({
   useSidebar: () => ({ isMobile: false, setOpenMobile: rs.fn() }),
 }));
 
@@ -244,7 +242,7 @@ rs.mock("@/hooks/api/view", () => ({
   viewsForSchemaQueryInput: rs.fn((input: unknown) => input),
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 

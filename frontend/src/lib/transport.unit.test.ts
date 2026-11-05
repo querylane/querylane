@@ -94,15 +94,16 @@ function createTestInterceptor() {
   let setupRequiredCalls = 0;
   const dependencies: SetupInterceptorDependencies = {
     getCurrentHref: () => "/instances/prod-us-east",
-    loadBlockingErrorStore: async () => ({
-      useBlockingErrorStore: {
-        getState: () => ({
-          setBlockingError: (error, returnTo) => {
-            blockingErrors.push({ error, returnTo });
-          },
-        }),
-      },
-    }),
+    loadBlockingErrorStore: () =>
+      Promise.resolve({
+        useBlockingErrorStore: {
+          getState: () => ({
+            setBlockingError: (error, returnTo) => {
+              blockingErrors.push({ error, returnTo });
+            },
+          }),
+        },
+      }),
     logger: createFakeLogger(),
     markSetupRequired: () => {
       setupRequiredCalls += 1;

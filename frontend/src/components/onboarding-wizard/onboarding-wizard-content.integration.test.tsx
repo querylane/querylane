@@ -122,8 +122,8 @@ function createController(
     finishWizard: rs.fn(),
     goBackToConfigure: rs.fn(),
     goBackToMethodSelection: rs.fn(),
-    refreshOnboardingState: rs.fn(async () => undefined),
-    retryWatch: rs.fn(async () => undefined),
+    refreshOnboardingState: rs.fn(() => Promise.resolve(undefined)),
+    retryWatch: rs.fn(() => Promise.resolve(undefined)),
     setupRunning: false,
     watchIsRunning: false,
     watchManualRetryRequired: false,
@@ -134,7 +134,7 @@ function createController(
 
 function renderWizard(
   controller = createController(),
-  testInstanceConnection = rs.fn(async () => ({}))
+  testInstanceConnection = rs.fn(() => Promise.resolve({}))
 ) {
   const queryClient = createTestQueryClient();
   renderedQueryClients.push(queryClient);
@@ -166,7 +166,7 @@ function renderRealWizard(initialMethod: ConfigMethod) {
   renderedQueryClients.push(queryClient);
   const transport = createTestRouterTransport(({ service }) => {
     service(InstanceService, {
-      testInstanceConnection: rs.fn(async () => ({})),
+      testInstanceConnection: rs.fn(() => Promise.resolve({})),
     });
   });
 
@@ -184,7 +184,7 @@ function renderRealWizard(initialMethod: ConfigMethod) {
 function seedOnboardingState() {
   useSetupStore.setState({
     onboardingState: createOnboardingState(),
-    refreshOnboardingState: rs.fn(async () => undefined),
+    refreshOnboardingState: rs.fn(() => Promise.resolve(undefined)),
     showWizardErrorBanner: false,
     status: "onboarding",
   });

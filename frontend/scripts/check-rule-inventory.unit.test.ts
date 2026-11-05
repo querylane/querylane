@@ -32,13 +32,154 @@ test("accepts the same reviewed catalog in a different order", () => {
   }).not.toThrow();
 });
 
+function addAuthoredDeclaration(root: string, enabled: boolean): void {
+  if (enabled) {
+    writeFileSync(
+      join(root, "src/extra.d.ts"),
+      "declare const extra: string;\n"
+    );
+  }
+}
+
 test.each([
+  {
+    config: "oxlint.config.ts",
+    original: "const MAX_BLOCK_DEPTH = 4;",
+    replacement: "const MAX_BLOCK_DEPTH = 99;",
+    rule: "weakened depth option",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: 'group: ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"]',
+    replacement: 'group: ["unreachable-import-prefix/**"]',
+    rule: "emptied pure dependency restrictions",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "package.json",
+    original: '"lint:oxlint": "oxlint ',
+    replacement: '"lint:oxlint": "echo ',
+    rule: "successful no-op lint entrypoint",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "doctor.config.ts",
+    original: 'includeFileContexts: ["test", "story"],',
+    replacement:
+      'includeFileContexts: ["test", "story"], excludeTags: ["design"],',
+    rule: "hidden Doctor design findings",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"src/env.d.ts",',
+    replacement: '"src/extra.d.ts", "src/env.d.ts",',
+    extraDeclaration: true,
+    rule: "new checked authored declaration",
+    status: 0,
+    message: "Every installed rule has a recorded policy decision.",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"target": "ESNext"',
+    replacement: '"target": "esnext"',
+    extraDeclaration: true,
+    rule: "new unchecked authored declaration",
+    message: "Authored declaration coverage is not enforced: src/extra.d.ts",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"skipLibCheck": false',
+    replacement: '"skipLibCheck": true',
+    rule: "unchecked authored declarations",
+    message: "Authored declarations must be checked completely",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"src/env.d.ts",',
+    replacement: "",
+    rule: "shadowed authored declarations",
+    message:
+      "Compiler coverage is not enforced: tsconfig.authored-declarations.json",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"json": {\n    "assist": {\n      "enabled": true',
+    replacement: '"json": {\n    "assist": {\n      "enabled": false',
+    rule: "disabled JSON assist",
+    message: "Quality engine cannot be disabled: json.assist",
+  },
+  {
+    config: "doctor.config.ts",
+    original: 'includeFileContexts: ["test", "story"],',
+    replacement: "",
+    rule: "nonblocking Doctor test findings",
+    message: "Doctor test and story findings must block CI",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"files": {',
+    replacement: '"files": { "maxSize": 1,',
+    rule: "narrowed Biome file-size coverage",
+    message: "Biome file-size coverage cannot be narrowed",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"overrides": [',
+    replacement:
+      '"overrides": [{ "includes": ["src/**"], "files": { "maxSize": 1 } },',
+    rule: "narrowed per-role Biome file-size coverage",
+    message: "Biome file-size coverage cannot be narrowed",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"files": {',
+    replacement: '"files": { "experimentalScannerIgnores": ["src"],',
+    rule: "unreviewed Biome scanner exclusion",
+    message: "Biome scanner exclusions are not permitted",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"files": {',
+    replacement: '"files": { "maxSize": 2097152,',
+    rule: "increased Biome file-size coverage",
+    status: 0,
+    message: "Every installed rule has a recorded policy decision.",
+  },
   {
     config: "tsconfig.strict.json",
     original: '"compilerOptions": {',
     replacement:
       '// Shared compiler policy supports JSONC.\n  "compilerOptions": {',
     rule: "valid compiler comments",
+    status: 0,
+    message: "Every installed rule has a recorded policy decision.",
+  },
+  {
+    config: "package.json",
+    original: '"@biomejs/biome": "',
+    replacement: '"@biomejs/biome": "0.0.0-audit-',
+    inventoryChange: {
+      original: '"@biomejs/biome": "',
+      replacement: '"@biomejs/biome": "0.0.0-audit-',
+    },
+    rule: "installed version drift",
+    message:
+      "Installed @biomejs/biome version does not match the reviewed version",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: 'specifier: "@shadcn/lint"',
+    replacement: 'specifier: "./quality/empty-shadcn-plugin.ts"',
+    rule: "substituted shadcn plugin",
+    message: "Reviewed shadcn plugin is not enforced",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: 'specifier: "@shadcn/lint"',
+    replacement: 'specifier: "./node_modules/@shadcn/lint/dist/index.js"',
+    rule: "equivalent shadcn plugin path",
     status: 0,
     message: "Every installed rule has a recorded policy decision.",
   },
@@ -325,7 +466,7 @@ test.each([
     replacement: 'files: ["src/lib/domain/quality-probe-*/**/*.ts"]',
     rule: "typescript/explicit-module-boundary-types",
     message:
-      "Reviewed rule scope is not enforced: typescript/explicit-module-boundary-types",
+      "Reviewed rule scope is not enforced: eslint/no-restricted-globals",
   },
 ])("enforces reviewed quality policy: $rule -> $replacement", (scenario) => {
   const source = resolve(import.meta.dirname, "..");
@@ -334,6 +475,9 @@ test.each([
     for (const file of [
       "scripts/check-rule-inventory.ts",
       "scripts/quality-boundaries.ts",
+      "scripts/quality-options.ts",
+      "quality/rule-options.json",
+      "scripts/querylane-lint.config.ts",
       "src/lib/value-guards.ts",
       "quality/rule-inventory.json",
       "package.json",
@@ -343,6 +487,9 @@ test.each([
       "tsconfig.browser-js.json",
       "tsconfig.ui.json",
       "tsconfig.declarations.json",
+      "tsconfig.authored-declarations.json",
+      "src/env.d.ts",
+      "src/import-meta-env.d.ts",
       "src/types/css.d.ts",
       "biome.jsonc",
       "oxlint.config.ts",
@@ -375,11 +522,37 @@ test.each([
         ],
       })
     );
+    writeFileSync(
+      join(root, "quality/empty-shadcn-plugin.ts"),
+      `import shadcn from "@shadcn/lint";
+export default {
+  ...shadcn,
+  rules: Object.fromEntries(Object.entries(shadcn.rules).map(([name, rule]) => [
+    name, { ...rule, create() { return {}; } },
+  ])),
+};
+`
+    );
+    addAuthoredDeclaration(root, "extraDeclaration" in scenario);
     const config = join(root, scenario.config);
     const original = readFileSync(config, "utf8");
     const modified = original.replace(scenario.original, scenario.replacement);
     expect(modified).not.toBe(original);
     writeFileSync(config, modified);
+    if (scenario.inventoryChange !== undefined) {
+      const inventoryPath = join(root, "quality/rule-inventory.json");
+      const inventory = readFileSync(inventoryPath, "utf8");
+      const changedInventory = inventory.replace(
+        scenario.inventoryChange.original,
+        scenario.inventoryChange.replacement
+      );
+      if (changedInventory === inventory) {
+        throw new Error(
+          `Missing fixture version: ${scenario.inventoryChange.original}`
+        );
+      }
+      writeFileSync(inventoryPath, changedInventory);
+    }
     if ("inventoryDecision" in scenario) {
       const inventoryPath = join(root, "quality/rule-inventory.json");
       const inventory = readFileSync(inventoryPath, "utf8");

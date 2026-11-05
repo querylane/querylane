@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { useTheme } from "@/theme-provider";
+import type { useTheme } from "@/theme-context";
 
 export function ThemeModeMenu({
   resolvedTheme,

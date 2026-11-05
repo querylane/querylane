@@ -326,10 +326,10 @@ function SqlEditor({
   }));
 
   useEffect(
-    function mountEditor() {
+    function mountEditor(): (() => void) | undefined {
       const host = hostRef.current;
       if (!host) {
-        return;
+        return undefined;
       }
       const runKeymap = keymap.of([
         {

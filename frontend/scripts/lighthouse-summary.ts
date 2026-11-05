@@ -57,22 +57,28 @@ function getNumericScore(value: unknown): number | undefined {
     : undefined;
 }
 
-function readAudit(report: LighthouseReportLike, auditId: string) {
+function readAudit(
+  report: LighthouseReportLike,
+  auditId: string
+): LighthouseAudit | undefined {
   if (!isRecord(report.audits)) {
-    return;
+    return undefined;
   }
 
   const audit = report.audits[auditId];
-  return isRecord(audit) ? (audit as LighthouseAudit) : undefined;
+  return isRecord(audit) ? audit : undefined;
 }
 
-function readCategory(report: LighthouseReportLike, categoryId: string) {
+function readCategory(
+  report: LighthouseReportLike,
+  categoryId: string
+): LighthouseCategory | undefined {
   if (!isRecord(report.categories)) {
-    return;
+    return undefined;
   }
 
   const category = report.categories[categoryId];
-  return isRecord(category) ? (category as LighthouseCategory) : undefined;
+  return isRecord(category) ? category : undefined;
 }
 
 function formatCategoryScore(report: LighthouseReportLike, categoryId: string) {

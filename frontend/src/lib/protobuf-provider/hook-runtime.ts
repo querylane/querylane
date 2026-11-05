@@ -106,7 +106,7 @@ function toDateTimeLocalValue(
   timestamp: MessageShape<typeof TimestampSchema> | undefined
 ): string | undefined {
   if (!timestamp) {
-    return;
+    return undefined;
   }
 
   const date = timestampDate({
@@ -116,7 +116,7 @@ function toDateTimeLocalValue(
       NANOSECONDS_PER_MILLISECOND,
   });
   if (Number.isNaN(date.getTime())) {
-    return;
+    return undefined;
   }
 
   const year = date.getFullYear();
@@ -135,7 +135,7 @@ function toDateTimeLocalValue(
 }
 
 function objectHasValues(value: Record<string, unknown>): boolean {
-  return Object.values(value).some(hasFormValue);
+  return Object.values(value).some((item) => hasFormValue(item));
 }
 
 function hasFormValue(entry: unknown): boolean {
@@ -163,9 +163,12 @@ function isJsonValue(value: unknown): value is JsonValue {
     return Number.isFinite(value);
   }
   if (isUnknownArray(value)) {
-    return value.every(isJsonValue);
+    return value.every((item) => isJsonValue(item));
   }
-  return isPlainObject(value) && Object.values(value).every(isJsonValue);
+  return (
+    isPlainObject(value) &&
+    Object.values(value).every((item) => isJsonValue(item))
+  );
 }
 
 function scalarToFormValue(
@@ -183,7 +186,7 @@ function scalarToFormValue(
 
 function anyToFormValue(value: unknown): ProtoAnyFormValue | undefined {
   if (!isPlainObject(value)) {
-    return;
+    return undefined;
   }
   return {
     typeUrl: typeof value["typeUrl"] === "string" ? value["typeUrl"] : "",
@@ -382,7 +385,7 @@ function protoToFormValues(
 
 function normalizeBooleanValue(value: unknown): boolean | undefined {
   if (isEmptyFormValue(value)) {
-    return;
+    return undefined;
   }
   if (typeof value === "boolean") {
     return value;
@@ -398,7 +401,7 @@ function normalizeBooleanValue(value: unknown): boolean | undefined {
 
 function normalizeNumberValue(value: unknown): number | undefined {
   if (isEmptyFormValue(value)) {
-    return;
+    return undefined;
   }
   if (typeof value === "number") {
     return Number.isNaN(value) ? undefined : value;
@@ -409,7 +412,7 @@ function normalizeNumberValue(value: unknown): number | undefined {
 
 function normalizeFloatingPointValue(value: unknown): number | undefined {
   if (isEmptyFormValue(value)) {
-    return;
+    return undefined;
   }
   if (typeof value === "number") {
     return value;
@@ -423,7 +426,7 @@ function normalizeFloatingPointValue(value: unknown): number | undefined {
 
 function normalizeBigIntValue(value: unknown): bigint | undefined {
   if (isEmptyFormValue(value)) {
-    return;
+    return undefined;
   }
   if (typeof value === "bigint") {
     return value;
@@ -496,9 +499,11 @@ function normalizeScalarValue(
   return normalizeNumberValue(value);
 }
 
-function timestampFromFormValue(value: unknown) {
+function timestampFromFormValue(
+  value: unknown
+): ReturnType<typeof timestampFromDate> | undefined {
   if (!isNonEmptyString(value)) {
-    return;
+    return undefined;
   }
   const timestamp = timestampFromDate(new Date(value));
   const fraction = TIMESTAMP_FRACTION.exec(value)?.[1];
@@ -518,14 +523,16 @@ function optionalStringFormValue(value: unknown): string {
   return value;
 }
 
-function anyFromFormValue(value: unknown) {
+function anyFromFormValue(
+  value: unknown
+): { typeUrl: string; value: ReturnType<typeof base64Decode> } | undefined {
   if (!isPlainObject(value)) {
-    return;
+    return undefined;
   }
   const typeUrl = optionalStringFormValue(value["typeUrl"]);
   const valueBase64 = optionalStringFormValue(value["valueBase64"]);
   if (!(isNonEmptyString(typeUrl) || isNonEmptyString(valueBase64))) {
-    return;
+    return undefined;
   }
   return { typeUrl, value: base64Decode(valueBase64) };
 }
@@ -535,7 +542,7 @@ function jsonMessageFromFormValue(
   value: unknown
 ): unknown {
   if (value === undefined) {
-    return;
+    return undefined;
   }
   const json = field.message.typeName === STRUCT_TYPE ? (value ?? {}) : value;
   if (!isJsonValue(json)) {
@@ -1523,7 +1530,7 @@ function getMessageConversionIssue(
   value: unknown
 ): string | undefined {
   if (isEmptyFormValue(value)) {
-    return;
+    return undefined;
   }
   if (desc.typeName === TIMESTAMP_TYPE) {
     return typeof value === "string" && !Number.isNaN(new Date(value).getTime())
@@ -1535,7 +1542,7 @@ function getMessageConversionIssue(
   }
 
   if (desc.typeName !== ANY_TYPE || !isPlainObject(value)) {
-    return;
+    return undefined;
   }
   return anyConversionIssue(value);
 }
@@ -1543,7 +1550,7 @@ function getMessageConversionIssue(
 function anyConversionIssue(value: AnyObject): string | undefined {
   const { valueBase64 } = value;
   if (valueBase64 === undefined || valueBase64 === "") {
-    return;
+    return undefined;
   }
   if (typeof valueBase64 !== "string") {
     return "Enter valid base64 data.";
@@ -1558,7 +1565,7 @@ function anyConversionIssue(value: AnyObject): string | undefined {
 
 function getMapConversionIssue(value: unknown): string | undefined {
   if (!isUnknownArray(value)) {
-    return;
+    return undefined;
   }
   const keys = value.flatMap((entry) => {
     if (!isPlainObject(entry)) {

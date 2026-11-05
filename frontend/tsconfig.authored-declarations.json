@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.strict.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["@rsbuild/core/types", "node"],
+    "noEmit": true,
+    "skipLibCheck": false
+  },
+  "include": [],
+  "exclude": [],
+  "files": ["src/env.d.ts", "src/import-meta-env.d.ts", "src/types/css.d.ts"]
+}

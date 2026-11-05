@@ -1,14 +1,14 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
-import { useSidebar } from "@/components/querylane-ui/sidebar";
+import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 import {
   navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,
 } from "@/lib/admin-navigation";
 import type { AdminPageId } from "@/lib/admin-page";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 
 function AdminKeyboardShortcuts() {

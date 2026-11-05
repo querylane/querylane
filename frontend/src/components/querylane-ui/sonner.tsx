@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { type ToasterProps, toast } from "sonner";
 import { Toaster as BaseToaster } from "@/components/ui/sonner";
-import { useTheme } from "@/theme-provider";
+import { useTheme } from "@/theme-context";
 
 function Toaster({ theme: toastTheme, ...props }: ToasterProps) {
   const { theme } = useTheme();

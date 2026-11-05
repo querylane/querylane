@@ -80,7 +80,7 @@ function formatIndexSqlColumns(index: TableIndex) {
   if (keyParts.length === 0) {
     return "/* expression */";
   }
-  return keyParts.map(formatIndexKeyPartForSql).join(", ");
+  return keyParts.map((value) => formatIndexKeyPartForSql(value)).join(", ");
 }
 function createIndexSql({
   index,
@@ -212,7 +212,7 @@ function IndexSummaryStrip({
     segments.push(
       `${formatCompactInteger(sumIndexScans(indexes))} scans since stats reset`
     );
-    const unusedCount = indexes.filter(isIndexUnused).length;
+    const unusedCount = indexes.filter((value) => isIndexUnused(value)).length;
     if (unusedCount > 0) {
       segments.push(`${unusedCount.toLocaleString()} unused`);
     }

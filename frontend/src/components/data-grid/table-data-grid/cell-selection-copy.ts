@@ -124,16 +124,18 @@ function copyRowValues(
   fetchFullCell: FetchFullCell
 ) {
   const cells = resultColumns.map((meta) => getGridCell(row, meta));
-  if (cells.some(cellNeedsFullValue)) {
+  if (cells.some((value) => cellNeedsFullValue(value))) {
     writeClipboardDeferred(async () => {
       const resolved = await Promise.all(
         cells.map((cell) => resolveFullCell(cell, fetchFullCell))
       );
-      return resolved.map(formatCellForClipboard).join("\t");
+      return resolved.map((value) => formatCellForClipboard(value)).join("\t");
     });
     return;
   }
-  writeClipboard(cells.map(formatCellForClipboard).join("\t"));
+  writeClipboard(
+    cells.map((value) => formatCellForClipboard(value)).join("\t")
+  );
 }
 
 function getDisplayedDataColumnKeys(columns: Column<GridRow>[]): string[] {

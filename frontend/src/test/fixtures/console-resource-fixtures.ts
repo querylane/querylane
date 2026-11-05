@@ -344,7 +344,7 @@ function catalogTable(
 }
 
 const consoleCatalog: CatalogFixture = {
-  schemas: ["analytics", "public"].map(catalogSchema),
+  schemas: ["analytics", "public"].map((value) => catalogSchema(value)),
   tables: {
     public: [
       catalogTable("public", "events", {

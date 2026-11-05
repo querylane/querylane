@@ -231,8 +231,9 @@ export function ErrorSummaryPhase() {
     : -1;
   const totalCount = progressEvents.length;
   const errorText =
-    [failedStepError, streamError?.title].find(isNonEmptyString) ??
-    "An unknown error occurred";
+    [failedStepError, streamError?.title].find((value) =>
+      isNonEmptyString(value)
+    ) ?? "An unknown error occurred";
   const errorKind = classifySetupError(errorText);
   const presentedStreamError = presentStreamError(streamError, errorKind);
 

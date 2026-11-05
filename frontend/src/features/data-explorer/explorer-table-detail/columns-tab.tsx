@@ -454,14 +454,16 @@ function ColumnsTab({
             {
               handleSelectedValuesChange: setTypeCategories,
               label: "Type",
-              options: uniqueSortedOptions(rows.map(columnTypeCategory)),
+              options: uniqueSortedOptions(
+                rows.map((value) => columnTypeCategory(value))
+              ),
               selectedValues: typeCategories,
             },
             {
               handleSelectedValuesChange: setKeyKinds,
               label: "Key",
               options: presentColumnOptions(
-                rows.flatMap(columnKeyKinds),
+                rows.flatMap((value) => columnKeyKinds(value)),
                 COLUMN_KEY_FILTER_OPTIONS
               ),
               selectedValues: keyKinds,
@@ -470,7 +472,7 @@ function ColumnsTab({
               handleSelectedValuesChange: setNullability,
               label: "Nullability",
               options: presentColumnOptions(
-                rows.map(columnNullability),
+                rows.map((value) => columnNullability(value)),
                 COLUMN_NULLABILITY_FILTER_OPTIONS
               ),
               selectedValues: nullability,
@@ -479,7 +481,7 @@ function ColumnsTab({
               handleSelectedValuesChange: setDefaultKinds,
               label: "Default",
               options: presentColumnOptions(
-                rows.map(columnDefaultKind),
+                rows.map((value) => columnDefaultKind(value)),
                 COLUMN_DEFAULT_FILTER_OPTIONS
               ),
               selectedValues: defaultKinds,
@@ -488,7 +490,7 @@ function ColumnsTab({
               handleSelectedValuesChange: setGenerationKinds,
               label: "Generation",
               options: presentColumnOptions(
-                rows.flatMap(columnGenerationKinds),
+                rows.flatMap((value) => columnGenerationKinds(value)),
                 COLUMN_GENERATION_FILTER_OPTIONS
               ),
               selectedValues: generationKinds,

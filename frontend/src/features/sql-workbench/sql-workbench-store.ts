@@ -380,12 +380,12 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         }
       },
       history: {},
-      openSavedQuery: (scope, id) => {
+      openSavedQuery: (scope, id): string | undefined => {
         const query = (get().savedQueries[scope] ?? []).find(
           (candidate) => candidate.id === id
         );
         if (!query) {
-          return;
+          return undefined;
         }
         const workspace = workspaceFor(get().workspaces, scope);
         const existing = workspace.tabs.find(

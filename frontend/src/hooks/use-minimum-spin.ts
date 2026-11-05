@@ -25,9 +25,9 @@ function useMinimumSpin(active: boolean): boolean {
   }
   const { sequence } = cycle;
   useEffect(
-    function expireMinimumSpin() {
+    function expireMinimumSpin(): (() => void) | undefined {
       if (sequence === 0) {
-        return;
+        return undefined;
       }
       const timer = globalThis.setTimeout(() => {
         setCycle((current) => ({ ...current, holding: false }));

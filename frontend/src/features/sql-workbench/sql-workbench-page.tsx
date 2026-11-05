@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
-import { useSidebar } from "@/components/querylane-ui/sidebar";
+import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
 import {
   ResizableHandle,
@@ -160,11 +160,11 @@ function useWorkbenchExecutionActions({
   const statements = splitSqlStatements(activeTab.text);
   function runCurrent(): Promise<unknown> | undefined {
     if (isRunning) {
-      return;
+      return undefined;
     }
     const pending = currentStatements();
     if (pending.length === 0) {
-      return;
+      return undefined;
     }
     setResultsTab("results");
     return runSequence(pending);
@@ -184,9 +184,9 @@ function useWorkbenchExecutionActions({
     }
   }
 
-  function runAll() {
+  function runAll(): Promise<void> | undefined {
     if (isRunning || statements.length === 0) {
-      return;
+      return undefined;
     }
     setResultsTab("results");
     return runSequence(statements);
@@ -203,13 +203,15 @@ function useWorkbenchExecutionActions({
     });
   }
 
-  function explain(analyze: boolean) {
+  function explain(
+    analyze: boolean
+  ): ReturnType<typeof execution.explain> | undefined {
     const pending = currentStatements();
     if (pending.length > 1) {
       toast.info("Explain one statement at a time", {
         description: "Select a single statement, or place the cursor in one.",
       });
-      return;
+      return undefined;
     }
     const statement = pending[0]?.text;
     if (isNonEmptyString(statement)) {

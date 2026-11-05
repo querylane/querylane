@@ -4,9 +4,9 @@ import { z } from "zod";
 
 const MAX_PORT = 65_535;
 
-const optionalPort = z.preprocess((value) => {
+const optionalPort = z.preprocess((value): number | undefined => {
   if (value === undefined || value === "") {
-    return;
+    return undefined;
   }
   return Number(value);
 }, z.number().int().min(1).max(MAX_PORT).optional());

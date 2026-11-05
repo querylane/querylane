@@ -13,7 +13,9 @@ function formErrorMessages(error: unknown): string[] {
       error.types !== null &&
       typeof error.types === "object"
     ) {
-      messages = Object.values(error.types).flatMap(errorCriteriaMessages);
+      messages = Object.values(error.types).flatMap((value) =>
+        errorCriteriaMessages(value)
+      );
     }
     return [...new Set([error.message, ...messages])];
   }

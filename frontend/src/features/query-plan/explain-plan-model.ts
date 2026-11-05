@@ -220,7 +220,7 @@ function rowEstimateLabel(
   estimated: number
 ): string | undefined {
   if (actual === estimated) {
-    return;
+    return undefined;
   }
   if (actual === 0) {
     return estimated >= ROW_ESTIMATE_THRESHOLD ? "No rows returned" : undefined;

@@ -66,7 +66,7 @@
   },
   "json": {
     "assist": {
-      "enabled": false
+      "enabled": true
     },
     "formatter": {
       "enabled": true,
@@ -199,7 +199,10 @@
         "useSimplifiedLogicExpression": "error",
         "useWhile": "error",
         "noExcessiveNestedCallbacks": "error",
-        "noExcessiveSelectorClasses": "error",
+        "noExcessiveSelectorClasses": {
+          "level": "error",
+          "options": { "maxClasses": 5 }
+        },
         "noPlaywrightUselessAwait": "error",
         "noUnnecessaryTemplateExpression": "error",
         "useArraySome": "error",
@@ -547,7 +550,7 @@
         "useStringStartsEndsWith": "error",
         "useSvelteKitRuneImports": "error",
         "useSvelteRequireEachKey": "error",
-        "useTailwindShorthandClasses": "off",
+        "useTailwindShorthandClasses": "error",
         "useValidTestTitle": "error",
         "useVueBaseImport": "error",
         "preset": "all",
@@ -748,18 +751,7 @@
           "level": "error",
           "options": {
             "allowConstantExport": true,
-            "allowExportNames": [
-              "DatabaseStructureMapTargetResource",
-              "OtherDatabaseObject",
-              "OtherObjectCategory",
-              "Route",
-              "resolveHomeInstanceId",
-              "useCommandPalette",
-              "useDb",
-              "useExplorerSidebarSlotRegistration",
-              "useSidebar",
-              "useTheme"
-            ]
+            "allowExportNames": []
           }
         },
         "useConsistentArrayType": "error",
@@ -990,7 +982,19 @@
         "useIterableCallbackReturn": "error",
         "useNamespaceKeyword": "error",
         "useNumberToFixedDigitsArgument": "error",
-        "useRequiredScripts": "error",
+        "useRequiredScripts": {
+          "level": "error",
+          "options": {
+            "requiredScripts": [
+              "lint",
+              "lint:fix",
+              "quality:gate",
+              "type:check",
+              "build",
+              "test"
+            ]
+          }
+        },
         "useStaticResponseMethods": "error",
         "useStrictMode": "error",
         "noConditionalExpect": "error",

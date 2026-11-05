@@ -444,7 +444,11 @@ function formatCellSelectionForClipboard(
 ): string {
   return blocks
     .map((rows) =>
-      rows.map((row) => row.map(escapeClipboardField).join("\t")).join("\n")
+      rows
+        .map((row) =>
+          row.map((value) => escapeClipboardField(value)).join("\t")
+        )
+        .join("\n")
     )
     .join("\n\n");
 }

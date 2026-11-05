@@ -403,7 +403,7 @@ function presentExtension(extension: Extension): PresentedExtension {
 }
 
 function presentExtensions(extensions: Extension[]): PresentedExtension[] {
-  return extensions.map(presentExtension);
+  return extensions.map((value) => presentExtension(value));
 }
 
 function matchesStatus(

@@ -79,7 +79,7 @@ function derivePartitionTabCount(
   metadata: TablePartitionMetadata | undefined
 ): number | undefined {
   if (!metadata || metadata.partitionCount <= 0) {
-    return;
+    return undefined;
   }
   return metadata.partitionCount;
 }
@@ -224,12 +224,14 @@ function partitionDisplayName(partition: TablePartition): string {
   }
 }
 
-function rangeBoundDayLabels(partitionBound: string) {
+function rangeBoundDayLabels(
+  partitionBound: string
+): { end: string; start: string } | undefined {
   const bounds = RANGE_BOUNDS_PATTERN.exec(partitionBound);
   const start = bounds?.[1];
   const end = bounds?.[2];
   if (!(isNonEmptyString(start) && typeof end === "string" && end.length > 0)) {
-    return;
+    return undefined;
   }
   return { end, start };
 }
@@ -251,16 +253,18 @@ function partitionBoundLabel(
   return withoutPrefix || "—";
 }
 
-function rangeBoundDates(partitionBound: string) {
+function rangeBoundDates(
+  partitionBound: string
+): { end: number; start: number } | undefined {
   const bounds = rangeBoundDayLabels(partitionBound);
   if (!bounds) {
-    return;
+    return undefined;
   }
 
   const start = Date.parse(`${bounds.start}T00:00:00Z`);
   const end = Date.parse(`${bounds.end}T00:00:00Z`);
   if (!(Number.isFinite(start) && Number.isFinite(end)) || end <= start) {
-    return;
+    return undefined;
   }
   return { end, start };
 }

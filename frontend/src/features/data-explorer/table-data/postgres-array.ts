@@ -43,7 +43,7 @@ function consumeEscapedCharacter(
   state: ArrayScanState
 ): number | undefined {
   if (!(state.inQuotes && input.charAt(index) === "\\")) {
-    return;
+    return undefined;
   }
   const next = input.charAt(index + 1);
   if (next !== "") {

@@ -14,7 +14,7 @@ for (const scenario of [
     saveData: false,
   },
 ] as const) {
-  test(`code-only ${scenario.interaction}: code preload=${scenario.preload}, saveData=${scenario.saveData}, ${scenario.effectiveType}`, async ({
+  test(`code-only ${scenario.interaction}: code preload=${String(scenario.preload)}, saveData=${String(scenario.saveData)}, ${scenario.effectiveType}`, async ({
     page,
   }) => {
     await mockDataExplorerApp(page);

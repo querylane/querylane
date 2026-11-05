@@ -57,7 +57,8 @@ rs.mock("@/hooks/api/extension", () => ({
     error: state.extensionsQuery.error ?? null,
     isFetching: state.extensionsQuery.isFetching ?? false,
     isPending: state.extensionsQuery.isPending ?? false,
-    refetch: state.extensionsQuery.refetch ?? rs.fn(async () => undefined),
+    refetch:
+      state.extensionsQuery.refetch ?? rs.fn(() => Promise.resolve(undefined)),
   }),
 }));
 

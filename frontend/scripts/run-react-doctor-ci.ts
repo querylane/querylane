@@ -152,7 +152,7 @@ function renderMarkdown(report: DoctorReport, commitSha: string | undefined) {
       "|---|---|---|---|---|",
       ...summary.diagnostics
         .slice(0, MAX_COMMENT_DIAGNOSTICS)
-        .map(renderDiagnostic)
+        .map((value) => renderDiagnostic(value))
     );
     if (summary.diagnostics.length > MAX_COMMENT_DIAGNOSTICS) {
       lines.push(
@@ -248,6 +248,11 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
   }
 
   const [owner, repo] = repository.split("/");
+  if (!(isNonEmptyString(owner) && isNonEmptyString(repo))) {
+    throw new TypeError(
+      "GITHUB_REPOSITORY must contain an owner and repository"
+    );
+  }
   const comments = z
     .array(
       z.looseObject({

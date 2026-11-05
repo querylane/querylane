@@ -6,7 +6,9 @@
     "@shadcn/lint": "0.2.5",
     "react-doctor": "0.9.22",
     "tsrs": "0.21.0-ts7.1.0-beta",
-    "typescript": "7.1.0-dev.20261104.1"
+    "typescript": "7.1.0-dev.20261104.1",
+    "oxlint-tsgolint": "7.0.2005",
+    "react-scan": "0.5.7"
   },
   "biome": [
     {
@@ -300,7 +302,7 @@
     {
       "rule": "complexity/noExcessiveSelectorClasses",
       "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "reason": "Enforce at most five classes per CSS selector, preserving existing data-grid selection and frozen-cell specificity contracts.",
       "docs": "https://biomejs.dev/linter/rules/no-excessive-selector-classes/"
     },
     {
@@ -468,7 +470,7 @@
     {
       "rule": "complexity/noUselessUndefined",
       "decision": "inapplicable",
-      "reason": "Exact-optional and index-signature APIs need explicit undefined returns.",
+      "reason": "No return-context option exists: this rule removes explicit undefined from promise callbacks that promise/always-return requires. Preserve the undefined return type and settlement timing instead of widening annotations or adding Promise hops. Useless initialization is independently forbidden.",
       "docs": "https://biomejs.dev/linter/rules/no-useless-undefined/"
     },
     {
@@ -1933,8 +1935,8 @@
     },
     {
       "rule": "nursery/useTailwindShorthandClasses",
-      "decision": "inapplicable",
-      "reason": "Biome 2.5.15 rewrites valid divide-y into nonexistent divide. Shadcn still rejects unknown utilities.",
+      "decision": "error",
+      "reason": "Enforce compatible shorthand classes. Biome 2.6.5 preserves divide-y; rejected/valid CLI probes cover the former limitation.",
       "docs": "https://biomejs.dev/linter/rules/use-tailwind-shorthand-classes/"
     },
     {
@@ -2318,7 +2320,7 @@
     {
       "rule": "style/noRestrictedTypes",
       "decision": "error",
-      "reason": "Enforce this style contract at error severity; framework-specific syntax is checked when present.",
+      "reason": "Configured error with an empty custom types map. This is a dormant policy container, not an additional type ban; compiler and native typed unsafe-flow rules enforce actual type safety.",
       "docs": "https://biomejs.dev/linter/rules/no-restricted-types/"
     },
     {
@@ -3674,7 +3676,7 @@
     {
       "rule": "nursery/noDanglingUnderscore",
       "decision": "inapplicable",
-      "reason": "Leading underscores are valid ignored callback parameters and externally defined identifiers, not correctness defects.",
+      "reason": "Build-time __API_BASE_URL__ and external virtualizer _didMount/_willUpdate members have fixed external names. Ignored parameters are already exempt.",
       "docs": "https://biomejs.dev/linter/rules/no-dangling-underscore"
     },
     {
@@ -3734,7 +3736,7 @@
     {
       "rule": "nursery/noUnreadableForOfExpression",
       "decision": "inapplicable",
-      "reason": "The rule rejects ordinary nullish fallback iterables (items ?? []) and direct Object.entries calls; naming every one adds indirection without a correctness or readability benefit. Eager array allocations in loops remain errors.",
+      "reason": "Nullish iterable fallbacks such as items ?? [] are valid supported contracts but still rejected; simple Object.entries calls are accepted in 2.6.5.",
       "docs": "https://biomejs.dev/linter/rules/no-unreadable-for-of-expression"
     },
     {
@@ -3876,7 +3878,7 @@
     {
       "rule": "nursery/noNull",
       "decision": "inapplicable",
-      "reason": "Preserve explicit null sentinels required by DOM, React refs and external JSON/RPC contracts; replacing them with undefined can change behavior.",
+      "reason": "Valid nullable DOM setter contracts, JSON/RPC sentinels, and nullable returns differ observably from undefined; useRef(null) is already exempt in this version.",
       "docs": "https://biomejs.dev/linter/rules/no-null/"
     },
     {
@@ -4148,7 +4150,7 @@
     {
       "rule": "nursery/noSyncMethods",
       "decision": "inapplicable",
-      "reason": "One-shot build, lint and test CLIs intentionally use synchronous filesystem and child-process operations for deterministic setup and failure propagation. Browser Node/Bun module restrictions remain errors.",
+      "reason": "The name heuristic flags deterministic CLI setup and deliberately synchronous bundled/lazy Shiki initialization, not only blocking filesystem IO.",
       "docs": "https://biomejs.dev/linter/rules/no-sync-methods/"
     },
     {
@@ -4735,9 +4737,13 @@
     },
     {
       "rule": "eslint/max-lines-per-function",
-      "decision": "inapplicable",
-      "reason": "Local size/naming heuristics do not establish correctness. Cognitive complexity, block depth, function size and explicit parameter limits enforce understandable units.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-lines-per-function.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-lines-per-function.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "complexity/noExcessiveLinesPerFunction"
+      }
     },
     {
       "rule": "eslint/max-nested-callbacks",
@@ -4747,15 +4753,23 @@
     },
     {
       "rule": "eslint/max-params",
-      "decision": "inapplicable",
-      "reason": "Local size/naming heuristics do not establish correctness. Cognitive complexity, block depth, function size and explicit parameter limits enforce understandable units.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-params.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-params.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "complexity/useMaxParams"
+      }
     },
     {
       "rule": "eslint/max-statements",
-      "decision": "inapplicable",
-      "reason": "Local size/naming heuristics do not establish correctness. Cognitive complexity, block depth, function size and explicit parameter limits enforce understandable units.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-statements.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-statements.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "nursery/noExcessiveStatementsPerFunction"
+      }
     },
     {
       "rule": "eslint/new-cap",
@@ -5015,9 +5029,13 @@
     },
     {
       "rule": "eslint/no-implicit-coercion",
-      "decision": "inapplicable",
-      "reason": "Typed strict boolean and operand rules reject unsafe conversions; a universal syntactic coercion ban is not the policy.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-implicit-coercion.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-implicit-coercion.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "complexity/noImplicitCoercions"
+      }
     },
     {
       "rule": "eslint/no-implicit-globals",
@@ -5230,20 +5248,22 @@
     {
       "rule": "eslint/no-restricted-exports",
       "decision": "error",
-      "reason": "Enforce the nursery contract at error severity, including new and previously ignored owned files.",
+      "reason": "Configured error with no restriction options; dormant policy container, not active export-name protection. Do not invent arbitrary export-name bans merely to increase active-rule counts.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-exports.html"
     },
     {
       "rule": "eslint/no-restricted-globals",
-      "decision": "error",
-      "reason": "Enforce the restriction contract at error severity, including new and previously ignored owned files.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-globals.html"
+      "decision": "scoped-error",
+      "reason": "The configured dependency and ambient-global bans are pure-domain contracts, not optionless global restrictions.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-globals.html",
+      "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]
     },
     {
       "rule": "eslint/no-restricted-imports",
-      "decision": "error",
-      "reason": "Enforce the restriction contract at error severity, including new and previously ignored owned files.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-imports.html"
+      "decision": "scoped-error",
+      "reason": "The configured dependency and ambient-global bans are pure-domain contracts, not optionless global restrictions.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-restricted-imports.html",
+      "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]
     },
     {
       "rule": "eslint/no-restricted-properties",
@@ -5953,8 +5973,8 @@
     },
     {
       "rule": "jest/no-commented-out-tests",
-      "decision": "inapplicable",
-      "reason": "Not a project runtime: Querylane uses web React, TanStack Router and Rstest, not Next.js, Vue, Jest or Vitest. Applicable test contracts are enforced by Biome and React Doctor.",
+      "decision": "error",
+      "reason": "The native comment detector works independently of the Rstest import recognition gap; all other framework-specific Jest rules remain explicitly off.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/jest/no-commented-out-tests.html"
     },
     {
@@ -6815,9 +6835,13 @@
     },
     {
       "rule": "node/no-process-env",
-      "decision": "inapplicable",
-      "reason": "Build scripts legitimately read validated environment settings. App source is governed by Biome noProcessEnv and @/env.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/node/no-process-env.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/node/no-process-env.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noProcessEnv"
+      }
     },
     {
       "rule": "node/no-sync",
@@ -7127,8 +7151,8 @@
     },
     {
       "rule": "react/exhaustive-effect-dependencies",
-      "decision": "inapplicable",
-      "reason": "The native compiler duplicate incorrectly requires stable useRef objects as dependencies. Biome and react-hooks exhaustive dependency checks remain enabled.",
+      "decision": "error",
+      "reason": "The pinned compiler-aware effect dependency check accepts omitted stable useRef objects. Missing reactive values are rejected by a paired CLI regression; the full 853-file candidate scan had no violations. Complements the conventional exhaustive-deps owner.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/exhaustive-effect-dependencies.html"
     },
     {
@@ -7140,13 +7164,13 @@
     {
       "rule": "react/forbid-dom-props",
       "decision": "error",
-      "reason": "Enforce the restriction contract at error severity, including new and previously ignored owned files.",
+      "reason": "Configured error with an empty default forbid list; no blanket DOM-prop policy is defined. Not counted as active restriction enforcement; shadcn independently owns component styling.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/forbid-dom-props.html"
     },
     {
       "rule": "react/forbid-elements",
       "decision": "error",
-      "reason": "Enforce the restriction contract at error severity, including new and previously ignored owned files.",
+      "reason": "Configured error with an empty default forbid list; no blanket raw-element policy is defined. Not counted as active restriction enforcement; project component rules and shadcn retain their own contracts.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/react/forbid-elements.html"
     },
     {
@@ -7695,13 +7719,9 @@
     },
     {
       "rule": "typescript/consistent-return",
-      "decision": "delegated",
-      "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/consistent-return.html",
-      "owner": {
-        "tool": "typescript",
-        "rule": "noImplicitReturns"
-      }
+      "decision": "error",
+      "reason": "Typed return consistency catches bare exits that noImplicitReturns accepts; explicit optional-return contracts preserve undefined.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/consistent-return.html"
     },
     {
       "rule": "typescript/consistent-type-assertions",
@@ -7729,8 +7749,8 @@
     },
     {
       "rule": "typescript/dot-notation",
-      "decision": "inapplicable",
-      "reason": "TypeScript requires bracket access for index signatures; a competing property-access style rule adds no safety contract.",
+      "decision": "error",
+      "reason": "Known properties use dot syntax; allowIndexSignaturePropertyAccess preserves compiler-required record brackets.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/dot-notation.html"
     },
     {
@@ -7742,7 +7762,7 @@
     {
       "rule": "typescript/explicit-member-accessibility",
       "decision": "inapplicable",
-      "reason": "Strict inference preserves generic and literal precision; compiler checks and unsafe-flow rules enforce contracts without redundant annotations.",
+      "reason": "Implicit public members are supported TypeScript. Requiring the public keyword is a style policy, not additional type safety; private/protected contracts remain compiler-checked.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/explicit-member-accessibility.html"
     },
     {
@@ -7874,9 +7894,13 @@
     },
     {
       "rule": "typescript/no-invalid-void-type",
-      "decision": "inapplicable",
-      "reason": "Oxc 1.89 rejects valid generic calls including Promise.withResolvers<void>() even with allowInGenericTypeArguments; Biome noConfusingVoidType owns the sound check.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-invalid-void-type.html"
+      "decision": "delegated",
+      "reason": "Oxlint 1.91 still rejects valid void generic call arguments; Biome checks invalid void aliases without that false positive.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/no-invalid-void-type.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "suspicious/noConfusingVoidType"
+      }
     },
     {
       "rule": "typescript/no-meaningless-void-operator",
@@ -8256,8 +8280,8 @@
     },
     {
       "rule": "typescript/require-await",
-      "decision": "inapplicable",
-      "reason": "Promise identity, settlement timing and synchronous contract adapters matter. Type-aware floating/misused/rejection rules remain errors.",
+      "decision": "error",
+      "reason": "Typed analysis permits real Promise returns while rejecting async wrappers that only return plain values.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/require-await.html"
     },
     {
@@ -8287,7 +8311,7 @@
     {
       "rule": "typescript/strict-void-return",
       "decision": "inapplicable",
-      "reason": "Promise identity, settlement timing and synchronous contract adapters matter. Type-aware floating/misused/rejection rules remain errors.",
+      "reason": "Deliberately permits discarding synchronous callback results under TypeScript void contracts. Promise floating/misuse/rejection checks remain errors; requiring every synchronous result to be consumed would reject supported adapters.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/typescript/strict-void-return.html"
     },
     {
@@ -8442,8 +8466,8 @@
     },
     {
       "rule": "unicorn/no-array-callback-reference",
-      "decision": "inapplicable",
-      "reason": "These are supported language/API composition features. More restrictive alternatives change semantics or add ceremony without a safety invariant.",
+      "decision": "error",
+      "reason": "Require explicit callback argument forwarding; array indexes must not accidentally become parseInt radices.",
       "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-array-callback-reference.html"
     },
     {
@@ -8616,9 +8640,13 @@
     },
     {
       "rule": "unicorn/no-process-exit",
-      "decision": "inapplicable",
-      "reason": "These are supported language/API composition features. More restrictive alternatives change semantics or add ceremony without a safety invariant.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-process-exit.html"
+      "decision": "delegated",
+      "reason": "Biome owns this checked contract and its explicit file-role options; avoid conflicting duplicate thresholds.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/unicorn/no-process-exit.html",
+      "owner": {
+        "tool": "biome",
+        "rule": "nursery/noProcessExit"
+      }
     },
     {
       "rule": "unicorn/no-single-promise-in-promise-methods",
@@ -9890,7 +9918,7 @@
     {
       "rule": "react-doctor/activity-wraps-effect-heavy-subtree",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/advanced-event-handler-refs",
@@ -10050,7 +10078,7 @@
     {
       "rule": "react-doctor/client-localstorage-no-version",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/client-passive-event-listeners",
@@ -10095,7 +10123,7 @@
     {
       "rule": "react-doctor/design-no-em-dash-in-jsx-text",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/design-no-redundant-padding-axes",
@@ -10115,7 +10143,7 @@
     {
       "rule": "react-doctor/design-no-three-period-ellipsis",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/design-no-vague-button-label",
@@ -10185,7 +10213,7 @@
     {
       "rule": "react-doctor/expo-no-non-inlined-env",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: expo. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/fieldset-requires-legend",
@@ -10215,12 +10243,12 @@
     {
       "rule": "react-doctor/forbid-dom-props",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Registered error with empty default forbid list; no blanket DOM/prop ban is defined. Not an active restriction policy; component styling is independently enforced by shadcn."
     },
     {
       "rule": "react-doctor/forbid-elements",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Registered error with empty default forbid list; no blanket DOM/prop ban is defined. Not an active restriction policy; component styling is independently enforced by shadcn."
     },
     {
       "rule": "react-doctor/form-control-requires-name",
@@ -10260,7 +10288,7 @@
     {
       "rule": "react-doctor/hooks-no-nan-in-deps",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/html-has-lang",
@@ -10490,7 +10518,7 @@
     {
       "rule": "react-doctor/js-early-exit",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/js-flatmap-filter",
@@ -10530,7 +10558,7 @@
     {
       "rule": "react-doctor/js-tosorted-immutable",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/jsx-boolean-value",
@@ -10610,7 +10638,7 @@
     {
       "rule": "react-doctor/jsx-no-target-blank",
       "decision": "error",
-      "reason": "Enforce the Security contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: target-blank-needs-explicit-protection. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/jsx-no-undef",
@@ -10690,17 +10718,17 @@
     {
       "rule": "react-doctor/mobx-no-make-auto-observable-in-inheritance",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: mobx:6. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/mobx-no-observer-wrapped-memo",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: mobx:4, mobx-react-binding-observer-memo-guard. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/mobx-reaction-disposer-discarded",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: mobx:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/motion-animate-presence-must-outlive-child",
@@ -10770,127 +10798,127 @@
     {
       "rule": "react-doctor/nextjs-async-client-component",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-async-dynamic-api-not-awaited",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs:15. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-error-boundary-missing-use-client",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-global-error-missing-html-body",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-image-missing-sizes",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-inline-script-missing-id",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-metadata-url-consistency",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-missing-metadata",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-a-element",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-client-fetch-for-server-data",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-client-side-redirect",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-css-link",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-default-export-in-route-handler",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-edge-og-runtime",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-font-link",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-google-analytics-script",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-head-import",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-img-element",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-native-script",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-polyfill-script",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-redirect-in-try-catch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-script-in-head",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-side-effect-in-get-handler",
       "decision": "error",
-      "reason": "Enforce the Security contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-use-search-params-without-suspense",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/nextjs-no-vercel-og-import",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: nextjs. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-access-key",
@@ -11010,7 +11038,7 @@
     {
       "rule": "react-doctor/no-cascading-set-state",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-chain-state-updates",
@@ -11020,7 +11048,7 @@
     {
       "rule": "react-doctor/no-children-prop",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-clipped-overlay",
@@ -11045,7 +11073,7 @@
     {
       "rule": "react-doctor/no-common-root-font",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-conflicting-spring-options",
@@ -11140,12 +11168,12 @@
     {
       "rule": "react-doctor/no-default-purple-page-gradient",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-default-warm-page-surface",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-deprecated-keyboard-event-keycode-which",
@@ -11275,7 +11303,7 @@
     {
       "rule": "react-doctor/no-enter-submit-without-ime-composition-guard",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: i18n. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-eval",
@@ -11385,7 +11413,7 @@
     {
       "rule": "react-doctor/no-full-viewport-centered-hero",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-full-viewport-width",
@@ -11435,7 +11463,7 @@
     {
       "rule": "react-doctor/no-hero-eyebrow-chip",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-high-complexity-react-function",
@@ -11450,12 +11478,12 @@
     {
       "rule": "react-doctor/no-hydration-branch-on-browser-global",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-icon-tile-heading-stack",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-image-hover-transform",
@@ -11475,7 +11503,7 @@
     {
       "rule": "react-doctor/no-impure-call-at-module-scope",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-impure-state-updater",
@@ -11545,7 +11573,7 @@
     {
       "rule": "react-doctor/no-italic-serif-display-heading",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-json-parse-stringify-clone",
@@ -11555,7 +11583,7 @@
     {
       "rule": "react-doctor/no-jsx-element-type",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-justified-text",
@@ -11600,7 +11628,7 @@
     {
       "rule": "react-doctor/no-locale-format-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-long-transition-duration",
@@ -11620,12 +11648,12 @@
     {
       "rule": "react-doctor/no-many-boolean-props",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-match-media-in-state-initializer",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-mirror-prop-effect",
@@ -11655,17 +11683,17 @@
     {
       "rule": "react-doctor/no-monotonous-page-spacing",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-multi-comp",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-multi-component-file",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-multiple-main-landmarks",
@@ -11760,7 +11788,7 @@
     {
       "rule": "react-doctor/no-numbered-section-markers",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-object-keys-values-entries-on-maybe-undefined",
@@ -11795,7 +11823,7 @@
     {
       "rule": "react-doctor/no-pass-data-to-parent",
       "decision": "inapplicable",
-      "reason": "Async catalog-aware URL canonicalization is intentional, not duplicated local state."
+      "reason": "Guarded metadata-aware URL normalization, server-filter synchronization and apply-after-draft-commit effects preserve supported state boundaries. Removing callbacks changes behavior; forced rule scan confirms these valid reports."
     },
     {
       "rule": "react-doctor/no-pass-live-state-to-parent",
@@ -11840,7 +11868,7 @@
     {
       "rule": "react-doctor/no-polymorphic-children",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-predicate-function-reference-in-boolean-position",
@@ -11885,7 +11913,7 @@
     {
       "rule": "react-doctor/no-pure-black-background",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-pure-black-shadow",
@@ -11960,7 +11988,7 @@
     {
       "rule": "react-doctor/no-render-prop-children",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-render-return-value",
@@ -12020,7 +12048,7 @@
     {
       "rule": "react-doctor/no-scale-from-zero",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/no-secrets-in-client-code",
@@ -12225,12 +12253,12 @@
     {
       "rule": "react-doctor/no-unguarded-browser-global-at-module-scope",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-unguarded-browser-global-in-render-or-hook-init",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/no-unguarded-numeric-input-parse",
@@ -12360,27 +12388,27 @@
     {
       "rule": "react-doctor/preact-no-children-length",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: preact. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/preact-no-react-hooks-import",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: pure-preact. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/preact-no-render-arguments",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: preact. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/preact-prefer-ondblclick",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: pure-preact. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/preact-prefer-oninput",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: pure-preact. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/prefer-dvh-over-vh",
@@ -12390,7 +12418,7 @@
     {
       "rule": "react-doctor/prefer-dynamic-import",
       "decision": "inapplicable",
-      "reason": "Browser-owned React.lazy chunks are enforced by production bundle contracts; Node tooling imports can be eager."
+      "reason": "Static CodeMirror imports inside an already lazy SQL-editor feature preserve intentional loading boundaries; production bundle budgets enforce actual eagerness."
     },
     {
       "rule": "react-doctor/prefer-es6-class",
@@ -12400,7 +12428,7 @@
     {
       "rule": "react-doctor/prefer-explicit-variants",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/prefer-function-component",
@@ -12520,397 +12548,397 @@
     {
       "rule": "react-doctor/r3f-cap-device-pixel-ratio",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-limit-shadowed-point-lights",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-advancing-clock-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-allocation-in-pointer-move",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-async-use-frame",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-clone-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-compile-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-deep-use-three-selector",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:6. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-dispose-loader-cache",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-duplicate-primitive-object",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-extend-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-extend-three-namespace",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-fresh-portal-container",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-fresh-use-three-selector",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:6. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-ignored-basic-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-ignored-linewidth",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-imperative-attach-of-managed-ref",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-inline-primitive-object",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-inline-resource-prop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-internal-imports",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-manual-canvas-resize",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-mutate-loader-cache",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-mutate-uniform-prop-source-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-mutating-pointer-event-data",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-new-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-normalized-float-buffer-attribute",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-null-loader-input",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-object-pointer-capture",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-recursive-raf-with-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-shader-configuration-mutation-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-shadows-on-unsupported-light",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-state-in-pointer-move",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-state-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-sync-readback-in-use-frame",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-unstable-args",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-no-use-frame-dependency-array",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:3. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-prefer-gpu-instanced-animation",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-prefer-gpu-position-animation",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-prefer-instanced-mesh",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-prefer-use-loader",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:3. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-animation-mixer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-data-texture-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-dynamic-buffer-usage",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-environment-for-metal",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-frame-delta",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-global-effect-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-instanced-buffer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-lighting-for-pbr",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-lit-material-normals",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-owned-texture-cleanup",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-position-buffer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-projection-matrix-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-render-target-reset",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-render-with-positive-priority",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-root-unmount",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-shadows-enabled",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-transparent-for-opacity",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-require-uv-for-texture-map",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-texture-repeat-requires-wrapping",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-buffer-attribute-array-length",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-buffer-attribute-item-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-fog-parameters",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-material-opacity",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-orthographic-camera",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-pbr-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-perspective-camera",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-physical-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-raycaster-range",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-shadow-map-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-spot-light-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-valid-texture-color-space",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-canvas-prop-compatibility",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:10. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-gl-state",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:10. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-high-precision-instancing",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, three:181. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-js-uniform-branch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:10. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-legacy-effect-composer",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-legacy-material-api",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-no-unregistered-pipeline-pass",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f, r3f:10. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/r3f-webgpu-require-async-init",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: r3f. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/radio-input-missing-name",
@@ -12920,12 +12948,12 @@
     {
       "rule": "react-doctor/radix-dialog-content-requires-title",
       "decision": "error",
-      "reason": "Enforce the Accessibility contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: radix-ui. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/radix-tabs-trigger-requires-list",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: radix-ui. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/raw-sql-injection-risk",
@@ -12935,12 +12963,16 @@
     {
       "rule": "react-doctor/react-aria-dialog-requires-heading",
       "decision": "error",
-      "reason": "Enforce the Accessibility contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-aria. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-compiler-no-manual-memoization",
-      "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "decision": "delegated",
+      "reason": "The installed Doctor implementation is retired/no-op; the project scope-aware JavaScript rule enforces actual memo imports and member accesses.",
+      "owner": {
+        "tool": "querylane",
+        "rule": "querylane/no-manual-memoization"
+      }
     },
     {
       "rule": "react-doctor/react-in-jsx-scope",
@@ -12955,192 +12987,192 @@
     {
       "rule": "react-doctor/react-router-csp-nonce-consistency",
       "decision": "error",
-      "reason": "Enforce the Security contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-descendant-routes-require-splat",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-guard-aborted-handle-error",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-internal-route-anchor",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-loader-fetch-forwards-signal",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-loader-parallel-fetch",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-nested-route-requires-outlet",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-catch-middleware-next",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7.8, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-client-module-in-server-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-duplicate-route-id",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-empty-leaf-route",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-invalid-absolute-child-path",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-invalid-lazy-route-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.9. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-invalid-splat-path",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-loader-request-body",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-middleware-response-body-consumption",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7.9, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-multiple-blockers",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.7. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-multiple-middleware-next",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7.9, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-multiple-set-search-params-in-tick",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-navigate-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-nested-router",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-redirect-in-try-catch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-route-module-environment-suffix",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-router-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-session-mutation-in-loader",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-static-cookie-expires",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-unsynchronized-search-params-mutation",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-no-use-loader-data-in-error-ui",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-prefer-route-lazy",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.9. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-require-root-error-boundary",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-resource-link-requires-reload",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-return-navigation-promise-in-transition",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7.10. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-server-middleware-return-response",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7.9, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-session-mutation-requires-commit",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:7, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-v8-no-meta-data-field",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:8. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-v8-no-react-router-dom-import",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:8. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-v8-no-removed-future-flags",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:8, react-router-framework. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/react-router-valid-route-object",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-router:6.4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/redux-useselector-inline-derivation",
@@ -13155,52 +13187,52 @@
     {
       "rule": "react-doctor/remotion-calculate-metadata-fetch-signal",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-deterministic-randomness",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-css-animation",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-css-transition",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-css-url-assets",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-module-scope-delay-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-native-media-elements",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-no-next-image",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/remotion-stable-delay-render-handle",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: remotion:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rendering-animate-svg-wrapper",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rendering-conditional-render",
@@ -13215,7 +13247,7 @@
     {
       "rule": "react-doctor/rendering-hydration-mismatch-time",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: ssr. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rendering-hydration-no-flicker",
@@ -13235,7 +13267,7 @@
     {
       "rule": "react-doctor/rendering-usetransition-loading",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/repository-secret-file",
@@ -13315,207 +13347,207 @@
     {
       "rule": "react-doctor/rn-animate-layout-property",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rn-animation-reaction-as-derived",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-bottom-sheet-no-ignored-scroll-prop",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-bottom-sheet-no-state-in-on-animate",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-bottom-sheet-prefer-native",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-bottom-sheet-use-integrated-scrollable",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-detox-missing-await",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-list-callback-per-row",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-list-data-mapped",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-list-missing-estimated-item-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-list-recyclable-without-types",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-deep-imports",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-deprecated-modules",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-dimensions-get",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-falsy-and-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-image-children",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-inline-flatlist-renderitem",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-inline-object-in-list-item",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-legacy-expo-packages",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-legacy-shadow-styles",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-non-native-navigator",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-panresponder",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-raw-text",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-renderitem-key",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-scroll-state",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-scrollview-mapped-list",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-no-set-native-props",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rn-no-single-element-style-array",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rn-platform-shaking-use-direct-import",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: expo:54. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-prefer-content-inset-adjustment",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rn-prefer-expo-image",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-prefer-pressable",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-prefer-pressable-over-gesture-detector",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-prefer-reanimated",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/rn-pressable-shared-value-mutation",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-reanimated-4-no-legacy-spring-thresholds",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: reanimated:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-reanimated-4-no-removed-api",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: reanimated:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-reanimated-4-use-worklets-scheduler",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: reanimated:4. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-scrollview-dynamic-padding",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-scrollview-flex-in-content-container",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/rn-style-prefer-boxshadow",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: react-native. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/role-button-requires-complete-keyboard-activation",
@@ -13635,12 +13667,12 @@
     {
       "rule": "react-doctor/styled-components-duplicate-css-property-in-block",
       "decision": "error",
-      "reason": "Enforce the Maintainability contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: styled-components. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/styled-components-non-transient-custom-prop-on-intrinsic-element",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: styled-components:6. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/supabase-client-owned-authz-field",
@@ -13670,82 +13702,82 @@
     {
       "rule": "react-doctor/tanstack-form-on-submit-requires-prevent-default",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-form. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-get-mutation",
       "decision": "error",
-      "reason": "Enforce the Security contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-loader-parallel-fetch",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-missing-head-content",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-missing-scripts",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-anchor-element",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-direct-fetch-in-loader",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Upstream-retired empty visitor in Doctor 0.9.22. Severity retained for catalog compatibility, not counted as an active detector; do not claim this name enforces its historical contract."
     },
     {
       "rule": "react-doctor/tanstack-start-no-dynamic-server-fn-import",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-navigate-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-secrets-in-loader",
       "decision": "error",
-      "reason": "Enforce the Security contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-use-server-in-handler",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-no-useeffect-fetch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-redirect-in-try-catch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-route-property-order",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-server-fn-method-order",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-start-server-fn-validate-input",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-start. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tanstack-table-no-unstable-data-or-columns",
@@ -13755,7 +13787,7 @@
     {
       "rule": "react-doctor/tanstack-virtual-measure-element-requires-data-index",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: tanstack-virtual. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/tenant-static-proxy-risk",
@@ -13765,532 +13797,532 @@
     {
       "rule": "react-doctor/three-cap-device-pixel-ratio",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-effect-composer-output-pass-last",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-effect-composer-require-size-on-resize",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-gpu-computation-handle-init-error",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-gpu-computation-require-init-before-compute",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-gpu-computation-valid-variable-name",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-limit-shadowed-point-lights",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-allocation-in-pointer-move",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-async-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-clone-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-compile-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-ignored-basic-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-ignored-linewidth",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-material-recompile-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-new-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-normalized-float-buffer-attribute",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-object-construction-in-render",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-redundant-uniforms-need-update",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-shader-configuration-mutation-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-shadows-on-unsupported-light",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-state-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-state-in-pointer-move",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-sync-readback-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-no-unconditional-renderer-resize-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-on-before-compile-require-program-cache-key",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-prefer-gpu-instanced-animation",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-prefer-gpu-position-animation",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-prefer-instanced-mesh",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-prefer-set-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-raw-shader-require-fragment-float-precision",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-raw-shader-require-glsl3-version",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-animation-mixer-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-animation-mixer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-camera-aspect-on-resize",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-controls-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-controls-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-data-texture-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-dynamic-buffer-usage",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-environment-for-metal",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-frame-delta",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-gpu-computation-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-instanced-buffer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-ktx2-detect-support",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-lighting-for-pbr",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-lit-material-normals",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-loader-error-handling",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-owned-geometry-cleanup",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-owned-material-cleanup",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-owned-texture-cleanup",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-position-buffer-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-postprocessing-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-projection-matrix-update",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-render-in-animation-loop",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-render-target-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-render-target-reset",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-renderer-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-renderer-dom-attachment",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-renderer-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-shadows-enabled",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-texture-update-after-wrapping-change",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-transparent-for-opacity",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-uv-for-texture-map",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-require-worker-loader-cleanup",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-constant-out-of-bounds-index",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-derivatives-in-nonuniform-flow",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-glsl1-syntax-with-glsl3",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-invalid-clamp-bounds",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-invalid-constant-bit-operations",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-invalid-constant-math",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-invalid-smoothstep-edges",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-inverse-of-uniform",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-redeclared-builtins",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-redundant-frag-depth",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-reserved-identifiers",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-no-version-directive",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-prefer-small-integer-pow",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-prefer-squared-distance-comparison",
       "decision": "error",
-      "reason": "Enforce the Performance contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-compatible-uniform-values",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-fragment-output-on-all-paths",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-matching-uniforms",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-matching-varyings",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-position-on-all-paths",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-require-uniform-bindings",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-valid-global-initializers",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-shader-valid-uniform-definitions",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-texture-repeat-requires-wrapping",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-tsl-no-js-uniform-branch",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-buffer-attribute-array-length",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-buffer-attribute-item-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-data-texture-data-length",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-data-texture-dimensions",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-fog-parameters",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-gpu-computation-dimensions",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-material-opacity",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-orthographic-camera",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-pbr-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-perspective-camera",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-physical-material-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-raycaster-range",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-shadow-map-size",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-spot-light-properties",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-valid-texture-color-space",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-webgpu-no-high-precision-instancing",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three, three:181. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-webgpu-no-legacy-effect-composer",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-webgpu-no-legacy-material-api",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/three-webgpu-require-init-before-sync-operation",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: three, three:181. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/unsafe-json-in-html",
@@ -14340,12 +14372,12 @@
     {
       "rule": "react-doctor/valtio-no-proxy-read-in-render",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: valtio:1. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/valtio-no-snapshot-in-callback",
       "decision": "error",
-      "reason": "Enforce the Bugs contract at error severity. Doctor applies framework/runtime capability gating."
+      "reason": "Configured error but not active for this project. Missing Doctor capabilities: valtio, valtio:1. No matching framework/runtime; independent typed Oxlint owns applicable React Compiler checks."
     },
     {
       "rule": "react-doctor/void-dom-elements-no-children",
@@ -14502,5 +14534,12 @@
         "rules": ["shadcn/no-restyle", "shadcn/require-static-classes"]
       }
     ]
-  }
+  },
+  "querylane": [
+    {
+      "rule": "querylane/no-manual-memoization",
+      "decision": "error",
+      "reason": "React Compiler owns memoization. Reject named imports, namespace/default member aliases and destructuring; preserve unrelated namespaces, type-only imports, and passthrough mocks."
+    }
+  ]
 }

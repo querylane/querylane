@@ -25,7 +25,7 @@ import { createTestQueryClient } from "@/test/query-client";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 const routeState = rs.hoisted(() => ({
-  navigate: rs.fn(async () => undefined),
+  navigate: rs.fn(() => Promise.resolve(undefined)),
 }));
 
 rs.mock("@tanstack/react-router", () => ({
@@ -66,7 +66,7 @@ function createInstanceBadRequestError({
 
 function renderCreateInstancePage({
   createInstance,
-  testInstanceConnection = async () => ({}),
+  testInstanceConnection = () => Promise.resolve({}),
 }: {
   createInstance: () => Promise<Record<string, never>>;
   testInstanceConnection?: () => Promise<Record<string, never>>;
@@ -121,9 +121,9 @@ afterEach(() => {
 describe("create instance backend field violations", () => {
   test("rejects malformed labels locally and focuses the invalid row", async () => {
     const user = userEvent.setup();
-    const testConnection = rs.fn(async () => ({}));
+    const testConnection = rs.fn(() => Promise.resolve({}));
     renderCreateInstancePage({
-      createInstance: async () => ({}),
+      createInstance: () => Promise.resolve({}),
       testInstanceConnection: testConnection,
     });
     fireEvent.change(screen.getByLabelText("Display name"), {
@@ -282,7 +282,7 @@ describe("create instance backend field violations", () => {
     const user = userEvent.setup();
     const databaseViolation = "PostgreSQL could not find this database.";
     renderCreateInstancePage({
-      createInstance: async () => ({}),
+      createInstance: () => Promise.resolve({}),
       testInstanceConnection: () =>
         Promise.reject(
           new ConnectError("database not found", Code.NotFound, undefined, [
@@ -330,7 +330,7 @@ describe("create instance backend field violations", () => {
     );
     const user = userEvent.setup();
     renderCreateInstancePage({
-      createInstance: async () => ({}),
+      createInstance: () => Promise.resolve({}),
       testInstanceConnection: () =>
         Promise.reject(
           new ConnectError("unreachable", Code.InvalidArgument, undefined, [
@@ -385,9 +385,9 @@ describe("create instance backend field violations", () => {
 
 test("valid prototype-like label keys cannot bypass value validation", async () => {
   const user = userEvent.setup();
-  const testConnection = rs.fn(async () => ({}));
+  const testConnection = rs.fn(() => Promise.resolve({}));
   renderCreateInstancePage({
-    createInstance: async () => ({}),
+    createInstance: () => Promise.resolve({}),
     testInstanceConnection: testConnection,
   });
   fireEvent.change(screen.getByLabelText("Display name"), {

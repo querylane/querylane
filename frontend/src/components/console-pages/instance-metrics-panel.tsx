@@ -381,7 +381,7 @@ function connectionsThresholds(
     ) ||
     connectionsLimit <= 0
   ) {
-    return;
+    return undefined;
   }
 
   let peak = 0;
@@ -392,7 +392,7 @@ function connectionsThresholds(
     }
   }
   if (peak < CONNECTIONS_LIMIT_PROXIMITY * connectionsLimit) {
-    return;
+    return undefined;
   }
 
   return [

@@ -213,9 +213,9 @@ function useProtoForm(
     }
   };
   useEffect(
-    function subscribeToModifiedFields() {
+    function subscribeToModifiedFields(): (() => void) | undefined {
       if (validationScope !== "modified-fields") {
-        return;
+        return undefined;
       }
       return form.subscribe({
         formState: { values: true },

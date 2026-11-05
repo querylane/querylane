@@ -71,11 +71,11 @@ rs.mock("@tanstack/react-router", () => {
   };
 });
 
-rs.mock("@/components/querylane-ui/sidebar", () => ({
+rs.mock("@/components/querylane-ui/sidebar-context", () => ({
   useSidebar: () => ({ isMobile: false, setOpenMobile: rs.fn() }),
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({ selectedDatabase: { name: "appdb" } }),
 }));
 

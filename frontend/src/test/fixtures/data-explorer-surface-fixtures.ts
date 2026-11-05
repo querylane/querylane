@@ -153,7 +153,7 @@ function readRowsResponse(columns: ColumnInit[]) {
           value: {
             kind: {
               case: "stringValue" as const,
-              value: `${columnName}_${row}`,
+              value: `${columnName ?? ""}_${row}`,
             },
           },
         })),

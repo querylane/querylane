@@ -35,7 +35,7 @@ rs.mock("@/hooks/api/role", () => ({
   useListRoleOwnedObjectsQuery: hookMocks.owned,
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: hookMocks.dbContext,
 }));
 

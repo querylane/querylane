@@ -30,7 +30,7 @@ const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 
 rs.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
-    mutateAsync: rs.fn(async () => undefined),
+    mutateAsync: rs.fn(() => Promise.resolve(undefined)),
   }),
 }));
 

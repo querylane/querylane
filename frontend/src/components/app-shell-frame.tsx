@@ -2,7 +2,7 @@
 
 import { Logo } from "@/components/logo";
 import { ThemeModeMenu } from "@/components/theme-mode-menu";
-import { useTheme } from "@/theme-provider";
+import { useTheme } from "@/theme-context";
 import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;

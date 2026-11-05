@@ -30,7 +30,7 @@ import {
   selectionFromSearch,
 } from "@/features/data-explorer/use-data-explorer-state";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import { handleQueryActionError } from "@/lib/query-action-errors";
 import { createResourceLoader } from "@/lib/resource-loader";

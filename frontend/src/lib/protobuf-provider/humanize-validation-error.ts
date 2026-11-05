@@ -195,7 +195,7 @@ function humanizeRegexError(
 ): string | undefined {
   const regexMatch = REGEX_ERROR_PATTERN.exec(message);
   if (!isNonEmptyString(regexMatch?.[1])) {
-    return;
+    return undefined;
   }
   const known = KNOWN_PATTERNS[regexMatch[1]];
   const fallback = known

@@ -266,7 +266,7 @@ function CategoryInfiniteScrollSentinel({
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(
-    function loadMoreWhenVisible() {
+    function loadMoreWhenVisible(): (() => void) | undefined {
       const element = ref.current;
       // No observer while a page is in flight: another onLoadMore would
       // cancel and restart the active fetchNextPage request. When the fetch
@@ -274,10 +274,10 @@ function CategoryInfiniteScrollSentinel({
       // notification re-triggers the load if a short page left the sentinel
       // inside the viewport.
       if (!(element && hasNextPage) || isFetchingNextPage) {
-        return;
+        return undefined;
       }
       if (scrollRoot === null) {
-        return;
+        return undefined;
       }
       const observer = new IntersectionObserver(
         (entries) => {

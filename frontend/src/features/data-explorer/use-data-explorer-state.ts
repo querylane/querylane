@@ -14,7 +14,7 @@ import {
 
 function parseCategory(value: string | undefined): CategoryKey | undefined {
   if (!isNonEmptyString(value)) {
-    return;
+    return undefined;
   }
   return isCategoryKey(value) ? value : undefined;
 }

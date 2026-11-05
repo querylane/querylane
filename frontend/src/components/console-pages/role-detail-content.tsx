@@ -39,7 +39,7 @@ import {
   useListRoleOwnedObjectsQuery,
 } from "@/hooks/api/role";
 import { parseResourceLeafId } from "@/lib/console-resources";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import {
   buildRoleSql,

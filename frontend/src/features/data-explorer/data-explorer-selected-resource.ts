@@ -34,9 +34,9 @@ function selectedResourceQueryError({
   selectedTableError: unknown;
   selectedViewError: unknown;
   selection: ExplorerSelection;
-}) {
+}): unknown {
   if (selection.kind !== "resource") {
-    return;
+    return undefined;
   }
   return selection.category === "tables"
     ? selectedTableError
@@ -55,7 +55,7 @@ function buildSelectedResourceName({
   selection: ExplorerSelection;
 }): string | undefined {
   if (!(activeSchema && selection.kind === "resource")) {
-    return;
+    return undefined;
   }
   if (selection.category === "tables") {
     return buildTableName({

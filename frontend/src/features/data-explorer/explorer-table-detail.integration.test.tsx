@@ -21,7 +21,6 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-
 import type { GridRow } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { ROW_KEY_FIELD } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
@@ -55,6 +54,7 @@ import {
   TableSchema,
   TableTriggerSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import { actSynchronous } from "@/test/async-act";
 
 const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
 const COLUMNS_TAB_RE = /^Columns/u;
@@ -122,7 +122,7 @@ function querySqlCodeBlock(pattern: RegExp) {
 function getSqlCodeBlock(pattern: RegExp) {
   const codeBlock = querySqlCodeBlock(pattern);
   if (!codeBlock) {
-    throw new Error(`Expected a SQL block matching ${pattern}.`);
+    throw new Error(`Expected a SQL block matching ${pattern.toString()}.`);
   }
   return codeBlock;
 }
@@ -544,7 +544,7 @@ describe("table detail definition document", () => {
 
     // Flush the lazy syntax-highlighter module before observing its output.
     const container = document.body;
-    await act(async () => {
+    await actSynchronous(act, () => {
       render(
         <TableDetail
           databaseId="app"

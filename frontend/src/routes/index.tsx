@@ -7,7 +7,7 @@ import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { ConfigManagedEmptyState } from "@/components/config-managed-empty-state";
 import { InternalStorageRecoveryAction } from "@/components/internal-storage-recovery";
 import { useConsoleConfigStatus } from "@/hooks/api/console";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { isNonEmptyString } from "@/lib/value-guards";

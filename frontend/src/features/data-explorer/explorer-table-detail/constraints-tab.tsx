@@ -130,8 +130,8 @@ function ConstraintDefinitionCell({
 
 function orderConstraintsByKind(constraints: TableConstraint[]) {
   return [
-    ...constraints.filter(isKeyConstraint),
-    ...constraints.filter(isForeignKeyConstraint),
+    ...constraints.filter((value) => isKeyConstraint(value)),
+    ...constraints.filter((value) => isForeignKeyConstraint(value)),
     ...constraints.filter(
       (constraint) => constraint.type === ConstraintType.CHECK
     ),
