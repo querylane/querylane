@@ -51,6 +51,7 @@ function ChartContainer({
 }: ChartContainerProps) {
   return (
     <div
+      aria-busy={isRefreshing}
       className={cn(
         "flex size-full flex-col text-xs transition-opacity",
         isRefreshing && "opacity-60",
