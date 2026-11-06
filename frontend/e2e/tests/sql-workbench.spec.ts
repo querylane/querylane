@@ -18,6 +18,68 @@ const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
 
 const RUN_BUTTON_NAME_RE = /^Run/u;
 
+test("ordinary SQL storage failure warns and recovery preserves the newest draft", async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => {
+    pageErrors.push(error.message);
+  });
+  await mockConsoleResources(page);
+  await mockRpc(page, "SQLService/ValidateQuery", {});
+  await page.goto(`${DATABASE_URL}/workbench`);
+  const editor = page.getByRole("textbox", { name: "SQL editor" });
+  await editor.fill("SELECT 1;");
+  const previousBytes = await page.evaluate(() => {
+    globalThis.dispatchEvent(new Event("pagehide"));
+    return localStorage.getItem("querylane.sql-workbench.v1");
+  });
+  expect(previousBytes).not.toBeNull();
+
+  await page.evaluate(() => {
+    const writers = new Map<Storage, Storage["setItem"]>([
+      [localStorage, localStorage.setItem.bind(localStorage)],
+      [sessionStorage, sessionStorage.setItem.bind(sessionStorage)],
+    ]);
+    Storage.prototype.setItem = function setItem(this: Storage, name, value) {
+      if (
+        this === localStorage &&
+        name === "querylane.sql-workbench.v1" &&
+        sessionStorage.getItem("e2e-reject-sql-write") === "true"
+      ) {
+        throw new DOMException("Storage quota exceeded", "QuotaExceededError");
+      }
+      const write = writers.get(this);
+      if (!write) {
+        throw new Error("Unexpected storage instance");
+      }
+      write(name, value);
+    };
+    sessionStorage.setItem("e2e-reject-sql-write", "true");
+  });
+  await editor.fill("SELECT 2;");
+  const warning = page.getByText("SQL changes are only stored in memory", {
+    exact: true,
+  });
+  await expect(warning).toBeVisible();
+  const rejectedBytes = await page.evaluate(() => {
+    globalThis.dispatchEvent(new Event("pagehide"));
+    return localStorage.getItem("querylane.sql-workbench.v1");
+  });
+  expect(rejectedBytes).toBe(previousBytes);
+  await expect(warning).toHaveCount(1);
+
+  await editor.fill("SELECT 3;");
+  await page.evaluate(() => {
+    sessionStorage.removeItem("e2e-reject-sql-write");
+    globalThis.dispatchEvent(new Event("pagehide"));
+  });
+  await expect(warning).toBeHidden();
+  await page.reload();
+  await expect(editor).toContainText("SELECT 3;");
+  expect(pageErrors).toEqual([]);
+});
+
 test("storage quota keeps rejected SQL work intact and warns that new drafts are in memory", async ({
   page,
 }) => {
