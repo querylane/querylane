@@ -1,107 +1,96 @@
 "use client";
 
-import { cva, type VariantProps } from "class-variance-authority";
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
 import { cn } from "@/lib/utils";
+import { OptionalHighlight, PlaintextCode } from "./plaintext-code";
 
-const sqlCodeBlockPresentations = cva("", {
-  variants: {
-    presentation: {
-      definition:
-        "bg-muted/30 rounded-none rounded-b-xl border-0 p-4 pr-10 text-(length:--text-xs)",
-      compact: "text-xs",
-    },
-  },
-});
+const presentationClasses = {
+  definition:
+    "bg-muted/30 rounded-none rounded-b-xl border-0 p-4 pr-10 text-(length:--text-xs)",
+  compact: "text-xs",
+};
+const variantClasses = {
+  block:
+    "bg-muted/40 text-foreground rounded-md border p-3 text-xs leading-relaxed",
+  compact:
+    "bg-muted/55 text-foreground overflow-x-auto rounded-md border-0 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap",
+  inline: "truncate text-(length:--text-xs) leading-normal",
+};
 
-const sqlCodeBlockVariants = cva("max-w-full min-w-0 font-mono", {
-  variants: {
-    variant: {
-      block:
-        "bg-muted/40 text-foreground rounded-md border p-3 text-xs leading-relaxed",
-      compact:
-        "bg-muted/55 text-foreground overflow-x-auto rounded-md border-0 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap",
-      // Keep line height after font size: cn() resolves conflicts in order.
-      inline: ["truncate text-(length:--text-xs)", "leading-normal"],
-    },
-    copyable: { true: "", false: "" },
-    wrap: { true: "", false: "" },
-  },
-  compoundVariants: [
-    {
-      variant: "block",
-      wrap: true,
-      className: "overflow-x-hidden wrap-break-word whitespace-pre-wrap",
-    },
-    { variant: "block", wrap: false, className: "overflow-x-auto" },
-    { variant: "block", wrap: true, copyable: true, className: "pr-14" },
-    { variant: "block", wrap: false, copyable: true, className: "pr-10" },
-    { variant: "compact", copyable: true, className: "pr-10" },
-  ],
-});
-
-type SqlCodeBlockProps = {
+interface SqlCodeBlockProps {
   className?: string;
-  copyButtonClassName?: string;
   copyable?: boolean;
+  copyButtonClassName?: string;
+  presentation?: keyof typeof presentationClasses | null;
   sql: string;
   variant?: "block" | "compact" | "inline";
   wrap?: boolean;
-} & VariantProps<typeof sqlCodeBlockPresentations>;
+}
 
+function UnavailableSql({ sql }: { sql: string }) {
+  return <PlaintextCode failed={true} language="sql" source={sql} />;
+}
+
+// Resolve a failed enhancement to plaintext once. Rerendering a rejected lazy
+// import cannot reload its cached promise; do not offer a misleading retry.
 const HighlightedSql = lazy(() =>
-  import("@/components/querylane-ui/sql-syntax-highlight-content").then(
-    (module) => ({
-      default: module.SqlSyntaxHighlight,
-    })
-  )
+  import("@/components/querylane-ui/sql-syntax-highlight-content")
+    .then((module) => ({ default: module.SqlSyntaxHighlight }))
+    .catch(() => ({ default: UnavailableSql }))
 );
 
-/** Keep SQL readable and copyable while the syntax highlighter loads. */
-export function SqlSyntaxHighlight({ sql }: { sql: string }) {
+/** Keep SQL readable and copyable while the optional enhancement loads. */
+function SqlSyntaxHighlight({ sql }: { sql: string }) {
   return (
-    <Suspense
-      fallback={
-        <code className="language-sql" data-language="sql">
-          {sql}
-        </code>
-      }
-    >
+    <OptionalHighlight language="sql" source={sql}>
       <HighlightedSql sql={sql} />
-    </Suspense>
+    </OptionalHighlight>
   );
 }
 
-export function SqlCodeBlock({
-  className,
-  presentation,
-  copyButtonClassName,
-  copyable = true,
-  sql: sqlText,
+function codeClassName({
   variant = "block",
   wrap = false,
+  copyable = true,
+  presentation,
+  className,
 }: SqlCodeBlockProps) {
-  const inline = variant === "inline";
+  return cn(
+    "max-w-full min-w-0 font-mono",
+    variantClasses[variant],
+    variant === "block" &&
+      (wrap
+        ? "overflow-x-hidden wrap-break-word whitespace-pre-wrap"
+        : "overflow-x-auto"),
+    copyable &&
+      variant !== "inline" &&
+      (variant === "block" && wrap ? "pr-14" : "pr-10"),
+    presentation && presentationClasses[presentation],
+    className
+  );
+}
 
+function SqlCodeBlock(props: SqlCodeBlockProps) {
   return (
-    <div className={cn("relative max-w-full min-w-0", inline && "w-full")}>
-      <pre
-        className={cn(
-          sqlCodeBlockVariants({ variant, wrap, copyable }),
-          sqlCodeBlockPresentations({ presentation }),
-          className
-        )}
-      >
-        <SqlSyntaxHighlight sql={sqlText} />
+    <div
+      className={cn(
+        "relative max-w-full min-w-0",
+        props.variant === "inline" && "w-full"
+      )}
+    >
+      <pre className={codeClassName(props)}>
+        <SqlSyntaxHighlight sql={props.sql} />
       </pre>
-      {copyable ? (
+      {props.copyable === false ? null : (
         <CopyIconButton
           ariaLabel="Copy SQL"
-          className={cn("absolute top-2 right-2", copyButtonClassName)}
-          value={sqlText}
+          className={cn("absolute top-2 right-2", props.copyButtonClassName)}
+          value={props.sql}
         />
-      ) : null}
+      )}
     </div>
   );
 }
+
+export { SqlCodeBlock, SqlSyntaxHighlight };
