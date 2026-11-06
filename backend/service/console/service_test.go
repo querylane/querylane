@@ -11,6 +11,21 @@ import (
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
+func TestGetConsoleConfigReportsReleaseVersion(t *testing.T) { //nolint:paralleltest // overrides build-time metadata
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+
+	previous := Version
+	Version = "1.2.3"
+	t.Cleanup(func() { Version = previous })
+
+	svc := NewService(t.Context(), nil, false, "")
+	res, err := svc.GetConsoleConfig(t.Context(), connect.NewRequest(&v1alpha1.GetConsoleConfigRequest{}))
+	require.NoError(t, err)
+	assert.Equal(t, "1.2.3", res.Msg.GetBuildInfo().GetVersion())
+}
+
 func TestGetConsoleConfigIncludesInstanceManagementDetails(t *testing.T) {
 	t.Parallel()
 
