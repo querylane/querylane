@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "@rstest/core";
@@ -18,6 +26,94 @@ const fileSystem = {
 };
 
 describe("changed-file lint selection", () => {
+  test("includes committed, staged, unstaged, and untracked changes from real Git", () => {
+    const repository = mkdtempSync(join(tmpdir(), "querylane-changed-lint-"));
+    const git = (...args: string[]) => {
+      const result = spawnSync("git", args, {
+        cwd: repository,
+        encoding: "utf8",
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout;
+    };
+    const runner = {
+      run: (command: string, args: string[]) => {
+        const result = spawnSync(command, args, {
+          cwd: join(repository, "frontend"),
+          encoding: "utf8",
+        });
+        return { status: result.status, stdout: result.stdout };
+      },
+    };
+    const paths = [
+      "frontend/src/committed.ts",
+      "frontend/src/staged.ts",
+      "frontend/src/unstaged.ts",
+      "frontend/src/deleted.ts",
+      "frontend/src/protogen/generated.ts",
+      ".github/workflows/frontend-ci.yml",
+      "backend/main.go",
+    ];
+    try {
+      git("init", "--quiet", "--initial-branch=main");
+      git("config", "user.name", "Quality test");
+      git("config", "user.email", "quality@example.test");
+      git("config", "commit.gpgSign", "false");
+      git("config", "core.hooksPath", join(repository, "disabled-hooks"));
+      for (const path of paths) {
+        mkdirSync(join(repository, path, ".."), { recursive: true });
+        writeFileSync(join(repository, path), "initial\n");
+      }
+      git("add", ".");
+      git("commit", "--quiet", "-m", "initial");
+      const base = git("rev-parse", "HEAD").trim();
+      writeFileSync(
+        join(repository, "frontend/src/committed.ts"),
+        "committed\n"
+      );
+      git("add", "frontend/src/committed.ts");
+      git("commit", "--quiet", "-m", "committed");
+      for (const path of paths) {
+        if (path !== "frontend/src/committed.ts") {
+          writeFileSync(join(repository, path), "local\n");
+        }
+      }
+      git("add", "frontend/src/staged.ts", ".github/workflows/frontend-ci.yml");
+      unlinkSync(join(repository, "frontend/src/deleted.ts"));
+      const untracked = "frontend/src/untracked with\nnewline.ts";
+      writeFileSync(join(repository, untracked), "untracked\n");
+
+      const files = changedRepoFiles(base, runner);
+      expect(files.toSorted()).toEqual(
+        [
+          ".github/workflows/frontend-ci.yml",
+          "frontend/src/committed.ts",
+          "frontend/src/deleted.ts",
+          "frontend/src/staged.ts",
+          "frontend/src/unstaged.ts",
+          "frontend/src/protogen/generated.ts",
+          untracked,
+        ].toSorted()
+      );
+      expect(
+        lintableChangedFiles(files, {
+          existsSync: (path) => existsSync(join(repository, "frontend", path)),
+          statSync: (path) => statSync(join(repository, "frontend", path)),
+        }).toSorted()
+      ).toEqual(
+        [
+          "src/committed.ts",
+          "src/staged.ts",
+          "src/unstaged.ts",
+          "src/untracked with\nnewline.ts",
+        ].toSorted()
+      );
+      expect(requiresFullStaticAnalysisFromBase(base, runner)).toBe(true);
+    } finally {
+      rmSync(repository, { recursive: true });
+    }
+  });
+
   test("uses the explicit quality base before GitHub and default bases", () => {
     expect(
       baseRefFromEnvironment({
@@ -96,7 +192,6 @@ test.each([
   "frontend/scripts/quality-boundaries.ts",
   "frontend/scripts/querylane-lint.config.ts",
   "frontend/scripts/quality-options.ts",
-  "frontend/scripts/check-biome-compat.ts",
   "frontend/scripts/check-suppressions.ts",
 ])("runs full lint when policy changes: %s", (path) => {
   expect(requiresFullStaticAnalysis([path])).toBe(true);

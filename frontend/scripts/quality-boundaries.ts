@@ -444,7 +444,7 @@ function assertDoctor(config: Record<string, unknown>): void {
   const surface = recordAt(recordAt(config, "surfaces"), "ciFailure");
   const contexts = strings(surface["includeFileContexts"]);
   if (
-    !["test", "story"].every((context) => contexts.includes(context)) ||
+    ["test", "story"].some((context) => !contexts.includes(context)) ||
     strings(surface["excludeFileContexts"]).length > 0
   ) {
     throw new Error("Doctor test and story findings must block CI");
@@ -462,10 +462,8 @@ function assertCompilerCoverage(
   );
   const requiredFiles = "requiredFiles" in project ? project.requiredFiles : [];
   if (
-    !(
-      project.includes.every((pattern) => includes.has(pattern)) &&
-      requiredFiles.every((file) => files.has(file))
-    ) ||
+    project.includes.some((pattern) => !includes.has(pattern)) ||
+    requiredFiles.some((file) => !files.has(file)) ||
     strings(config["exclude"]).some((pattern) => !approved.has(pattern))
   ) {
     throw new Error(`Compiler coverage is not enforced: ${project.name}`);

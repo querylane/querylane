@@ -167,7 +167,7 @@ function assertNativeOverrides(
       override === undefined ||
       extra.length > 0 ||
       override.files.length !== scope.length ||
-      !scope.every((file) => files.has(file))
+      scope.some((file) => !files.has(file))
     ) {
       throw new Error(`Reviewed rule scope is not enforced: ${entry.rule}`);
     }
