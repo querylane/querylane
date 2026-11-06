@@ -39,10 +39,50 @@ const ROW = { values: [] };
 
 function renderExecution() {
   const onSettled = rs.fn();
-  const { result } = renderHook(() =>
+  const { result, unmount } = renderHook(() =>
     useSqlExecution({ databaseId: "app", instanceId: "local", onSettled })
   );
-  return { onSettled, result };
+  return { onSettled, result, unmount };
+}
+
+function heldExplain() {
+  return {
+    response: Promise.withResolvers<{ plan: string }>(),
+    started: Promise.withResolvers<AbortSignal>(),
+  };
+}
+
+function installExplains(
+  requests: Record<string, ReturnType<typeof heldExplain>>
+) {
+  sqlTransport.current = createTestRouterTransport((router) => {
+    router.service(SQLService, {
+      explainQuery(request, context) {
+        const pending = requests[request.statement];
+        if (!pending) {
+          throw new Error(`Unexpected Explain: ${request.statement}`);
+        }
+        pending.started.resolve(context.signal);
+        return pending.response.promise;
+      },
+    });
+  });
+}
+
+function settleExplain(
+  pending: ReturnType<typeof heldExplain>,
+  outcome: "cancelled" | "error" | "success"
+) {
+  if (outcome === "success") {
+    pending.response.resolve({ plan: "old plan" });
+  } else {
+    pending.response.reject(
+      new ConnectError(
+        "old request settled",
+        outcome === "cancelled" ? Code.Canceled : Code.Internal
+      )
+    );
+  }
 }
 
 afterEach(() => {
@@ -141,5 +181,182 @@ describe("useSqlExecution", () => {
     });
     expect(result.current.executions[TAB_ID]?.status).toBe("error");
     expect(result.current.executions[TAB_ID]?.error).toBeDefined();
+  });
+
+  test.each(["cancelled", "error", "success"] as const)(
+    "keeps replacement Explain running and cancellable after late %s",
+    async (outcome) => {
+      const first = heldExplain();
+      const second = heldExplain();
+      installExplains({ "select 1": first, "select 2": second });
+      const { result } = renderExecution();
+      let a: Promise<void> | undefined;
+      let b: Promise<void> | undefined;
+      await act(async () => {
+        a = result.current.explain(TAB_ID, "select 1", { analyze: true });
+        await first.started.promise;
+      });
+      await act(async () => {
+        b = result.current.explain(TAB_ID, "select 2", { analyze: false });
+        await second.started.promise;
+      });
+      const firstSignal = await first.started.promise;
+      expect(firstSignal.aborted).toBe(true);
+      await act(async () => {
+        settleExplain(first, outcome);
+        await a;
+      });
+      expect(result.current.explains[TAB_ID]).toMatchObject({
+        analyze: false,
+        statement: "select 2",
+        status: "running",
+      });
+      const signal = await second.started.promise;
+      expect(signal.aborted).toBe(false);
+      await act(async () => {
+        result.current.cancelExplain(TAB_ID);
+        expect(signal.aborted).toBe(true);
+        second.response.reject(new ConnectError("cancelled B", Code.Canceled));
+        await b;
+      });
+      expect(result.current.explains[TAB_ID]).toMatchObject({
+        statement: "select 2",
+        status: "cancelled",
+      });
+    }
+  );
+
+  test.each(["cancelled", "error", "success"] as const)(
+    "does not resurrect a cleared Explain after late %s",
+    async (outcome) => {
+      const pending = heldExplain();
+      installExplains({ "select 1": pending });
+      const { result } = renderExecution();
+      let request: Promise<void> | undefined;
+      await act(async () => {
+        request = result.current.explain(TAB_ID, "select 1", {
+          analyze: false,
+        });
+        await pending.started.promise;
+      });
+      act(() => {
+        result.current.clear(TAB_ID);
+      });
+      const signal = await pending.started.promise;
+      expect(signal.aborted).toBe(true);
+      expect(result.current.explains[TAB_ID]).toBeUndefined();
+      await act(async () => {
+        settleExplain(pending, outcome);
+        await request;
+      });
+      expect(result.current.explains[TAB_ID]).toBeUndefined();
+    }
+  );
+
+  test.each(["cancelled", "error", "success"] as const)(
+    "preserves completed replacement Explain after late %s",
+    async (outcome) => {
+      const first = heldExplain();
+      const second = heldExplain();
+      installExplains({ "select 1": first, "select 2": second });
+      const { result } = renderExecution();
+      let a: Promise<void> | undefined;
+      await act(async () => {
+        a = result.current.explain(TAB_ID, "select 1", { analyze: true });
+        await first.started.promise;
+      });
+      // Keep start, response, controller cleanup and React's queued updates
+      // inside one act: valid success must survive controller-map deletion.
+      await act(async () => {
+        const b = result.current.explain(TAB_ID, "select 2", {
+          analyze: false,
+        });
+        await second.started.promise;
+        second.response.resolve({ plan: "replacement plan" });
+        await b;
+      });
+      expect(result.current.explains[TAB_ID]).toMatchObject({
+        rawPlan: "replacement plan",
+        statement: "select 2",
+        status: "success",
+      });
+      await act(async () => {
+        settleExplain(first, outcome);
+        await a;
+      });
+      expect(result.current.explains[TAB_ID]).toMatchObject({
+        rawPlan: "replacement plan",
+        statement: "select 2",
+        status: "success",
+      });
+    }
+  );
+
+  test("keeps Explain cancellation independent between tabs", async () => {
+    const first = heldExplain();
+    const second = heldExplain();
+    installExplains({ "select 1": first, "select 2": second });
+    const { result } = renderExecution();
+    let a: Promise<void> | undefined;
+    let b: Promise<void> | undefined;
+    await act(async () => {
+      a = result.current.explain(TAB_ID, "select 1", { analyze: false });
+      b = result.current.explain("tab-2", "select 2", { analyze: false });
+      await Promise.all([first.started.promise, second.started.promise]);
+    });
+    const [firstSignal, secondSignal] = await Promise.all([
+      first.started.promise,
+      second.started.promise,
+    ]);
+    act(() => {
+      result.current.cancelExplain(TAB_ID);
+    });
+    expect(firstSignal.aborted).toBe(true);
+    expect(secondSignal.aborted).toBe(false);
+    await act(async () => {
+      settleExplain(first, "cancelled");
+      second.response.resolve({ plan: "other tab plan" });
+      await Promise.all([a, b]);
+    });
+    expect(result.current.explains[TAB_ID]?.status).toBe("cancelled");
+    expect(result.current.explains["tab-2"]).toMatchObject({
+      rawPlan: "other tab plan",
+      statement: "select 2",
+      status: "success",
+    });
+  });
+
+  test("retains a current Explain error", async () => {
+    const pending = heldExplain();
+    installExplains({ "select 1": pending });
+    const { result } = renderExecution();
+    await act(async () => {
+      const request = result.current.explain(TAB_ID, "select 1", {
+        analyze: false,
+      });
+      await pending.started.promise;
+      settleExplain(pending, "error");
+      await request;
+    });
+    expect(result.current.explains[TAB_ID]?.status).toBe("error");
+    expect(result.current.explains[TAB_ID]?.error).toBeDefined();
+  });
+
+  test("aborts pending Explain on unmount", async () => {
+    const pending = heldExplain();
+    installExplains({ "select 1": pending });
+    const { result, unmount } = renderExecution();
+    let request: Promise<void> | undefined;
+    await act(async () => {
+      request = result.current.explain(TAB_ID, "select 1", { analyze: false });
+      await pending.started.promise;
+    });
+    const signal = await pending.started.promise;
+    unmount();
+    expect(signal.aborted).toBe(true);
+    await act(async () => {
+      settleExplain(pending, "success");
+      await request;
+    });
   });
 });
