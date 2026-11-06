@@ -94,7 +94,7 @@ function role({
     },
     comment,
     isSystemRole,
-    memberOf: memberOf.map(membership),
+    memberOf: memberOf.map((value) => membership(value)),
     name: `${INSTANCE}/roles/${roleName}`,
     roleName,
   };

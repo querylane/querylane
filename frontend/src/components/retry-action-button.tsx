@@ -45,9 +45,9 @@ export function RetryActionButton({
   }, []);
 
   function handleRetry() {
-    handleAsyncAction(() => {
+    handleAsyncAction((): Promise<unknown> | undefined => {
       if (retryPending) {
-        return;
+        return undefined;
       }
 
       setRetryPending(true);

@@ -5,7 +5,7 @@ import type {
   QuerylaneLogoProps,
   QuerylaneLogoVariant,
 } from "@/components/branding/querylane-logo.constants";
-import { useTheme } from "@/theme-provider";
+import { useTheme } from "@/theme-context";
 
 const AUTO_VARIANTS = {
   boxed: {

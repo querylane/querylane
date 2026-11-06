@@ -41,7 +41,7 @@ const state = rs.hoisted(
     navigate: ReturnType<typeof rs.fn>;
     selectedInstanceStatus: "connected" | "disconnected";
   } => ({
-    navigate: rs.fn(async () => undefined),
+    navigate: rs.fn(() => Promise.resolve(undefined)),
     selectedInstanceStatus: "connected" as "connected" | "disconnected",
   })
 );
@@ -83,7 +83,7 @@ const queryState = {
   suppressedReason: null,
 } as const;
 
-rs.mock("@/lib/db-context", () => {
+rs.mock("@/lib/db-context-state", () => {
   const instance = (id: string, name: string) => ({
     connectionError: "",
     host: "analytics-writer.internal.querylane.test",
@@ -121,7 +121,7 @@ rs.mock("@/lib/db-context", () => {
       ],
       navigateToDatabase: rs.fn(),
       queryStates: { databases: queryState, instances: queryState },
-      retryInstanceCatalog: rs.fn(async () => undefined),
+      retryInstanceCatalog: rs.fn(() => Promise.resolve(undefined)),
       selectedInstance: {
         ...instance(CONSOLE_INSTANCE_ID, "Production Analytics Writer"),
         status: state.selectedInstanceStatus,
@@ -551,7 +551,7 @@ test("dense schema inventories use the wide row without layout holes", async () 
   await renderConsolePage(databasePage, {
     catalog: {
       ...consoleCatalog,
-      schemas: schemaIds.map(catalogSchema),
+      schemas: schemaIds.map((value) => catalogSchema(value)),
       tables: Object.fromEntries(
         schemaIds.map((id) => [
           id,

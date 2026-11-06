@@ -97,7 +97,7 @@ function resolveRequestedAdminPageForScope(
 ): AdminPageId | undefined {
   const requestedPage = parseAdminPageId(value);
   if (!requestedPage) {
-    return;
+    return undefined;
   }
 
   return canRenderAdminPageAtScope(requestedPage, scope)
@@ -153,7 +153,7 @@ function resolveImplicitAdminPageFromPathname(
   // The instance-scoped admin panel is not an AdminPageId page: it renders
   // app-global backend state and must not resolve to instance.overview.
   if (isInstanceAdminRoot(segments)) {
-    return;
+    return undefined;
   }
   return pathname.includes("/instances/") ? "instance.overview" : undefined;
 }

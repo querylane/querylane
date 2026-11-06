@@ -77,7 +77,7 @@ function useTableDataController({
       ? pageTokenState
       : resetPageTokenState(queryShapeKey);
 
-  const orderBy = sortColumns.map(toRowOrder);
+  const orderBy = sortColumns.map((value) => toRowOrder(value));
 
   const request = create(ReadRowsRequestSchema, {
     cellValueMode: CellValueMode.PREVIEW,

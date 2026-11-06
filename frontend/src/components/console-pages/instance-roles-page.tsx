@@ -587,14 +587,18 @@ export function InstanceRolesPage({
             </div>
             <DataTableFacetedFilter
               onSelectedValuesChange={(values) => {
-                handleRoleTypeChange(values.find(isInstanceRolesType));
+                handleRoleTypeChange(
+                  values.find((value) => isInstanceRolesType(value))
+                );
               }}
               options={ROLE_TYPE_FILTERS.map((entry) => ({
                 count: counts[entry.id],
                 label: entry.label,
                 value: entry.id,
               }))}
-              selectedValues={[type].filter(isInstanceRolesType)}
+              selectedValues={[type].filter((value) =>
+                isInstanceRolesType(value)
+              )}
               singleSelect={true}
               title="Type"
             />

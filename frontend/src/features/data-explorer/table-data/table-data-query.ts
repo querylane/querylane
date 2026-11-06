@@ -93,7 +93,7 @@ function serializeSortSearch(
   sortColumns: readonly SortColumn[]
 ): string | undefined {
   if (sortColumns.length === 0) {
-    return;
+    return undefined;
   }
 
   const parts = sortColumns.map(

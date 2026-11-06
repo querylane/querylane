@@ -4,11 +4,12 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button } from "@/components/ui/button";
+import { actSynchronous } from "@/test/async-act";
+import { useTheme } from "@/theme-context";
 import {
   type ResolvedTheme,
   type Theme,
   ThemeProvider,
-  useTheme,
 } from "./theme-provider";
 
 const STORAGE_KEY = "querylane-ui-theme";
@@ -142,7 +143,7 @@ async function renderThemeProvider(defaultTheme: Theme = "system") {
 
   root = createRoot(container);
 
-  await act(async () => {
+  await actSynchronous(act, () => {
     root?.render(
       <ThemeProvider defaultTheme={defaultTheme}>
         <ThemeProbe />
@@ -160,7 +161,7 @@ async function clickButton(label: string) {
     throw new Error(`Button not found: ${label}`);
   }
 
-  await act(async () => {
+  await actSynchronous(act, () => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 }
@@ -186,7 +187,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   if (root) {
-    await act(async () => {
+    await actSynchronous(act, () => {
       root?.unmount();
     });
   }
@@ -224,7 +225,7 @@ describe("theme provider", () => {
       resolvedTheme: "light",
     });
 
-    await act(async () => {
+    await actSynchronous(act, () => {
       matchMediaController?.setDarkMode(true);
     });
 

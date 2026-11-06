@@ -17,7 +17,7 @@ function readSearchString(
 ): string | undefined {
   const value = search[key];
   if (typeof value !== "string") {
-    return;
+    return undefined;
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;

@@ -29,12 +29,14 @@ const routeState = rs.hoisted(
     navigate: ReturnType<typeof rs.fn>;
     testInstanceConnection: ReturnType<typeof rs.fn>;
   } => ({
-    createInstance: rs.fn(async () => ({
-      instance: { name: "instances/prod" },
-    })),
-    listDatabases: rs.fn(async () => ({ databases: [] })),
-    navigate: rs.fn(async () => undefined),
-    testInstanceConnection: rs.fn(async () => ({})),
+    createInstance: rs.fn(() =>
+      Promise.resolve({
+        instance: { name: "instances/prod" },
+      })
+    ),
+    listDatabases: rs.fn(() => Promise.resolve({ databases: [] })),
+    navigate: rs.fn(() => Promise.resolve(undefined)),
+    testInstanceConnection: rs.fn(() => Promise.resolve({})),
   })
 );
 

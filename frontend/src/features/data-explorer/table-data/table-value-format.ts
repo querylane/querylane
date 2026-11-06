@@ -39,7 +39,7 @@ const TIMEZONE_OFFSET_PATTERN =
 
 function formatTimezoneLabel(offset: string | undefined): string | undefined {
   if (!isNonEmptyString(offset)) {
-    return;
+    return undefined;
   }
   const normalized = offset.toUpperCase();
   if (normalized === "Z") {
@@ -47,9 +47,12 @@ function formatTimezoneLabel(offset: string | undefined): string | undefined {
   }
   const match = TIMEZONE_OFFSET_PATTERN.exec(normalized);
   if (!match) {
-    return;
+    return undefined;
   }
   const [, sign, hours, minutes = "00"] = match;
+  if (sign === undefined || hours === undefined) {
+    return undefined;
+  }
   const normalizedOffset = `${sign}${hours}:${minutes}`;
   if (normalizedOffset === "+00:00" || normalizedOffset === "-00:00") {
     return "UTC";

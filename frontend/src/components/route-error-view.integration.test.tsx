@@ -19,7 +19,7 @@ import { GetOnboardingStateResponseSchema } from "@/protogen/querylane/console/v
 import { useSetupStore } from "@/stores/setup-store";
 
 const routerMock = rs.hoisted(() => ({
-  invalidate: rs.fn(async () => undefined),
+  invalidate: rs.fn(() => Promise.resolve(undefined)),
 }));
 
 rs.mock("@tanstack/react-router", () => ({

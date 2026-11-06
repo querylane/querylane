@@ -364,7 +364,7 @@ function serializeTableFilterSearch(
   state: Readonly<TableFilterState>
 ): string | undefined {
   if (state.rules.length === 0 && state.logic === DEFAULT_FILTER_LOGIC) {
-    return;
+    return undefined;
   }
   return JSON.stringify({
     l: state.logic,
@@ -623,7 +623,7 @@ function buildRowFilter(
   );
   const children = buildFilterChildren(rules, columnMap);
   if (children.length === 0) {
-    return;
+    return undefined;
   }
   const populatedGroups = groupFilterChildrenByPrecedence(children, logic);
   if (populatedGroups.length === 1) {
@@ -633,7 +633,7 @@ function buildRowFilter(
     );
   }
   return createFilterGroup(
-    populatedGroups.map(collapseAndFilterGroup),
+    populatedGroups.map((value) => collapseAndFilterGroup(value)),
     RowFilterGroup_Logic.OR
   );
 }
@@ -704,11 +704,11 @@ function buildPredicate(
 ): RowPredicate | undefined {
   const meta = FILTER_OPERATOR_META[rule.operator];
   if (!isOperatorAllowedForColumn(column, rule.operator)) {
-    return;
+    return undefined;
   }
   const values = buildValues(rule, column.dataType, meta.valueCount);
   if (!values) {
-    return;
+    return undefined;
   }
   return create(RowPredicateSchema, {
     column: rule.column,
@@ -738,7 +738,7 @@ function buildListValues(
     .map((part) => part.trim())
     .filter(Boolean);
   if (parts.length === 0) {
-    return;
+    return undefined;
   }
   const values = parts.map((part) =>
     parseTableValue(part, dataType, rule.operator)
@@ -790,7 +790,7 @@ function parseTableValue(
 ): TableValue | undefined {
   const value = rawValue.trim();
   if (!value) {
-    return;
+    return undefined;
   }
   if (operator === "jsonContains" || dataType === DataType.JSON) {
     return parseJsonTableValue(value);

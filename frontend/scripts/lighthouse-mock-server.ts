@@ -276,7 +276,7 @@ function findLighthouseMockBody(url: string): string | undefined {
   try {
     ({ pathname } = new URL(url));
   } catch {
-    return;
+    return undefined;
   }
 
   const [servicePath, methodName] = pathname
@@ -284,12 +284,12 @@ function findLighthouseMockBody(url: string): string | undefined {
     .filter(Boolean)
     .slice(-MOCK_RPC_PATH_SEGMENT_COUNT);
   if (!(isNonEmptyString(servicePath) && isNonEmptyString(methodName))) {
-    return;
+    return undefined;
   }
 
   const serviceName = servicePath.split(".").at(-1);
   if (!isNonEmptyString(serviceName)) {
-    return;
+    return undefined;
   }
 
   return serializedMockResponses.get(`${serviceName}/${methodName}`);
@@ -297,12 +297,12 @@ function findLighthouseMockBody(url: string): string | undefined {
 
 function createLighthouseMockResponse(request: Request): Response | undefined {
   if (request.method !== "POST") {
-    return;
+    return undefined;
   }
 
   const body = findLighthouseMockBody(request.url);
   if (body === undefined) {
-    return;
+    return undefined;
   }
 
   return new Response(body, { headers: JSON_HEADERS });
@@ -471,7 +471,7 @@ function createStaticResponse(
   distDir = DEFAULT_DIST_DIR
 ): Response | undefined {
   if (!(request.method === "GET" || request.method === "HEAD")) {
-    return;
+    return undefined;
   }
 
   const { pathname } = new URL(request.url);
@@ -485,12 +485,12 @@ function createStaticResponse(
   }
 
   if (!shouldServeSpaFallback(request)) {
-    return;
+    return undefined;
   }
 
   const indexPath = join(distDir, "index.html");
   if (!existsSync(indexPath)) {
-    return;
+    return undefined;
   }
 
   return createStaticFileResponse({

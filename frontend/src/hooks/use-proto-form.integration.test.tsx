@@ -9,6 +9,7 @@ import {
   PostgresConfig_SslMode,
   PostgresConfigSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { actSynchronous } from "@/test/async-act";
 
 function renderPostgresConfigForm(password: string) {
   return renderHook(() => {
@@ -115,7 +116,7 @@ describe("useProtoForm", () => {
       ]
     );
 
-    await act(async () => {
+    await actSynchronous(act, () => {
       result.current.form.setServerErrors(error);
     });
 
@@ -141,7 +142,7 @@ describe("useProtoForm", () => {
     });
     expect(result.current.isDirty).toBe(true);
 
-    await act(async () => {
+    await actSynchronous(act, () => {
       result.current.form.resetField("config");
     });
 

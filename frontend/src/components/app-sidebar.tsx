@@ -17,7 +17,6 @@ import {
 import { Fragment, useEffect, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { Logo } from "@/components/logo";
-import { useCommandPalette } from "@/components/querylane-ui/admin-command-palette";
 import { Button } from "@/components/querylane-ui/button";
 import {
   Combobox,
@@ -29,6 +28,7 @@ import {
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
 import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
+import { useCommandPalette } from "@/components/querylane-ui/command-palette-context";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import {
   Sidebar,
@@ -43,8 +43,8 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/querylane-ui/sidebar";
+import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import {
   buildNavLinkProps,
   buildNavLinkSearch,
@@ -89,10 +89,10 @@ import {
   resolveQuerylaneAboutMetadata,
 } from "@/lib/app-metadata";
 import { assertNever } from "@/lib/assert-never";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import type { ScopeLevel } from "@/lib/db-navigation";
 import type { PostgresDatabase } from "@/lib/db-resource-mappers";
-import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot";
+import { useExplorerSidebarSlotRegistration } from "@/lib/explorer-sidebar-slot-context";
 import { preloadRouteCode } from "@/lib/route-code-preload";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import type { AppUiError } from "@/lib/ui-error-types";
@@ -731,9 +731,9 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const router = useRouter();
   const { hoverRevealOpen, isMobile, setOpenMobile, state } = useSidebar();
   useEffect(
-    function dismissMobileSidebarAfterNavigation() {
+    function dismissMobileSidebarAfterNavigation(): (() => void) | undefined {
       if (!isMobile) {
-        return;
+        return undefined;
       }
       return router.subscribe("onResolved", (event) => {
         if (event.hrefChanged || event.pathChanged) {

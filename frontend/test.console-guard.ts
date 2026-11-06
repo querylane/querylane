@@ -81,7 +81,7 @@ function formatUnexpectedConsoleIssues(
 ) {
   const formattedIssues = issues.map(
     ({ args, level }) =>
-      `console.${level}: ${args.map(formatConsoleArgument).join(" ")}`
+      `console.${level}: ${args.map((value) => formatConsoleArgument(value)).join(" ")}`
   );
 
   return [

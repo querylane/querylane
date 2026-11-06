@@ -39,6 +39,7 @@ export default defineConfig({
       includeTags: ["design"],
     },
     ciFailure: {
+      includeFileContexts: ["test", "story"],
       includeTags: ["design"],
     },
   },
@@ -256,7 +257,7 @@ export default defineConfig({
     "react-doctor/prefer-module-scope-pure-function": "error",
     "react-doctor/prefer-module-scope-static-value": "error",
     "react-doctor/prefer-useReducer": "error",
-    "react-doctor/react-compiler-no-manual-memoization": "error",
+    "react-doctor/react-compiler-no-manual-memoization": "off",
     "react-doctor/rendering-animate-svg-wrapper": "error",
     "react-doctor/rendering-hoist-jsx": "error",
     "react-doctor/rendering-svg-precision": "error",

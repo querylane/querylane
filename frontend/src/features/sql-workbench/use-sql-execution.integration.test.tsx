@@ -1,3 +1,4 @@
+import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError, type Transport } from "@connectrpc/connect";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
 import { act, cleanup, renderHook } from "@testing-library/react";
@@ -5,7 +6,11 @@ import { useSqlExecution } from "@/features/sql-workbench/use-sql-execution";
 import * as actualTransport from "@/lib/transport" with {
   rstest: "importActual",
 };
-import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
+import {
+  ExecuteQueryResponseSchema,
+  SQLService,
+} from "@/protogen/querylane/console/v1alpha1/sql_pb";
+import { rejectedStream, streamOf } from "@/test/async-stream";
 import { createTestRouterTransport } from "@/test/router-transport";
 
 const sqlTransport = rs.hoisted((): { current: Transport | undefined } => ({
@@ -49,16 +54,18 @@ describe("useSqlExecution", () => {
   test("reports the server's row count when the stream settles", async () => {
     sqlTransport.current = createTestRouterTransport((router) => {
       router.service(SQLService, {
-        async *executeQuery() {
-          yield* [
-            { result: { case: "rowBatch", value: { rows: [ROW, ROW] } } },
-            {
+        executeQuery() {
+          return streamOf(
+            create(ExecuteQueryResponseSchema, {
+              result: { case: "rowBatch", value: { rows: [ROW, ROW] } },
+            }),
+            create(ExecuteQueryResponseSchema, {
               result: {
                 case: "stats",
                 value: { commandTag: "SELECT 2", rowCount: 2n },
               },
-            },
-          ] as const;
+            })
+          );
         },
       });
     });
@@ -86,10 +93,12 @@ describe("useSqlExecution", () => {
   test("counts streamed rows when the stream ends without stats", async () => {
     sqlTransport.current = createTestRouterTransport((router) => {
       router.service(SQLService, {
-        async *executeQuery() {
-          yield* [
-            { result: { case: "rowBatch", value: { rows: [ROW, ROW, ROW] } } },
-          ] as const;
+        executeQuery() {
+          return streamOf(
+            create(ExecuteQueryResponseSchema, {
+              result: { case: "rowBatch", value: { rows: [ROW, ROW, ROW] } },
+            })
+          );
         },
       });
     });
@@ -106,11 +115,12 @@ describe("useSqlExecution", () => {
     sqlTransport.current = createTestRouterTransport((router) => {
       router.service(SQLService, {
         // Fails before the first message, like a statement that does not parse.
-        async *executeQuery() {
-          yield* [];
-          throw new ConnectError(
-            'relation "nope" does not exist',
-            Code.InvalidArgument
+        executeQuery() {
+          return rejectedStream(
+            new ConnectError(
+              'relation "nope" does not exist',
+              Code.InvalidArgument
+            )
           );
         },
       });

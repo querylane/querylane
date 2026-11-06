@@ -152,7 +152,7 @@ function buildSchemaMapModel({
   const tableInfos = tables.map((table) =>
     tableInfo(table, columnsByTable[table.name] ?? [], constraintsByTable)
   );
-  const viewInfos = views.map(viewInfo);
+  const viewInfos = views.map((value) => viewInfo(value));
   const schemaOptions = buildSchemaOptions(schemaOrder, tableInfos);
   const normalizedQuery = filter.query.trim().toLowerCase();
   const activeSchema =

@@ -66,7 +66,7 @@
   },
   "json": {
     "assist": {
-      "enabled": false
+      "enabled": true
     },
     "formatter": {
       "enabled": true,
@@ -127,7 +127,12 @@
         "useValidAriaProps": "error",
         "useValidAriaRole": "error",
         "useValidAriaValues": "error",
-        "useValidAutocomplete": "error",
+        "useValidAutocomplete": {
+          "level": "error",
+          "options": {
+            "inputComponents": ["Input"]
+          }
+        },
         "useValidLang": "error"
       },
       "complexity": {
@@ -199,7 +204,10 @@
         "useSimplifiedLogicExpression": "error",
         "useWhile": "error",
         "noExcessiveNestedCallbacks": "error",
-        "noExcessiveSelectorClasses": "error",
+        "noExcessiveSelectorClasses": {
+          "level": "error",
+          "options": { "maxClasses": 5 }
+        },
         "noPlaywrightUselessAwait": "error",
         "noUnnecessaryTemplateExpression": "error",
         "useArraySome": "error",
@@ -547,7 +555,7 @@
         "useStringStartsEndsWith": "error",
         "useSvelteKitRuneImports": "error",
         "useSvelteRequireEachKey": "error",
-        "useTailwindShorthandClasses": "off",
+        "useTailwindShorthandClasses": "error",
         "useValidTestTitle": "error",
         "useVueBaseImport": "error",
         "preset": "all",
@@ -748,18 +756,7 @@
           "level": "error",
           "options": {
             "allowConstantExport": true,
-            "allowExportNames": [
-              "DatabaseStructureMapTargetResource",
-              "OtherDatabaseObject",
-              "OtherObjectCategory",
-              "Route",
-              "resolveHomeInstanceId",
-              "useCommandPalette",
-              "useDb",
-              "useExplorerSidebarSlotRegistration",
-              "useSidebar",
-              "useTheme"
-            ]
+            "allowExportNames": []
           }
         },
         "useConsistentArrayType": "error",
@@ -990,7 +987,19 @@
         "useIterableCallbackReturn": "error",
         "useNamespaceKeyword": "error",
         "useNumberToFixedDigitsArgument": "error",
-        "useRequiredScripts": "error",
+        "useRequiredScripts": {
+          "level": "error",
+          "options": {
+            "requiredScripts": [
+              "lint",
+              "lint:fix",
+              "quality:gate",
+              "type:check",
+              "build",
+              "test"
+            ]
+          }
+        },
         "useStaticResponseMethods": "error",
         "useStrictMode": "error",
         "noConditionalExpect": "error",
@@ -1129,6 +1138,18 @@
         "rules": {
           "correctness": {
             "noNodejsModules": "error"
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Buffer": "Use browser byte APIs.",
+                  "setImmediate": "Use browser scheduling APIs.",
+                  "clearImmediate": "Use browser scheduling APIs."
+                }
+              }
+            }
           }
         }
       }

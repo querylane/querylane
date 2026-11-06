@@ -65,7 +65,9 @@ function uniqueSortedFilterOptions(
 }
 
 function presentDatabaseKindOptions(databases: DatabaseFacetRow[]) {
-  const presentKinds = new Set<string>(databases.map(databaseKindFilterValue));
+  const presentKinds = new Set<string>(
+    databases.map((value) => databaseKindFilterValue(value))
+  );
   return DATABASE_KIND_FILTER_OPTIONS.filter((option) =>
     presentKinds.has(option.value)
   );
@@ -73,14 +75,14 @@ function presentDatabaseKindOptions(databases: DatabaseFacetRow[]) {
 
 function presentDatabaseEncodingOptions(databases: DatabaseFacetRow[]) {
   return uniqueSortedFilterOptions(
-    databases.map(databaseEncodingFilterValue),
+    databases.map((value) => databaseEncodingFilterValue(value)),
     databaseEncodingFilterLabel
   );
 }
 
 function presentDatabaseOwnerOptions(databases: DatabaseFacetRow[]) {
   return uniqueSortedFilterOptions(
-    databases.map(databaseOwnerFilterValue),
+    databases.map((value) => databaseOwnerFilterValue(value)),
     databaseOwnerFilterLabel
   );
 }

@@ -11,29 +11,39 @@ const FRONTEND_WORKFLOW_GIT_PATHSPEC =
 const STATIC_ANALYSIS_GIT_PATHSPECS = [
   FRONTEND_GIT_PATHSPEC,
   FRONTEND_WORKFLOW_GIT_PATHSPEC,
+  ":(top)biome.jsonc",
+  ":(top)bun.lock",
+  ":(top)package.json",
 ];
 const FAILURE_EXIT_CODE = 1;
 const SUCCESS_EXIT_CODE = 0;
 const EXTENSION_PATTERN = /\.[^.]+$/u;
-const GIT_CHANGED_FILE_FILTER = ["ACMRT", "UXB"].join("");
+const GIT_CHANGED_FILE_FILTER = ["ACDMRT", "UXB"].join("");
 
 const LINTABLE_EXTENSIONS = new Set([
   ".cjs",
   ".css",
+  ".cts",
+  ".gql",
+  ".graphql",
   ".html",
   ".js",
   ".json",
   ".jsonc",
   ".jsx",
   ".mjs",
+  ".mts",
+  ".scss",
   ".ts",
   ".tsx",
+  ".yaml",
+  ".yml",
 ]);
 
 const GENERATED_OR_REGISTRY_PREFIXES = ["src/components/ui/", "src/protogen/"];
 const GENERATED_FILES = new Set(["src/routeTree.gen.ts"]);
 const FULL_STATIC_ANALYSIS_PATH_PATTERN =
-  /^(?:\.github\/workflows\/frontend-ci\.yml|frontend\/(?:biome\.jsonc|bun\.lock|doctor\.config\.ts|oxlint\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|strict-tooling-policy\.unit\.test)\.ts))$/u;
+  /^(?:biome\.jsonc|bun\.lock|package\.json|\.github\/workflows\/frontend-ci\.yml|frontend\/(?:quality\/[^/]+\.json|biome\.jsonc|bun\.lock|doctor\.config\.ts|oxlint\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|check-biome-compat|check-rule-inventory|quality-boundaries|quality-options|check-suppressions|querylane-lint\.config|strict-tooling-policy\.unit\.test)\.ts))$/u;
 
 interface FileSystemAccess {
   existsSync: (path: string) => boolean;
@@ -137,10 +147,10 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
   const diffResult = runner.run("git", [
     "diff",
     "--name-only",
+    "-z",
     "--no-renames",
     `--diff-filter=${GIT_CHANGED_FILE_FILTER}`,
     diffBase,
-    "HEAD",
     "--",
     ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
@@ -151,19 +161,20 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
 
   const untrackedResult = runner.run("git", [
     "ls-files",
+    "-z",
     "--others",
     "--exclude-standard",
     "--",
     ...STATIC_ANALYSIS_GIT_PATHSPECS,
   ]);
-  const untrackedFiles =
-    untrackedResult.status === SUCCESS_EXIT_CODE
-      ? untrackedResult.stdout.split("\n").filter(Boolean)
-      : [];
+  if (untrackedResult.status !== SUCCESS_EXIT_CODE) {
+    throw new Error("Could not list untracked frontend files.");
+  }
+  const untrackedFiles = untrackedResult.stdout.split("\0").filter(Boolean);
 
   return [
     ...new Set([
-      ...diffResult.stdout.split("\n").filter(Boolean),
+      ...diffResult.stdout.split("\0").filter(Boolean),
       ...untrackedFiles,
     ]),
   ];
@@ -182,7 +193,9 @@ function runChangedLint({
   const repoFiles = changedRepoFiles(baseRef, runner);
   if (requiresFullStaticAnalysis(repoFiles)) {
     console.log("Tooling policy changed; linting the full frontend.");
-    const result = spawnSync("ultracite", ["check"], { stdio: "inherit" });
+    const result = spawnSync("ultracite", ["check", "--error-on-warnings"], {
+      stdio: "inherit",
+    });
     return result.status ?? FAILURE_EXIT_CODE;
   }
 
@@ -194,9 +207,13 @@ function runChangedLint({
   }
 
   console.log(`Linting ${files.length} changed frontend file(s).`);
-  const result = spawnSync("ultracite", ["check", ...files], {
-    stdio: "inherit",
-  });
+  const result = spawnSync(
+    "ultracite",
+    ["check", "--error-on-warnings", ...files],
+    {
+      stdio: "inherit",
+    }
+  );
   return result.status ?? FAILURE_EXIT_CODE;
 }
 

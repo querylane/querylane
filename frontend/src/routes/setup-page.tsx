@@ -4,7 +4,7 @@ import { AppInlineError } from "@/components/app-error-view";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
 import { OnboardingWizard } from "@/components/onboarding-wizard/wizard";
 import { useConsoleConfigStatus } from "@/hooks/api/console";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { logger } from "@/lib/diagnostics";
 import { errorMessageOf } from "@/lib/error-message";
 import { handleNavigationError } from "@/lib/navigation-errors";

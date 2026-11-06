@@ -14,7 +14,7 @@ export function resolveValidSelectionId({
   loaded: boolean;
 }>): string | undefined {
   if (!isNonEmptyString(candidateId)) {
-    return;
+    return undefined;
   }
   if (!loaded) {
     return candidateId;

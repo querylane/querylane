@@ -69,7 +69,7 @@ class ProblemCache {
     }
     const problem = await validator.check(statement, signal);
     if (signal.aborted || problem === undefined) {
-      return;
+      return undefined;
     }
     if (this.results.size >= RESULT_CACHE_LIMIT) {
       this.results.clear();

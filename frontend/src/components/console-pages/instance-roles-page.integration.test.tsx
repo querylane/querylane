@@ -12,6 +12,7 @@ import {
   RoleMembershipSchema,
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
+import { actSynchronous } from "@/test/async-act";
 
 const mocks = rs.hoisted(
   (): {
@@ -105,7 +106,7 @@ rs.mock("@/hooks/api/role", () => ({
       },
       error: null,
       isPending: false,
-      refetch: rs.fn(async () => undefined),
+      refetch: rs.fn(() => Promise.resolve(undefined)),
     };
   },
   useRolesAccessMapResourcesQuery: (input: {
@@ -218,7 +219,7 @@ describe("instance roles page", () => {
         ],
       }),
     });
-    await act(async () => {
+    await actSynchronous(act, () => {
       rs.advanceTimersByTime(200);
     });
     expect(mocks.roleQueryInputs).toContainEqual({

@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { isRecord, isUnknownArray } from "../src/lib/value-guards";
+
+const SCOPED_PATTERN = /^\.\//u;
 
 const artifactDirectories = [
   ".git",
@@ -39,11 +41,8 @@ const toolExclusions = new Set([
   "**/*.gen.ts",
   "**/*.gen.tsx",
 ]);
-const disabledEngineRoles = new Set([
-  "markdown.linter",
-  "markdown.formatter",
-  "json.assist",
-]);
+const disabledEngineRoles = new Set(["markdown.linter", "markdown.formatter"]);
+const MINIMUM_BIOME_MAX_SIZE = 1_048_576;
 const engines = ["linter", "formatter", "assist"] as const;
 const languages = [
   "javascript",
@@ -133,6 +132,17 @@ const compilerProjects = [
     includes: ["scripts/perf-budgets.ts", "src/lib/value-guards.ts"],
     excludes: ["src/components/ui"],
     checkJs: false,
+  },
+  {
+    name: "tsconfig.authored-declarations.json",
+    includes: [],
+    excludes: [],
+    checkJs: false,
+    requiredFiles: [
+      "src/env.d.ts",
+      "src/import-meta-env.d.ts",
+      "src/types/css.d.ts",
+    ],
   },
 ];
 const recordSchema = z.record(z.string(), z.unknown());
@@ -304,6 +314,7 @@ function assertBiomeOverrides(
 ): void {
   const overrides = z.array(recordSchema).parse(config["overrides"] ?? []);
   for (const override of overrides) {
+    assertBiomeScannerCoverage(recordAt(override, "files"));
     const scope = strings(override["includes"]);
     const generated =
       scope.length > 0 && scope.every((path) => generatedScopes.has(path));
@@ -332,7 +343,9 @@ function assertBiome(
   if (presets.length !== 1 || presets[0] !== "ultracite/biome/playwright") {
     throw new Error("Unreviewed Biome preset inheritance");
   }
-  const includes = strings(recordAt(config, "files")["includes"]);
+  const files = recordAt(config, "files");
+  assertBiomeScannerCoverage(files);
+  const includes = strings(files["includes"]);
   if (!includes.includes("**")) {
     throw new Error("Biome must cover all authored file roles");
   }
@@ -346,6 +359,20 @@ function assertBiome(
   }
   assertEngineSwitches(config);
   assertBiomeOverrides(config, policies, exceptions);
+}
+
+function assertBiomeScannerCoverage(files: Record<string, unknown>): void {
+  if (strings(files["experimentalScannerIgnores"]).length > 0) {
+    throw new Error("Biome scanner exclusions are not permitted");
+  }
+  const { maxSize } = files;
+  if (
+    maxSize !== undefined &&
+    maxSize !== null &&
+    (typeof maxSize !== "number" || maxSize < MINIMUM_BIOME_MAX_SIZE)
+  ) {
+    throw new Error("Biome file-size coverage cannot be narrowed");
+  }
 }
 
 function assertOxlint(
@@ -414,6 +441,14 @@ function assertDoctor(config: Record<string, unknown>): void {
     strings(recordAt(config, "ignore")["files"]),
     approved
   );
+  const surface = recordAt(recordAt(config, "surfaces"), "ciFailure");
+  const contexts = strings(surface["includeFileContexts"]);
+  if (
+    !["test", "story"].every((context) => contexts.includes(context)) ||
+    strings(surface["excludeFileContexts"]).length > 0
+  ) {
+    throw new Error("Doctor test and story findings must block CI");
+  }
 }
 
 function assertCompilerCoverage(
@@ -422,8 +457,15 @@ function assertCompilerCoverage(
 ): void {
   const includes = new Set(strings(config["include"]));
   const approved = new Set(project.excludes);
+  const files = new Set(
+    strings(config["files"]).map((file) => file.replace(SCOPED_PATTERN, ""))
+  );
+  const requiredFiles = "requiredFiles" in project ? project.requiredFiles : [];
   if (
-    !project.includes.every((pattern) => includes.has(pattern)) ||
+    !(
+      project.includes.every((pattern) => includes.has(pattern)) &&
+      requiredFiles.every((file) => files.has(file))
+    ) ||
     strings(config["exclude"]).some((pattern) => !approved.has(pattern))
   ) {
     throw new Error(`Compiler coverage is not enforced: ${project.name}`);
@@ -447,7 +489,11 @@ function assertCompiler(
   const parsed: unknown = JSON.parse(result.stdout);
   const resolved = recordSchema.parse(parsed);
   assertCompilerCoverage(project, resolved);
+  if (project.name === "tsconfig.authored-declarations.json") {
+    assertAuthoredDeclarationCoverage(root, resolved);
+  }
   const options = recordAt(resolved, "compilerOptions");
+  assertDeclarationCompleteness(project.name, options);
   const requiredTrue = project.checkJs
     ? [...trueCompilerOptions, "checkJs"]
     : trueCompilerOptions;
@@ -464,6 +510,40 @@ function assertCompiler(
         `Compiler contract is not enforced: ${project.name}/${option}`
       );
     }
+  }
+}
+
+function assertAuthoredDeclarationCoverage(
+  root: string,
+  config: Record<string, unknown>
+): void {
+  const roots = new Set(
+    strings(config["files"]).map((file) => file.replace(SCOPED_PATTERN, ""))
+  );
+  const declarations = globSync("**/*.d.{ts,mts,cts}", {
+    cwd: root,
+    exclude: [
+      ...artifactDirectories.map((directory) => `**/${directory}/**`),
+      ...generatedScopes,
+    ],
+  });
+  for (const file of declarations) {
+    if (!roots.has(file)) {
+      throw new Error(`Authored declaration coverage is not enforced: ${file}`);
+    }
+  }
+}
+
+function assertDeclarationCompleteness(
+  projectName: string,
+  options: Record<string, unknown>
+): void {
+  if (
+    (projectName === "tsconfig.authored-declarations.json" ||
+      projectName === "tsconfig.browser-js.json") &&
+    options["skipLibCheck"] !== false
+  ) {
+    throw new Error("Authored declarations must be checked completely");
   }
 }
 

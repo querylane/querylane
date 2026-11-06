@@ -269,12 +269,12 @@ function PlanRows(props: PlanRowsProps) {
       {expanded
         ? node.children.map((child, index) => (
             <PlanRows
+              key={child.id}
               {...props}
               continuations={[
                 ...continuations,
                 index < node.children.length - 1,
               ]}
-              key={child.id}
               node={child}
             />
           ))

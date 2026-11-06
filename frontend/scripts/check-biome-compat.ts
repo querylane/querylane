@@ -23,6 +23,7 @@ const result = spawnSync(
   join(import.meta.dirname, "../node_modules/.bin/biome"),
   [
     "lint",
+    "--error-on-warnings",
     ...rules.map((rule) => `--only=nursery/${rule}`),
     ...(args.length > 0 ? args : ["."]),
   ],

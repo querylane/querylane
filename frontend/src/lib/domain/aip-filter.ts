@@ -22,7 +22,7 @@ function buildContainsFilter(
 ): string | undefined {
   const trimmed = value.trim();
   if (trimmed.length < MIN_SERVER_SUBSTRING_LENGTH) {
-    return;
+    return undefined;
   }
   return `${field}:${quoteFilterValue(trimmed)}`;
 }
@@ -52,9 +52,12 @@ function buildOwnedFilter({
 function buildGrantSearchFilter(search: string): string | undefined {
   const objectName = buildContainsFilter("object_name", search);
   if (!isNonEmptyString(objectName)) {
-    return;
+    return undefined;
   }
   const schemaName = buildContainsFilter("schema_name", search);
+  if (!isNonEmptyString(schemaName)) {
+    return undefined;
+  }
   return `(${objectName} OR ${schemaName})`;
 }
 
@@ -81,7 +84,7 @@ function buildGrantFilter({
 function roleTypeFilter(type: RoleFilterKind | undefined): string | undefined {
   switch (type) {
     case undefined:
-      return;
+      return undefined;
     case "builtin":
       return "is_system_role = true";
     case "super":

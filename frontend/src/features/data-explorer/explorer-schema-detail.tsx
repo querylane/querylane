@@ -285,7 +285,10 @@ function SchemaObjectsTable({
   // typing on large schemas.
   const deferredSearch = useDeferredValue(search);
 
-  const rows = [...tables.map(toTableRow), ...views.map(toViewRow)];
+  const rows = [
+    ...tables.map((value) => toTableRow(value)),
+    ...views.map((value) => toViewRow(value)),
+  ];
   const visibleRows = filterSchemaObjectRows({
     kindFilters,
     ownerFilters,

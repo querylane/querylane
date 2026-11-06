@@ -152,7 +152,7 @@ function renderMarkdown(report: DoctorReport, commitSha: string | undefined) {
       "|---|---|---|---|---|",
       ...summary.diagnostics
         .slice(0, MAX_COMMENT_DIAGNOSTICS)
-        .map(renderDiagnostic)
+        .map((value) => renderDiagnostic(value))
     );
     if (summary.diagnostics.length > MAX_COMMENT_DIAGNOSTICS) {
       lines.push(
@@ -227,7 +227,11 @@ function buildRunUrl(repository: string) {
     : undefined;
 }
 
-async function publishGitHubResult(report: DoctorReport, markdown: string) {
+async function publishGitHubResult(
+  report: DoctorReport,
+  markdown: string,
+  passed: boolean
+) {
   const token = getEnv("GITHUB_TOKEN");
   const repository = getEnv("GITHUB_REPOSITORY");
   const event = readPullRequestEvent();
@@ -248,6 +252,11 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
   }
 
   const [owner, repo] = repository.split("/");
+  if (!(isNonEmptyString(owner) && isNonEmptyString(repo))) {
+    throw new TypeError(
+      "GITHUB_REPOSITORY must contain an owner and repository"
+    );
+  }
   const comments = z
     .array(
       z.looseObject({
@@ -280,7 +289,7 @@ async function publishGitHubResult(report: DoctorReport, markdown: string) {
       body: {
         context: "React Doctor",
         description: buildStatusDescription(report),
-        state: report.ok ? "success" : "failure",
+        state: passed ? "success" : "failure",
         target_url: buildRunUrl(repository),
       },
       method: "POST",
@@ -321,6 +330,8 @@ if (!doctorReport) {
   stdout.write(result.stdout);
   exit(1);
 }
+const success =
+  result.status === 0 && doctorReport.ok && doctorReport.error === null;
 
 const event = readPullRequestEvent();
 const headCommitSha = event?.pull_request?.head?.sha ?? getEnv("GITHUB_SHA");
@@ -332,7 +343,7 @@ if (isNonEmptyString(stepSummaryPath)) {
 stdout.write(summaryMarkdown);
 
 try {
-  await publishGitHubResult(doctorReport, summaryMarkdown);
+  await publishGitHubResult(doctorReport, summaryMarkdown, success);
 } catch (error) {
   stderr.write(
     `Could not publish React Doctor GitHub result: ${String(error)}\n`
@@ -340,6 +351,4 @@ try {
   exit(1);
 }
 
-exit(
-  result.status !== 0 || !doctorReport.ok || doctorReport.error !== null ? 1 : 0
-);
+exit(success ? 0 : 1);

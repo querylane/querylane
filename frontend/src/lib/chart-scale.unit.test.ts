@@ -14,7 +14,9 @@ describe("niceAxisTicks (decimal)", () => {
 
   test("formatted labels are always distinct", () => {
     for (const max of [0.3, 0.9, 2.9, 7, 45, 147, 2840, 28_600, 184_000]) {
-      const labels = (niceAxisTicks(max, 10) ?? []).map(formatCompactNumber);
+      const labels = (niceAxisTicks(max, 10) ?? []).map((value) =>
+        formatCompactNumber(value)
+      );
       expect(new Set(labels).size).toBe(labels.length);
     }
   });

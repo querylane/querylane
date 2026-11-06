@@ -72,12 +72,6 @@ interface DatabaseStructureMapProps {
   targetResource?: DatabaseStructureMapTargetResource | undefined;
 }
 
-interface DatabaseStructureMapTargetResource {
-  category?: "tables" | "views" | undefined;
-  name?: string | undefined;
-  schemaName: string;
-}
-
 type DatabaseMapVisibleNodeKind = Extract<
   VisualizationNode["kind"],
   | "column"
@@ -777,5 +771,10 @@ function DatabaseStructureMap({
   );
 }
 
-export type { DatabaseStructureMapTargetResource };
+export interface DatabaseStructureMapTargetResource {
+  category?: "tables" | "views" | undefined;
+  name?: string | undefined;
+  schemaName: string;
+}
+
 export { DatabaseStructureMap };

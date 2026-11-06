@@ -349,9 +349,9 @@ function ForeignKeyDataCell({
   }, []);
 
   useEffect(
-    function cancelPendingOpenOnOutsidePointerDown() {
+    function cancelPendingOpenOnOutsidePointerDown(): (() => void) | undefined {
       if (!isAwaitingOpen) {
-        return;
+        return undefined;
       }
       function cancelIfOutsideTrigger(event: PointerEvent) {
         if (

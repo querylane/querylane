@@ -57,6 +57,14 @@ function toTimestamp(value: { seconds?: bigint; nanos?: number }): Timestamp {
   });
 }
 
+function byteUnitLabel(units: readonly string[], index: number): string {
+  const unit = units[index];
+  if (unit === undefined) {
+    throw new RangeError("Invalid byte unit index");
+  }
+  return unit;
+}
+
 export function buildInstanceName(instanceId: string): string {
   return `instances/${encodeResourceSegment(instanceId)}`;
 }
@@ -147,7 +155,7 @@ export function tryParseRelationQualifiedName(
       match[2].length > 0
     )
   ) {
-    return;
+    return undefined;
   }
   return {
     relation: decodeResourceSegment(match[2]),
@@ -166,7 +174,7 @@ export function tryParseTableQualifiedName(
       match[2].length > 0
     )
   ) {
-    return;
+    return undefined;
   }
   return {
     schema: decodeResourceSegment(match[1]),
@@ -212,7 +220,7 @@ export function formatBytes(
     unitIndex += 1;
   }
 
-  return `${byteFormatter.format(rounded)} ${units[unitIndex]}`;
+  return `${byteFormatter.format(rounded)} ${byteUnitLabel(units, unitIndex)}`;
 }
 
 export function normalizeEstimatedRowCount(

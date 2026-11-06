@@ -471,7 +471,7 @@ function describeArrayType(
 ): PostgresTypeDisplay | undefined {
   const arrayMatch = ARRAY_TYPE_PATTERN.exec(normalized);
   if (!isNonEmptyString(arrayMatch?.[1])) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: ["array", `${arrayMatch[1]} elements`],
@@ -486,7 +486,7 @@ function describeIntegerType(
 ): PostgresTypeDisplay | undefined {
   const integerMeta = INTEGER_META[normalized];
   if (!integerMeta) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: [
@@ -528,7 +528,7 @@ function describeIntervalVariantType(
   normalized: string
 ): PostgresTypeDisplay | undefined {
   if (!normalized.startsWith("interval ")) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: ["16 bytes", "duration"],
@@ -542,7 +542,7 @@ function describeNetworkType(
   normalized: string
 ): PostgresTypeDisplay | undefined {
   if (!NETWORK_TYPES.has(normalized)) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: ["address"],
@@ -557,7 +557,7 @@ function describeObjectIdType(
 ): PostgresTypeDisplay | undefined {
   const isInternalId = normalized === "xid" || normalized === "cid";
   if (!(OBJECT_ID_TYPES.has(normalized) || isInternalId)) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: [isInternalId ? "system ID" : "system catalog"],
@@ -573,7 +573,7 @@ function describeRangeType(
   normalized: string
 ): PostgresTypeDisplay | undefined {
   if (!RANGE_TYPES.has(normalized)) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: [normalized.includes("multirange") ? "multirange" : "range"],
@@ -587,7 +587,7 @@ function describeSpatialType(
   normalized: string
 ): PostgresTypeDisplay | undefined {
   if (!SPATIAL_TYPES.has(normalized)) {
-    return;
+    return undefined;
   }
   return withDisplay(column, {
     badges: [

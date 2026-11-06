@@ -137,7 +137,7 @@ test.each(["line", "area", "stacked"] as const)(
 
 test("series-key identity, not array churn, owns emphasis reset; default legend stays passive", async () => {
   const chart = (items: ChartSeries[], enabled = true) => (
-    <div className="h-80 w-80">
+    <div className="size-80">
       <MetricChart
         data={data}
         formatValue={String}

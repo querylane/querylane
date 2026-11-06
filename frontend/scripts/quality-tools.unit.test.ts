@@ -58,7 +58,59 @@ function lintBiome(file: string) {
   };
 }
 
+test("rejects oversized authored files instead of passing a skipped scan", () => {
+  const directory = mkdtempSync(join(root, "scripts/quality-probe-"));
+  const file = join(directory, "oversized.ts");
+  try {
+    writeFileSync(join(directory, "valid.ts"), "export const ready = true;\n");
+    writeFileSync(file, `//${" ".repeat(1_048_576)}\n`);
+    const result = spawnSync("bun", ["run", "lint:biome:compat", directory], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain(
+      "exceeds the configured maximum"
+    );
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test.each([
+  {
+    name: "browser runtime globals",
+    rule: "noRestrictedGlobals",
+    directory: "src",
+    suffix: "ts",
+    invalid:
+      "export function encode(value: string) { return Buffer.from(value); }\n",
+    valid:
+      "export function encode(value: string) { return new TextEncoder().encode(value); }\n",
+  },
+  {
+    name: "custom input autocomplete tokens",
+    rule: "useValidAutocomplete",
+    suffix: "tsx",
+    invalid:
+      'import { Input } from "@/components/ui/input"; export const field = <Input aria-label="Name" autoComplete="full-name" />;\n',
+    valid:
+      'import { Input } from "@/components/ui/input"; export const field = <Input aria-label="Name" autoComplete="name" />;\n',
+  },
+  {
+    name: "bounded CSS selector classes",
+    rule: "noExcessiveSelectorClasses",
+    suffix: "css",
+    invalid: ".one.two.three.four.five.six { color: inherit; }\n",
+    valid: ".one.two.three.four.five { color: inherit; }\n",
+  },
+  {
+    name: "safe Tailwind shorthand classes",
+    rule: "useTailwindShorthandClasses",
+    suffix: "tsx",
+    invalid: 'export const icon = <span className="h-4 w-4 divide-y" />;\n',
+    valid: 'export const icon = <span className="size-4 divide-y" />;\n',
+  },
   {
     name: "unchained numeric comparisons",
     rule: "noChainedComparison",
@@ -217,7 +269,9 @@ test.each([
     valid: '"true": enabled\n',
   },
 ])("biome enforces $name without rejecting valid alternatives", (probe) => {
-  const directory = mkdtempSync(join(root, "scripts", "quality-probe-"));
+  const directory = mkdtempSync(
+    join(root, probe.directory ?? "scripts", "quality-probe-")
+  );
   const file = join(directory, `probe.${probe.suffix}`);
   const lint = () => lintBiome(file);
   try {

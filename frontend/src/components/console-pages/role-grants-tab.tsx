@@ -880,7 +880,7 @@ function grantsTableSourceForView(
     return "direct";
   }
   if (view.kind !== "reach") {
-    return;
+    return undefined;
   }
   switch (view.reach) {
     case "owns":
@@ -888,7 +888,7 @@ function grantsTableSourceForView(
     case "public":
       return "public";
     case "defaults":
-      return;
+      return undefined;
     default:
       return view.reach satisfies never;
   }
@@ -907,7 +907,7 @@ function buildRoleGrantsTableSlice(
   queryResults: Record<RoleGrantsTableSource, GrantsTableQueryResult>
 ): RoleGrantsTableSlice | undefined {
   if (!activeFilter) {
-    return;
+    return undefined;
   }
   const result = queryResults[activeFilter.source];
   return {

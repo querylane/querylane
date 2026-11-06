@@ -87,7 +87,9 @@ function wrapPolicyPredicate(predicate: string) {
 }
 
 function joinPolicyPredicates(predicates: string[], operator: "AND" | "OR") {
-  return predicates.map(wrapPolicyPredicate).join(`\n${operator} `);
+  return predicates
+    .map((value) => wrapPolicyPredicate(value))
+    .join(`\n${operator} `);
 }
 
 interface RlsPreviewModel {
@@ -134,7 +136,7 @@ function combineRlsPredicates(
     permissivePolicies.length === 1
       ? permissivePredicate
       : `(${permissivePredicate})`,
-    ...restrictivePredicates.map(wrapPolicyPredicate),
+    ...restrictivePredicates.map((value) => wrapPolicyPredicate(value)),
   ].join("\nAND ");
 }
 

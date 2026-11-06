@@ -219,10 +219,10 @@ function PlanMap({
   const viewportRef = useRef<HTMLElement>(null);
   const [bounds, setBounds] = useState({ width: 800, height: 400 });
   const [zoom, setZoom] = useState<number | null>(null);
-  useEffect(function measureMap() {
+  useEffect(function measureMap(): (() => void) | undefined {
     const element = viewportRef.current;
     if (!element || typeof ResizeObserver === "undefined") {
-      return;
+      return undefined;
     }
     const observer = new ResizeObserver(([entry]) => {
       if (entry) {

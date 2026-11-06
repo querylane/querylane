@@ -58,7 +58,7 @@ describe("paginateUpTo", () => {
   test("reports a complete result when the endpoint ends below the cap", async () => {
     const result = await paginateUpTo(
       3,
-      async () => ({ items: ["a", "b"], nextPageToken: "" }),
+      () => Promise.resolve({ items: ["a", "b"], nextPageToken: "" }),
       select
     );
 

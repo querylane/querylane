@@ -81,7 +81,7 @@ function countRolesWhere(
   roles: Role[],
   predicate: (role: Role) => boolean
 ): number {
-  return roles.filter(predicate).length;
+  return roles.filter((value) => predicate(value)).length;
 }
 
 // Counts login roles whose password has expired or is expiring soon, in a single
@@ -592,7 +592,9 @@ export function describeRoleRisk(risk: RoleRisk): string[] {
   return clauses;
 }
 
-export function expiryPresentation(state: ExpiryState) {
+export function expiryPresentation(
+  state: ExpiryState
+): "expiry-expired" | "expiry-soon" | undefined {
   if (state === "expired") {
     return "expiry-expired";
   }

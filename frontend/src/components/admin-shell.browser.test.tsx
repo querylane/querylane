@@ -28,7 +28,7 @@ import { ThemeProvider } from "@/theme-provider";
 import { HarnessProviders } from "@/visual-harness/harness-providers";
 
 const INSTANCE_SELECTOR_NAME = /^Instance:/u;
-const navigateMock = rs.fn(async () => undefined);
+const navigateMock = rs.fn(() => Promise.resolve(undefined));
 const navigateToDatabaseMock = rs.fn();
 const adminHeaderMockState = rs.hoisted(
   (): {
@@ -99,7 +99,7 @@ rs.mock("@tanstack/react-router", () => ({
     return select ? select(location) : location;
   },
   useNavigate: () => navigateMock,
-  useRouter: () => ({ invalidate: async () => undefined }),
+  useRouter: () => ({ invalidate: () => Promise.resolve(undefined) }),
   useRouterState: ({
     select,
   }: {
@@ -142,7 +142,7 @@ const selectedDatabase = {
   resourceName: `instances/${CONSOLE_INSTANCE_ID}/databases/${CONSOLE_DATABASE_ID}`,
 } as const;
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({
     databases: [
       selectedDatabase,
@@ -175,7 +175,7 @@ rs.mock("@/lib/db-context", () => ({
       databases: queryState,
       instances: queryState,
     },
-    retryInstanceCatalog: rs.fn(async () => undefined),
+    retryInstanceCatalog: rs.fn(() => Promise.resolve(undefined)),
     scopeLevel: "database",
     selectedDatabase: adminHeaderMockState.isInstanceRolesRoute
       ? null

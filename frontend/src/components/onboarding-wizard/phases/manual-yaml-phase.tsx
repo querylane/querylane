@@ -36,9 +36,9 @@ export function ManualYamlPhase() {
   const [pathCopyState, setPathCopyState] = useState<"copied" | "idle">("idle");
   const configPreview = buildConfigPreview(configFilePath);
   useEffect(
-    function resetCopyFeedback() {
+    function resetCopyFeedback(): (() => void) | undefined {
       if (copyState === "idle") {
-        return;
+        return undefined;
       }
       const timer = globalThis.window.setTimeout(() => {
         setCopyState("idle");
@@ -50,9 +50,9 @@ export function ManualYamlPhase() {
     [copyState]
   );
   useEffect(
-    function resetPathCopyFeedback() {
+    function resetPathCopyFeedback(): (() => void) | undefined {
       if (pathCopyState === "idle") {
-        return;
+        return undefined;
       }
       const timer = globalThis.window.setTimeout(() => {
         setPathCopyState("idle");

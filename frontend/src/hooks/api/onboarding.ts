@@ -261,14 +261,14 @@ function useWatchConfigChanges({
   }, [retryTick]);
 
   // sync form field from server response
-  useEffect(() => {
+  useEffect((): (() => void) | undefined => {
     if (!enabled) {
       settleRetryState({
         retryPromiseRef,
         retryResolveRef,
         setRetryPending,
       });
-      return;
+      return undefined;
     }
 
     const controller = new AbortController();

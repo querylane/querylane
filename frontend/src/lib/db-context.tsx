@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import React, { use } from "react";
+import React from "react";
 import {
   databasesForInstanceQueryInput,
   useGetDatabaseQuery,
@@ -12,13 +12,12 @@ import {
   useGetInstanceQuery,
   useListAllInstancesQuery,
 } from "@/hooks/api/instance";
-import type { AdminPageId } from "@/lib/admin-page";
 import { resolveCurrentAdminPage } from "@/lib/admin-page";
 import { buildDatabaseName, buildInstanceName } from "@/lib/console-resources";
+import { DbContext, type DbContextType } from "@/lib/db-context-state";
 import {
   type RouteSelectionIds,
   resolveScopeLevel,
-  type ScopeLevel,
   useNavigationCallbacks,
 } from "@/lib/db-navigation";
 import {
@@ -35,7 +34,6 @@ import {
   mapInstance,
   type PostgresDatabase,
   type PostgresInstance,
-  type ResourceCollectionQueryState,
 } from "@/lib/db-resource-mappers";
 import {
   pickSelectedResource,
@@ -48,37 +46,6 @@ import { isNonEmptyString } from "@/lib/value-guards";
 
 const EMPTY_DB_ARRAY: PostgresDatabase[] = [];
 const EMPTY_INSTANCE_ARRAY: PostgresInstance[] = [];
-
-interface DbContextType {
-  databases: PostgresDatabase[];
-  instances: PostgresInstance[];
-  navigateToDatabase: (
-    database: PostgresDatabase,
-    options?: { overridePage?: AdminPageId }
-  ) => void;
-  navigateToInstance: (instance: PostgresInstance) => void;
-  navigationIds: RouteSelectionIds;
-  queryStates: {
-    databases: ResourceCollectionQueryState;
-    instances: ResourceCollectionQueryState;
-  };
-  retryInstanceCatalog: () => Promise<void>;
-  scopeLevel: ScopeLevel;
-  selectedDatabase: PostgresDatabase | null;
-  selectedInstance: PostgresInstance | null;
-  viewLevel: ScopeLevel;
-  viewOverview: (level: "instance" | "database") => void;
-}
-
-const DbContext = React.createContext<DbContextType | null>(null);
-
-function useDb() {
-  const context = use(DbContext);
-  if (!context) {
-    throw new Error("useDb must be used within a DbProvider");
-  }
-  return context;
-}
 
 function useSelectedInstanceResource({
   effectiveInstanceId,
@@ -425,4 +392,4 @@ function DbProvider({ children }: { children: React.ReactNode }) {
   return <DbContext.Provider value={value}>{children}</DbContext.Provider>;
 }
 
-export { DbProvider, useDb };
+export { DbProvider };

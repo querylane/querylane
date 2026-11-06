@@ -1,30 +1,20 @@
 "use client";
 
-import React, {
+import {
   type ReactNode,
-  use,
   useEffect,
   useState,
   useSyncExternalStore,
 } from "react";
+import { ThemeProviderContext, type ThemeProviderState } from "@/theme-context";
 import type { ResolvedTheme, Theme } from "@/theme-types";
 import { isTheme } from "@/theme-types";
-
-interface ThemeProviderState {
-  resolvedTheme: ResolvedTheme;
-  setTheme: (theme: Theme) => void;
-  theme: Theme;
-}
 
 interface ThemeProviderProps {
   children: ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
 }
-
-const ThemeProviderContext = React.createContext<
-  ThemeProviderState | undefined
->(undefined);
 
 function subscribeToSystemTheme(onStoreChange: () => void) {
   if (
@@ -117,13 +107,5 @@ function ThemeProvider({
   );
 }
 
-function useTheme() {
-  const context = use(ThemeProviderContext);
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
-}
-
 export type { ResolvedTheme, Theme } from "@/theme-types";
-export { ThemeProvider, useTheme };
+export { ThemeProvider };

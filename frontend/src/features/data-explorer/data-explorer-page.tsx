@@ -1,7 +1,7 @@
 "use client";
 
 import { ResourcePageState } from "@/components/console-pages/console-layout";
-import { useSidebar } from "@/components/querylane-ui/sidebar";
+import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import { ExplorerDetailPane } from "@/features/data-explorer/data-explorer-layout";
 import { useDataExplorerPageController } from "@/features/data-explorer/data-explorer-page-controller";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";

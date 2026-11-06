@@ -5,6 +5,7 @@ import shadcn from "ultracite/oxlint/shadcn";
 // Keep an explicit import: Oxlint loads this package from jsPlugins, which
 // React Doctor cannot trace through a string specifier.
 import "@shadcn/lint";
+import "./scripts/querylane-lint.config.ts";
 
 const MAX_BLOCK_DEPTH = 4;
 
@@ -26,14 +27,117 @@ export default defineConfig({
     respectEslintDisableDirectives: false,
     reportUnusedDisableDirectives: "error",
   },
-  plugins: [...(core.plugins ?? []), ...(react.plugins ?? [])],
+  plugins: [...(core.plugins ?? []), ...(react.plugins ?? []), "jest"],
   // Expose the plugin dependency without requiring preset evaluation.
-  jsPlugins: [{ name: "shadcn", specifier: "@shadcn/lint" }],
+  jsPlugins: [
+    { name: "shadcn", specifier: "@shadcn/lint" },
+    { name: "querylane", specifier: "./scripts/querylane-lint.config.ts" },
+  ],
   rules: {
     // Copy rules, not preset overrides: tests and declarations get the same checks.
     ...core.rules,
     ...react.rules,
     ...shadcn.rules,
+    "querylane/no-manual-memoization": "error",
+    "no-restricted-imports": "off",
+    "no-restricted-globals": "off",
+    "jest/consistent-test-it": "off",
+    "jest/expect-expect": "off",
+    "jest/max-expects": "off",
+    "jest/max-nested-describe": "off",
+    "jest/no-alias-methods": "off",
+    "jest/no-commented-out-tests": "error",
+    "jest/no-conditional-expect": "off",
+    "jest/no-conditional-in-test": "off",
+    "jest/no-confusing-set-timeout": "off",
+    "jest/no-deprecated-functions": "off",
+    "jest/no-disabled-tests": "off",
+    "jest/no-done-callback": "off",
+    "jest/no-duplicate-hooks": "off",
+    "jest/no-export": "off",
+    "jest/no-focused-tests": "off",
+    "jest/no-hooks": "off",
+    "jest/no-identical-title": "off",
+    "jest/no-interpolation-in-snapshots": "off",
+    "jest/no-jasmine-globals": "off",
+    "jest/no-large-snapshots": "off",
+    "jest/no-mocks-import": "off",
+    "jest/no-restricted-jest-methods": "off",
+    "jest/no-restricted-matchers": "off",
+    "jest/no-standalone-expect": "off",
+    "jest/no-test-prefixes": "off",
+    "jest/no-test-return-statement": "off",
+    "jest/no-unneeded-async-expect-function": "off",
+    "jest/no-untyped-mock-factory": "off",
+    "jest/padding-around-after-all-blocks": "off",
+    "jest/padding-around-test-blocks": "off",
+    "jest/prefer-called-with": "off",
+    "jest/prefer-comparison-matcher": "off",
+    "jest/prefer-each": "off",
+    "jest/prefer-ending-with-an-expect": "off",
+    "jest/prefer-equality-matcher": "off",
+    "jest/prefer-expect-assertions": "off",
+    "jest/prefer-expect-resolves": "off",
+    "jest/prefer-hooks-in-order": "off",
+    "jest/prefer-hooks-on-top": "off",
+    "jest/prefer-importing-jest-globals": "off",
+    "jest/prefer-jest-mocked": "off",
+    "jest/prefer-lowercase-title": "off",
+    "jest/prefer-mock-promise-shorthand": "off",
+    "jest/prefer-mock-return-shorthand": "off",
+    "jest/prefer-snapshot-hint": "off",
+    "jest/prefer-spy-on": "off",
+    "jest/prefer-strict-equal": "off",
+    "jest/prefer-to-be": "off",
+    "jest/prefer-to-contain": "off",
+    "jest/prefer-to-have-been-called": "off",
+    "jest/prefer-to-have-been-called-times": "off",
+    "jest/prefer-to-have-length": "off",
+    "jest/prefer-todo": "off",
+    "jest/require-hook": "off",
+    "jest/require-to-throw-message": "off",
+    "jest/require-top-level-describe": "off",
+    "jest/valid-describe-callback": "off",
+    "jest/valid-expect": "off",
+    "jest/valid-expect-in-promise": "off",
+    "jest/valid-title": "off",
+    "unicorn/no-array-callback-reference": "error",
+
+    "typescript/require-await": "error",
+    "typescript/no-floating-promises": [
+      "error",
+      { ignoreVoid: false, checkThenables: true },
+    ],
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        allowAny: false,
+        allowBoolean: false,
+        allowNullish: false,
+        allowRegExp: false,
+        allowNumber: true,
+        allowArray: false,
+        allowNever: false,
+      },
+    ],
+    "typescript/restrict-plus-operands": [
+      "error",
+      {
+        allowAny: false,
+        allowBoolean: false,
+        allowNullish: false,
+        allowNumberAndString: false,
+        allowRegExp: false,
+      },
+    ],
+    "react/jsx-key": [
+      "error",
+      {
+        checkFragmentShorthand: true,
+        warnOnDuplicates: true,
+        checkKeyMustBeforeSpread: true,
+      },
+    ],
     "max-depth": ["error", MAX_BLOCK_DEPTH],
     "react/forward-ref-uses-ref": "error",
     "react/no-unknown-property": "error",
@@ -48,9 +152,9 @@ export default defineConfig({
       "error",
       { allowInterfaces: "with-single-extends" },
     ],
-    // Biome and react-hooks/exhaustive-deps agree on stable ref identities;
-    // the compiler duplicate incorrectly asks for useRef objects as dependencies.
-    "react/exhaustive-effect-dependencies": "off",
+    // Compiler-aware analysis complements conventional exhaustive dependency checks.
+    // The pinned implementation permits omitted stable useRef objects.
+    "react/exhaustive-effect-dependencies": "error",
     // Oxc 1.89 rejects valid Promise.withResolvers<void>() / useMutation<void>()
     // even with allowInGenericTypeArguments. Biome noConfusingVoidType owns this.
     "typescript/no-invalid-void-type": "off",
@@ -58,6 +162,9 @@ export default defineConfig({
     "typescript/only-throw-error": [
       "error",
       {
+        allowThrowingAny: false,
+        allowThrowingUnknown: false,
+        allowRethrowing: true,
         allow: [
           {
             from: "package",
@@ -127,7 +234,10 @@ export default defineConfig({
       },
     ],
     // TypeScript requires brackets for index signatures and explicit undefined returns.
-    "typescript/dot-notation": "off",
+    "typescript/dot-notation": [
+      "error",
+      { allowIndexSignaturePropertyAccess: true },
+    ],
     "unicorn/no-useless-undefined": "off",
     // Property sorting can change insertion-order semantics; Biome sorts declarations.
     "sort-keys": "off",
@@ -140,7 +250,7 @@ export default defineConfig({
     // Biome owns the same syntax/style checks, avoiding incompatible fixes.
     "unicorn/switch-case-braces": ["error", "avoid"],
     "typescript/array-type": ["error", { default: "array" }],
-    "typescript/consistent-return": "off",
+    "typescript/consistent-return": "error",
     // Void intentionally discards synchronous results; no-misused-promises guards async loss.
     "typescript/strict-void-return": "off",
     // Promise bridges/chains and reducers are valid APIs, not correctness defects.

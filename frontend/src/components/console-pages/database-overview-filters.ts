@@ -121,36 +121,51 @@ function uniqueSortedOptions(
 }
 
 function presentCatalogObjectKindOptions(objects: CatalogObjectKindRow[]) {
-  const presentKinds = new Set(objects.map(catalogObjectKindValue));
+  const presentKinds = new Set(
+    objects.map((value) => catalogObjectKindValue(value))
+  );
   return CATALOG_OBJECT_KIND_OPTIONS.filter((option) =>
     presentKinds.has(option.value)
   );
 }
 
 function presentCatalogObjectSchemaOptions(objects: CatalogObjectFacetRow[]) {
-  return uniqueSortedOptions(objects.map(schemaFilterValue), schemaFilterLabel);
+  return uniqueSortedOptions(
+    objects.map((value) => schemaFilterValue(value)),
+    schemaFilterLabel
+  );
 }
 
 function presentCatalogObjectSystemOptions(objects: CatalogObjectFacetRow[]) {
-  const presentKinds = new Set(objects.map(catalogObjectSystemValue));
+  const presentKinds = new Set(
+    objects.map((value) => catalogObjectSystemValue(value))
+  );
   return CATALOG_OBJECT_SYSTEM_OPTIONS.filter((option) =>
     presentKinds.has(option.value)
   );
 }
 
 function presentCatalogObjectOwnerOptions(objects: CatalogObjectFacetRow[]) {
-  return uniqueSortedOptions(objects.map(ownerFilterValue), ownerFilterLabel);
+  return uniqueSortedOptions(
+    objects.map((value) => ownerFilterValue(value)),
+    ownerFilterLabel
+  );
 }
 
 function presentCatalogSchemaKindOptions(schemas: CatalogSchemaFacetRow[]) {
-  const presentKinds = new Set(schemas.map(catalogSchemaKindValue));
+  const presentKinds = new Set(
+    schemas.map((value) => catalogSchemaKindValue(value))
+  );
   return CATALOG_SCHEMA_KIND_OPTIONS.filter((option) =>
     presentKinds.has(option.value)
   );
 }
 
 function presentCatalogSchemaOwnerOptions(schemas: CatalogSchemaFacetRow[]) {
-  return uniqueSortedOptions(schemas.map(ownerFilterValue), ownerFilterLabel);
+  return uniqueSortedOptions(
+    schemas.map((value) => ownerFilterValue(value)),
+    ownerFilterLabel
+  );
 }
 
 function matchesSelectedFacet(

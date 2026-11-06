@@ -198,13 +198,13 @@ function useSetupExecution({
 
   // execute each explicitly requested setup run
   useEffect(
-    function executeSetupRun() {
+    function executeSetupRun(): (() => void) | undefined {
       const currentOptions = setupRequestOptionsRef.current;
       if (
         setupRunToken === 0 ||
         !shouldAutoRunSetup(currentOptions.phase, currentOptions.selectedMethod)
       ) {
-        return;
+        return undefined;
       }
 
       const controller = new AbortController();

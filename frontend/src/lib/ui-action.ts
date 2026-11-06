@@ -24,6 +24,7 @@ function handleAsyncAction<Args extends unknown[]>(
     } catch (error) {
       reportActionError(error);
     }
+
     return undefined;
   };
 }

@@ -1,10 +1,21 @@
-import { getByRole } from "@testing-library/dom";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
+import { getByRole } from "@testing-library/dom";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+
+const RGBA_RED_GREEN_BLUE_PATTERN =
+  /^rgba?\(\s*(?<red>[\d.]+)\s*,\s*(?<green>[\d.]+)\s*,\s*(?<blue>[\d.]+)(?:\s*,\s*[\d.]+)?\s*\)$/u;
+const OKLCH_LIGHTNESS_CHROMA_HUE_PATTERN =
+  /^oklch\(\s*(?<lightness>[\d.]+%?)\s+(?<chroma>[\d.]+)\s+(?<hue>[\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)$/u;
+const TYPE_USER_PATTERN = /Type.*User/u;
+const SUPERUSER_PATTERN = /Superuser\s+1/u;
+const TYPE_SUPERUSER_PATTERN = /Type.*Superuser/u;
+const STATUS_ACTIVE_PATTERN = /Status.*Active/u;
+const STATUS_PAUSED_PATTERN = /Status.*Paused/u;
+const INTERNAL_STALE_ID_PATTERN = /internal-stale-id/u;
 
 interface LinearRgb {
   blue: number;
@@ -21,7 +32,7 @@ function clampChannel(channel: number) {
 
 function convertGammaEncodedChannelToLinear(channel: number) {
   const normalized = channel / 255;
-  if (normalized <= 0.04045) {
+  if (normalized <= 0.040_45) {
     return normalized / 12.92;
   }
 
@@ -29,14 +40,11 @@ function convertGammaEncodedChannelToLinear(channel: number) {
 }
 
 function parseRgbColor(color: string): LinearRgb | null {
-  const match = color.match(
-    /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*[\d.]+)?\s*\)$/
-  );
-  if (!match) {
+  const match = RGBA_RED_GREEN_BLUE_PATTERN.exec(color);
+  const { red, green, blue } = match?.groups ?? {};
+  if (red === undefined || green === undefined || blue === undefined) {
     return null;
   }
-
-  const [, red, green, blue] = match;
   return {
     blue: convertGammaEncodedChannelToLinear(Number(blue)),
     green: convertGammaEncodedChannelToLinear(Number(green)),
@@ -45,14 +53,11 @@ function parseRgbColor(color: string): LinearRgb | null {
 }
 
 function parseOklchColor(color: string): LinearRgb | null {
-  const match = color.match(
-    /^oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)$/
-  );
-  if (!match) {
+  const match = OKLCH_LIGHTNESS_CHROMA_HUE_PATTERN.exec(color);
+  const { lightness, chroma, hue } = match?.groups ?? {};
+  if (lightness === undefined || chroma === undefined || hue === undefined) {
     return null;
   }
-
-  const [, lightness, chroma, hue] = match;
   const l = lightness.endsWith("%")
     ? Number(lightness.slice(0, -1)) / 100
     : Number(lightness);
@@ -61,9 +66,9 @@ function parseOklchColor(color: string): LinearRgb | null {
   const a = c * Math.cos(hueRadians);
   const b = c * Math.sin(hueRadians);
 
-  const long = l + 0.3963377774 * a + 0.2158037573 * b;
-  const medium = l - 0.1055613458 * a - 0.0638541728 * b;
-  const short = l - 0.0894841775 * a - 1.291485548 * b;
+  const long = l + 0.396_337_777_4 * a + 0.215_803_757_3 * b;
+  const medium = l - 0.105_561_345_8 * a - 0.063_854_172_8 * b;
+  const short = l - 0.089_484_177_5 * a - 1.291_485_548 * b;
 
   const longCubed = long ** 3;
   const mediumCubed = medium ** 3;
@@ -71,19 +76,19 @@ function parseOklchColor(color: string): LinearRgb | null {
 
   return {
     blue: clampChannel(
-      -0.0041960863 * longCubed -
-        0.7034186147 * mediumCubed +
-        1.707614701 * shortCubed
+      -0.004_196_086_3 * longCubed -
+        0.703_418_614_7 * mediumCubed +
+        1.707_614_701 * shortCubed
     ),
     green: clampChannel(
-      -1.2684380046 * longCubed +
-        2.6097574011 * mediumCubed -
-        0.3413193965 * shortCubed
+      -1.268_438_004_6 * longCubed +
+        2.609_757_401_1 * mediumCubed -
+        0.341_319_396_5 * shortCubed
     ),
     red: clampChannel(
-      4.0767416621 * longCubed -
-        3.3077115913 * mediumCubed +
-        0.2309699292 * shortCubed
+      4.076_741_662_1 * longCubed -
+        3.307_711_591_3 * mediumCubed +
+        0.230_969_929_2 * shortCubed
     ),
   };
 }
@@ -134,7 +139,7 @@ function SingleSelectFilterFixture() {
           { count: 1, label: "Superuser", value: "super" },
         ]}
         selectedValues={selectedValues}
-        singleSelect
+        singleSelect={true}
         title="Type"
       />
     </ScreenshotFrame>
@@ -280,30 +285,32 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
 test("single-select filter replaces the previous option and shows counts", async () => {
   await render(<SingleSelectFilterFixture />);
 
-  await page.getByRole("button", { name: /Type.*User/ }).click();
+  await page.getByRole("button", { name: TYPE_USER_PATTERN }).click();
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: /Superuser\s+1/ }))
+    .element(page.getByRole("menuitemcheckbox", { name: SUPERUSER_PATTERN }))
     .toBeVisible();
 
-  await page.getByRole("menuitemcheckbox", { name: /Superuser\s+1/ }).click();
+  await page.getByRole("menuitemcheckbox", { name: SUPERUSER_PATTERN }).click();
 
   await expect
-    .element(page.getByRole("button", { name: /Type.*Superuser/ }))
+    .element(page.getByRole("button", { name: TYPE_SUPERUSER_PATTERN }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: /Type.*User/ }))
+    .element(page.getByRole("button", { name: TYPE_USER_PATTERN }))
     .toBeDetached();
 });
 
 test("filter option counts stay beside their labels", async () => {
   await render(<SingleSelectFilterFixture />);
 
-  await page.getByRole("button", { name: /Type.*User/ }).click();
-  const option = page.getByRole("menuitemcheckbox", { name: /Superuser\s+1/ });
+  await page.getByRole("button", { name: TYPE_USER_PATTERN }).click();
+  const option = page.getByRole("menuitemcheckbox", {
+    name: SUPERUSER_PATTERN,
+  });
   await expect.element(option).toBeVisible();
 
   const optionElement = getByRole(document.body, "menuitemcheckbox", {
-    name: /Superuser\s+1/,
+    name: SUPERUSER_PATTERN,
   });
   const [label, count] = optionElement.querySelectorAll(":scope > span");
   if (!(label && count)) {
@@ -334,7 +341,7 @@ test("fixed enum filters omit search without changing option behavior", async ()
 
   await page.getByRole("menuitemcheckbox", { name: "Active" }).click();
   await expect
-    .element(page.getByRole("button", { name: /Status.*Active/ }))
+    .element(page.getByRole("button", { name: STATUS_ACTIVE_PATTERN }))
     .toBeVisible();
 });
 
@@ -358,7 +365,7 @@ test("fixed enum filters support keyboard selection and restore trigger focus", 
   await expect.element(paused).toHaveAttribute("aria-checked", "true");
 
   await expect
-    .element(page.getByRole("button", { name: /Status.*Paused/ }))
+    .element(page.getByRole("button", { name: STATUS_PAUSED_PATTERN }))
     .toBeVisible();
   await paused.press("Escape");
   await expect.poll(() => document.activeElement).toBe(triggerElement);
@@ -374,7 +381,7 @@ test("selected badges follow option order and hide stale values", async () => {
     .element(page.getByRole("button", { name: "Status Unavailable" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: /internal-stale-id/ }))
+    .element(page.getByRole("button", { name: INTERNAL_STALE_ID_PATTERN }))
     .toBeDetached();
 });
 

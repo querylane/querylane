@@ -261,3 +261,65 @@ describe("collectBundleBudgetStats", () => {
     });
   });
 });
+
+test.each(["react-scan", "bippy"])(
+  "rejects production profiler %s in a hashed bundle map",
+  (name) => {
+    const distDir = createDistDir();
+    writeAsset(distDir, "index.html", "<main></main>");
+    writeAsset(distDir, "static/js/async/hashed.js", "instrumentation();");
+    writeAsset(
+      distDir,
+      "static/js/async/hashed.js.map",
+      JSON.stringify({ sources: [`../../node_modules/${name}/dist/index.js`] })
+    );
+    const stats = collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    });
+    expect(stats.productionContractViolations).toEqual([
+      `Development profiler in static/js/async/hashed.js: ../../node_modules/${name}/dist/index.js`,
+    ]);
+  }
+);
+
+test("rejects an emitted profiler and external profiler script", () => {
+  const distDir = createDistDir();
+  writeAsset(
+    distDir,
+    "index.html",
+    '<script src="https://unpkg.com/react-scan@0.5.7/dist/auto.global.js"></script>'
+  );
+  writeAsset(distDir, "react-scan.js", "instrumentation();");
+  const stats = collectBundleBudgetStats({
+    distDir,
+    indexHtmlPath: join(distDir, "index.html"),
+  });
+  expect(stats.productionContractViolations).toContain(
+    "Development profiler asset: react-scan.js"
+  );
+  expect(stats.productionContractViolations).toContain(
+    "Development profiler script in index.html: https://unpkg.com/react-scan@0.5.7/dist/auto.global.js"
+  );
+});
+
+test("allows production assets without profiling sources", () => {
+  const distDir = createDistDir();
+  writeAsset(
+    distDir,
+    "index.html",
+    '<script src="/static/js/index.js"></script>'
+  );
+  writeAsset(distDir, "static/js/index.js", "application();");
+  writeAsset(
+    distDir,
+    "static/js/index.js.map",
+    JSON.stringify({ sources: ["../../src/main.tsx"] })
+  );
+  expect(
+    collectBundleBudgetStats({
+      distDir,
+      indexHtmlPath: join(distDir, "index.html"),
+    }).productionContractViolations
+  ).toEqual([]);
+});

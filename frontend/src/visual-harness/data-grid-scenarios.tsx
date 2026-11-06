@@ -33,6 +33,8 @@ import "@/components/data-grid/table-data-grid/data-grid-theme.css";
 // and the Playwright visual harness, so both runners exercise identical markup.
 
 function ignoreAction() {
+  // Visual fixtures deliberately have no action side effects.
+
   return undefined;
 }
 

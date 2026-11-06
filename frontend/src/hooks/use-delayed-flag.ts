@@ -15,10 +15,10 @@ function useDelayedFlag(
 
   // sync visible state to an intentionally delayed flag
   useEffect(
-    function syncDelayedFlagVisibility() {
+    function syncDelayedFlagVisibility(): (() => void) | undefined {
       if (active) {
         if (visible) {
-          return;
+          return undefined;
         }
 
         const showTimer = globalThis.setTimeout(() => {
@@ -32,7 +32,7 @@ function useDelayedFlag(
       }
 
       if (!visible) {
-        return;
+        return undefined;
       }
 
       const elapsed = Date.now() - (shownAtRef.current ?? Date.now());
@@ -41,7 +41,7 @@ function useDelayedFlag(
       if (remaining <= 0) {
         shownAtRef.current = undefined;
         setVisible(false);
-        return;
+        return undefined;
       }
 
       const hideTimer = globalThis.setTimeout(() => {

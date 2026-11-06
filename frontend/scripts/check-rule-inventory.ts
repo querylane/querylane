@@ -1,15 +1,24 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import shadcn from "@shadcn/lint";
 import { z } from "zod";
 import oxlintConfig from "../oxlint.config";
 import { isRecord } from "../src/lib/value-guards";
 import { assertQualityBoundaries, ruleSeverity } from "./quality-boundaries";
+import { assertReviewedQualityOptions } from "./quality-options";
+import querylanePlugin from "./querylane-lint.config";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ESLINT_SCOPE_PATTERN = /^eslint\//u;
-const RULE_TOOLS = ["biome", "oxlint", "reactDoctor", "shadcn"] as const;
+const RULE_TOOLS = [
+  "biome",
+  "oxlint",
+  "reactDoctor",
+  "shadcn",
+  "querylane",
+] as const;
 const ruleEntry = z
   .object({
     rule: z.string().min(1),
@@ -23,6 +32,7 @@ const ruleEntry = z
           "oxlint",
           "reactDoctor",
           "shadcn",
+          "querylane",
           "typescript",
         ]),
         rule: z.string().min(1),
@@ -48,6 +58,7 @@ const inventorySchema = z.object({
   oxlint: z.array(ruleEntry),
   reactDoctor: z.array(ruleEntry),
   shadcn: z.array(ruleEntry),
+  querylane: z.array(ruleEntry),
 });
 
 function assertReviewedRuleIds(
@@ -79,7 +90,10 @@ function toolJson(tool: string, args: readonly string[]): unknown {
     encoding: "utf8",
   });
   if (result.status !== 0) {
-    throw new Error(`${tool} catalog failed: ${result.stderr}`);
+    throw new Error(
+      `${tool} catalog failed (${result.status ?? result.signal ?? "spawn error"}): ${result.stdout}${result.stderr}`,
+      { cause: result.error }
+    );
   }
   const value: unknown = JSON.parse(result.stdout);
   return value;
@@ -274,10 +288,38 @@ async function assertDoctorRuleLevels(
 }
 
 function assertShadcnRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
+  const plugins = z
+    .array(
+      z.union([
+        z.string(),
+        z.object({ name: z.string(), specifier: z.string() }),
+      ])
+    )
+    .parse(oxlintConfig.jsPlugins ?? []);
+  const reviewed = resolvedPluginPath("@shadcn/lint");
+  const bindings = plugins.flatMap((plugin) => {
+    const path = resolvedPluginPath(
+      typeof plugin === "string" ? plugin : plugin.specifier
+    );
+    const matches =
+      typeof plugin === "string" ? path === reviewed : plugin.name === "shadcn";
+    return matches ? [path] : [];
+  });
+  if (bindings.length !== 1 || bindings[0] !== reviewed) {
+    throw new Error("Reviewed shadcn plugin is not enforced");
+  }
   const rules = new Map(Object.entries(oxlintConfig.rules));
   for (const entry of entries) {
     assertReviewedLevel(entry, rules.get(entry.rule));
   }
+}
+
+function resolvedPluginPath(specifier: string): string {
+  return realpathSync(
+    fileURLToPath(
+      import.meta.resolve(specifier, join(ROOT, "oxlint.config.ts"))
+    )
+  );
 }
 
 async function assertDelegatedOwners(
@@ -351,6 +393,28 @@ async function checkRuleInventory() {
     inventory.shadcn.map((entry) => entry.rule),
     Object.keys(shadcn.rules).map((rule) => `shadcn/${rule}`)
   );
+  assertReviewedRuleIds(
+    inventory.querylane.map((entry) => entry.rule),
+    Object.keys(querylanePlugin.rules).map((rule) => `querylane/${rule}`)
+  );
+  const querylaneBindings = (oxlintConfig.jsPlugins ?? []).filter(
+    (plugin) => typeof plugin !== "string" && plugin.name === "querylane"
+  );
+  if (
+    querylaneBindings.length !== 1 ||
+    querylaneBindings[0] === undefined ||
+    typeof querylaneBindings[0] === "string" ||
+    resolvedPluginPath(querylaneBindings[0].specifier) !==
+      resolvedPluginPath("./scripts/querylane-lint.config.ts")
+  ) {
+    throw new Error("Reviewed Querylane plugin is not enforced");
+  }
+  for (const entry of inventory.querylane) {
+    assertReviewedLevel(
+      entry,
+      new Map(Object.entries(oxlintConfig.rules)).get(entry.rule)
+    );
+  }
   await assertBiomeRuleLevels(inventory.biome);
   assertNativeRuleLevels(inventory.oxlint);
   await assertDoctorRuleLevels(inventory.reactDoctor, doctor);
@@ -371,7 +435,16 @@ async function checkRuleInventory() {
         `Review ${name} rules before updating the recorded version.`
       );
     }
+    const installed = z
+      .object({ version: z.string() })
+      .parse(readJson(join(ROOT, "node_modules", name, "package.json")));
+    if (installed.version !== version) {
+      throw new Error(
+        `Installed ${name} version does not match the reviewed version: ${installed.version} != ${version}.`
+      );
+    }
   }
+  await assertReviewedQualityOptions(ROOT);
   console.log("Every installed rule has a recorded policy decision.");
 }
 

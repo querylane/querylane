@@ -71,7 +71,7 @@ function reserveChunkLoadReloadAttempt({
 
 function getChunkLoadSessionStorage(): Storage | undefined {
   if (typeof globalThis === "undefined") {
-    return;
+    return undefined;
   }
 
   let storage: Storage | undefined;

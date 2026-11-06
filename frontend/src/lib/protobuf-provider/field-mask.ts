@@ -97,10 +97,10 @@ function hasDirtyValue(value: unknown): boolean {
     return true;
   }
   if (Array.isArray(value)) {
-    return value.some(hasDirtyValue);
+    return value.some((item) => hasDirtyValue(item));
   }
   if (isRecord(value)) {
-    return Object.values(value).some(hasDirtyValue);
+    return Object.values(value).some((item) => hasDirtyValue(item));
   }
   return false;
 }

@@ -75,7 +75,7 @@ rs.mock("@tanstack/react-router", () => {
   };
 });
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({
     databases: [
       { id: "appdb", name: "appdb" },

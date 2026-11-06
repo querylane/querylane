@@ -44,14 +44,14 @@ import {
   rolesForInstanceQueryInput,
   useListAllRolesQuery,
 } from "@/hooks/api/role";
-import { useDb } from "@/lib/db-context";
+import { useDb } from "@/lib/db-context-state";
 import { handleNavigationError } from "@/lib/navigation-errors";
 import { resolveBreadcrumbTail } from "@/lib/page-breadcrumb";
 import { roleIdOf } from "@/lib/role-display";
 import { useCurrentRouteIds } from "@/lib/route-ids";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
-import { useTheme } from "@/theme-provider";
+import { useTheme } from "@/theme-context";
 
 type ConnectionStatus = "connected" | "disconnected" | "error";
 

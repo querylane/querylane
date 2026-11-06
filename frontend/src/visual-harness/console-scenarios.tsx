@@ -16,6 +16,8 @@ import { SQLSTATE_SCENARIOS } from "@/visual-harness/sqlstate-scenarios";
 // Playwright visual harness, so both runners exercise identical markup.
 
 function ignoreAction() {
+  // Visual fixtures deliberately have no action side effects.
+
   return undefined;
 }
 

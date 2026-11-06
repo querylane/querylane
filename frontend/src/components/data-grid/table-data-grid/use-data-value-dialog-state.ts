@@ -21,9 +21,9 @@ function useDataValueDialogState() {
   const open = setOpenDialogId ? openDialogId === dialogId : localOpen;
 
   useEffect(
-    function clearOwnedDataValueDialogOnUnmount() {
+    function clearOwnedDataValueDialogOnUnmount(): (() => void) | undefined {
       if (!setOpenDialogId) {
-        return;
+        return undefined;
       }
 
       return function clearOwnedDataValueDialog() {

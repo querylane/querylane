@@ -177,7 +177,7 @@ function localErrorMessage(
     error === "" ||
     error === 0
   ) {
-    return;
+    return undefined;
   }
   if (typeof error === "object" && "type" in error && error.type === "server") {
     return findFirstErrorMessage(error) ?? fallback;

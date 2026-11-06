@@ -116,7 +116,7 @@ const state = rs.hoisted(
   } => ({
     activityQueryOptions: undefined as Record<string, unknown> | undefined,
     databases: [] as PostgresDatabase[],
-    deleteInstance: rs.fn(async () => undefined),
+    deleteInstance: rs.fn(() => Promise.resolve(undefined)),
     extensionData: undefined as ListExtensionsResponse | undefined,
     extensionInput: undefined as
       | { filter?: string; orderBy?: string; pageSize?: number; parent: string }
@@ -130,23 +130,27 @@ const state = rs.hoisted(
     instanceData: undefined as GetInstanceResponse | undefined,
     instanceQueryError: null as unknown,
     instances: [] as PostgresInstance[],
-    navigate: rs.fn(async (_options: Record<string, unknown>) => undefined),
+    navigate: rs.fn((_options: Record<string, unknown>) =>
+      Promise.resolve(undefined)
+    ),
     navigateToDatabase: rs.fn(),
     overviewData: undefined as GetInstanceOverviewResponse | undefined,
     queryClient: {
       getQueryState: rs.fn(() => undefined),
-      query: rs.fn(async () => undefined),
+      query: rs.fn(() => Promise.resolve(undefined)),
       tag: "query-client",
     },
-    refetchExtensions: rs.fn(async () => ({})),
-    refetchInstance: rs.fn(async () => ({})),
-    retryInstanceCatalog: rs.fn(async () => undefined),
+    refetchExtensions: rs.fn(() => Promise.resolve({})),
+    refetchInstance: rs.fn(() => Promise.resolve({})),
+    retryInstanceCatalog: rs.fn(() => Promise.resolve(undefined)),
     selectedInstanceStatus: "disconnected" as
       | "connected"
       | "disconnected"
       | "error",
     transport: { tag: "transport" },
-    updateInstance: rs.fn(async (_input: InstanceUpdateInput) => undefined),
+    updateInstance: rs.fn((_input: InstanceUpdateInput) =>
+      Promise.resolve(undefined)
+    ),
   })
 );
 
@@ -225,14 +229,14 @@ rs.mock("@/hooks/api/metrics", () => ({
     error: null,
     isFetching: false,
     isPending: true,
-    refetch: rs.fn(async () => ({})),
+    refetch: rs.fn(() => Promise.resolve({})),
   }),
   useInstancePreviousMetricsQuery: () => ({
     data: undefined,
     error: null,
     isFetching: false,
     isPending: true,
-    refetch: rs.fn(async () => ({})),
+    refetch: rs.fn(() => Promise.resolve({})),
   }),
 }));
 
@@ -252,7 +256,7 @@ rs.mock("@/hooks/api/instance", () => ({
       error: null,
       isFetching: false,
       isPending: state.healthData === undefined,
-      refetch: rs.fn(async () => ({})),
+      refetch: rs.fn(() => Promise.resolve({})),
     };
   },
   useCheckInstanceHealthQuery: (
@@ -265,7 +269,7 @@ rs.mock("@/hooks/api/instance", () => ({
       error: null,
       isFetching: false,
       isPending: state.healthData === undefined,
-      refetch: rs.fn(async () => ({})),
+      refetch: rs.fn(() => Promise.resolve({})),
     };
   },
   useDeleteInstanceMutation: () => ({
@@ -277,7 +281,7 @@ rs.mock("@/hooks/api/instance", () => ({
     error: null,
     isFetching: false,
     isPending: false,
-    refetch: rs.fn(async () => ({})),
+    refetch: rs.fn(() => Promise.resolve({})),
   }),
   useGetInstanceQuery: () => ({
     data: state.instanceData,
@@ -293,7 +297,7 @@ rs.mock("@/hooks/api/instance", () => ({
   }),
 }));
 
-rs.mock("@/lib/db-context", () => ({
+rs.mock("@/lib/db-context-state", () => ({
   useDb: () => ({
     databases: state.databases,
     instances: state.instances,

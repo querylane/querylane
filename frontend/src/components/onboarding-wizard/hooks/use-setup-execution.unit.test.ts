@@ -52,6 +52,7 @@ function arrangeReactHooks() {
     if (typeof cleanup === "function") {
       cleanupCallbacks.push(cleanup);
     }
+
     return undefined;
   });
 }
@@ -63,7 +64,7 @@ function createSetupOptions(
     getFailedEvent: rs.fn(() => null),
     onSuccess: rs.fn(),
     phase: "progress_running" as const,
-    runSetupMutation: rs.fn(async () => undefined),
+    runSetupMutation: rs.fn(() => Promise.resolve(undefined)),
     selectedMethod: "embedded" as const,
     setConfigureValidationError: rs.fn(),
     setStreamFailure: rs.fn(),
