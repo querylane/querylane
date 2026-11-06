@@ -175,7 +175,12 @@ function PartitionRowsTable({
                   PARTITION_COLUMNS.find((column) => column.id === id)?.label
                 }
                 aria-sort={listSortDirection(id, sortState.sorting)}
+                className={cn(
+                  id === "share" && "w-48",
+                  (id === "rows" || id === "size") && "text-right"
+                )}
                 key={id}
+                presentation={id === "partition" ? "inset" : undefined}
               >
                 <ListSortHeader
                   id={id}

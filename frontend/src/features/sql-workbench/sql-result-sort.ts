@@ -1,3 +1,5 @@
+import { fromJson } from "@bufbuild/protobuf";
+import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { comparePrimitive, type ListSort } from "@/lib/list-layout";
 import type {
   TableCell,
@@ -9,6 +11,9 @@ const DECIMAL =
   /^(?<sign>[+-]?)(?<integer>\d*)(?:\.(?<fraction>\d*))?(?:[eE](?<exponent>[+-]?\d+))?$/u;
 const LEADING_ZEROES = /^0+/u;
 const TRAILING_ZEROES = /0+$/u;
+const DATE = /^\d{4}-\d{2}-\d{2}$/u;
+const TIME = /^\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})?$/u;
+const TIME_ZONE = /(?:Z|[+-]\d{2}:\d{2})$/u;
 const SPECIAL_NUMERIC_RANK: Record<string, number> = {
   "-Infinity": -1,
   Infinity: 1,
@@ -75,6 +80,8 @@ function cellValue(cell: TableCell | undefined) {
     ? undefined
     : value;
 }
+type CellValue = NonNullable<ReturnType<typeof cellValue>>;
+
 function compareBytes(a: Uint8Array, b: Uint8Array) {
   for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
     const compared = (a[i] ?? 0) - (b[i] ?? 0);
@@ -84,23 +91,65 @@ function compareBytes(a: Uint8Array, b: Uint8Array) {
   }
   return a.length - b.length;
 }
-function compareCellValues(
-  a: NonNullable<ReturnType<typeof cellValue>>,
-  b: NonNullable<ReturnType<typeof cellValue>>
-) {
+function temporalParts(value: string) {
+  let timestamp = value;
+  if (DATE.test(value)) {
+    timestamp = `${value}T00:00:00`;
+  } else if (TIME.test(value)) {
+    timestamp = `1970-01-01T${value}`;
+  }
+  // Zone-free SQL values are wall-clock values, independent of the browser zone.
+  if (!TIME_ZONE.test(timestamp)) {
+    timestamp += "Z";
+  }
+  try {
+    return fromJson(TimestampSchema, timestamp);
+  } catch {
+    return undefined;
+  }
+}
+function compareTemporal(left: string, right: string) {
+  const a = temporalParts(left);
+  const b = temporalParts(right);
+  if (a && b) {
+    return (
+      comparePrimitive(a.seconds, b.seconds) ||
+      comparePrimitive(a.nanos, b.nanos)
+    );
+  }
+  // Unsupported formats/ranges form a separate text-sorted bucket, keeping a
+  // total order even when valid timestamps use different timezone offsets.
+  if (a || b) {
+    return a ? -1 : 1;
+  }
+  return left.localeCompare(right, "en", { numeric: true });
+}
+function compareRawValues(a: CellValue["value"], b: CellValue["value"]) {
+  if (a instanceof Uint8Array && b instanceof Uint8Array) {
+    return compareBytes(a, b);
+  }
+  if (typeof a === "string" && typeof b === "string") {
+    return a.localeCompare(b, "en", { numeric: true });
+  }
+  if (a instanceof Uint8Array || b instanceof Uint8Array) {
+    return 0;
+  }
+  return comparePrimitive(a, b);
+}
+function compareCellValues(a: CellValue, b: CellValue) {
+  if (a.case === "timestampValue" && b.case === "timestampValue") {
+    return compareTemporal(a.value, b.value);
+  }
+  if (a.case === "doubleValue" && b.case === "doubleValue") {
+    return (
+      Number(Number.isNaN(a.value)) - Number(Number.isNaN(b.value)) ||
+      comparePrimitive(a.value, b.value)
+    );
+  }
   if (a.case === "numericValue" && b.case === "numericValue") {
     return compareDecimal(a.value, b.value);
   }
-  if (a.value instanceof Uint8Array && b.value instanceof Uint8Array) {
-    return compareBytes(a.value, b.value);
-  }
-  if (typeof a.value === "string" && typeof b.value === "string") {
-    return a.value.localeCompare(b.value, "en", { numeric: true });
-  }
-  if (a.value instanceof Uint8Array || b.value instanceof Uint8Array) {
-    return 0;
-  }
-  return comparePrimitive(a.value, b.value);
+  return compareRawValues(a.value, b.value);
 }
 function compareCells(
   left: TableCell | undefined,

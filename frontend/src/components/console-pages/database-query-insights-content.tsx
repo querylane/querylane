@@ -585,7 +585,13 @@ function TopQueriesTable({
                   TOP_QUERY_COLUMNS.find((column) => column.id === id)?.label
                 }
                 aria-sort={listSortDirection(id, sortState.sorting)}
+                className={cn(
+                  id === "relative" && "w-28",
+                  (id === "calls" || id === "mean" || id === "total") &&
+                    "text-right"
+                )}
                 key={id}
+                presentation={id === "query" ? "insight-leading" : "insight"}
               >
                 <ListSortHeader
                   id={id}

@@ -125,11 +125,7 @@ function useTableColumnLayout({
     const nextVisibleColumns = layout.order.filter(
       (columnName) => !nextHiddenColumns.has(columnName)
     );
-    setSelection(
-      nextVisibleColumns.length === layout.order.length
-        ? undefined
-        : nextVisibleColumns
-    );
+    setSelection(nextVisibleColumns);
     setLayout(tableName, {
       ...nextProjectionSetting(),
       hiddenColumns: layout.order.filter((columnName) =>
@@ -178,7 +174,11 @@ function useTableColumnLayout({
     displayColumns,
     fetchVisibleColumns: layout.fetchVisibleColumns ?? false,
     hiddenColumnKeys,
-    isCustomized: Boolean(layout.fetchVisibleColumns) || hasColumnCustomization,
+    isCustomized:
+      selection !== undefined ||
+      sharedLayout.order !== undefined ||
+      Boolean(layout.fetchVisibleColumns) ||
+      hasColumnCustomization,
     reorderColumns,
     reset: () => {
       if (sharedLayout.resetColumns) {
