@@ -16,7 +16,7 @@ function PlanTiming({
   selectedId: string;
   onSelect: (node: PlanNode) => void;
 }) {
-  if (!nodes.some((node) => node.exclusiveMs !== undefined)) {
+  if (nodes.every((node) => node.exclusiveMs === undefined)) {
     return (
       <p className="text-muted-foreground min-h-48 min-w-0 flex-1 p-4 text-xs">
         {nodes.some((node) => node.parallel === true)

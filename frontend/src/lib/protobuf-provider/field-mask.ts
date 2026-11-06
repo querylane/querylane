@@ -211,11 +211,10 @@ function createFieldMask(
   if (normalizedPaths.includes("*")) {
     return create(FieldMaskSchema, { paths: ["*"] });
   }
-  const minimizedPaths = normalizedPaths.filter(
-    (path) =>
-      !normalizedPaths.some(
-        (candidate) => candidate !== path && path.startsWith(`${candidate}.`)
-      )
+  const minimizedPaths = normalizedPaths.filter((path) =>
+    normalizedPaths.every(
+      (candidate) => candidate === path || !path.startsWith(`${candidate}.`)
+    )
   );
   minimizedPaths.sort((left, right) => compareFieldOrder(schema, left, right));
   return create(FieldMaskSchema, { paths: minimizedPaths });

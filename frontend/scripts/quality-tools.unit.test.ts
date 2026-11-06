@@ -39,23 +39,14 @@ test("development and CI use Node 26 LTS with the same advertised minimum", () =
 });
 
 function lintBiome(file: string) {
-  const normal = spawnSync(
+  return spawnSync(
     join(root, "node_modules/.bin/biome"),
-    ["lint", file],
+    ["lint", "--error-on-warnings", file],
     {
       cwd: root,
       encoding: "utf8",
     }
   );
-  const supplemental = spawnSync("bun", ["run", "lint:biome:compat", file], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  return {
-    status: normal.status === 0 && supplemental.status === 0 ? 0 : 1,
-    stdout: normal.stdout + supplemental.stdout,
-    stderr: normal.stderr + supplemental.stderr,
-  };
 }
 
 test("rejects oversized authored files instead of passing a skipped scan", () => {
@@ -64,10 +55,14 @@ test("rejects oversized authored files instead of passing a skipped scan", () =>
   try {
     writeFileSync(join(directory, "valid.ts"), "export const ready = true;\n");
     writeFileSync(file, `//${" ".repeat(1_048_576)}\n`);
-    const result = spawnSync("bun", ["run", "lint:biome:compat", directory], {
-      cwd: root,
-      encoding: "utf8",
-    });
+    const result = spawnSync(
+      join(root, "node_modules/.bin/biome"),
+      ["lint", "--error-on-warnings", directory],
+      {
+        cwd: root,
+        encoding: "utf8",
+      }
+    );
     expect(result.status).toBe(1);
     expect(result.stdout + result.stderr).toContain(
       "exceeds the configured maximum"
@@ -110,6 +105,82 @@ test.each([
     suffix: "tsx",
     invalid: 'export const icon = <span className="h-4 w-4 divide-y" />;\n',
     valid: 'export const icon = <span className="size-4 divide-y" />;\n',
+  },
+  {
+    name: "array-compatible arguments",
+    rule: "noArrayMethodsOnArguments",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function collect() { return arguments.map((value: string) => value.trim()); }\n",
+    valid:
+      "export function collect(...values: string[]) { return values.map((value) => value.trim()); }\n",
+  },
+  {
+    name: "non-erasing arithmetic",
+    rule: "noErasingOperation",
+    suffix: "unit.test.ts",
+    invalid: "export function total(value: number) { return value * 0; }\n",
+    valid: "export function total(value: number) { return value * 2; }\n",
+  },
+  {
+    name: "direct array predicates",
+    rule: "noNegatedArrayPredicate",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function empty(values: readonly string[]) { return !values.some((value) => value.length > 0); }\n",
+    valid:
+      "export function empty(values: readonly string[]) { return values.every((value) => value.length === 0); }\n",
+  },
+  {
+    name: "in-range numeric formatting",
+    rule: "noNumberArgumentOutOfRange",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function format(value: number) { return value.toString(64); }\n",
+    valid:
+      "export function format(value: number) { return value.toString(16); }\n",
+  },
+  {
+    name: "shared branch cleanup",
+    rule: "noSharedBranchCode",
+    suffix: "unit.test.ts",
+    invalid:
+      'export function save(value: boolean) { if (value) { console.error("yes"); console.error("done"); } else { console.error("no"); console.error("done"); } }\n',
+    valid:
+      'export function save(value: boolean) { if (value) { console.error("yes"); } else { console.error("no"); } console.error("done"); }\n',
+  },
+  {
+    name: "direct operand comparisons",
+    rule: "noSubtractionComparison",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function greater(a: number, b: number) { return a - b > 0; }\n",
+    valid: "export function greater(a: number, b: number) { return a > b; }\n",
+  },
+  {
+    name: "initialized array callbacks",
+    rule: "noUninvokedArrayCallback",
+    suffix: "unit.test.ts",
+    invalid: 'export const values = new Array(5).map(() => "item");\n',
+    valid: 'export const values = Array.from({ length: 5 }, () => "item");\n',
+  },
+  {
+    name: "declared runtime engines without CPU restrictions",
+    rule: "usePackageJsonEngines",
+    suffix: "json",
+    invalid:
+      '{"name":"quality-probe","private":true,"packageManager":"bun@1.4.4","scripts":{"lint":"biome check .","lint:fix":"biome check --write .","quality:gate":"bun run lint && bun run type:check && bun run build && bun run test","type:check":"tsc --noEmit","build":"rsbuild build","test":"rstest"}}\n',
+    valid:
+      '{"name":"quality-probe","private":true,"packageManager":"bun@1.4.4","scripts":{"lint":"biome check .","lint:fix":"biome check --write .","quality:gate":"bun run lint && bun run type:check && bun run build && bun run test","type:check":"tsc --noEmit","build":"rsbuild build","test":"rstest"},"engines":{"node":">=26.13.0"}}\n',
+  },
+  {
+    name: "possible numeric ranges",
+    rule: "noConstantComparisons",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function valid(value: number) { return value <= 400 && value > 500; }\n",
+    valid:
+      "export function valid(value: number) { return value >= 400 && value <= 500; }\n",
   },
   {
     name: "unchained numeric comparisons",
@@ -272,7 +343,10 @@ test.each([
   const directory = mkdtempSync(
     join(root, probe.directory ?? "scripts", "quality-probe-")
   );
-  const file = join(directory, `probe.${probe.suffix}`);
+  const file = join(
+    directory,
+    probe.suffix === "json" ? "package.json" : `probe.${probe.suffix}`
+  );
   const lint = () => lintBiome(file);
   try {
     writeFileSync(file, probe.invalid);
@@ -509,7 +583,7 @@ test.each([
     writeFileSync(file, source);
     const result = spawnSync(
       join(root, "node_modules/.bin/biome"),
-      ["lint", file],
+      ["lint", "--error-on-warnings", file],
       { cwd: root, encoding: "utf8" }
     );
     expect(result.status, result.stdout + result.stderr).toBe(
@@ -591,6 +665,24 @@ test.each([
     }
   }
 );
+
+test("tailwind shorthand fixes preserve vertical dividers", () => {
+  const directory = mkdtempSync(join(root, "scripts", "quality-probe-"));
+  const file = join(directory, "probe.tsx");
+  const source = 'export const rows = <div className="divide-y" />;\n';
+  try {
+    writeFileSync(file, source);
+    const result = spawnSync(
+      join(root, "node_modules/.bin/biome"),
+      ["lint", "--write", "--unsafe", file],
+      { cwd: root, encoding: "utf8" }
+    );
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(readFileSync(file, "utf8")).toBe(source);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
 
 test("tailwind sorts cva variant objects using the project stylesheet", () => {
   const result = spawnSync(

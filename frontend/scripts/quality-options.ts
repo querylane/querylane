@@ -7,7 +7,6 @@ const entrypoints = [
   "lint",
   "lint:fix",
   "lint:biome",
-  "lint:biome:compat",
   "lint:oxlint",
   "lint:shadcn",
   "lint:changed",

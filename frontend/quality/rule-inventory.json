@@ -1,6 +1,6 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.5",
+    "@biomejs/biome": "2.6.6",
     "ultracite": "8.1.1",
     "oxlint": "1.91.0",
     "@shadcn/lint": "0.2.5",
@@ -4564,6 +4564,78 @@
       "decision": "inapplicable",
       "reason": "Querylane uses React, not Vue; this framework-specific contract does not apply.",
       "docs": "https://biomejs.dev/linter/rules/use-vue-valid-next-tick/"
+    },
+    {
+      "rule": "nursery/noArrayMethodsOnArguments",
+      "decision": "error",
+      "reason": "The arguments object is not an array; reject array method calls that throw TypeError.",
+      "docs": "https://biomejs.dev/linter/rules/no-array-methods-on-arguments/"
+    },
+    {
+      "rule": "nursery/noConstantComparisons",
+      "decision": "error",
+      "reason": "Reject contradictory or redundant numeric comparisons.",
+      "docs": "https://biomejs.dev/linter/rules/no-constant-comparisons/"
+    },
+    {
+      "rule": "nursery/noErasingOperation",
+      "decision": "error",
+      "reason": "Reject arithmetic and bitwise operations that erase their other operand.",
+      "docs": "https://biomejs.dev/linter/rules/no-erasing-operation/"
+    },
+    {
+      "rule": "nursery/noNegatedArrayPredicate",
+      "decision": "error",
+      "reason": "Express negated array predicates directly with every or some.",
+      "docs": "https://biomejs.dev/linter/rules/no-negated-array-predicate/"
+    },
+    {
+      "rule": "nursery/noNumberArgumentOutOfRange",
+      "decision": "error",
+      "reason": "Reject numeric formatting arguments that throw RangeError.",
+      "docs": "https://biomejs.dev/linter/rules/no-number-argument-out-of-range/"
+    },
+    {
+      "rule": "nursery/noSharedBranchCode",
+      "decision": "error",
+      "reason": "Move identical leading or trailing branch statements outside the conditional.",
+      "docs": "https://biomejs.dev/linter/rules/no-shared-branch-code/"
+    },
+    {
+      "rule": "nursery/noSubtractionComparison",
+      "decision": "error",
+      "reason": "Compare operands directly instead of subtracting only to compare with zero.",
+      "docs": "https://biomejs.dev/linter/rules/no-subtraction-comparison/"
+    },
+    {
+      "rule": "nursery/noSvelteIgnoredUnsubscribe",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React, not Svelte stores.",
+      "docs": "https://biomejs.dev/linter/rules/no-svelte-ignored-unsubscribe/"
+    },
+    {
+      "rule": "nursery/noUninvokedArrayCallback",
+      "decision": "error",
+      "reason": "Reject callbacks on arrays containing only empty slots; use Array.from to initialize values.",
+      "docs": "https://biomejs.dev/linter/rules/no-uninvoked-array-callback/"
+    },
+    {
+      "rule": "nursery/useNextScriptForGoogleAnalytics",
+      "decision": "inapplicable",
+      "reason": "Querylane uses Rsbuild and TanStack Router, not Next.js.",
+      "docs": "https://biomejs.dev/linter/rules/use-next-script-for-google-analytics/"
+    },
+    {
+      "rule": "nursery/usePackageJsonCpu",
+      "decision": "inapplicable",
+      "reason": "The private frontend has no CPU architecture restriction; do not narrow supported developer platforms.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-cpu/"
+    },
+    {
+      "rule": "nursery/usePackageJsonEngines",
+      "decision": "error",
+      "reason": "Require the frontend package to declare its supported runtime engines.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-engines/"
     }
   ],
   "oxlint": [

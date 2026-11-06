@@ -43,7 +43,7 @@ const LINTABLE_EXTENSIONS = new Set([
 const GENERATED_OR_REGISTRY_PREFIXES = ["src/components/ui/", "src/protogen/"];
 const GENERATED_FILES = new Set(["src/routeTree.gen.ts"]);
 const FULL_STATIC_ANALYSIS_PATH_PATTERN =
-  /^(?:biome\.jsonc|bun\.lock|package\.json|\.github\/workflows\/frontend-ci\.yml|frontend\/(?:quality\/[^/]+\.json|biome\.jsonc|bun\.lock|doctor\.config\.ts|oxlint\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|check-biome-compat|check-rule-inventory|quality-boundaries|quality-options|check-suppressions|querylane-lint\.config|strict-tooling-policy\.unit\.test)\.ts))$/u;
+  /^(?:biome\.jsonc|bun\.lock|package\.json|\.github\/workflows\/frontend-ci\.yml|frontend\/(?:quality\/[^/]+\.json|biome\.jsonc|bun\.lock|doctor\.config\.ts|oxlint\.config\.ts|package\.json|react-doctor\.config\.json|tsconfig(?:\.[^/]+)?\.json|scripts\/(?:lint-changed|run-react-doctor-ci|check-rule-inventory|quality-boundaries|quality-options|check-suppressions|querylane-lint\.config|strict-tooling-policy\.unit\.test)\.ts))$/u;
 
 interface FileSystemAccess {
   existsSync: (path: string) => boolean;
@@ -162,6 +162,7 @@ function changedRepoFiles(baseRef: string, runner: CommandRunner) {
   const untrackedResult = runner.run("git", [
     "ls-files",
     "-z",
+    "--full-name",
     "--others",
     "--exclude-standard",
     "--",

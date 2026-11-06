@@ -367,6 +367,18 @@
         "useVueValidVFor": "error"
       },
       "nursery": {
+        "noArrayMethodsOnArguments": "error",
+        "noConstantComparisons": "error",
+        "noErasingOperation": "error",
+        "noNegatedArrayPredicate": "error",
+        "noNumberArgumentOutOfRange": "error",
+        "noSharedBranchCode": "error",
+        "noSubtractionComparison": "error",
+        "noSvelteIgnoredUnsubscribe": "off",
+        "noUninvokedArrayCallback": "error",
+        "useNextScriptForGoogleAnalytics": "off",
+        "usePackageJsonCpu": "off",
+        "usePackageJsonEngines": "error",
         "noArrayForEach": "off",
         "noAwaitInPromiseMethods": "error",
         "noChainedComparison": "error",

@@ -159,7 +159,7 @@ function shouldHydrateSelectedDatabase(
   if ((routeDatabaseId ?? "") || !isNonEmptyString(effectiveDatabaseId)) {
     return false;
   }
-  return !databases.some((database) => database.id === effectiveDatabaseId);
+  return databases.every((database) => database.id !== effectiveDatabaseId);
 }
 
 function usePersistedNavigationSelections() {
