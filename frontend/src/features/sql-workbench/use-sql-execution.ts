@@ -321,15 +321,18 @@ function useSqlExecution({
     const controller = new AbortController();
     controllersRef.current.set(explainKey(tabId), controller);
     const startedAt = Date.now();
-    const base = {
+    // The running object owns this request, even after controller cleanup.
+    // Replacement or clear removes that ownership before queued updates apply.
+    const pending: SqlExplain = {
       analyze: options.analyze,
       notices: [],
       startedAt,
       statement,
+      status: "running",
     };
     setExplains((current) => ({
       ...current,
-      [tabId]: { ...base, status: "running" },
+      [tabId]: pending,
     }));
     const client = createClient(SQLService, longRunningTransport);
     try {
@@ -344,33 +347,43 @@ function useSqlExecution({
         },
         { signal: controller.signal }
       );
-      setExplains((current) => ({
-        ...current,
-        [tabId]: {
-          ...base,
-          latencyMs: durationToMs(response.latency),
-          notices: response.notices,
-          rawPlan: response.plan,
-          status: "success",
-        },
-      }));
+      setExplains((current) => {
+        if (current[tabId] !== pending) {
+          return current;
+        }
+        return {
+          ...current,
+          [tabId]: {
+            ...pending,
+            latencyMs: durationToMs(response.latency),
+            notices: response.notices,
+            rawPlan: response.plan,
+            status: "success",
+          },
+        };
+      });
     } catch (error) {
       const cancelled = isCancellation(error) || controller.signal.aborted;
-      setExplains((current) => ({
-        ...current,
-        [tabId]: cancelled
-          ? { ...base, status: "cancelled" }
-          : {
-              ...base,
-              error: describeSqlExecutionError(
-                normalizeAppUiError(error, {
-                  ...SQL_WORKBENCH_ERROR_CONTEXT,
-                  action: "explain",
-                })
-              ),
-              status: "error",
-            },
-      }));
+      setExplains((current) => {
+        if (current[tabId] !== pending) {
+          return current;
+        }
+        return {
+          ...current,
+          [tabId]: cancelled
+            ? { ...pending, status: "cancelled" }
+            : {
+                ...pending,
+                error: describeSqlExecutionError(
+                  normalizeAppUiError(error, {
+                    ...SQL_WORKBENCH_ERROR_CONTEXT,
+                    action: "explain",
+                  })
+                ),
+                status: "error",
+              },
+        };
+      });
     } finally {
       if (controllersRef.current.get(explainKey(tabId)) === controller) {
         controllersRef.current.delete(explainKey(tabId));
