@@ -126,35 +126,131 @@ describe("useTableDataQuery", () => {
     expect(rowRefetch).not.toHaveBeenCalled();
   });
 
-  test("resets page tokens after the query shape changes", () => {
+  test("revisits the next page with an unchanged continuation token", () => {
+    const { result } = renderHook(() =>
+      useTableDataQuery({
+        name: tableName,
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
+        pageSize: 25,
+        sortSearch: "created_at:desc",
+      })
+    );
+    const indices = [result.current.controller.currentPageIndex];
+    const requestTokens = [latestReadRowsCall()[0].pageToken];
+
+    act(() => {
+      result.current.controller.goNext("T2");
+    });
+    indices.push(result.current.controller.currentPageIndex);
+    requestTokens.push(latestReadRowsCall()[0].pageToken);
+
+    act(() => {
+      result.current.controller.goPrev();
+    });
+    indices.push(result.current.controller.currentPageIndex);
+    requestTokens.push(latestReadRowsCall()[0].pageToken);
+
+    act(() => {
+      result.current.controller.goNext("T2");
+    });
+    indices.push(result.current.controller.currentPageIndex);
+    requestTokens.push(latestReadRowsCall()[0].pageToken);
+
+    expect({ indices, requestTokens }).toEqual({
+      indices: [0, 1, 0, 1],
+      requestTokens: ["", "T2", "", "T2"],
+    });
+  });
+
+  test("revisits later pages and ignores duplicate next callbacks", () => {
+    const { result } = renderHook(() =>
+      useTableDataQuery({
+        name: tableName,
+        onFilterSearchChange: rs.fn(),
+        onPageSizeChange: rs.fn(),
+        onSortSearchChange: rs.fn(),
+        pageSize: 25,
+        sortSearch: "created_at:desc",
+      })
+    );
+
+    act(() => {
+      result.current.controller.goNext("");
+      result.current.controller.goPrev();
+    });
+    expect(result.current.controller.currentPageIndex).toBe(0);
+    expect(latestReadRowsCall()[0].pageToken).toBe("");
+
+    for (const token of ["T2", "T3"]) {
+      act(() => {
+        const { goNext } = result.current.controller;
+        goNext(token);
+        goNext(token);
+      });
+    }
+    expect(result.current.controller.currentPageIndex).toBe(2);
+    expect(latestReadRowsCall()[0].pageToken).toBe("T3");
+
+    act(() => {
+      result.current.controller.goPrev();
+    });
+    act(() => {
+      result.current.controller.goPrev();
+    });
+    act(() => {
+      result.current.controller.goNext("T2");
+    });
+    act(() => {
+      result.current.controller.goNext("T3");
+    });
+    expect(result.current.controller.currentPageIndex).toBe(2);
+    expect(latestReadRowsCall()[0].pageToken).toBe("T3");
+  });
+
+  test.each([
+    {
+      shape: "filter",
+      changes: {
+        filterSearch: JSON.stringify({
+          l: "and",
+          r: [{ c: "email", i: "email", o: "eq", v: "alice@example.com" }],
+        }),
+      },
+    },
+    { shape: "sort", changes: { sortSearch: "email:asc" } },
+    { shape: "page size", changes: { pageSize: 50 } },
+    { shape: "projection", changes: { selectedColumns: ["id"] } },
+    { shape: "table", changes: { name: `${tableName}-other` } },
+  ])("resets page tokens after the $shape changes", ({ changes }) => {
     const { result, rerender } = renderHook(
-      ({ filterSearch }: { filterSearch?: string }) =>
+      (props: Partial<Parameters<typeof useTableDataQuery>[0]>) =>
         useTableDataQuery({
-          filterSearch,
           name: tableName,
           onFilterSearchChange: rs.fn(),
           onPageSizeChange: rs.fn(),
           onSortSearchChange: rs.fn(),
           pageSize: 25,
           sortSearch: "created_at:desc",
+          ...props,
         }),
       { initialProps: {} }
     );
 
     act(() => {
-      result.current.controller.goNext("page-2");
+      result.current.controller.goNext("T2");
     });
-    rerender({});
-    expect(latestReadRowsCall()[0].pageToken).toBe("page-2");
+    expect(latestReadRowsCall()[0].pageToken).toBe("T2");
 
-    rerender({
-      filterSearch: JSON.stringify({
-        l: "and",
-        r: [{ c: "email", i: "email", o: "eq", v: "alice@example.com" }],
-      }),
-    });
-
+    rerender(changes);
     expect(latestReadRowsCall()[0].pageToken).toBe("");
     expect(result.current.controller.currentPageIndex).toBe(0);
+
+    act(() => {
+      result.current.controller.goNext("new-shape-T2");
+    });
+    expect(latestReadRowsCall()[0].pageToken).toBe("new-shape-T2");
+    expect(result.current.controller.currentPageIndex).toBe(1);
   });
 });

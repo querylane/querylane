@@ -30,6 +30,9 @@ declare global {
   }
 }
 
+const PAGE_ONE_RE = /^Page 1\b/u;
+const PAGE_TWO_RE = /^Page 2\b/u;
+
 const EXPLORER_URL_RE = /\/instances\/production\/databases\/appdb\/explorer/u;
 const BILLING_SCHEMA_URL_RE = /[?&]schema=billing\b/u;
 const TABLE_CATEGORY_URL_RE = /[?&]category=tables\b/u;
@@ -317,6 +320,60 @@ test("data explorer: sorting and pagination update ReadRows inputs", {
   await expect(page.getByText("grace@example.com")).toBeVisible();
   expect(readRowsBodies.at(-1)).toMatchObject({ pageToken: "page-2" });
 });
+
+for (const expanded of [false, true]) {
+  test(`data explorer: ${expanded ? "expanded" : "compact"} pagination revisits the next page`, {
+    tag: ["@feat:data-explorer", "@flow:query"],
+  }, async ({ page }) => {
+    await mockExplorerShell(page);
+    await mockTableCatalog(page);
+    await mockPaginatedReadRows(page, () => undefined);
+
+    await page.goto(
+      "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders"
+    );
+    await expect(page.getByText("ada@example.com")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next page" })).toBeEnabled();
+    if (expanded) {
+      await page
+        .getByRole("button", { exact: true, name: "Expand data grid" })
+        .click();
+    }
+    const grid = expanded
+      ? page.getByRole("dialog", { name: "Expanded data grid" })
+      : page.getByRole("main");
+
+    await test.step("open page two", async () => {
+      const response = page.waitForResponse((value) =>
+        value.url().endsWith("TableDataService/ReadRows")
+      );
+      await grid.getByRole("button", { name: "Next page" }).click();
+      await response;
+      await expect(grid.getByText("grace@example.com")).toBeVisible();
+      await expect(grid.getByText(PAGE_TWO_RE)).toBeVisible();
+      await expect(
+        grid.getByRole("button", { name: "Next page" })
+      ).toBeDisabled();
+    });
+    await test.step("return to page one", async () => {
+      await grid.getByRole("button", { name: "Previous page" }).click();
+      await expect(grid.getByText("ada@example.com")).toBeVisible();
+      await expect(grid.getByText(PAGE_ONE_RE)).toBeVisible();
+      await expect(
+        grid.getByRole("button", { name: "Next page" })
+      ).toBeEnabled();
+    });
+    await test.step("revisit page two using the same continuation", async () => {
+      await grid.getByRole("button", { name: "Next page" }).click();
+      await expect(grid.getByText("grace@example.com")).toBeVisible();
+      await expect(grid.getByText("ada@example.com")).not.toBeVisible();
+      await expect(grid.getByText(PAGE_TWO_RE)).toBeVisible();
+      await expect(
+        grid.getByRole("button", { name: "Next page" })
+      ).toBeDisabled();
+    });
+  });
+}
 
 test("data explorer: table errors and retry stay inside explorer shell", {
   tag: ["@feat:data-explorer", "@flow:error"],
