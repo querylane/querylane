@@ -149,6 +149,7 @@ const STORAGE_KEY = "querylane.sql-workbench.v1";
 // Every keystroke updates the tab text; writing the whole workbench to
 // localStorage once typing pauses keeps serialization off the keystroke path.
 const PERSIST_DELAY_MS = 250;
+const WRITE_FAILURE_TOAST_ID = "sql-workbench-write-failed";
 const MAX_HISTORY_ENTRIES = 100;
 const DEFAULT_TAB_TITLE_PREFIX = "Query";
 
@@ -232,6 +233,7 @@ function nextActiveTabAfterClose({
  */
 function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
   let recoveryWriteBlocked = false;
+  let writeFailed = false;
   let pending:
     | { name: string; value: StorageValue<PersistedSqlWorkbench> }
     | undefined;
@@ -245,8 +247,23 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
       return;
     }
     if (pending) {
-      localStorage.setItem(pending.name, JSON.stringify(pending.value));
+      try {
+        localStorage.setItem(pending.name, JSON.stringify(pending.value));
+      } catch {
+        writeFailed = true;
+        toast.error("SQL changes are only stored in memory", {
+          id: WRITE_FAILURE_TOAST_ID,
+          duration: Number.POSITIVE_INFINITY,
+          description:
+            "Keep this tab open and copy your SQL elsewhere. Browser storage could not save your latest SQL changes.",
+        });
+        return;
+      }
       pending = undefined;
+      if (writeFailed) {
+        writeFailed = false;
+        toast.dismiss(WRITE_FAILURE_TOAST_ID);
+      }
     }
   }
 
