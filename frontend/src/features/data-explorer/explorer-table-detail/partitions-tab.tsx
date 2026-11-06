@@ -5,6 +5,8 @@ import {
   TriangleExclamationPoint,
 } from "lucide-react";
 import { useState } from "react";
+import { ListCells } from "@/components/list-view/list-cells";
+import { ListSortHeader } from "@/components/list-view/list-sort-header";
 import { Button } from "@/components/querylane-ui/button";
 import { Input } from "@/components/querylane-ui/input";
 import {
@@ -43,7 +45,13 @@ import type { useGetTablePartitionMetadataQuery } from "@/hooks/api/table";
 import {
   type ListColumnOption,
   useListColumnSelection,
+  useListSorting,
 } from "@/lib/list-columns";
+import {
+  type ListSort,
+  listSortDirection,
+  sortListRows,
+} from "@/lib/list-layout";
 import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
@@ -137,11 +145,13 @@ const PARTITION_COLUMNS = [
 
 function PartitionRowsTable({
   rows,
+  sortState,
   totalPartitionCount,
   totalRowsLabel,
   totalSizeLabel,
 }: {
   rows: PartitionDisplayRow[];
+  sortState: { sorting: ListSort[]; setSorting: (next: ListSort[]) => void };
   totalPartitionCount: number;
   totalRowsLabel: string;
   totalSizeLabel: string;
@@ -150,7 +160,7 @@ function PartitionRowsTable({
     "table-partitions",
     PARTITION_COLUMNS
   );
-  const visible = new Set(columnSelection.visibleIds);
+
   return (
     <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
       <div className="flex justify-end p-2">
@@ -159,103 +169,116 @@ function PartitionRowsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {visible.has("partition") && (
-              <TableHead presentation="inset">Partition</TableHead>
-            )}
-            {visible.has("bounds") && <TableHead>Bounds</TableHead>}
-            {visible.has("rows") && (
-              <TableHead className="text-right">Est. rows</TableHead>
-            )}
-            {visible.has("size") && (
-              <TableHead className="text-right">Size</TableHead>
-            )}
-            {visible.has("share") && (
-              <TableHead className="w-48">Share of rows</TableHead>
-            )}
+            {columnSelection.visibleIds.map((id) => (
+              <TableHead
+                aria-label={
+                  PARTITION_COLUMNS.find((column) => column.id === id)?.label
+                }
+                aria-sort={listSortDirection(id, sortState.sorting)}
+                key={id}
+              >
+                <ListSortHeader
+                  id={id}
+                  label={
+                    PARTITION_COLUMNS.find((column) => column.id === id)
+                      ?.label ?? id
+                  }
+                  {...sortState}
+                />
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.table}>
-              {visible.has("partition") && (
-                <TableCell presentation="inset">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-mono text-sm font-medium">
-                      {row.name}
-                    </span>
-                    {row.isCurrent ? (
-                      <StatusBadge variant="success">CURRENT</StatusBadge>
-                    ) : null}
-                    {row.isDefault ? (
-                      <StatusBadge variant="warning">DEFAULT</StatusBadge>
-                    ) : null}
-                  </div>
-                </TableCell>
-              )}
-              {visible.has("bounds") && (
-                <TableCell
-                  className="max-w-[28rem] wrap-break-word whitespace-normal"
-                  presentation="identifier-muted-small"
-                  title={row.partitionBound}
-                >
-                  {row.boundLabel}
-                </TableCell>
-              )}
-              {visible.has("rows") && (
-                <TableCell className="text-right" presentation="identifier">
-                  {row.rowsLabel}
-                </TableCell>
-              )}
-              {visible.has("size") && (
-                <TableCell
-                  className="text-right"
-                  presentation="identifier-muted"
-                >
-                  {row.sizeLabel}
-                </TableCell>
-              )}
-              {visible.has("share") && (
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
-                      <div
-                        className={cn(
-                          "h-full rounded-full",
-                          row.shareWidthClassName,
-                          partitionShareToneClass(row)
-                        )}
-                      />
-                    </div>
-                    <span className="text-muted-foreground w-9 text-right font-mono text-xs">
-                      {row.shareLabel}
-                    </span>
-                  </div>
-                </TableCell>
-              )}
+              <ListCells
+                cells={{
+                  partition: (
+                    <TableCell presentation="inset">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-mono text-sm font-medium">
+                          {row.name}
+                        </span>
+                        {row.isCurrent ? (
+                          <StatusBadge variant="success">CURRENT</StatusBadge>
+                        ) : null}
+                        {row.isDefault ? (
+                          <StatusBadge variant="warning">DEFAULT</StatusBadge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  ),
+                  bounds: (
+                    <TableCell
+                      className="max-w-[28rem] wrap-break-word whitespace-normal"
+                      presentation="identifier-muted-small"
+                      title={row.partitionBound}
+                    >
+                      {row.boundLabel}
+                    </TableCell>
+                  ),
+                  rows: (
+                    <TableCell className="text-right" presentation="identifier">
+                      {row.rowsLabel}
+                    </TableCell>
+                  ),
+                  size: (
+                    <TableCell
+                      className="text-right"
+                      presentation="identifier-muted"
+                    >
+                      {row.sizeLabel}
+                    </TableCell>
+                  ),
+                  share: (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              row.shareWidthClassName,
+                              partitionShareToneClass(row)
+                            )}
+                          />
+                        </div>
+                        <span className="text-muted-foreground w-9 text-right font-mono text-xs">
+                          {row.shareLabel}
+                        </span>
+                      </div>
+                    </TableCell>
+                  ),
+                }}
+                order={columnSelection.visibleIds}
+              />
             </TableRow>
           ))}
         </TableBody>
         <TableFooter>
           <TableRow>
-            {visible.has("partition") && (
-              <TableCell
-                colSpan={visible.has("bounds") ? 2 : 1}
-                presentation="inset-muted"
-              >
-                Total · {totalPartitionCount.toLocaleString()} partitions
-              </TableCell>
-            )}
-            {visible.has("rows") && (
-              <TableCell className="text-right" presentation="identifier">
-                {totalRowsLabel}
-              </TableCell>
-            )}
-            {visible.has("size") && (
-              <TableCell className="text-right" presentation="identifier">
-                {totalSizeLabel}
-              </TableCell>
-            )}
-            {visible.has("share") && <TableCell />}
+            <ListCells
+              cells={{
+                partition: (
+                  <TableCell presentation="inset-muted">
+                    Total · {totalPartitionCount.toLocaleString()} partitions
+                  </TableCell>
+                ),
+                bounds: <TableCell />,
+                rows: (
+                  <TableCell className="text-right" presentation="identifier">
+                    {totalRowsLabel}
+                  </TableCell>
+                ),
+                size: (
+                  <TableCell className="text-right" presentation="identifier">
+                    {totalSizeLabel}
+                  </TableCell>
+                ),
+                share: <TableCell />,
+              }}
+              order={columnSelection.visibleIds}
+            />
           </TableRow>
         </TableFooter>
       </Table>
@@ -377,6 +400,10 @@ function PartitionsTab({
 }: {
   query: ReturnType<typeof useGetTablePartitionMetadataQuery>;
 }) {
+  const sortState = useListSorting(
+    "table-partitions",
+    PARTITION_COLUMNS.map((column) => column.id)
+  );
   const toolbar = deriveMetadataToolbar([query]);
   const [partitionSearch, setPartitionSearch] = useState("");
   const [partitionPageIndex, setPartitionPageIndex] = useState(0);
@@ -427,9 +454,16 @@ function PartitionsTab({
     currentDate: new Date(query.dataUpdatedAt),
     partitions: childPartitions,
   });
-  const filteredPartitionRows = filterPartitionDisplayRows(
-    partitionModel.rows,
-    partitionSearch
+  const filteredPartitionRows = sortListRows(
+    filterPartitionDisplayRows(partitionModel.rows, partitionSearch),
+    sortState.sorting,
+    {
+      partition: (row) => row.name,
+      bounds: (row) => row.partitionBound,
+      rows: (row) => row.estimatedRows,
+      size: (row) => row.sizeBytes,
+      share: (row) => row.estimatedRows,
+    }
   );
   const filteredPartitionSummary = summarizePartitionDisplayRows(
     filteredPartitionRows
@@ -473,6 +507,7 @@ function PartitionsTab({
       />
       <PartitionRowsTable
         rows={paginatedPartitionRows}
+        sortState={sortState}
         totalPartitionCount={filteredPartitionRows.length}
         totalRowsLabel={filteredPartitionSummary.totalRowsLabel}
         totalSizeLabel={filteredPartitionSummary.totalSizeLabel}

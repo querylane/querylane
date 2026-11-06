@@ -29,6 +29,7 @@ import {
 } from "@/features/data-explorer/table-data/full-cell-resolver";
 import { buildGridStatusItems } from "@/features/data-explorer/table-data/grid-status";
 import {
+  parseSortSearch,
   serializeSortSearch,
   useTableDataQuery,
 } from "@/features/data-explorer/table-data/table-data-query";
@@ -38,6 +39,7 @@ import {
 } from "@/features/user-settings/refresh-settings";
 import { useReadCellValueMutation } from "@/hooks/api/table-data";
 import { parseRelationQualifiedName } from "@/lib/console-resources";
+import { useListLayout } from "@/lib/list-columns";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   ReadCellValueRequestSchema,
@@ -332,7 +334,20 @@ function TableDataGrid({
 }: TableDataGridProps) {
   const relationQualifiedName = parseRelationQualifiedName(name);
   const [filterSearch, setFilterSearch] = useState<string>();
-  const [sortSearch, setSortSearch] = useState<string>();
+  const sharedLayout = useListLayout(`table-data:${name}`);
+  const sortSearch = serializeSortSearch(
+    (sharedLayout.sorting ?? []).map((sort) => ({
+      columnKey: sort.id,
+      direction: sort.desc ? "DESC" : "ASC",
+    }))
+  );
+  function setSortSearch(next: string | undefined) {
+    const sorting = parseSortSearch(next).map((sort) => ({
+      id: sort.columnKey,
+      desc: sort.direction === "DESC",
+    }));
+    sharedLayout.setSorting(sorting.length > 0 ? sorting : undefined);
+  }
   const [pageSize, setPageSize] = useState(initialPageSize);
   const selectedColumns = useSelectedTableColumns(name);
   const {

@@ -5,7 +5,11 @@ import {
   resolveTableColumnLayout,
   useTableColumnLayoutSettingsStore,
 } from "@/features/user-settings/table-column-layout-settings";
-import { resolveListColumns, useListColumns } from "@/lib/list-columns";
+import {
+  resolveListColumns,
+  useListColumns,
+  useListLayout,
+} from "@/lib/list-columns";
 import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
 /** What the result grid needs from a column layout, persisted or not. */
@@ -47,6 +51,7 @@ function useTableColumnLayout({
   tableName,
 }: UseTableColumnLayoutOptions): TableColumnLayoutController {
   const { selection, setSelection } = useListColumns(`table-data:${tableName}`);
+  const sharedLayout = useListLayout(`table-data:${tableName}`);
   const savedLayout = useTableColumnLayoutSettingsStore(
     (state) => state.layouts[tableName]
   );
@@ -64,14 +69,16 @@ function useTableColumnLayout({
   );
   const selected = new Set(resolveListColumns(selection, availableColumnNames));
   const effectiveLayout =
-    selection === undefined
+    selection === undefined && sharedLayout.order === undefined
       ? savedLayout
       : {
           ...savedLayout,
-          order: savedLayout?.order ?? availableColumnNames,
-          hiddenColumns: availableColumnNames.filter(
-            (name) => !selected.has(name)
-          ),
+          order:
+            sharedLayout.order ?? savedLayout?.order ?? availableColumnNames,
+          hiddenColumns:
+            selection === undefined
+              ? (savedLayout?.hiddenColumns ?? [])
+              : availableColumnNames.filter((name) => !selected.has(name)),
         };
   const layout = resolveTableColumnLayout(
     availableColumnNames,
@@ -133,6 +140,9 @@ function useTableColumnLayout({
   }
 
   function setColumnOrder(order: string[]) {
+    // An explicit catalog order must also override another viewer's personal
+    // order. Only Reset columns returns to the personal/default fallback.
+    sharedLayout.setOrder(order);
     setLayout(tableName, {
       ...nextProjectionSetting(),
       hiddenColumns: layout.hiddenColumns,
@@ -171,7 +181,12 @@ function useTableColumnLayout({
     isCustomized: Boolean(layout.fetchVisibleColumns) || hasColumnCustomization,
     reorderColumns,
     reset: () => {
-      setSelection(undefined);
+      if (sharedLayout.resetColumns) {
+        sharedLayout.resetColumns(`table-data:${tableName}`);
+      } else {
+        setSelection(undefined);
+        sharedLayout.setOrder(undefined);
+      }
       resetLayout(tableName);
     },
     setColumnOrder,

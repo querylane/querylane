@@ -177,7 +177,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
   },
   {
     cell: ({ row }) => <LoginCell role={row.original} />,
-    enableSorting: false,
+    accessorFn: (role) => role.attributes?.canLogin ?? false,
     header: "Login",
     id: "login",
   },
@@ -466,6 +466,7 @@ export function InstanceRolesPage({
         replace: false,
         resetScroll: false,
         search: (previous) => ({
+          ...previous,
           ...normalizeRolesNavigateSearch(previous),
           tab: next === "details" ? undefined : next,
         }),
@@ -482,6 +483,7 @@ export function InstanceRolesPage({
         replace: false,
         resetScroll: false,
         search: (previous) => ({
+          ...previous,
           ...normalizeRolesNavigateSearch(previous),
           type: nextType,
         }),

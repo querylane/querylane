@@ -1765,6 +1765,42 @@ describe("table data grid error recovery", () => {
 describe("bookmarked table data columns", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
+  test("explicit catalog order remains shareable over a personal column order", async () => {
+    const user = userEvent.setup();
+    seedRowsQueryWithRawClipboardValues();
+    const tableName =
+      "instances/prod/databases/app/schemas/public/tables/measurements";
+    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
+      order: ["observed_at", "measurement"],
+      hiddenColumns: [],
+    });
+    const setOrder = rs.fn();
+    render(
+      <ColumnSelectionContext
+        value={{
+          selections: {},
+          setSelection: rs.fn(),
+          layout: {
+            orders: {},
+            sortings: {},
+            setOrder,
+            setSorting: rs.fn(),
+            resetColumns: rs.fn(),
+          },
+        }}
+      >
+        <TableDataGrid name={tableName} />
+      </ColumnSelectionContext>
+    );
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(
+      screen.getByRole("button", { name: "Move observed_at down" })
+    );
+    expect(setOrder).toHaveBeenCalledWith(`table-data:${tableName}`, [
+      "measurement",
+      "observed_at",
+    ]);
+  });
   test("restoring all columns omits the default URL selection", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
