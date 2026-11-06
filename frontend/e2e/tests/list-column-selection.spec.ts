@@ -1,9 +1,15 @@
-import { toJson } from "@bufbuild/protobuf";
+import { fromJsonString, toJson } from "@bufbuild/protobuf";
 import type { Page } from "playwright/test";
 import {
   ExecuteQueryResponseSchema,
   SQLService,
 } from "../../src/protogen/querylane/console/v1alpha1/sql_pb";
+import {
+  type ReadRowsRequest,
+  ReadRowsRequestSchema,
+  RowOrder_Direction,
+  TableDataService,
+} from "../../src/protogen/querylane/console/v1alpha1/table_data_pb";
 import {
   busyActivity,
   designExtensions,
@@ -42,6 +48,10 @@ import { expect, test } from "./base";
 import { mockRpc } from "./helpers";
 
 const RUN_BUTTON = /^Run/u;
+const USERS_FILTER = /^Users(?: |$)/u;
+const GRID_COLUMN_OPTIONS = /^Open options for column/u;
+const SORTABLE_HEADER = /, (?:not sorted|sorted ascending|sorted descending)$/u;
+const MOVE_COLUMN_FORWARD = /^Move .* (?:right|down)$/u;
 
 interface ColumnJourney {
   afterReload?: () => Promise<void>;
@@ -77,14 +87,55 @@ async function bookmarkColumns(
   const count = await headers.count();
   expect(count).toBeGreaterThan(1);
   const original = new URL(page.url());
+  const defaultHeaders = await headers.allTextContents();
+  if (role === "grid") {
+    await table
+      .getByRole("button", { name: GRID_COLUMN_OPTIONS })
+      .first()
+      .click();
+    await page
+      .getByRole("menuitemcheckbox", { name: "Sort descending", exact: true })
+      .click();
+  } else {
+    await table
+      .getByRole("button", {
+        name: SORTABLE_HEADER,
+      })
+      .first()
+      .click();
+  }
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("listSort") ?? "")
+    .toContain(key);
   const control = page
     .getByRole("button", { name: "Columns", exact: true })
     .nth(index);
   await control.click();
+  if (checkbox === "checkbox") {
+    await page
+      .getByRole("dialog", { name: "Manage columns" })
+      .getByRole("button", { name: MOVE_COLUMN_FORWARD })
+      .first()
+      .click();
+  }
+  await expect
+    .poll(() =>
+      (new URL(page.url()).searchParams.get("columnOrder") ?? "").includes(key)
+    )
+    .toBe(checkbox === "checkbox");
+  await expect
+    .poll(
+      async () =>
+        JSON.stringify(await headers.allTextContents()) !==
+        JSON.stringify(defaultHeaders)
+    )
+    .toBe(checkbox === "checkbox");
   const options =
     checkbox === "checkbox"
-      ? page.locator('[aria-label="Manage columns"]').getByRole(checkbox)
-      : page.getByRole(checkbox);
+      ? page
+          .getByRole("dialog", { name: "Manage columns" })
+          .getByRole("checkbox")
+      : page.getByRole("menu").getByRole("menuitemcheckbox");
   const option = options
     .and(page.locator(':not([aria-disabled="true"]):not(:disabled)'))
     .first();
@@ -92,6 +143,7 @@ async function bookmarkColumns(
   await option.click();
   await page.keyboard.press("Escape");
   await expect(headers).toHaveCount(count - 1);
+  const chosenHeaders = await headers.allTextContents();
   await expect
     .poll(() => new URL(page.url()).searchParams.get("columns") ?? "")
     .toContain(key);
@@ -103,15 +155,25 @@ async function bookmarkColumns(
   await openView?.();
   await afterReload?.();
   await expect(headers).toHaveCount(count - 1);
+  await expect.poll(() => headers.allTextContents()).toEqual(chosenHeaders);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("listSort") ?? "")
+    .toContain(key);
   await control.click();
-  const resetRole = checkbox === "checkbox" ? "button" : "menuitem";
   await page
-    .getByRole(resetRole, { name: "Reset columns", exact: true })
+    .getByRole(checkbox === "checkbox" ? "button" : "menuitem", {
+      name: "Reset columns",
+      exact: true,
+    })
     .click();
   if (checkbox === "checkbox") {
     await page.keyboard.press("Escape");
   }
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("columnOrder") ?? "")
+    .not.toContain(key);
   await expect(headers).toHaveCount(count);
+  await expect.poll(() => headers.allTextContents()).toEqual(defaultHeaders);
   await expect
     .poll(() => new URL(page.url()).searchParams.get("columns") ?? "")
     .not.toContain(key);
@@ -225,6 +287,16 @@ for (const [index, key] of [
 
 test("bookmarked columns: table data", async ({ page }) => {
   await mockDataGridExplorer(page);
+  const requests: ReadRowsRequest[] = [];
+  await page.route(
+    `**/${TableDataService.typeName}/${TableDataService.method.readRows.name}`,
+    async (rpc) => {
+      requests.push(
+        fromJsonString(ReadRowsRequestSchema, rpc.request().postData() ?? "{}")
+      );
+      await rpc.fallback();
+    }
+  );
   const table = await bookmarkColumns(page, {
     key: "table-data:",
     url: DATA_GRID_TABLE_URL,
@@ -232,6 +304,13 @@ test("bookmarked columns: table data", async ({ page }) => {
     checkbox: "checkbox",
   });
   await expect(table).toBeVisible();
+  expect(
+    requests.some((request) =>
+      request.orderBy.some(
+        (order) => order.direction === RowOrder_Direction.DESC
+      )
+    )
+  ).toBe(true);
 });
 
 test("bookmarked columns: materialized view data", async ({ page }) => {
@@ -286,7 +365,7 @@ for (const route of ["sql", "workbench"]) {
       ).toBeEnabled();
       await page.getByRole("button", { name: RUN_BUTTON }).click();
       await expect(
-        page.getByText("Pacific Crest Shipping", { exact: true }).first()
+        page.getByRole("grid").getByRole("row").nth(1)
       ).toBeVisible();
     };
     // Keep the existing result for the first action, rather than executing from a URL.
@@ -327,4 +406,30 @@ test("extension description follows explicit selection on narrow screens", async
   await expect(
     page.getByRole("columnheader", { name: "Description", exact: true })
   ).toBeVisible();
+});
+
+test("role filters retain bookmarked sorting and column order", async ({
+  page,
+}) => {
+  await mockRolesScreen(page, accessMapFixture({ roles: ROLES_TABLE_ROLES }));
+  const order = JSON.stringify({
+    "instance-roles": ["connLimit", "roleName", "login"],
+  });
+  const sorting = JSON.stringify({
+    "instance-roles": [{ id: "roleName", desc: true }],
+  });
+  await page.goto(
+    `/instances/production/roles?columnOrder=${encodeURIComponent(order)}&listSort=${encodeURIComponent(sorting)}`
+  );
+  await page.getByRole("button", { name: "Type", exact: true }).click();
+  await page.getByRole("menuitemcheckbox", { name: USERS_FILTER }).click();
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("type"))
+    .toBe("login");
+  expect(new URL(page.url()).searchParams.get("columnOrder")).toBe(order);
+  expect(new URL(page.url()).searchParams.get("listSort")).toBe(sorting);
+  await expect(
+    page.getByRole("table").getByRole("columnheader").first()
+  ).toContainText("Conn limit");
 });

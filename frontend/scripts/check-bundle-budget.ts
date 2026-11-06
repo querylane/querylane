@@ -26,7 +26,10 @@ const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
 // Measured with Bun 1.4.3: 201.3 KiB. Initial/largest-chunk caps are unchanged.
 // 205 (was 203): latest sql-formatter and panel releases add deferred code.
 // Paired Bun 1.4.4 builds: SQL editor 199.3 -> 203.5 KiB gzip.
-const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 205;
+// 206 (was 205): proposed allowance for lossless SQL result display sorting.
+// Paired Bun 1.4.4 builds of this rebased PR: 204.8 -> 205.1 KiB gzip.
+// Core, initial-load and largest-async caps remain unchanged.
+const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 206;
 // TanStack Charts is lazy-loaded and only pulled in on the instance
 // overview metrics panel, so it is split out and guarded separately from core.
 // 145 (was 140): the console-pages chunk shares these sources and also grew
@@ -61,8 +64,9 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // Initial-load and largest-async caps stay unchanged.
 // 1045 (was 1043): approved dependency refresh on current main measures
 // 1043.3 KiB core gzip with Bun 1.4.4 on both macOS and Linux CI.
-// Leave modest headroom; every other bundle and latency cap is unchanged.
-const MAX_TOTAL_GZIP_KIB = 1045;
+// 1050 (was 1045): shareable list sorting and layout state. No new dependencies;
+// initial-load, SQL-editor and largest-async caps stay unchanged.
+const MAX_TOTAL_GZIP_KIB = 1050;
 
 interface BundleBudgetAsset {
   brotli: number;

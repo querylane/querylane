@@ -33,6 +33,18 @@ test.describe("roles list", () => {
   });
 });
 
+test("column picker keeps the compact checkbox menu", async ({ page }) => {
+  await mockRolesScreen(page, accessMapFixture({ roles: ROLES_TABLE_ROLES }));
+  await page.goto(ROLES_URL);
+  await page.getByRole("button", { name: "Columns", exact: true }).click();
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Role", exact: true })
+  ).toBeChecked();
+  await expect(page.getByRole("menu")).toHaveScreenshot(
+    "roles-column-picker.png"
+  );
+});
+
 test.describe("roles access map", () => {
   test("matches the design source across view states", async ({ page }) => {
     await mockRolesScreen(page, accessMapFixture());
