@@ -520,7 +520,7 @@ function assertAuthoredDeclarationCoverage(
   const roots = new Set(
     strings(config["files"]).map((file) => file.replace(SCOPED_PATTERN, ""))
   );
-  const declarations = globSync("**/*.d.ts", {
+  const declarations = globSync("**/*.d.{ts,mts,cts}", {
     cwd: root,
     exclude: [
       ...artifactDirectories.map((directory) => `**/${directory}/**`),

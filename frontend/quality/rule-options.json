@@ -1,6 +1,9 @@
 {
   "biome": {
     "rules": {
+      "a11y/useValidAutocomplete": {
+        "inputComponents": ["Input"]
+      },
       "complexity/noExcessiveCognitiveComplexity": {
         "maxAllowedComplexity": 10
       },
@@ -125,6 +128,18 @@
       }
     },
     "overrides": [
+      {
+        "scope": ["src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}"],
+        "rules": {
+          "style/noRestrictedGlobals": {
+            "deniedGlobals": {
+              "Buffer": "Use browser byte APIs.",
+              "setImmediate": "Use browser scheduling APIs.",
+              "clearImmediate": "Use browser scheduling APIs."
+            }
+          }
+        }
+      },
       {
         "scope": [
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",

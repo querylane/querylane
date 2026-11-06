@@ -62,10 +62,19 @@ const SUPPRESSION_PATTERNS = [
   ["type", "coverage", "ignore"].join("-"),
   ["no", "inspection"].join(""),
 ];
-const SUPPRESSION_MATCHERS = SUPPRESSION_PATTERNS.map((pattern) => ({
-  pattern,
-  matcher: new RegExp(String.raw`(?:<!--|(?<![\w-]))${pattern}(?!\w)`, "u"),
-}));
+const TS_LINE_DIRECTIVE_PATTERN = /^@ts-(?:ignore|expect-error)$/u;
+const SUPPRESSION_MATCHERS = SUPPRESSION_PATTERNS.map((pattern) => {
+  const boundary = TS_LINE_DIRECTIVE_PATTERN.test(pattern)
+    ? ""
+    : String.raw`(?!\w)`;
+  return {
+    pattern,
+    matcher: new RegExp(
+      String.raw`(?:<!--|(?<![\w-]))${pattern}${boundary}`,
+      "u"
+    ),
+  };
+});
 const ALLOWED_SUPPRESSION_PATH_PREFIXES = ["src/protogen/"];
 const ALLOWED_SUPPRESSION_FILES = new Set<string>();
 const PROTOBUF_FILENAME_PATTERN = /(?:_pb|_connectquery)\.ts$/u;

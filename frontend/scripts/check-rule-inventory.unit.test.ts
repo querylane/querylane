@@ -32,10 +32,10 @@ test("accepts the same reviewed catalog in a different order", () => {
   }).not.toThrow();
 });
 
-function addAuthoredDeclaration(root: string, enabled: boolean): void {
-  if (enabled) {
+function addAuthoredDeclaration(root: string, extension?: string): void {
+  if (extension !== undefined) {
     writeFileSync(
-      join(root, "src/extra.d.ts"),
+      join(root, `src/extra.d.${extension}`),
       "declare const extra: string;\n"
     );
   }
@@ -75,7 +75,7 @@ test.each([
     config: "tsconfig.authored-declarations.json",
     original: '"src/env.d.ts",',
     replacement: '"src/extra.d.ts", "src/env.d.ts",',
-    extraDeclaration: true,
+    extraDeclaration: "ts",
     rule: "new checked authored declaration",
     status: 0,
     message: "Every installed rule has a recorded policy decision.",
@@ -84,9 +84,25 @@ test.each([
     config: "tsconfig.authored-declarations.json",
     original: '"target": "ESNext"',
     replacement: '"target": "esnext"',
-    extraDeclaration: true,
+    extraDeclaration: "ts",
     rule: "new unchecked authored declaration",
     message: "Authored declaration coverage is not enforced: src/extra.d.ts",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"target": "ESNext"',
+    replacement: '"target": "esnext"',
+    extraDeclaration: "mts",
+    rule: "new unchecked authored mts declaration",
+    message: "Authored declaration coverage is not enforced: src/extra.d.mts",
+  },
+  {
+    config: "tsconfig.authored-declarations.json",
+    original: '"target": "ESNext"',
+    replacement: '"target": "esnext"',
+    extraDeclaration: "cts",
+    rule: "new unchecked authored cts declaration",
+    message: "Authored declaration coverage is not enforced: src/extra.d.cts",
   },
   {
     config: "tsconfig.authored-declarations.json",
@@ -533,7 +549,7 @@ export default {
 };
 `
     );
-    addAuthoredDeclaration(root, "extraDeclaration" in scenario);
+    addAuthoredDeclaration(root, scenario.extraDeclaration);
     const config = join(root, scenario.config);
     const original = readFileSync(config, "utf8");
     const modified = original.replace(scenario.original, scenario.replacement);

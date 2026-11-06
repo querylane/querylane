@@ -127,7 +127,12 @@
         "useValidAriaProps": "error",
         "useValidAriaRole": "error",
         "useValidAriaValues": "error",
-        "useValidAutocomplete": "error",
+        "useValidAutocomplete": {
+          "level": "error",
+          "options": {
+            "inputComponents": ["Input"]
+          }
+        },
         "useValidLang": "error"
       },
       "complexity": {
@@ -1133,6 +1138,18 @@
         "rules": {
           "correctness": {
             "noNodejsModules": "error"
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Buffer": "Use browser byte APIs.",
+                  "setImmediate": "Use browser scheduling APIs.",
+                  "clearImmediate": "Use browser scheduling APIs."
+                }
+              }
+            }
           }
         }
       }

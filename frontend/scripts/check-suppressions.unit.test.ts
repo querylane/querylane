@@ -13,6 +13,19 @@ import { describe, expect, test } from "@rstest/core";
 import { findSuppressionViolations } from "./check-suppressions";
 
 describe("suppression guard", () => {
+  test.each(["ignore", "expect-error"])(
+    "reports TypeScript %s with concatenated descriptions",
+    (directive) => {
+      const pattern = ["@ts", directive].join("-");
+      expect(
+        findSuppressionViolations({
+          files: ["/repo/src/app.ts"],
+          projectRoot: "/repo",
+          readFile: () => `// ${pattern}BecauseExplanation\nexport {};`,
+        })
+      ).toEqual([{ line: 1, path: "src/app.ts", pattern }]);
+    }
+  );
   test("rejects generated headers on authored files", () => {
     const violations = findSuppressionViolations({
       files: ["/repo/src/escape.ts"],
