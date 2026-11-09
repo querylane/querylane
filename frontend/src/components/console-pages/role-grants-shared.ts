@@ -602,12 +602,11 @@ export function objectMatchesFilters({
   if (needle && !objectDisplayName(object).toLowerCase().includes(needle)) {
     return false;
   }
-  if (grantOnly && !object.privileges.some((p) => p.grantable)) {
+  if (grantOnly && object.privileges.every((p) => !p.grantable)) {
     return false;
   }
   if (
-    activePrivs.length > 0 &&
-    !activePrivs.every((name) => object.privileges.some((p) => p.name === name))
+    activePrivs.some((name) => object.privileges.every((p) => p.name !== name))
   ) {
     return false;
   }

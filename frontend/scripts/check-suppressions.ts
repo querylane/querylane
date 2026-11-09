@@ -41,6 +41,8 @@ const TEXT_EXTENSIONS = new Set([
   ".svg",
   ".ts",
   ".tsx",
+  ".yaml",
+  ".yml",
 ]);
 const SUPPRESSION_PATTERNS = [
   ["biome", "ignore"].join("-"),

@@ -338,8 +338,8 @@ function PlanMetricControls({
                 disabled={
                   (!analyze &&
                     (item.value === "self" || item.value === "time")) ||
-                  !nodes.some(
-                    (node) => planMetricValue(node, item.value) !== undefined
+                  nodes.every(
+                    (node) => planMetricValue(node, item.value) === undefined
                   )
                 }
                 key={item.value}

@@ -137,6 +137,37 @@ describe("suppression guard", () => {
 });
 
 describe("suppression check file coverage", () => {
+  test.each(["yaml", "yml"])(
+    "rejects suppressions in .%s files while accepting valid YAML keys",
+    (extension) => {
+      const root = mkdtempSync(join(tmpdir(), "querylane-yaml-suppressions-"));
+      const file = join(root, `probe.${extension}`);
+      const check = () =>
+        spawnSync("bun", [join(import.meta.dirname, "check-suppressions.ts")], {
+          cwd: root,
+          encoding: "utf-8",
+        });
+      const directive = ["biome", "ignore"].join("-");
+      try {
+        writeFileSync(
+          file,
+          `# ${directive} lint/nursery/noYamlBooleanKeys: hidden key\ntrue: enabled\n`
+        );
+        const suppressed = check();
+        expect(suppressed.status, suppressed.stdout + suppressed.stderr).toBe(
+          1
+        );
+        expect(suppressed.stderr).toContain(`probe.${extension}:1`);
+        expect(suppressed.stderr).toContain(directive);
+        writeFileSync(file, '"true": enabled\n');
+        const valid = check();
+        expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+      } finally {
+        rmSync(root, { recursive: true });
+      }
+    }
+  );
+
   test("rejects directives in modules, hidden tooling, and new source directories", () => {
     const root = mkdtempSync(join(tmpdir(), "querylane-suppressions-"));
     for (const directory of [

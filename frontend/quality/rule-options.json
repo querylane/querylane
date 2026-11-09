@@ -439,13 +439,12 @@
     }
   },
   "entrypoints": {
-    "lint": "bun run quality:rules && ultracite check --error-on-warnings && bun run lint:biome:compat && bun run lint:shadcn && bun run suppressions:check",
-    "lint:fix": "biome format --write . && ultracite fix --error-on-warnings && bun run lint:biome:compat --write . && bun run lint:shadcn && bun run suppressions:check",
-    "lint:biome": "biome check --error-on-warnings . && bun run lint:biome:compat",
-    "lint:biome:compat": "bun run scripts/check-biome-compat.ts",
+    "lint": "bun run quality:rules && ultracite check --error-on-warnings && bun run lint:shadcn && bun run suppressions:check",
+    "lint:fix": "biome format --write . && ultracite fix --error-on-warnings && bun run lint:shadcn && bun run suppressions:check",
+    "lint:biome": "biome check --error-on-warnings .",
     "lint:oxlint": "oxlint --config oxlint.config.ts --type-aware --deny-warnings --disable-nested-config --report-unused-disable-directives-severity error",
     "lint:shadcn": "bun run lint:oxlint",
-    "lint:changed": "bun run scripts/lint-changed.ts && bun run lint:biome:compat && bun run lint:shadcn && bun run suppressions:check",
+    "lint:changed": "bun run scripts/lint-changed.ts && bun run lint:shadcn && bun run suppressions:check",
     "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
     "doctor:full": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
     "doctor:ci": "bun run doctor:full",
