@@ -157,7 +157,22 @@ test.describe("constraints", () => {
       table: "customers",
     });
 
-    await expect(page.getByText("Not valid", { exact: true })).toBeVisible();
+    const unenforced = page.getByRole("row").filter({
+      has: page.getByText("customers_status_check", { exact: true }),
+    });
+    await expect(
+      unenforced.getByText("Not enforced", { exact: true })
+    ).toBeVisible();
+    await expect(
+      unenforced.getByText("Not valid", { exact: true })
+    ).toBeVisible();
+    const legacy = page.getByRole("row").filter({
+      has: page.getByText("customers_legacy_status_check", { exact: true }),
+    });
+    await expect(legacy.getByText("Not valid", { exact: true })).toBeVisible();
+    await expect(
+      legacy.getByText("Not enforced", { exact: true })
+    ).not.toBeVisible();
     await expect(pageContent(page)).toHaveScreenshot(
       "table-constraint-states.png"
     );

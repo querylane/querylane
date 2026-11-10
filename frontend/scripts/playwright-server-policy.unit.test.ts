@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { env } from "node:process";
 import { expect, test } from "@rstest/core";
 
-test("canonical container uses Node 26 LTS and isolated build output", () => {
+test("canonical container uses private pinned tooling and isolated build output", () => {
   const directory = mkdtempSync(
     join(tmpdir(), "querylane-container-contract-")
   );
@@ -34,8 +34,12 @@ test("canonical container uses Node 26 LTS and isolated build output", () => {
     );
     expect(result.status).toBe(0);
     const args = result.stdout.trim().split("\n");
-    expect(args.at(-1)).toContain(
-      "npm install --global --silent node@26.13.0 bun@"
+    const bootstrap = args.at(-1);
+    expect(bootstrap).toContain(
+      "npm install --global --prefix /tmp/querylane-playwright-toolchain --silent node@26.13.0 bun@"
+    );
+    expect(bootstrap).toContain(
+      "export PATH=/tmp/querylane-playwright-toolchain/bin:$PATH"
     );
     const volumes = args.flatMap((argument, index) =>
       argument === "--volume" ? [args[index + 1]] : []

@@ -1283,12 +1283,24 @@ test("data explorer constraints tab covers validation and action states", async 
       )
     )
     .toBeVisible();
+  const unenforced = page.getByRole("row").filter({
+    has: page.getByText("customers_status_check", { exact: true }),
+  });
   await expect
-    .element(page.getByText("Not valid", { exact: true }).first())
+    .element(unenforced.getByText("Not enforced", { exact: true }))
     .toBeVisible();
   await expect
-    .element(page.getByText("Not enforced", { exact: true }))
+    .element(unenforced.getByText("Not valid", { exact: true }))
     .toBeVisible();
+  const legacy = page.getByRole("row").filter({
+    has: page.getByText("customers_legacy_status_check", { exact: true }),
+  });
+  await expect
+    .element(legacy.getByText("Not valid", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(legacy.getByText("Not enforced", { exact: true }))
+    .not.toBeVisible();
   await expect.element(page.getByText("CHECK").first()).toBeVisible();
   await expect.element(page.getByText("EXCLUSION")).toBeVisible();
   expect(document.body.textContent).not.toContain(
