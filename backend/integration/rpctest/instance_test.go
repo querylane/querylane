@@ -220,7 +220,7 @@ func (s *RPCSuite) TestInstanceCredentialRecovery() {
 func (s *RPCSuite) corruptStoredInstancePassword(ctx context.Context, instanceID string) {
 	s.T().Helper()
 
-	db, err := s.pgContainer.ConnectToDatabase(ctx, metaDBName)
+	db, err := s.metaContainer.ConnectToDatabase(ctx, metaDBName)
 	s.Require().NoError(err)
 
 	defer db.Close()

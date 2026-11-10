@@ -54,6 +54,8 @@ func (c queryInsightsTestConn) Begin() (driver.Tx, error) {
 
 func (c queryInsightsTestConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
 	switch {
+	case strings.Contains(query, "pg_catalog.pg_extension"):
+		return &queryInsightsTestRows{columns: []string{"nspname"}, rows: [][]driver.Value{{"public"}}}, nil
 	case strings.Contains(query, "pg_stat_statements"):
 		return &queryInsightsTestRows{
 			columns: []string{"query_id", "query_text", "calls", "total_time_ms", "mean_time_ms", "total_time_ratio"},

@@ -60,6 +60,11 @@ func (s *PostgresEngineIntegrationTestSuite) SetupSuite() {
 
 	s.eng = postgres.New(tokens)
 
+	var serverVersion string
+	var serverVersionNum int
+	s.Require().NoError(db.QueryRowContext(ctx, "SELECT version(), current_setting('server_version_num')::int").Scan(&serverVersion, &serverVersionNum))
+	s.T().Logf("instance compatibility target: %s (server_version_num=%d)", serverVersion, serverVersionNum)
+
 	// Test basic connection
 	err = s.eng.TestConnection(ctx, s.db)
 	s.Require().NoError(err)
@@ -105,6 +110,13 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetInstanceOverviewExposesPgSta
 
 	s.Require().NoError(err)
 	s.Require().NotNil(overview)
+	version, versionErr := s.eng.GetServerVersionNum(ctx, s.db)
+	s.Require().NoError(versionErr)
+	if version < 160000 {
+		s.Nil(overview.IO, "older PostgreSQL must not pretend unavailable I/O is zero")
+		s.NotEmpty(overview.PartialErrors)
+		return
+	}
 	s.Require().NotNil(overview.IO, "PostgreSQL 16+ exposes pg_stat_io")
 	s.GreaterOrEqual(overview.IO.Reads, int64(0))
 	s.GreaterOrEqual(overview.IO.ReadBytes, int64(0))
@@ -194,7 +206,7 @@ func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples(
 
 	version, err := s.eng.GetServerVersionNum(ctx, s.db)
 	s.Require().NoError(err)
-	s.GreaterOrEqual(version, int32(160000), "test container is PG16+")
+	s.GreaterOrEqual(version, int32(140000), "test container is PG14+")
 
 	conn, err := s.eng.GetConnectionMetrics(ctx, s.db)
 	s.Require().NoError(err)
@@ -242,6 +254,13 @@ func (s *PostgresEngineIntegrationTestSuite) TestProbeMetricsCollectRealSamples(
 	s.Positive(sizeByName["postgres"], "the default database must report a size")
 
 	io, err := s.eng.GetIOCounters(ctx, s.db)
+	version, versionErr := s.eng.GetServerVersionNum(ctx, s.db)
+	s.Require().NoError(versionErr)
+	if version < 160000 {
+		s.Require().Error(err, "pg_stat_io is unavailable, not an observed zero")
+		s.Nil(io)
+		return
+	}
 	s.Require().NoError(err)
 	s.GreaterOrEqual(io.Reads, int64(0))
 	s.GreaterOrEqual(io.Fsyncs, int64(0))
@@ -262,9 +281,14 @@ func (s *PostgresEngineIntegrationTestSuite) TestGetVacuumCountersAggregatesUser
 	_, err = testDB.ExecContext(ctx, "VACUUM (ANALYZE) probe_vacuum_target")
 	s.Require().NoError(err)
 
+	// PG14's separate stats collector publishes asynchronously; wait for
+	// the observed VACUUM instead of mistaking delayed publication for zero.
+	s.Require().Eventually(func() bool {
+		vacuum, queryErr := s.eng.GetVacuumCounters(ctx, testDB)
+		return queryErr == nil && vacuum.VacuumCount >= 1
+	}, 5*time.Second, 50*time.Millisecond, "the manual VACUUM must be counted")
 	vacuum, err := s.eng.GetVacuumCounters(ctx, testDB)
 	s.Require().NoError(err)
-	s.GreaterOrEqual(vacuum.VacuumCount, int64(1), "the manual VACUUM must be counted")
 	s.GreaterOrEqual(vacuum.LiveTuples, int64(0))
 	s.GreaterOrEqual(vacuum.DeadTuples, int64(0))
 }

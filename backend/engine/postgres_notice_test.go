@@ -63,3 +63,18 @@ func TestPostgresNoticeSlotIgnoresNoticesWithoutCollector(t *testing.T) {
 		slot.add(&pgconn.Notice{SeverityUnlocalized: "NOTICE", Message: "outside querylane session"})
 	})
 }
+
+func TestPostgresStartupNoticesDeliveredOnlyToFirstSession(t *testing.T) {
+	t.Parallel()
+	slot := &postgresNoticeSlot{startup: &postgresNoticeCollector{}}
+	slot.add(&pgconn.Notice{SeverityUnlocalized: "WARNING", Message: "password expires soon"})
+	first := &postgresNoticeCollector{}
+	slot.set(first)
+	require.Len(t, first.snapshot(), 1)
+	assert.Contains(t, first.snapshot()[0], "password expires soon")
+	slot.set(nil)
+	slot.add(&pgconn.Notice{Message: "unclaimed pooled notice"})
+	second := &postgresNoticeCollector{}
+	slot.set(second)
+	assert.Empty(t, second.snapshot())
+}

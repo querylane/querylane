@@ -374,3 +374,22 @@ func (s *RPCSuite) TestValidateQuery_RejectsMalformedParent() {
 	s.Require().Error(err)
 	s.Equal(connect.CodeInvalidArgument, connect.CodeOf(err))
 }
+
+func (s *RPCSuite) TestExecuteQuery_RejectsPhysicalMaintenance() {
+	ctx := s.T().Context()
+	for _, statement := range []string{
+		"/* maintenance is not a read */ REPACK public.customers",
+		"REPACK (CONCURRENTLY) public.customers",
+		"CLUSTER public.customers",
+	} {
+		stream, err := s.sqlClient.ExecuteQuery(ctx, connect.NewRequest(&consolev1alpha1.ExecuteQueryRequest{Parent: s.databaseName(), Statement: statement}))
+		if err == nil {
+			for stream.Receive() {
+			}
+			err = stream.Err()
+		}
+		s.Require().Error(err, statement)
+		s.Equal(connect.CodeInvalidArgument, connect.CodeOf(err), statement)
+		s.Contains(err.Error(), "not allowed in the read-only workbench", statement)
+	}
+}

@@ -83,6 +83,10 @@ var builtinTypeNames = map[uint32]string{
 	6153: "_tstzmultirange",
 	6155: "_datemultirange",
 	6157: "_int8multirange",
+	6437: "oid8",
+	6442: "_oid8",
+	6490: "regdatabase",
+	6491: "_regdatabase",
 }
 
 // resolveTypeNamesQuery names the OIDs the driver could not. format_type
