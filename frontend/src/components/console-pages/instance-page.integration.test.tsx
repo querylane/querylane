@@ -47,6 +47,8 @@ import {
   Instance_CredentialState,
   InstanceHealthSchema,
   InstanceSchema,
+  LockStatisticsSchema,
+  LockTypeStatisticsSchema,
   PgStatStatementsHealthSchema,
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
@@ -56,6 +58,7 @@ import {
   ServerInfoSchema,
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { ObservationAvailability } from "@/protogen/querylane/console/v1alpha1/observation_pb";
 
 interface InstanceUpdateInput {
   instance: {
@@ -250,6 +253,7 @@ rs.mock("@/hooks/api/instance", () => ({
       data: state.healthData
         ? {
             activity: state.healthData.health?.connectionActivity,
+            lockStatistics: state.healthData.health?.lockStatistics,
             partialErrors: state.healthData.partialErrors,
           }
         : undefined,
@@ -453,6 +457,7 @@ function instanceHealthResponse({
         maxReplicationLagBytes: 86_000_000n,
         replayLagSeconds: 0n,
         role: replicationRole,
+        statisticsVisible: true,
         status: HealthCheckStatus.OK,
         streamingReplicas: 1,
         summary:
@@ -778,6 +783,32 @@ describe("backend instance danger zone", () => {
 });
 
 describe("backend instance activity interactions", () => {
+  test("wires live cumulative lock statistics independently of session rows", () => {
+    state.selectedInstanceStatus = "connected";
+    state.instances = [postgresInstanceFixture("connected")];
+    state.instanceData = connectedInstanceResponse();
+    state.healthData = createProto(CheckInstanceHealthResponseSchema, {
+      health: createProto(InstanceHealthSchema, {
+        lockStatistics: createProto(LockStatisticsSchema, {
+          availability: ObservationAvailability.AVAILABLE,
+          byType: [
+            createProto(LockTypeStatisticsSchema, {
+              lockType: "relation",
+              waits: 0n,
+              waitTimeMs: 0,
+              fastpathExceeded: 0n,
+            }),
+          ],
+        }),
+      }),
+    });
+    renderInstanceActivity();
+    expect(
+      screen.getByRole("table", { name: "Cumulative lock statistics by type" })
+    ).toBeTruthy();
+    expect(screen.getByText("Activity data unavailable")).toBeTruthy();
+    expect(screen.getByText("relation")).toBeTruthy();
+  });
   function openBlockedSessionInspector(
     user: ReturnType<typeof userEvent.setup>
   ) {

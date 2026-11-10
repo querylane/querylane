@@ -20,6 +20,15 @@ function column(
 }
 
 describe("describePostgresType", () => {
+  test("describes PostgreSQL 19 unsigned integers and database aliases", () => {
+    const unsigned = describePostgresType(column("oid8", DataType.INTEGER));
+    expect(unsigned.badges).toContain("64-bit");
+    expect(unsigned.summary).toBe("Unsigned 64-bit whole number.");
+    expect(
+      describePostgresType(column("regdatabase", DataType.UNKNOWN)).category
+    ).toBe("Object ID");
+  });
+
   test("explains timestamp with time zone using PostgreSQL timestamptz language", () => {
     const meta = describePostgresType(
       column("timestamp with time zone", DataType.TIMESTAMP)

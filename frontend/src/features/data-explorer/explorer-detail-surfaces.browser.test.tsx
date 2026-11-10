@@ -24,6 +24,7 @@ import { CatalogSyncMetadataSchema } from "@/protogen/querylane/console/v1alpha1
 import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
   DataType,
+  GeneratedColumnKind,
   TableSchema,
   TableService,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -1036,6 +1037,30 @@ test("data explorer table columns show generated and identity metadata", async (
   expect(badgeRow.scrollWidth).toBeLessThanOrEqual(badgeRow.clientWidth);
 });
 
+test.each([
+  [GeneratedColumnKind.STORED, "GENERATED STORED"],
+  [GeneratedColumnKind.VIRTUAL, "GENERATED VIRTUAL"],
+  [GeneratedColumnKind.UNSPECIFIED, "GENERATED"],
+] as const)(
+  "generated storage kind %s has an accurate badge",
+  async (kind, label) => {
+    await renderTable(
+      customersSchema({
+        columns: [
+          column("name_length", [DataType.INTEGER, "int4"], {
+            generatedKind: kind,
+            generationExpression: "length(name)",
+            isGenerated: true,
+          }),
+        ],
+      }),
+      "customers",
+      "columns"
+    );
+    await expect.element(page.getByText(label, { exact: true })).toBeVisible();
+  }
+);
+
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
   const customers = customersSchema();
   await renderWithCatalog(
@@ -1259,7 +1284,10 @@ test("data explorer constraints tab covers validation and action states", async 
     )
     .toBeVisible();
   await expect
-    .element(page.getByText("Not valid", { exact: true }))
+    .element(page.getByText("Not valid", { exact: true }).first())
+    .toBeVisible();
+  await expect
+    .element(page.getByText("Not enforced", { exact: true }))
     .toBeVisible();
   await expect.element(page.getByText("CHECK").first()).toBeVisible();
   await expect.element(page.getByText("EXCLUSION")).toBeVisible();

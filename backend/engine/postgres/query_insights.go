@@ -33,6 +33,12 @@ func (d *Postgres) GetDatabaseQueryInsights(ctx context.Context, db *sql.DB) (*e
 		recordQueryInsightsPartialError(ctx, insights, tableInsightsMetricTableStats, "failed to query table statistics", "query table statistics", err)
 	}
 
+	priorities, err := queryAutovacuumPriorities(ctx, db)
+	insights.AutovacuumPriorities = priorities
+	if err != nil {
+		recordQueryInsightsPartialError(ctx, insights, "autovacuum_priorities", "failed to query autovacuum priorities", "query autovacuum priorities", err)
+	}
+
 	return insights, nil
 }
 

@@ -451,7 +451,7 @@ type GetDatabaseQueryInsightsResponse struct {
 	// Errors encountered fetching individual insight categories.
 	// The RPC succeeds even when some categories are unavailable. Each Status
 	// identifies the failed category via google.rpc.ErrorInfo with metadata key
-	// "metric" set to "query_stats" or "table_stats".
+	// "metric" set to "query_stats", "table_stats", or "autovacuum_priorities".
 	PartialErrors []*status.Status `protobuf:"bytes,2,rep,name=partial_errors,json=partialErrors,proto3" json:"partial_errors,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -517,8 +517,10 @@ type DatabaseQueryInsights struct {
 	QueryStatsAvailable bool `protobuf:"varint,5,opt,name=query_stats_available,json=queryStatsAvailable,proto3" json:"query_stats_available,omitempty"`
 	// Whether table statistics views could be queried.
 	TableStatsAvailable bool `protobuf:"varint,6,opt,name=table_stats_available,json=tableStatsAvailable,proto3" json:"table_stats_available,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Current database-local scores, not a guaranteed autovacuum processing queue.
+	AutovacuumPriorities *AutovacuumPriorities `protobuf:"bytes,7,opt,name=autovacuum_priorities,json=autovacuumPriorities,proto3" json:"autovacuum_priorities,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *DatabaseQueryInsights) Reset() {
@@ -591,6 +593,13 @@ func (x *DatabaseQueryInsights) GetTableStatsAvailable() bool {
 		return x.TableStatsAvailable
 	}
 	return false
+}
+
+func (x *DatabaseQueryInsights) GetAutovacuumPriorities() *AutovacuumPriorities {
+	if x != nil {
+		return x.AutovacuumPriorities
+	}
+	return nil
 }
 
 type QueryRuntimeInsight struct {
@@ -882,11 +891,196 @@ func (x *TableCacheHitInsight) GetTotalSizeBytes() int64 {
 	return 0
 }
 
+// Bounded PostgreSQL 19 autovacuum-priority observations for visible tables.
+type AutovacuumPriorities struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Availability  ObservationAvailability    `protobuf:"varint,1,opt,name=availability,proto3,enum=querylane.console.v1alpha1.ObservationAvailability" json:"availability,omitempty"`
+	Summary       string                     `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	Tables        []*AutovacuumTablePriority `protobuf:"bytes,3,rep,name=tables,proto3" json:"tables,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AutovacuumPriorities) Reset() {
+	*x = AutovacuumPriorities{}
+	mi := &file_querylane_console_v1alpha1_database_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutovacuumPriorities) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutovacuumPriorities) ProtoMessage() {}
+
+func (x *AutovacuumPriorities) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_database_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutovacuumPriorities.ProtoReflect.Descriptor instead.
+func (*AutovacuumPriorities) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_database_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AutovacuumPriorities) GetAvailability() ObservationAvailability {
+	if x != nil {
+		return x.Availability
+	}
+	return ObservationAvailability_OBSERVATION_AVAILABILITY_UNSPECIFIED
+}
+
+func (x *AutovacuumPriorities) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *AutovacuumPriorities) GetTables() []*AutovacuumTablePriority {
+	if x != nil {
+		return x.Tables
+	}
+	return nil
+}
+
+type AutovacuumTablePriority struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SchemaName        string                 `protobuf:"bytes,1,opt,name=schema_name,json=schemaName,proto3" json:"schema_name,omitempty"`
+	TableName         string                 `protobuf:"bytes,2,opt,name=table_name,json=tableName,proto3" json:"table_name,omitempty"`
+	Score             float64                `protobuf:"fixed64,3,opt,name=score,proto3" json:"score,omitempty"`
+	XidScore          float64                `protobuf:"fixed64,4,opt,name=xid_score,json=xidScore,proto3" json:"xid_score,omitempty"`
+	MxidScore         float64                `protobuf:"fixed64,5,opt,name=mxid_score,json=mxidScore,proto3" json:"mxid_score,omitempty"`
+	VacuumScore       float64                `protobuf:"fixed64,6,opt,name=vacuum_score,json=vacuumScore,proto3" json:"vacuum_score,omitempty"`
+	VacuumInsertScore float64                `protobuf:"fixed64,7,opt,name=vacuum_insert_score,json=vacuumInsertScore,proto3" json:"vacuum_insert_score,omitempty"`
+	AnalyzeScore      float64                `protobuf:"fixed64,8,opt,name=analyze_score,json=analyzeScore,proto3" json:"analyze_score,omitempty"`
+	DoVacuum          bool                   `protobuf:"varint,9,opt,name=do_vacuum,json=doVacuum,proto3" json:"do_vacuum,omitempty"`
+	DoAnalyze         bool                   `protobuf:"varint,10,opt,name=do_analyze,json=doAnalyze,proto3" json:"do_analyze,omitempty"`
+	ForWraparound     bool                   `protobuf:"varint,11,opt,name=for_wraparound,json=forWraparound,proto3" json:"for_wraparound,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AutovacuumTablePriority) Reset() {
+	*x = AutovacuumTablePriority{}
+	mi := &file_querylane_console_v1alpha1_database_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AutovacuumTablePriority) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AutovacuumTablePriority) ProtoMessage() {}
+
+func (x *AutovacuumTablePriority) ProtoReflect() protoreflect.Message {
+	mi := &file_querylane_console_v1alpha1_database_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AutovacuumTablePriority.ProtoReflect.Descriptor instead.
+func (*AutovacuumTablePriority) Descriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_database_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AutovacuumTablePriority) GetSchemaName() string {
+	if x != nil {
+		return x.SchemaName
+	}
+	return ""
+}
+
+func (x *AutovacuumTablePriority) GetTableName() string {
+	if x != nil {
+		return x.TableName
+	}
+	return ""
+}
+
+func (x *AutovacuumTablePriority) GetScore() float64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetXidScore() float64 {
+	if x != nil {
+		return x.XidScore
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetMxidScore() float64 {
+	if x != nil {
+		return x.MxidScore
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetVacuumScore() float64 {
+	if x != nil {
+		return x.VacuumScore
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetVacuumInsertScore() float64 {
+	if x != nil {
+		return x.VacuumInsertScore
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetAnalyzeScore() float64 {
+	if x != nil {
+		return x.AnalyzeScore
+	}
+	return 0
+}
+
+func (x *AutovacuumTablePriority) GetDoVacuum() bool {
+	if x != nil {
+		return x.DoVacuum
+	}
+	return false
+}
+
+func (x *AutovacuumTablePriority) GetDoAnalyze() bool {
+	if x != nil {
+		return x.DoAnalyze
+	}
+	return false
+}
+
+func (x *AutovacuumTablePriority) GetForWraparound() bool {
+	if x != nil {
+		return x.ForWraparound
+	}
+	return false
+}
+
 var File_querylane_console_v1alpha1_database_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\n" +
-	")querylane/console/v1alpha1/database.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\"\xd5\x03\n" +
+	")querylane/console/v1alpha1/database.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x17google/rpc/status.proto\x1a,querylane/console/v1alpha1/observation.proto\"\xd5\x03\n" +
 	"\bDatabase\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12(\n" +
@@ -920,7 +1114,7 @@ const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\x1econsole.querylane.dev/Database\xbaHG\xc8\x01\x01rB2@^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+$R\x04name\"\xc9\x01\n" +
 	" GetDatabaseQueryInsightsResponse\x12`\n" +
 	"\x0equery_insights\x18\x01 \x01(\v21.querylane.console.v1alpha1.DatabaseQueryInsightsB\x06\xbaH\x03\xc8\x01\x01R\rqueryInsights\x12C\n" +
-	"\x0epartial_errors\x18\x02 \x03(\v2\x12.google.rpc.StatusB\b\xbaH\x05\x92\x01\x02\x10\x02R\rpartialErrors\"\xfc\x06\n" +
+	"\x0epartial_errors\x18\x02 \x03(\v2\x12.google.rpc.StatusB\b\xbaH\x05\x92\x01\x02\x10\x03R\rpartialErrors\"\xe8\a\n" +
 	"\x15DatabaseQueryInsights\x12Z\n" +
 	"\vtop_queries\x18\x01 \x03(\v2/.querylane.console.v1alpha1.QueryRuntimeInsightB\b\xbaH\x05\x92\x01\x02\x10\n" +
 	"R\n" +
@@ -932,7 +1126,8 @@ const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\vobserved_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"observedAt\x122\n" +
 	"\x15query_stats_available\x18\x05 \x01(\bR\x13queryStatsAvailable\x122\n" +
-	"\x15table_stats_available\x18\x06 \x01(\bR\x13tableStatsAvailable:\xfc\x02\xbaH\xf8\x02\x1a\x9c\x01\n" +
+	"\x15table_stats_available\x18\x06 \x01(\bR\x13tableStatsAvailable\x12j\n" +
+	"\x15autovacuum_priorities\x18\a \x01(\v20.querylane.console.v1alpha1.AutovacuumPrioritiesB\x03\xe0A\x03R\x14autovacuumPriorities:\xfc\x02\xbaH\xf8\x02\x1a\x9c\x01\n" +
 	"\"top_queries_empty_when_unavailable\x12:top_queries must be empty when query stats are unavailable\x1a:this.query_stats_available || this.top_queries.size() == 0\x1a\xd6\x01\n" +
 	"%table_insights_empty_when_unavailable\x12=table insights must be empty when table stats are unavailable\x1anthis.table_stats_available || (this.sequential_scan_hotspots.size() == 0 && this.table_cache_hits.size() == 0)\"\x8e\x02\n" +
 	"\x13QueryRuntimeInsight\x12\x14\n" +
@@ -965,7 +1160,29 @@ const file_querylane_console_v1alpha1_database_proto_rawDesc = "" +
 	"\x10heap_blocks_read\x18\x04 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0eheapBlocksRead\x124\n" +
 	"\thit_ratio\x18\x05 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\x00\x00R\bhitRatio\x121\n" +
 	"\x10total_size_bytes\x18\x06 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x0etotalSizeBytes:\xad\x01\xbaH\xa9\x01\x1a\xa6\x01\n" +
-	"\x1acache_hit_empty_ratio_zero\x128hit_ratio must be zero when no heap blocks were observed\x1aNthis.heap_blocks_hit > 0 || this.heap_blocks_read > 0 || this.hit_ratio == 0.02\x95\x03\n" +
+	"\x1acache_hit_empty_ratio_zero\x128hit_ratio must be zero when no heap blocks were observed\x1aNthis.heap_blocks_hit > 0 || this.heap_blocks_read > 0 || this.hit_ratio == 0.0\"\xed\x01\n" +
+	"\x14AutovacuumPriorities\x12\\\n" +
+	"\favailability\x18\x01 \x01(\x0e23.querylane.console.v1alpha1.ObservationAvailabilityB\x03\xe0A\x03R\favailability\x12\x1d\n" +
+	"\asummary\x18\x02 \x01(\tB\x03\xe0A\x03R\asummary\x12X\n" +
+	"\x06tables\x18\x03 \x03(\v23.querylane.console.v1alpha1.AutovacuumTablePriorityB\v\xe0A\x03\xbaH\x05\x92\x01\x02\x10\n" +
+	"R\x06tables\"\x91\x04\n" +
+	"\x17AutovacuumTablePriority\x12$\n" +
+	"\vschema_name\x18\x01 \x01(\tB\x03\xe0A\x03R\n" +
+	"schemaName\x12\"\n" +
+	"\n" +
+	"table_name\x18\x02 \x01(\tB\x03\xe0A\x03R\ttableName\x12'\n" +
+	"\x05score\x18\x03 \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x05score\x12.\n" +
+	"\txid_score\x18\x04 \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\bxidScore\x120\n" +
+	"\n" +
+	"mxid_score\x18\x05 \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\tmxidScore\x124\n" +
+	"\fvacuum_score\x18\x06 \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\vvacuumScore\x12A\n" +
+	"\x13vacuum_insert_score\x18\a \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x11vacuumInsertScore\x126\n" +
+	"\ranalyze_score\x18\b \x01(\x01B\x11\xe0A\x03\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\fanalyzeScore\x12 \n" +
+	"\tdo_vacuum\x18\t \x01(\bB\x03\xe0A\x03R\bdoVacuum\x12\"\n" +
+	"\n" +
+	"do_analyze\x18\n" +
+	" \x01(\bB\x03\xe0A\x03R\tdoAnalyze\x12*\n" +
+	"\x0efor_wraparound\x18\v \x01(\bB\x03\xe0A\x03R\rforWraparound2\x95\x03\n" +
 	"\x0fDatabaseService\x12v\n" +
 	"\rListDatabases\x120.querylane.console.v1alpha1.ListDatabasesRequest\x1a1.querylane.console.v1alpha1.ListDatabasesResponse\"\x00\x12p\n" +
 	"\vGetDatabase\x12..querylane.console.v1alpha1.GetDatabaseRequest\x1a/.querylane.console.v1alpha1.GetDatabaseResponse\"\x00\x12\x97\x01\n" +
@@ -984,7 +1201,7 @@ func file_querylane_console_v1alpha1_database_proto_rawDescGZIP() []byte {
 	return file_querylane_console_v1alpha1_database_proto_rawDescData
 }
 
-var file_querylane_console_v1alpha1_database_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_querylane_console_v1alpha1_database_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_querylane_console_v1alpha1_database_proto_goTypes = []any{
 	(*Database)(nil),                         // 0: querylane.console.v1alpha1.Database
 	(*ListDatabasesRequest)(nil),             // 1: querylane.console.v1alpha1.ListDatabasesRequest
@@ -997,33 +1214,39 @@ var file_querylane_console_v1alpha1_database_proto_goTypes = []any{
 	(*QueryRuntimeInsight)(nil),              // 8: querylane.console.v1alpha1.QueryRuntimeInsight
 	(*SequentialScanHotspot)(nil),            // 9: querylane.console.v1alpha1.SequentialScanHotspot
 	(*TableCacheHitInsight)(nil),             // 10: querylane.console.v1alpha1.TableCacheHitInsight
-	(*timestamppb.Timestamp)(nil),            // 11: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),            // 12: google.protobuf.FieldMask
-	(*status.Status)(nil),                    // 13: google.rpc.Status
+	(*AutovacuumPriorities)(nil),             // 11: querylane.console.v1alpha1.AutovacuumPriorities
+	(*AutovacuumTablePriority)(nil),          // 12: querylane.console.v1alpha1.AutovacuumTablePriority
+	(*timestamppb.Timestamp)(nil),            // 13: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),            // 14: google.protobuf.FieldMask
+	(*status.Status)(nil),                    // 15: google.rpc.Status
+	(ObservationAvailability)(0),             // 16: querylane.console.v1alpha1.ObservationAvailability
 }
 var file_querylane_console_v1alpha1_database_proto_depIdxs = []int32{
-	11, // 0: querylane.console.v1alpha1.Database.last_ddl_time:type_name -> google.protobuf.Timestamp
-	11, // 1: querylane.console.v1alpha1.Database.create_time:type_name -> google.protobuf.Timestamp
-	12, // 2: querylane.console.v1alpha1.ListDatabasesRequest.read_mask:type_name -> google.protobuf.FieldMask
+	13, // 0: querylane.console.v1alpha1.Database.last_ddl_time:type_name -> google.protobuf.Timestamp
+	13, // 1: querylane.console.v1alpha1.Database.create_time:type_name -> google.protobuf.Timestamp
+	14, // 2: querylane.console.v1alpha1.ListDatabasesRequest.read_mask:type_name -> google.protobuf.FieldMask
 	0,  // 3: querylane.console.v1alpha1.ListDatabasesResponse.databases:type_name -> querylane.console.v1alpha1.Database
 	0,  // 4: querylane.console.v1alpha1.GetDatabaseResponse.database:type_name -> querylane.console.v1alpha1.Database
 	7,  // 5: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.query_insights:type_name -> querylane.console.v1alpha1.DatabaseQueryInsights
-	13, // 6: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.partial_errors:type_name -> google.rpc.Status
+	15, // 6: querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse.partial_errors:type_name -> google.rpc.Status
 	8,  // 7: querylane.console.v1alpha1.DatabaseQueryInsights.top_queries:type_name -> querylane.console.v1alpha1.QueryRuntimeInsight
 	9,  // 8: querylane.console.v1alpha1.DatabaseQueryInsights.sequential_scan_hotspots:type_name -> querylane.console.v1alpha1.SequentialScanHotspot
 	10, // 9: querylane.console.v1alpha1.DatabaseQueryInsights.table_cache_hits:type_name -> querylane.console.v1alpha1.TableCacheHitInsight
-	11, // 10: querylane.console.v1alpha1.DatabaseQueryInsights.observed_at:type_name -> google.protobuf.Timestamp
-	1,  // 11: querylane.console.v1alpha1.DatabaseService.ListDatabases:input_type -> querylane.console.v1alpha1.ListDatabasesRequest
-	3,  // 12: querylane.console.v1alpha1.DatabaseService.GetDatabase:input_type -> querylane.console.v1alpha1.GetDatabaseRequest
-	5,  // 13: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:input_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsRequest
-	2,  // 14: querylane.console.v1alpha1.DatabaseService.ListDatabases:output_type -> querylane.console.v1alpha1.ListDatabasesResponse
-	4,  // 15: querylane.console.v1alpha1.DatabaseService.GetDatabase:output_type -> querylane.console.v1alpha1.GetDatabaseResponse
-	6,  // 16: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:output_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse
-	14, // [14:17] is the sub-list for method output_type
-	11, // [11:14] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	13, // 10: querylane.console.v1alpha1.DatabaseQueryInsights.observed_at:type_name -> google.protobuf.Timestamp
+	11, // 11: querylane.console.v1alpha1.DatabaseQueryInsights.autovacuum_priorities:type_name -> querylane.console.v1alpha1.AutovacuumPriorities
+	16, // 12: querylane.console.v1alpha1.AutovacuumPriorities.availability:type_name -> querylane.console.v1alpha1.ObservationAvailability
+	12, // 13: querylane.console.v1alpha1.AutovacuumPriorities.tables:type_name -> querylane.console.v1alpha1.AutovacuumTablePriority
+	1,  // 14: querylane.console.v1alpha1.DatabaseService.ListDatabases:input_type -> querylane.console.v1alpha1.ListDatabasesRequest
+	3,  // 15: querylane.console.v1alpha1.DatabaseService.GetDatabase:input_type -> querylane.console.v1alpha1.GetDatabaseRequest
+	5,  // 16: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:input_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsRequest
+	2,  // 17: querylane.console.v1alpha1.DatabaseService.ListDatabases:output_type -> querylane.console.v1alpha1.ListDatabasesResponse
+	4,  // 18: querylane.console.v1alpha1.DatabaseService.GetDatabase:output_type -> querylane.console.v1alpha1.GetDatabaseResponse
+	6,  // 19: querylane.console.v1alpha1.DatabaseService.GetDatabaseQueryInsights:output_type -> querylane.console.v1alpha1.GetDatabaseQueryInsightsResponse
+	17, // [17:20] is the sub-list for method output_type
+	14, // [14:17] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_database_proto_init() }
@@ -1031,13 +1254,14 @@ func file_querylane_console_v1alpha1_database_proto_init() {
 	if File_querylane_console_v1alpha1_database_proto != nil {
 		return
 	}
+	file_querylane_console_v1alpha1_observation_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_database_proto_rawDesc), len(file_querylane_console_v1alpha1_database_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

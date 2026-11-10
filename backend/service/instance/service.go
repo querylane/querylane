@@ -567,6 +567,7 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 		},
 	}
 
+	resp.Health.LockStatistics = lockStatisticsToProto(health.LockStatistics)
 	checkErrors := overviewMetricErrorsByMetric(health.PartialErrors)
 	recordedPartialErrors := map[string]bool{}
 
@@ -621,8 +622,8 @@ func (s *Service) CheckInstanceHealth(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(resp), nil
 }
 
-// CheckInstanceActivity returns only connection activity for high-frequency
-// polling without running unrelated health checks.
+// CheckInstanceActivity returns connection activity and cumulative lock counters
+// without running unrelated health checks.
 func (s *Service) CheckInstanceActivity(ctx context.Context, req *connect.Request[v1alpha1.CheckInstanceActivityRequest]) (*connect.Response[v1alpha1.CheckInstanceActivityResponse], error) {
 	instanceResource, connectErr := apierrors.ParseResourceWithError(req.Msg.GetName(), "name", resource.ParseInstanceName)
 	if connectErr != nil {
@@ -642,18 +643,22 @@ func (s *Service) CheckInstanceActivity(ctx context.Context, req *connect.Reques
 		})
 	}
 
-	resp := &v1alpha1.CheckInstanceActivityResponse{}
+	resp := &v1alpha1.CheckInstanceActivityResponse{LockStatistics: lockStatisticsToProto(health.LockStatistics)}
 	if health.ConnectionActivity != nil {
 		resp.Activity = connectionActivityHealthToProto(health.ConnectionActivity)
-		return connect.NewResponse(resp), nil
 	}
-
-	checkErrors := overviewMetricErrorsByMetric(health.PartialErrors)
-	resp.PartialErrors = append(resp.PartialErrors, healthPartialError(
-		"connection_activity",
-		healthPartialErrorMessage("connection_activity"),
-		checkErrors["connection_activity"],
-	))
+	activityErrorReported := false
+	for _, partial := range health.PartialErrors {
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError(partial.Metric, healthPartialErrorMessage(partial.Metric), partial.Err))
+		activityErrorReported = activityErrorReported || partial.Metric == "connection_activity"
+	}
+	if health.ConnectionActivity == nil && !activityErrorReported {
+		resp.PartialErrors = append(resp.PartialErrors, healthPartialError(
+			"connection_activity",
+			healthPartialErrorMessage("connection_activity"),
+			nil,
+		))
+	}
 
 	return connect.NewResponse(resp), nil
 }
@@ -735,6 +740,9 @@ func replicationHealthToProto(replication *engine.ReplicationHealth) *v1alpha1.R
 		MaxReplicationLagBytes: replication.MaxReplicationLagBytes,
 		WalReceiverActive:      replication.WALReceiverActive,
 		ReplayLagSeconds:       replication.ReplayLagSeconds,
+		StatisticsVisible:      replication.StatisticsVisible,
+		ReplayLagKnown:         replication.ReplayLagKnown,
+		Recovery:               recoveryHealthToProto(replication.Recovery),
 	}
 }
 
@@ -862,6 +870,10 @@ func healthPartialErrorMessage(check string) string {
 		return "failed to query pg_stat_statements health"
 	case "autovacuum":
 		return "failed to query autovacuum health"
+	case "lock_statistics":
+		return "failed to query lock statistics"
+	case "recovery":
+		return "failed to query recovery state"
 	default:
 		return "failed to query instance health"
 	}

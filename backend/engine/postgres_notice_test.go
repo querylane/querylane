@@ -2,6 +2,7 @@ package engine
 
 import (
 	"strings"
+	"sync"
 	"testing"
 	"unicode/utf8"
 
@@ -77,4 +78,47 @@ func TestPostgresStartupNoticesDeliveredOnlyToFirstSession(t *testing.T) {
 	second := &postgresNoticeCollector{}
 	slot.set(second)
 	assert.Empty(t, second.snapshot())
+}
+
+func TestPostgresStartupNoticesShareRequestBoundsAndSnapshotOwnership(t *testing.T) {
+	t.Parallel()
+
+	slot := &postgresNoticeSlot{startup: &postgresNoticeCollector{}}
+	for range maxPostgresNotices + 2 {
+		slot.add(&pgconn.Notice{SeverityUnlocalized: "WARNING", Message: "startup warning"})
+	}
+	collector := &postgresNoticeCollector{}
+	slot.set(collector)
+	slot.add(&pgconn.Notice{Message: "query notice"})
+
+	notices := collector.snapshot()
+	require.Len(t, notices, maxPostgresNotices+1)
+	assert.Equal(t, "QUERYLANE_NOTICE_TRUNCATED: 3 additional database notices omitted", notices[maxPostgresNotices])
+	notices[0] = "caller-owned change"
+	assert.Contains(t, collector.snapshot()[0], "startup warning", "callers cannot mutate retained startup notices")
+
+	slot.set(nil)
+	next := &postgresNoticeCollector{}
+	slot.set(next)
+	assert.Empty(t, next.snapshot())
+}
+
+func TestPostgresNoticeCollectorConcurrentSnapshots(t *testing.T) {
+	t.Parallel()
+
+	collector := &postgresNoticeCollector{}
+	var workers sync.WaitGroup
+	for range 4 {
+		workers.Go(func() {
+			for range 50 {
+				collector.add(&pgconn.Notice{Message: "concurrent notice"})
+				_ = collector.snapshot()
+			}
+		})
+	}
+	workers.Wait()
+
+	notices := collector.snapshot()
+	require.Len(t, notices, maxPostgresNotices+1)
+	assert.Equal(t, "QUERYLANE_NOTICE_TRUNCATED: 100 additional database notices omitted", notices[maxPostgresNotices])
 }

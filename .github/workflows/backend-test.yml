@@ -125,4 +125,4 @@ jobs:
       - name: Require Docker provider
         run: docker info
       - name: Run real-server compatibility tests
-        run: go test -count=1 -v -timeout 6m -run '^(TestIntegration|TestRPCSuite)$' ${{ matrix.packages }}
+        run: go test -count=1 -v -timeout 6m -run 'Integration|RPCSuite' ${{ matrix.packages }}

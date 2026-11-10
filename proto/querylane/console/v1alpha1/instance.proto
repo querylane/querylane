@@ -8,6 +8,7 @@ import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
+import "querylane/console/v1alpha1/observation.proto";
 
 // --------------------------------------------------------------------------
 // Service
@@ -515,7 +516,7 @@ message CheckInstanceHealthResponse {
   // Each Status identifies the failed category via google.rpc.ErrorInfo
   // in its details, with metadata key "check" set to the category name
   // (one of: "connection_activity", "replication", "stats_access",
-  // "pg_stat_statements", "autovacuum").
+  // "pg_stat_statements", "autovacuum", "lock_statistics", "recovery").
   repeated google.rpc.Status partial_errors = 2;
 }
 
@@ -533,10 +534,12 @@ message CheckInstanceActivityRequest {
 
 message CheckInstanceActivityResponse {
   ConnectionActivityHealth activity = 1;
+  // PostgreSQL 19 cumulative completed lock-wait counters.
+  LockStatistics lock_statistics = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Errors encountered fetching connection activity. The RPC succeeds (OK)
   // when activity is unavailable so the page can show the category reason.
-  // ErrorInfo metadata key "check" is "connection_activity".
+  // ErrorInfo metadata key "check" is "connection_activity" or "lock_statistics".
   repeated google.rpc.Status partial_errors = 2;
 }
 
@@ -570,6 +573,8 @@ message InstanceHealth {
   PgStatStatementsHealth pg_stat_statements = 5;
   // Autovacuum worker saturation and most recent auto-maintenance activity.
   AutovacuumHealth autovacuum = 6;
+  // Cumulative completed lock waits, not the number of current waiters.
+  LockStatistics lock_statistics = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Backend activity and connection pressure from pg_stat_activity.
@@ -644,7 +649,14 @@ message ReplicationHealth {
   int32 synchronous_replicas = 6 [(buf.validate.field).int32.gte = 0];
   int64 max_replication_lag_bytes = 7 [(buf.validate.field).int64.gte = 0];
   bool wal_receiver_active = 8;
+  // Age of the last replayed transaction, not a measure of idle-primary lag.
   int64 replay_lag_seconds = 9 [(buf.validate.field).int64.gte = 0];
+  // Whether the connected role can observe detailed replication statistics.
+  bool statistics_visible = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // False when no transaction replay timestamp has been observed yet.
+  bool replay_lag_known = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // PostgreSQL 19 recovery state; unavailable states are explicit.
+  RecoveryHealth recovery = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Statistics visibility for the connected role.
@@ -653,7 +665,10 @@ message StatsAccessHealth {
   string summary = 2;
   string current_user = 3;
   bool superuser = 4;
+  // Whether pg_monitor privileges are effective in the current session (USAGE).
+  // The legacy field name does not mean SET ROLE-only membership (MEMBER).
   bool pg_monitor_member = 5;
+  // Whether pg_read_all_stats privileges are effective in the current session.
   bool pg_read_all_stats_member = 6;
   bool can_read_pg_stat_activity = 7;
   bool can_read_pg_stat_database = 8;
@@ -776,4 +791,46 @@ message IOMetrics {
   int64 extend_bytes = 6 [(buf.validate.field).int64.gte = 0];
   // Total fsync calls since last stats reset.
   int64 fsyncs = 7 [(buf.validate.field).int64.gte = 0];
+}
+
+// PostgreSQL 19 recovery observation. On a primary the view is inapplicable;
+// on a restricted standby an empty view is not evidence of healthy recovery.
+message RecoveryHealth {
+  ObservationAvailability availability = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string pause_state = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  bool promotion_triggered = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string replay_end_lsn = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 replay_timeline = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).int32.gte = 0
+  ];
+}
+
+// Cumulative instance-wide lock statistics, sampled without resetting counters.
+message LockStatistics {
+  HealthCheckStatus status = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string summary = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  ObservationAvailability availability = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  repeated LockTypeStatistics by_type = 4 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).repeated.max_items = 64
+  ];
+}
+
+message LockTypeStatistics {
+  string lock_type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 waits = 2 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).int64.gte = 0
+  ];
+  // Milliseconds spent in completed waits exceeding deadlock_timeout.
+  double wait_time_ms = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  int64 fastpath_exceeded = 4 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).int64.gte = 0
+  ];
+  google.protobuf.Timestamp stats_reset_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

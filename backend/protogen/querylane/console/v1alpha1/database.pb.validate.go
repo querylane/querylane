@@ -1148,6 +1148,35 @@ func (m *DatabaseQueryInsights) validate(all bool) error {
 
 	// no validation rules for TableStatsAvailable
 
+	if all {
+		switch v := interface{}(m.GetAutovacuumPriorities()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DatabaseQueryInsightsValidationError{
+					field:  "AutovacuumPriorities",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DatabaseQueryInsightsValidationError{
+					field:  "AutovacuumPriorities",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetAutovacuumPriorities()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return DatabaseQueryInsightsValidationError{
+				field:  "AutovacuumPriorities",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return DatabaseQueryInsightsMultiError(errors)
 	}
@@ -1573,3 +1602,267 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = TableCacheHitInsightValidationError{}
+
+// Validate checks the field values on AutovacuumPriorities with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *AutovacuumPriorities) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AutovacuumPriorities with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AutovacuumPrioritiesMultiError, or nil if none found.
+func (m *AutovacuumPriorities) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AutovacuumPriorities) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Availability
+
+	// no validation rules for Summary
+
+	for idx, item := range m.GetTables() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, AutovacuumPrioritiesValidationError{
+						field:  fmt.Sprintf("Tables[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, AutovacuumPrioritiesValidationError{
+						field:  fmt.Sprintf("Tables[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return AutovacuumPrioritiesValidationError{
+					field:  fmt.Sprintf("Tables[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return AutovacuumPrioritiesMultiError(errors)
+	}
+
+	return nil
+}
+
+// AutovacuumPrioritiesMultiError is an error wrapping multiple validation
+// errors returned by AutovacuumPriorities.ValidateAll() if the designated
+// constraints aren't met.
+type AutovacuumPrioritiesMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AutovacuumPrioritiesMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AutovacuumPrioritiesMultiError) AllErrors() []error { return m }
+
+// AutovacuumPrioritiesValidationError is the validation error returned by
+// AutovacuumPriorities.Validate if the designated constraints aren't met.
+type AutovacuumPrioritiesValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AutovacuumPrioritiesValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AutovacuumPrioritiesValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AutovacuumPrioritiesValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AutovacuumPrioritiesValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AutovacuumPrioritiesValidationError) ErrorName() string {
+	return "AutovacuumPrioritiesValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e AutovacuumPrioritiesValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAutovacuumPriorities.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AutovacuumPrioritiesValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AutovacuumPrioritiesValidationError{}
+
+// Validate checks the field values on AutovacuumTablePriority with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *AutovacuumTablePriority) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AutovacuumTablePriority with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AutovacuumTablePriorityMultiError, or nil if none found.
+func (m *AutovacuumTablePriority) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AutovacuumTablePriority) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for SchemaName
+
+	// no validation rules for TableName
+
+	// no validation rules for Score
+
+	// no validation rules for XidScore
+
+	// no validation rules for MxidScore
+
+	// no validation rules for VacuumScore
+
+	// no validation rules for VacuumInsertScore
+
+	// no validation rules for AnalyzeScore
+
+	// no validation rules for DoVacuum
+
+	// no validation rules for DoAnalyze
+
+	// no validation rules for ForWraparound
+
+	if len(errors) > 0 {
+		return AutovacuumTablePriorityMultiError(errors)
+	}
+
+	return nil
+}
+
+// AutovacuumTablePriorityMultiError is an error wrapping multiple validation
+// errors returned by AutovacuumTablePriority.ValidateAll() if the designated
+// constraints aren't met.
+type AutovacuumTablePriorityMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AutovacuumTablePriorityMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AutovacuumTablePriorityMultiError) AllErrors() []error { return m }
+
+// AutovacuumTablePriorityValidationError is the validation error returned by
+// AutovacuumTablePriority.Validate if the designated constraints aren't met.
+type AutovacuumTablePriorityValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AutovacuumTablePriorityValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AutovacuumTablePriorityValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AutovacuumTablePriorityValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AutovacuumTablePriorityValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AutovacuumTablePriorityValidationError) ErrorName() string {
+	return "AutovacuumTablePriorityValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e AutovacuumTablePriorityValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAutovacuumTablePriority.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AutovacuumTablePriorityValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AutovacuumTablePriorityValidationError{}

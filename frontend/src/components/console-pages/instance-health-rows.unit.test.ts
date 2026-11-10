@@ -17,14 +17,18 @@ import {
   HealthCheckStatus,
   InstanceHealthSchema,
   InstanceSchema,
+  LockStatisticsSchema,
+  LockTypeStatisticsSchema,
   PgStatStatementsHealthSchema,
   PostgresConfig_SslMode,
   PostgresConfigSchema,
+  RecoveryHealthSchema,
   ReplicationHealthSchema,
   ServerInfo_ReplicationRole,
   ServerInfoSchema,
   StatsAccessHealthSchema,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { ObservationAvailability } from "@/protogen/querylane/console/v1alpha1/observation_pb";
 
 const MS_PER_MINUTE = 60_000;
 const UPTIME_FACT_PATTERN = /^up /u;
@@ -78,6 +82,143 @@ describe("getHealthCheckPartialReasons", () => {
 });
 
 describe("buildLiveHealthRows", () => {
+  test("does not turn missing replication visibility into healthy zeroes", () => {
+    const rows = buildLiveHealthRows(
+      createProto(InstanceHealthSchema, {
+        replication: createProto(ReplicationHealthSchema, {
+          role: ServerInfo_ReplicationRole.PRIMARY,
+          status: HealthCheckStatus.OK,
+          summary: "primary with 0 attached replicas",
+        }),
+      }),
+      undefined
+    );
+    const replication = rows.find((row) => row.id === "replication");
+    expect(replication?.tone).toBe("muted");
+    expect(replication?.summary).toContain("statistics unavailable");
+    for (const label of [
+      "Streaming replicas",
+      "Synchronous replicas",
+      "Max replication lag",
+    ]) {
+      expect(replication?.detail).toContainEqual({ label, value: "Unknown" });
+    }
+  });
+
+  test("labels replay age honestly and preserves unknown timestamps", () => {
+    const rows = buildLiveHealthRows(
+      createProto(InstanceHealthSchema, {
+        replication: createProto(ReplicationHealthSchema, {
+          role: ServerInfo_ReplicationRole.REPLICA,
+          walReceiverActive: true,
+        }),
+      }),
+      undefined
+    );
+    const replication = rows.find((row) => row.id === "replication");
+    expect(replication?.detail).toContainEqual({
+      label: "WAL receiver",
+      value: "Active",
+    });
+    expect(replication?.detail).toContainEqual({
+      label: "Last transaction replay age",
+      value: "Unknown",
+    });
+  });
+
+  test("shows observed recovery pause, promotion, position and timeline", () => {
+    const rows = buildLiveHealthRows(
+      createProto(InstanceHealthSchema, {
+        replication: createProto(ReplicationHealthSchema, {
+          recovery: createProto(RecoveryHealthSchema, {
+            availability: ObservationAvailability.AVAILABLE,
+            pauseState: "paused",
+            promotionTriggered: true,
+            replayEndLsn: "0/ABCDEF",
+            replayTimeline: 3,
+          }),
+          replayLagKnown: true,
+          replayLagSeconds: 120n,
+          role: ServerInfo_ReplicationRole.REPLICA,
+          statisticsVisible: true,
+          status: HealthCheckStatus.OK,
+        }),
+      }),
+      undefined
+    );
+    const replication = rows.find((row) => row.id === "replication");
+    expect(replication?.tone).toBe("warning");
+    expect(replication?.detail).toContainEqual({
+      label: "Recovery pause state",
+      value: "paused",
+    });
+    expect(replication?.detail).toContainEqual({
+      label: "Promotion triggered",
+      value: "Yes",
+    });
+    expect(replication?.detail).toContainEqual({
+      label: "Replay end LSN",
+      value: "0/ABCDEF",
+    });
+    expect(replication?.detail).toContainEqual({
+      label: "Replay timeline",
+      value: "3",
+    });
+    expect(replication?.detail).toContainEqual({
+      label: "Last transaction replay age",
+      value: "2m",
+    });
+  });
+
+  test("keeps recovery unsupported, restricted and unavailable distinct", () => {
+    for (const [availability, label] of [
+      [ObservationAvailability.UNSUPPORTED, "Not supported by this server"],
+      [ObservationAvailability.RESTRICTED, "Restricted"],
+      [ObservationAvailability.UNAVAILABLE, "Unavailable"],
+      [ObservationAvailability.NOT_APPLICABLE, "Not applicable"],
+      [ObservationAvailability.UNSPECIFIED, "Not reported"],
+    ] as const) {
+      const rows = buildLiveHealthRows(
+        createProto(InstanceHealthSchema, {
+          replication: createProto(ReplicationHealthSchema, {
+            recovery: createProto(RecoveryHealthSchema, { availability }),
+            role: ServerInfo_ReplicationRole.REPLICA,
+          }),
+        }),
+        undefined
+      );
+      expect(
+        rows.find((row) => row.id === "replication")?.detail
+      ).toContainEqual({ label: "Recovery", value: label });
+    }
+  });
+
+  test("shows historical lock totals without treating them as current contention", () => {
+    const rows = buildLiveHealthRows(
+      createProto(InstanceHealthSchema, {
+        lockStatistics: createProto(LockStatisticsSchema, {
+          availability: ObservationAvailability.AVAILABLE,
+          byType: [
+            createProto(LockTypeStatisticsSchema, {
+              lockType: "relation",
+              waits: 9007199254740993n,
+              waitTimeMs: 12.5,
+              fastpathExceeded: 2n,
+            }),
+          ],
+        }),
+      }),
+      undefined
+    );
+    const locks = rows.find((row) => row.id === "lock-statistics");
+    expect(locks?.tone).toBe("ok");
+    expect(locks?.detail).toContainEqual({
+      label: "Completed waits",
+      value: 9007199254740993n.toLocaleString(),
+    });
+    expect(locks?.summary).toContain("Cumulative");
+  });
+
   test("composes a connections summary from activity fields", () => {
     const health = createProto(InstanceHealthSchema, {
       connectionActivity: createProto(ConnectionActivityHealthSchema, {
@@ -140,6 +281,7 @@ describe("buildLiveHealthRows", () => {
       replication: createProto(ReplicationHealthSchema, {
         role: ServerInfo_ReplicationRole.PRIMARY,
         status: HealthCheckStatus.OK,
+        statisticsVisible: true,
         streamingReplicas: 1,
         summary: "Primary · 1 replica streaming",
       }),

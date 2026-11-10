@@ -109,6 +109,7 @@ import type {
   Instance,
   InstanceHealth,
   InstanceOverview,
+  LockStatistics,
   ServerInfo,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 import {
@@ -140,6 +141,7 @@ interface OverviewLiveData {
   health: InstanceHealth | undefined;
   healthPartialErrors: Status[] | undefined;
   healthPending: boolean;
+  lockStatistics: LockStatistics | undefined;
   metricsError: boolean;
   metricsPending: boolean;
   metricsRange: MetricRange;
@@ -1352,6 +1354,7 @@ function buildInstanceLiveData({
 }) {
   return {
     activity: activityQuery.data?.activity,
+    lockStatistics: activityQuery.data?.lockStatistics,
     activityPartialErrors: activityQuery.data?.partialErrors,
     activityPending: activityQuery.isPending,
     activityRefreshing: activityQuery.isFetching && !activityQuery.isPending,
@@ -1481,6 +1484,7 @@ function renderLoadedInstancePageContent({
         activity={liveData.activity}
         connectionStatus={connectionStatus}
         lastRefreshedLabel={getLastRefreshedLabel(liveData.activityUpdatedAt)}
+        lockStatistics={liveData.lockStatistics}
         onRefresh={onRefresh}
         partialErrors={liveData.activityPartialErrors}
         pending={liveData.activityPending}

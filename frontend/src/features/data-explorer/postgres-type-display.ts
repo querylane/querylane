@@ -54,6 +54,11 @@ const INTEGER_META: Record<
     bytes: "4 bytes",
     summary: "Typical signed whole number.",
   },
+  oid8: {
+    bits: "64-bit",
+    bytes: "8 bytes",
+    summary: "Unsigned 64-bit whole number.",
+  },
   serial: {
     bits: "32-bit",
     bytes: "4 bytes",
@@ -115,6 +120,7 @@ const OBJECT_ID_TYPES = new Set([
   "regclass",
   "regcollation",
   "regconfig",
+  "regdatabase",
   "regdictionary",
   "regnamespace",
   "regoper",
