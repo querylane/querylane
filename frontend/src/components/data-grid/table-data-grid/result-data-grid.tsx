@@ -50,7 +50,6 @@ import {
 } from "@/components/data-grid/table-data-grid/grid-row-model";
 import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-status-bar";
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
 import type {
   GridEmptyMessage,
@@ -70,6 +69,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/querylane-ui/dialog";
+import { PaginationFooter } from "@/components/querylane-ui/pagination-footer";
 import type { FetchFullCell } from "@/features/data-explorer/table-data/full-cell-resolver";
 import type { GridStatusItem } from "@/features/data-explorer/table-data/grid-status";
 import type { ExportFormat } from "@/features/data-explorer/table-data/selection-formatters";
@@ -403,7 +403,6 @@ function ResultDataGridPager({
 }) {
   return (
     <PaginationFooter
-      className={isFlush ? "px-3 py-2 sm:px-4" : undefined}
       hasNext={hasNext}
       hasPrev={currentPageIndex > 0}
       onNext={onNext}
@@ -412,6 +411,7 @@ function ResultDataGridPager({
       pageLabel={pageLabel}
       pageSize={pageSize}
       pageSizeOptions={HIGH_VOLUME_PAGE_SIZE_OPTIONS}
+      presentation={isFlush ? "inset" : undefined}
     />
   );
 }

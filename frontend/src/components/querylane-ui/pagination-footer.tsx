@@ -22,6 +22,7 @@ interface PaginationFooterProps {
   pageSize: number;
   pageSizeLabel?: string;
   pageSizeOptions?: readonly number[];
+  presentation?: "inset" | undefined;
 }
 export function PaginationFooter({
   className,
@@ -34,11 +35,13 @@ export function PaginationFooter({
   pageSize,
   pageSizeLabel = "Rows per page",
   pageSizeOptions = PAGE_SIZE_OPTIONS,
+  presentation,
 }: PaginationFooterProps) {
   return (
     <div
       className={cn(
         "text-muted-foreground flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs",
+        presentation === "inset" && "px-3 py-2 sm:px-4",
         className
       )}
       data-slot="pagination-footer"
