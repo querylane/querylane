@@ -197,6 +197,7 @@ func convertQueryInsightsToProto(insights *engine.DatabaseQueryInsights) *v1alph
 
 	queryInsights.QueryStatsAvailable = insights.QueryStatsAvailable
 	queryInsights.TableStatsAvailable = insights.TableStatsAvailable
+	queryInsights.AutovacuumPriorities = autovacuumPrioritiesToProto(insights.AutovacuumPriorities)
 	queryInsights.TopQueries = make([]*v1alpha1.QueryRuntimeInsight, 0, len(insights.TopQueries))
 	queryInsights.SequentialScanHotspots = make([]*v1alpha1.SequentialScanHotspot, 0, len(insights.SequentialScanHotspots))
 	queryInsights.TableCacheHits = make([]*v1alpha1.TableCacheHitInsight, 0, len(insights.TableCacheHits))

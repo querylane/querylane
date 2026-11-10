@@ -145,7 +145,10 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 		})
 	}
 
-	wg.Go(func() {
+	// Snapshot activity before opening this request's sibling probe
+	// transactions. Their brief inter-query idle state is instrumentation,
+	// not an abandoned user transaction. Preserve counts and warning policy.
+	func() {
 		activity, err := queryConnectionActivityHealth(ctx, db)
 		if err != nil {
 			recordPartialError("connection_activity", "failed to query connection activity health", "query connection activity health", err)
@@ -153,16 +156,18 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 		}
 
 		health.ConnectionActivity = activity
-	})
+	}()
 
 	wg.Go(func() {
 		replication, err := queryReplicationHealth(ctx, db)
-		if err != nil {
-			recordPartialError("replication", "failed to query replication health", "query replication health", err)
-			return
-		}
-
 		health.Replication = replication
+		if err != nil {
+			check := "replication"
+			if replication != nil {
+				check = "recovery"
+			}
+			recordPartialError(check, "failed to query replication health", "query replication health", err)
+		}
 	})
 
 	wg.Go(func() {
@@ -207,15 +212,31 @@ func (d *Postgres) CheckInstanceHealth(ctx context.Context, db *sql.DB) (*engine
 		health.Autovacuum = autovacuum
 	})
 
+	wg.Go(func() {
+		statistics, err := queryLockStatisticsHealth(ctx, db)
+		health.LockStatistics = statistics
+		if err != nil {
+			recordPartialError("lock_statistics", "failed to query lock statistics", "query lock statistics", err)
+		}
+	})
+
 	wg.Wait()
 
 	return health, nil
 }
 
-// CheckInstanceActivity retrieves only pg_stat_activity-backed signals for
-// high-frequency polling on the Activity page.
+// CheckInstanceActivity retrieves current sessions and bounded cumulative lock
+// statistics for high-frequency polling on the Activity page.
 func (d *Postgres) CheckInstanceActivity(ctx context.Context, db *sql.DB) (*engine.InstanceHealth, error) {
 	health := &engine.InstanceHealth{}
+	statistics, lockErr := queryLockStatisticsHealth(ctx, db)
+	health.LockStatistics = statistics
+	if lockErr != nil {
+		health.PartialErrors = append(health.PartialErrors, engine.OverviewMetricError{
+			Metric: "lock_statistics",
+			Err:    lockErr,
+		})
+	}
 
 	activity, err := queryConnectionActivityHealth(ctx, db)
 	if err != nil {
@@ -369,6 +390,9 @@ func queryConnectionActivitySessions(ctx context.Context, tx *sql.Tx) ([]engine.
 }
 
 func queryReplicationHealth(ctx context.Context, db *sql.DB) (*engine.ReplicationHealth, error) {
+	ctx, cancel := context.WithTimeout(ctx, probeStatementTimeout)
+	defer cancel()
+
 	var inRecovery bool
 	if err := db.QueryRowContext(ctx, getRecoveryStateQuery).Scan(&inRecovery); err != nil {
 		return nil, classifyQueryError("query recovery state", err)
@@ -380,24 +404,27 @@ func queryReplicationHealth(ctx context.Context, db *sql.DB) (*engine.Replicatio
 
 	if inRecovery {
 		replication.Role = engine.ReplicationRoleReplica
+		var replayAge sql.NullInt64
+		var receiverStatus sql.NullString
 		if err := db.QueryRowContext(ctx, getReplicaReplicationHealthQuery).Scan(
 			&replication.WALReceiverActive,
-			&replication.ReplayLagSeconds,
+			&replication.StatisticsVisible,
+			&replayAge,
+			&receiverStatus,
 		); err != nil {
 			return nil, classifyQueryError("query replica replication health", err)
 		}
 
-		replication.Summary = "replica with active WAL receiver"
-		if !replication.WALReceiverActive {
-			replication.Status = engine.HealthStatusWarning
-			replication.Summary = "replica without active WAL receiver"
-		}
+		replication.ReplayLagKnown = replayAge.Valid
+		replication.ReplayLagSeconds = replayAge.Int64
+		summarizeReplicaReplicationHealth(replication, receiverStatus.String)
 
-		return replication, nil
+		return finishReplicationHealth(ctx, db, replication, inRecovery)
 	}
 
 	replication.Role = engine.ReplicationRolePrimary
 	if err := db.QueryRowContext(ctx, getPrimaryReplicationHealthQuery).Scan(
+		&replication.StatisticsVisible,
 		&replication.AttachedReplicas,
 		&replication.StreamingReplicas,
 		&replication.SynchronousReplicas,
@@ -407,12 +434,34 @@ func queryReplicationHealth(ctx context.Context, db *sql.DB) (*engine.Replicatio
 	}
 
 	replication.Summary = fmt.Sprintf("primary with %d attached replicas", replication.AttachedReplicas)
-	if replication.AttachedReplicas > 0 && replication.StreamingReplicas == 0 {
+	if !replication.StatisticsVisible {
+		replication.Status = engine.HealthStatusWarning
+		replication.Summary += "; statistics visibility is restricted (requires pg_read_all_stats)"
+	} else if replication.AttachedReplicas > 0 && replication.StreamingReplicas == 0 {
 		replication.Status = engine.HealthStatusWarning
 		replication.Summary = fmt.Sprintf("primary with %d replicas, none streaming", replication.AttachedReplicas)
 	}
 
-	return replication, nil
+	return finishReplicationHealth(ctx, db, replication, inRecovery)
+}
+
+func summarizeReplicaReplicationHealth(replication *engine.ReplicationHealth, receiverStatus string) {
+	replication.Summary = "replica with active WAL receiver"
+	if !replication.WALReceiverActive {
+		replication.Status = engine.HealthStatusWarning
+		replication.Summary = "replica without active WAL receiver"
+	} else if replication.StatisticsVisible && receiverStatus != "streaming" {
+		replication.Status = engine.HealthStatusWarning
+		replication.Summary = "replica WAL receiver is not streaming"
+	}
+	if !replication.StatisticsVisible {
+		replication.Status = engine.HealthStatusWarning
+		replication.Summary += "; statistics visibility is restricted (requires pg_read_all_stats)"
+	}
+	if !replication.ReplayLagKnown {
+		replication.Status = engine.HealthStatusWarning
+		replication.Summary += "; no transaction replay timestamp available"
+	}
 }
 
 func queryStatsAccessHealth(ctx context.Context, db *sql.DB) (*engine.StatsAccessHealth, error) {

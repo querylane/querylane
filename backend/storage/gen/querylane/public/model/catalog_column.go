@@ -31,4 +31,5 @@ type CatalogColumn struct {
 	GenerationExpression   string
 	IsIdentity             bool
 	IdentityGeneration     int32
+	GeneratedKind          int32
 }

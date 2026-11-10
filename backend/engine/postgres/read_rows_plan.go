@@ -69,7 +69,11 @@ func (d *Postgres) buildPlan(catalog []engine.Column, rowIdentity *api.RowIdenti
 	// Every ORDER BY column (visible or appended tiebreaker) gets a
 	// trailing un-truncated cursor projection so keyset cursors are never
 	// derived from preview-truncated public cells.
-	plan.cursorColumns = resolveCursorColumns(plan.order, idx)
+	if len(rowIdentity.GetColumnNames()) == 0 {
+		plan.order = resolveUnidentifiedOrder(publicCols, params.OrderBy)
+	} else {
+		plan.cursorColumns = resolveCursorColumns(plan.order, idx)
+	}
 
 	if plan.previewMode {
 		// Identity columns are excluded from preview truncation: their

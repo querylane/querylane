@@ -24,6 +24,7 @@ type orderEntry struct {
 	column     string
 	dirAsc     bool
 	nullOrder  api.RowOrder_NullOrder
+	asText     bool // fallback ordering for PostgreSQL types without ordinary ordering
 	tiebreaker bool // true when the entry was server-added (not in user OrderBy)
 }
 
@@ -214,6 +215,9 @@ func canonicalOrderHash(order []orderEntry) []byte {
 		}
 
 		b.WriteString(e.column)
+		if e.asText {
+			b.WriteString("::text")
+		}
 		b.WriteByte(':')
 
 		if e.dirAsc {
@@ -377,4 +381,29 @@ func (d *Postgres) verifyPageToken(token string, plan *paginationPlan, params en
 	}
 
 	return &payload, nil
+}
+
+// Without a stable identity, only OFFSET is possible. Use all projected values
+// as deterministic tiebreakers; duplicates are indistinguishable in this view.
+// Do not pull hidden columns/remote physical pointers merely to mint cursors.
+func resolveUnidentifiedOrder(public []engine.Column, requested []*api.RowOrder) []orderEntry {
+	order := resolveOrder(requested, nil)
+	seen := make(map[string]bool, len(order))
+	for _, entry := range order {
+		seen[entry.column] = true
+	}
+	for _, col := range public {
+		if seen[col.Name] {
+			continue
+		}
+		asText := true
+		switch col.DataType { //nolint:exhaustive // other PostgreSQL types need text ordering
+		case api.DataType_DATA_TYPE_STRING, api.DataType_DATA_TYPE_INTEGER, api.DataType_DATA_TYPE_FLOAT,
+			api.DataType_DATA_TYPE_BOOLEAN, api.DataType_DATA_TYPE_UUID, api.DataType_DATA_TYPE_DATE,
+			api.DataType_DATA_TYPE_TIME, api.DataType_DATA_TYPE_TIMESTAMP:
+			asText = false
+		}
+		order = append(order, orderEntry{column: col.Name, dirAsc: true, tiebreaker: true, asText: asText})
+	}
+	return order
 }

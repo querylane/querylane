@@ -747,12 +747,16 @@ const CUSTOMERS_CONSTRAINT_STATES: ConstraintInit[] = [
     columnNames: ["status"],
     constraintName: "customers_status_check",
     definition: "CHECK (status IN ('active', 'archived'))",
+    isEnforced: false,
+    isValidated: false,
     type: ConstraintType.CHECK,
   },
   {
     columnNames: ["legacy_status"],
     constraintName: "customers_legacy_status_check",
     definition: "CHECK (legacy_status <> 'deleted') NOT VALID",
+    isEnforced: true,
+    isValidated: false,
     type: ConstraintType.CHECK,
   },
   {

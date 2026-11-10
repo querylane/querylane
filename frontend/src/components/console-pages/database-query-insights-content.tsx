@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
+import { AutovacuumPrioritiesCard } from "@/components/console-pages/autovacuum-priorities-card";
 import { EmptyState } from "@/components/empty-state";
 import { ListCells } from "@/components/list-view/list-cells";
 import { ListSortHeader } from "@/components/list-view/list-sort-header";
@@ -1187,7 +1188,9 @@ function QueryInsightsContent({
     ? (selectedQuerySelection?.selectionKey ?? null)
     : null;
   const hasAnyStats =
-    insights.queryStatsAvailable || insights.tableStatsAvailable;
+    insights.queryStatsAvailable ||
+    insights.tableStatsAvailable ||
+    Boolean(insights.autovacuumPriorities);
 
   if (!hasAnyStats && Object.keys(partialErrors).length === 0) {
     return <QueryInsightsEmptyState />;
@@ -1218,6 +1221,7 @@ function QueryInsightsContent({
           selectedQueryKey={selectedQueryKey}
         />
       </div>
+      <AutovacuumPrioritiesCard priorities={insights.autovacuumPriorities} />
       <QueryDetailPanel
         className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
         onClose={() => {

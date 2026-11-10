@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/querylane/querylane/backend/engine"
@@ -28,7 +29,8 @@ func (f healthFetcherFunc) CheckInstanceHealth(ctx context.Context, instance res
 }
 
 type activityFetcherStub struct {
-	activity *engine.ConnectionActivityHealth
+	activity      *engine.ConnectionActivityHealth
+	partialErrors []engine.OverviewMetricError
 }
 
 func (f *activityFetcherStub) GetInstanceOverview(context.Context, resource.InstanceName) (*engine.InstanceOverview, error) {
@@ -36,7 +38,31 @@ func (f *activityFetcherStub) GetInstanceOverview(context.Context, resource.Inst
 }
 
 func (f *activityFetcherStub) CheckInstanceActivity(context.Context, resource.InstanceName) (*engine.InstanceHealth, error) {
-	return &engine.InstanceHealth{ConnectionActivity: f.activity}, nil
+	return &engine.InstanceHealth{ConnectionActivity: f.activity, PartialErrors: f.partialErrors}, nil
+}
+
+func TestCheckInstanceActivityPreservesSiblingFailuresWhenActivityMissing(t *testing.T) {
+	t.Parallel()
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+	service := NewService(nil, nil, nil, nil, nil, &activityFetcherStub{
+		partialErrors: []engine.OverviewMetricError{
+			{Metric: "lock_statistics", Err: postgreserrors.Wrap(&pgconn.PgError{Code: "57014", Message: "statement timeout"}, postgreserrors.ProfileDefault, "lock probe")},
+			{Metric: "connection_activity", Err: postgreserrors.Wrap(&pgconn.PgError{Code: "42501", Message: "permission denied"}, postgreserrors.ProfileDefault, "activity probe")},
+		},
+	}, false, newTestConnectionGuard())
+	resp, err := service.CheckInstanceActivity(t.Context(), connect.NewRequest(&v1alpha1.CheckInstanceActivityRequest{Name: "instances/prod"}))
+	require.NoError(t, err)
+	assert.Nil(t, resp.Msg.GetActivity())
+	require.Len(t, resp.Msg.GetPartialErrors(), 2)
+	states := make(map[string]string)
+	for _, partial := range resp.Msg.GetPartialErrors() {
+		var info errdetails.ErrorInfo
+		require.NoError(t, partial.GetDetails()[0].UnmarshalTo(&info))
+		states[info.GetMetadata()["check"]] = info.GetMetadata()["sqlstate"]
+	}
+	assert.Equal(t, map[string]string{"lock_statistics": "57014", "connection_activity": "42501"}, states)
 }
 
 func TestCheckInstanceActivityReturnsOnlyConnectionActivity(t *testing.T) {

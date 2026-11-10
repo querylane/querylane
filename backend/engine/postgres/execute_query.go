@@ -253,8 +253,10 @@ func (s *queryStream) finalize() {
 
 	s.finalized = true
 	latency := time.Since(s.start)
-	notices := s.notices.Notices()
 	s.closeResources()
+	// Closing rows drains the protocol and can deliver notices after the last
+	// row the caller consumed (including early-close and row-limit paths).
+	notices := s.notices.Notices()
 
 	s.stats = engine.ExecuteQueryStats{
 		RowCount:  s.rowCount,

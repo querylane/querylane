@@ -40,7 +40,8 @@ SELECT
 		ELSE ''
 	END,
 	pa.attidentity <> '',
-	pa.attidentity::text
+	pa.attidentity::text,
+	pa.attgenerated::text
 FROM pg_catalog.pg_class pcl
 JOIN pg_catalog.pg_namespace pn
 	ON pn.oid = pcl.relnamespace

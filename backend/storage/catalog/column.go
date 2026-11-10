@@ -73,6 +73,7 @@ func (r *PGRepository) SyncColumns(ctx context.Context, instanceID, databaseName
 					table.CatalogColumn.GenerationExpression,
 					table.CatalogColumn.IsIdentity,
 					table.CatalogColumn.IdentityGeneration,
+					table.CatalogColumn.GeneratedKind,
 				).
 				MODELS(columns)
 

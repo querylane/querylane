@@ -104,6 +104,7 @@ func TestColumnMapperRoundTrip(t *testing.T) {
 		Comment:                "User email address",
 		IsGenerated:            true,
 		GenerationExpression:   "lower(email)",
+		GeneratedKind:          api.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL,
 		IsIdentity:             true,
 		IdentityGeneration:     api.IdentityGeneration_IDENTITY_GENERATION_BY_DEFAULT,
 	}
@@ -124,6 +125,7 @@ func TestColumnMapperRoundTrip(t *testing.T) {
 	assert.Equal(t, original.Comment, result.Comment)
 	assert.Equal(t, original.IsGenerated, result.IsGenerated)
 	assert.Equal(t, original.GenerationExpression, result.GenerationExpression)
+	assert.Equal(t, original.GeneratedKind, result.GeneratedKind)
 	assert.Equal(t, original.IsIdentity, result.IsIdentity)
 	assert.Equal(t, original.IdentityGeneration, result.IdentityGeneration)
 }
@@ -149,6 +151,22 @@ func TestColumnMapperNilOptionalFields(t *testing.T) {
 	result := catalogColumnToEngine(catalogRow)
 	assert.Empty(t, result.DefaultValue)
 	assert.Equal(t, int32(0), result.CharacterMaximumLength)
+}
+
+func TestCachedMetadataUnknownsRemainUnknown(t *testing.T) {
+	t.Parallel()
+
+	for _, raw := range []int32{0, -1, 99} {
+		column := catalogColumnToEngine(model.CatalogColumn{GeneratedKind: raw})
+		assert.Equal(t, api.GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED, column.GeneratedKind)
+	}
+	for _, state := range []*bool{nil, new(false), new(true)} {
+		original := engine.TableConstraint{IsEnforced: state, IsValidated: state}
+		row := engineConstraintToCatalog("inst1", "db", "public", "t", original, time.Now())
+		result := catalogConstraintToEngine(row)
+		assert.Equal(t, state, result.IsEnforced)
+		assert.Equal(t, state, result.IsValidated)
+	}
 }
 
 func TestParseTableType(t *testing.T) {

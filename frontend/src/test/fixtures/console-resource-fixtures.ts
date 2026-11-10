@@ -692,6 +692,7 @@ function consoleResourceServices(fixture: ConsoleResourceFixture) {
             status: HealthCheckStatus.OK,
             streamingReplicas: 2,
             summary: "primary with 2 attached replicas",
+            statisticsVisible: true,
           },
         },
       }),

@@ -139,6 +139,21 @@ message Column {
 
   // Output-only. The identity generation strategy, if applicable.
   IdentityGeneration identity_generation = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Storage kind of a generated column. Unspecified for ordinary
+  // columns or when the server's generation kind is not recognized.
+  GeneratedColumnKind generated_kind = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// GeneratedColumnKind specifies when a generated column's expression is evaluated.
+enum GeneratedColumnKind {
+  GENERATED_COLUMN_KIND_UNSPECIFIED = 0;
+
+  // The generated value is stored when a row is written.
+  GENERATED_COLUMN_KIND_STORED = 1;
+
+  // The generated value is computed when a row is read.
+  GENERATED_COLUMN_KIND_VIRTUAL = 2;
 }
 
 // IdentityGeneration specifies how an identity column's value is generated.
@@ -515,6 +530,14 @@ message TableConstraint {
 
   // Output-only. Raw database definition or normalized SQL snippet.
   string definition = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether PostgreSQL enforces this constraint for new writes.
+  // Absent when enforcement metadata is unavailable, including older API servers.
+  optional bool is_enforced = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output-only. Whether PostgreSQL has validated existing rows against this
+  // constraint. Absent when validation metadata is unavailable.
+  optional bool is_validated = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message TableIndex {

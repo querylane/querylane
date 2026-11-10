@@ -25,6 +25,11 @@ const (
 // It signs a TableCellFullValueTokenPayload bound to the table resource
 // name, column, and the row's identity values.
 func (d *Postgres) mintFullValueToken(resourceName, column string, identity *api.RowIdentity, identityValues []*api.TableValue) (string, error) {
+	// No identity means a bounded preview can be shown, but cannot be safely
+	// expanded later. Never emit a signed promise that can resolve another row.
+	if len(identity.GetColumnNames()) == 0 {
+		return "", nil
+	}
 	payload := &api.TableCellFullValueTokenPayload{
 		Version:        1,
 		TableName:      resourceName,

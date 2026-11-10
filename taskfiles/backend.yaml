@@ -77,7 +77,7 @@ tasks:
     dir: "{{.BACKEND_ROOT}}"
     cmds:
       - 'docker info > /dev/null'
-      - 'go test -count=1 -v -timeout 6m -run "^(TestIntegration|TestRPCSuite)$" ./engine/postgres ./integration/rpctest'
+      - 'go test -count=1 -v -timeout 6m -run "Integration|RPCSuite" ./engine/postgres ./integration/rpctest'
 
   test:coverage:
     desc: Run unit tests with coverage report

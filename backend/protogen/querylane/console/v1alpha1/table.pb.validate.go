@@ -84,6 +84,8 @@ func (m *Column) validate(all bool) error {
 
 	// no validation rules for IdentityGeneration
 
+	// no validation rules for GeneratedKind
+
 	if len(errors) > 0 {
 		return ColumnMultiError(errors)
 	}
@@ -2602,6 +2604,14 @@ func (m *TableConstraint) validate(all bool) error {
 	// no validation rules for OnDelete
 
 	// no validation rules for Definition
+
+	if m.IsEnforced != nil {
+		// no validation rules for IsEnforced
+	}
+
+	if m.IsValidated != nil {
+		// no validation rules for IsValidated
+	}
 
 	if len(errors) > 0 {
 		return TableConstraintMultiError(errors)

@@ -404,6 +404,7 @@ func convertColumns(columns []engine.Column) []*v1alpha1.Column {
 			IsUnique:               column.IsUnique,
 			IsGenerated:            column.IsGenerated,
 			GenerationExpression:   column.GenerationExpression,
+			GeneratedKind:          column.GeneratedKind,
 			IsIdentity:             column.IsIdentity,
 			IdentityGeneration:     column.IdentityGeneration,
 		}
@@ -425,6 +426,8 @@ func convertConstraints(constraints []engine.TableConstraint, schemaRes resource
 			OnUpdate:              c.OnUpdate,
 			OnDelete:              c.OnDelete,
 			Definition:            c.Definition,
+			IsEnforced:            c.IsEnforced,
+			IsValidated:           c.IsValidated,
 		}
 
 		if c.ReferencedTableName != "" {

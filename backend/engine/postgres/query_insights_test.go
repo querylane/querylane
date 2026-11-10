@@ -19,6 +19,8 @@ type queryInsightsTestDriver struct{}
 
 type queryInsightsTestConn struct{}
 
+type queryInsightsTestTx struct{}
+
 type queryInsightsTestRows struct {
 	columns []string
 	rows    [][]driver.Value
@@ -52,8 +54,24 @@ func (c queryInsightsTestConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("transactions unsupported")
 }
 
+func (c queryInsightsTestConn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	if !opts.ReadOnly {
+		return nil, errors.New("read-only transaction required")
+	}
+	return queryInsightsTestTx{}, nil
+}
+
+func (queryInsightsTestTx) Commit() error   { return nil }
+func (queryInsightsTestTx) Rollback() error { return nil }
+
+func (c queryInsightsTestConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+	return driver.RowsAffected(1), nil
+}
+
 func (c queryInsightsTestConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
 	switch {
+	case query == discoverAutovacuumPrioritiesQuery:
+		return &queryInsightsTestRows{columns: []string{"version", "shape", "readable"}, rows: [][]driver.Value{{false, false, false}}}, nil
 	case strings.Contains(query, "pg_catalog.pg_extension"):
 		return &queryInsightsTestRows{columns: []string{"nspname"}, rows: [][]driver.Value{{"public"}}}, nil
 	case strings.Contains(query, "pg_stat_statements"):

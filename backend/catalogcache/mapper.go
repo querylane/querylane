@@ -108,6 +108,7 @@ func engineColumnToCatalog(instanceID, databaseName, schemaName, tableName strin
 		SyncedAt:             now,
 		IsGenerated:          c.IsGenerated,
 		GenerationExpression: c.GenerationExpression,
+		GeneratedKind:        int32(c.GeneratedKind),
 		IsIdentity:           c.IsIdentity,
 		IdentityGeneration:   int32(c.IdentityGeneration),
 	}
@@ -137,6 +138,7 @@ func catalogColumnToEngine(row model.CatalogColumn) engine.Column {
 		Comment:              row.Comment,
 		IsGenerated:          row.IsGenerated,
 		GenerationExpression: row.GenerationExpression,
+		GeneratedKind:        catalogIntToGeneratedKind(row.GeneratedKind),
 		IsIdentity:           row.IsIdentity,
 		IdentityGeneration:   catalogIntToIdentityEnum(row.IdentityGeneration),
 	}
@@ -150,6 +152,17 @@ func catalogColumnToEngine(row model.CatalogColumn) engine.Column {
 	}
 
 	return c
+}
+
+func catalogIntToGeneratedKind(value int32) api.GeneratedColumnKind {
+	switch value {
+	case int32(api.GeneratedColumnKind_GENERATED_COLUMN_KIND_STORED):
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_STORED
+	case int32(api.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL):
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL
+	default:
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED
+	}
 }
 
 func catalogIntToIdentityEnum(value int32) api.IdentityGeneration {
@@ -212,6 +225,8 @@ func engineConstraintToCatalog(instanceID, databaseName, schemaName, tableName s
 		OnUpdate:              int32(c.OnUpdate),
 		OnDelete:              int32(c.OnDelete),
 		Definition:            c.Definition,
+		IsEnforced:            c.IsEnforced,
+		IsValidated:           c.IsValidated,
 		SyncedAt:              now,
 	}
 }
@@ -227,6 +242,8 @@ func catalogConstraintToEngine(row model.CatalogTableConstraint) engine.TableCon
 		OnUpdate:              api.ReferentialAction(row.OnUpdate),
 		OnDelete:              api.ReferentialAction(row.OnDelete),
 		Definition:            row.Definition,
+		IsEnforced:            row.IsEnforced,
+		IsValidated:           row.IsValidated,
 	}
 }
 
