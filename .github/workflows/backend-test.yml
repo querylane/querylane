@@ -75,9 +75,54 @@ jobs:
         shell: bash
         run: |
           set +o pipefail
-          mapfile -t INTEGRATION_PACKAGES < <(./tools/integration-test-packages.sh Integration)
-          go test -json -cover -parallel 10 -run Integration "${INTEGRATION_PACKAGES[@]}" | tee integration-test-output.json | tparse -follow -all
+          mapfile -t INTEGRATION_PACKAGES < <(./tools/integration-test-packages.sh "Integration|RPCSuite")
+          go test -json -cover -parallel 10 -run "Integration|RPCSuite" "${INTEGRATION_PACKAGES[@]}" | tee integration-test-output.json | tparse -follow -all
           TEST_EXIT_CODE=${PIPESTATUS[0]}
           set -o pipefail
           tparse -format markdown -file integration-test-output.json > "$GITHUB_STEP_SUMMARY"
           exit "$TEST_EXIT_CODE"
+
+  postgres-compatibility:
+    name: PostgreSQL ${{ matrix.label }}
+    if: github.event.pull_request.draft != true || github.event_name == 'workflow_call'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: '19 RC1 instance and meta'
+            image: 'postgres:19rc1-alpine@sha256:0571e712ad11a80278d6850551ae50a224d1e27a0234bbdc7b39e8aed391f924'
+            packages: './engine/postgres ./integration/rpctest'
+          - label: '19 RC1 instance, 18 meta'
+            image: 'postgres:19rc1-alpine@sha256:0571e712ad11a80278d6850551ae50a224d1e27a0234bbdc7b39e8aed391f924'
+            meta: 'postgres:18.6-alpine'
+            packages: './engine/postgres ./integration/rpctest'
+          - label: '18 instance, 19 RC1 meta'
+            image: 'postgres:18.6-alpine'
+            meta: 'postgres:19rc1-alpine@sha256:0571e712ad11a80278d6850551ae50a224d1e27a0234bbdc7b39e8aed391f924'
+            packages: './engine/postgres ./integration/rpctest'
+          - label: '16 instance'
+            image: 'postgres:16.15-alpine'
+            packages: './engine/postgres'
+          - label: '14 instance'
+            image: 'postgres:14.24-alpine'
+            packages: './engine/postgres'
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      QUERYLANE_TEST_POSTGRES_IMAGE: ${{ matrix.image }}
+      QUERYLANE_TEST_META_POSTGRES_IMAGE: ${{ matrix.meta }}
+    steps:
+      - uses: *action_checkout
+        with:
+          persist-credentials: false
+      - uses: *action_setup_go
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Require Docker provider
+        run: docker info
+      - name: Run real-server compatibility tests
+        run: go test -count=1 -v -timeout 6m -run '^(TestIntegration|TestRPCSuite)$' ${{ matrix.packages }}

@@ -82,7 +82,11 @@ func truncationProjection(col engine.Column, maxChars int) string {
 		return fmt.Sprintf("left((%s)::text, %d) AS %s, octet_length((%s)::text) AS %s", q, maxChars, q, q, sizeAlias)
 	case api.DataType_DATA_TYPE_STRING:
 		// substring(text, 1, N) is character-based — see proto comment.
-		return fmt.Sprintf("substring(%s, 1, %d) AS %s, octet_length(%s) AS %s", q, maxChars, q, q, sizeAlias)
+		expr := q
+		if col.RawType == "regdatabase" {
+			expr = "(" + q + ")::text"
+		}
+		return fmt.Sprintf("substring(%s, 1, %d) AS %s, octet_length(%s) AS %s", expr, maxChars, q, expr, sizeAlias)
 	}
 
 	// xml fallback (raw_type == "xml" but DATA_TYPE_UNKNOWN).

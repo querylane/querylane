@@ -31,11 +31,6 @@ func (d *Postgres) ReadRows(ctx context.Context, db *sql.DB, params engine.ReadR
 		return nil, err
 	}
 
-	query, args, err := buildReadRowsQuery(params, plan)
-	if err != nil {
-		return nil, err
-	}
-
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, classifyQueryError("begin read-only tx", err)
@@ -44,6 +39,19 @@ func (d *Postgres) ReadRows(ctx context.Context, db *sql.DB, params engine.ReadR
 	defer func() { _ = tx.Rollback() }()
 
 	if err := setStatementTimeout(ctx, tx, defaultReadTimeout, postgreserrors.ProfileDefault); err != nil {
+		return nil, err
+	}
+
+	if rowIdentity.GetSource() == api.RowIdentity_SOURCE_OPAQUE_ROW_KEY {
+		if err := bindPhysicalPagination(ctx, tx, plan, params); err != nil {
+			return nil, err
+		}
+	}
+	if err := d.resumeReadRowsPlan(plan, params); err != nil {
+		return nil, err
+	}
+	query, args, err := buildReadRowsQuery(params, plan)
+	if err != nil {
 		return nil, err
 	}
 

@@ -421,9 +421,9 @@ func pgTypeToDataType(typeName string, isArray bool) api.DataType {
 	}
 
 	switch strings.ToLower(strings.TrimSpace(typeName)) {
-	case "character varying", "varchar", "character", "char", "text", "name", "bpchar":
+	case "character varying", "varchar", "character", "char", "text", "name", "bpchar", "regdatabase":
 		return api.DataType_DATA_TYPE_STRING
-	case "integer", "bigint", "smallint", "int2", "int4", "int8":
+	case "integer", "bigint", "smallint", "int2", "int4", "int8", "oid8":
 		return api.DataType_DATA_TYPE_INTEGER
 	case "numeric", "decimal", "real", "double precision", "float4", "float8":
 		return api.DataType_DATA_TYPE_FLOAT

@@ -72,6 +72,13 @@ tasks:
     cmds:
       - '{{.PATH_PREFIX}} ./tools/integration-test-packages.sh "Integration|RPCSuite" | xargs go test -json -parallel 10 -run "Integration|RPCSuite" | {{.BUILD_ROOT}}/bin/tparse -follow -all'
 
+  test:postgres-compatibility:
+    desc: Test real instance and meta database compatibility (override QUERYLANE_TEST_POSTGRES_IMAGE and QUERYLANE_TEST_META_POSTGRES_IMAGE)
+    dir: "{{.BACKEND_ROOT}}"
+    cmds:
+      - 'docker info > /dev/null'
+      - 'go test -count=1 -v -timeout 6m -run "^(TestIntegration|TestRPCSuite)$" ./engine/postgres ./integration/rpctest'
+
   test:coverage:
     desc: Run unit tests with coverage report
     deps:

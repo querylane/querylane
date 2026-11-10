@@ -13,6 +13,7 @@ var blockedReadOnlyStatementStarts = map[string]struct{}{
 	"ANALYZE":  {},
 	"BEGIN":    {},
 	"CALL":     {},
+	"CLUSTER":  {},
 	"COMMIT":   {},
 	"CREATE":   {},
 	"DELETE":   {},
@@ -21,6 +22,7 @@ var blockedReadOnlyStatementStarts = map[string]struct{}{
 	"EXPLAIN":  {},
 	"INSERT":   {},
 	"MERGE":    {},
+	"REPACK":   {},
 	"ROLLBACK": {},
 	"SET":      {},
 	"START":    {},
@@ -32,7 +34,9 @@ var blockedReadOnlyStatementStarts = map[string]struct{}{
 // validateReadOnlyStatement is a fast application-level guardrail for the SQL
 // workbench. PostgreSQL still runs the statement inside a read-only
 // transaction; this preflight gives users an immediate, explicit error for
-// obvious leading writes, transaction control, and multi-statement input.
+// obvious leading writes, physical maintenance, transaction control, and
+// multi-statement input. Physical maintenance must be blocked explicitly:
+// PostgreSQL 19 allows REPACK even in a read-only transaction.
 func validateReadOnlyStatement(statement string) error {
 	firstKeyword, hasMultipleStatements, err := inspectSQLStatement(statement)
 	if err != nil {

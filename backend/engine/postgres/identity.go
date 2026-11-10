@@ -60,10 +60,9 @@ func discoverRowIdentity(ctx context.Context, db *sql.DB, schemaName, tableName 
 		}, cols, nil
 	}
 
-	// Fallback: ctid is the physical row pointer; valid only within a single
-	// VACUUM-FULL/CLUSTER-stable window. The proto field stays consistent
-	// with the engine's bookkeeping so downstream code can use the same
-	// `[]identityColumn` slice for projection/scanning.
+	// Fallback: expose one opaque ctid identity column. The cursor projection
+	// binds its value to tableoid, filenode, xmin and ctid so cell tokens reject
+	// physical rewrites and tuple replacement rather than reading another row.
 	ctidCols := []identityColumn{
 		{name: ctidColumn, rawType: "tid"},
 	}

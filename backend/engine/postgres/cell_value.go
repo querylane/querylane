@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -60,6 +61,12 @@ func (d *Postgres) ReadCellValue(ctx context.Context, db *sql.DB, params engine.
 		return nil, fmt.Errorf("%w: token identity values mismatch", engine.ErrInvalidPageToken)
 	}
 
+	if identity.GetSource() == api.RowIdentity_SOURCE_OPAQUE_ROW_KEY {
+		if len(identity.GetColumnNames()) != 1 || identity.GetColumnNames()[0] != ctidColumn || !validPhysicalIdentity(params.IdentityValues[0]) {
+			return nil, fmt.Errorf("%w: physical row identity expired; reload rows", engine.ErrInvalidPageToken)
+		}
+	}
+
 	// Look up the column to know whether it's preview-eligible (so we can
 	// truncate to maxBytes in a type-appropriate way) and get its data type.
 	cols, err := d.ListTableColumns(ctx, db, params.SchemaName, params.TableName)
@@ -98,6 +105,9 @@ func (d *Postgres) ReadCellValue(ctx context.Context, db *sql.DB, params engine.
 	)
 
 	if err := row.Scan(&raw, &size); err != nil {
+		if errors.Is(err, sql.ErrNoRows) && identity.GetSource() == api.RowIdentity_SOURCE_OPAQUE_ROW_KEY {
+			return nil, fmt.Errorf("%w: physical row changed; reload rows", engine.ErrInvalidPageToken)
+		}
 		return nil, classifyQueryError("read cell value", err)
 	}
 
@@ -142,7 +152,7 @@ func buildReadCellValueSQL(schemaName, tableName string, col engine.Column, iden
 		}
 
 		if name == ctidColumn {
-			fmt.Fprintf(&b, "ctid = $%d::tid", i+1)
+			fmt.Fprintf(&b, "ctid = split_part($%d::text, ':', 4)::tid AND tableoid = split_part($%d::text, ':', 1)::oid AND pg_catalog.pg_relation_filenode(tableoid) = split_part($%d::text, ':', 2)::oid AND xmin::text = split_part($%d::text, ':', 3)", i+1, i+1, i+1, i+1)
 			continue
 		}
 

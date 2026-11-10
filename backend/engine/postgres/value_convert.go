@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,14 +60,7 @@ func convertToValueTyped(v any, col *api.TableResultColumn) *api.TableValue {
 
 	switch col.GetDataType() { //nolint:exhaustive // default falls through to convertToValue
 	case api.DataType_DATA_TYPE_INTEGER:
-		switch n := v.(type) {
-		case int64:
-			return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: n}}
-		case int32:
-			return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: int64(n)}}
-		case int:
-			return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: int64(n)}}
-		}
+		return convertIntegerValue(v, col)
 	case api.DataType_DATA_TYPE_FLOAT:
 		// "numeric" and "decimal" arrive from pgx as []byte to preserve
 		// arbitrary precision; surface them as numeric_value strings so the
@@ -201,4 +195,36 @@ func extractTableValues(values []*api.TableValue) []any {
 	}
 
 	return result
+}
+
+func unsignedDecimalText(value any) string {
+	switch n := value.(type) {
+	case string:
+		return n
+	case []byte:
+		return string(n)
+	case uint64:
+		return strconv.FormatUint(n, 10)
+	default:
+		return fmt.Sprint(n)
+	}
+}
+
+func convertIntegerValue(value any, col *api.TableResultColumn) *api.TableValue {
+	// oid8 is unsigned 64-bit: neither int64 nor double can represent its
+	// full range. Reuse the exact decimal wire value, including for cursors
+	// and parameterized cell lookups, rather than narrowing it to int64.
+	if col.GetRawType() == "oid8" {
+		return &api.TableValue{Kind: &api.TableValue_NumericValue{NumericValue: unsignedDecimalText(value)}}
+	}
+	switch n := value.(type) {
+	case int64:
+		return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: n}}
+	case int32:
+		return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: int64(n)}}
+	case int:
+		return &api.TableValue{Kind: &api.TableValue_Int64Value{Int64Value: int64(n)}}
+	default:
+		return convertToValue(value)
+	}
 }
