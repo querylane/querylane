@@ -27,3 +27,17 @@ test("malformed column state does not break the route", () => {
     listColumnsSearchSchema.parse({ columns: { roles: ["roleName"] } }).columns
   ).toEqual({ roles: ["roleName"] });
 });
+
+test("invalid sort directions and oversized layouts fall back without breaking other preferences", () => {
+  expect(
+    listColumnsSearchSchema.parse({
+      columns: { roles: ["roleName"] },
+      listSort: { roles: [{ id: "roleName", desc: "false" }] },
+      columnOrder: { roles: Array.from({ length: 2001 }, () => "roleName") },
+    })
+  ).toEqual({
+    columns: { roles: ["roleName"] },
+    listSort: undefined,
+    columnOrder: undefined,
+  });
+});

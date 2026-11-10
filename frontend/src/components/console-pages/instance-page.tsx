@@ -734,6 +734,16 @@ function InstanceOverviewSection({
           });
         }}
         tableKey="instance-databases"
+        toolbarFilters={
+          <DataTableFilterToolbar
+            dataSlot="instance-database-filter-bar"
+            facets={databaseFacetFilters}
+            onClearAll={handleClearAll}
+            onSearchChange={handleAsyncAction(setDbFilter)}
+            searchPlaceholder="Search databases…"
+            searchValue={dbFilter}
+          />
+        }
       />
     );
   }
@@ -744,16 +754,7 @@ function InstanceOverviewSection({
           isUnavailableEmpty || isLoading ? null : filteredDatabases.length
         }
       />
-      {isUnavailableEmpty || isLoading ? null : (
-        <DataTableFilterToolbar
-          dataSlot="instance-database-filter-bar"
-          facets={databaseFacetFilters}
-          onClearAll={handleClearAll}
-          onSearchChange={handleAsyncAction(setDbFilter)}
-          searchPlaceholder="Search databases…"
-          searchValue={dbFilter}
-        />
-      )}
+
       {databasesContent}
     </section>
   );

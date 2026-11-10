@@ -5,7 +5,6 @@ import {
   DataTableFilter,
   SortableHeader,
 } from "@/components/ui/data-table";
-import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   type ColumnRow,
   deriveColumnRows,
@@ -346,31 +345,28 @@ function ColumnsInventoryTable({
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-2">
-        <DataTableFilter
-          onChange={setSearchValue}
-          placeholder="Search columns…"
-          value={searchValue}
-        />
-        {filters}
-        <div className="flex-1" />
-        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <span>Catalog metadata</span>
-          <span aria-hidden="true">·</span>
-          <RefreshControl
-            isRefreshing={toolbar.isRefreshing}
-            labelClassName="not-sr-only"
-            lastFetchedLabel={toolbar.lastFetchedLabel}
-            onRefresh={toolbar.handleRefresh}
-          />
-        </div>
-      </div>
       <DataTable
         columns={columnInventoryColumns}
         data={visibleRows}
         density="metadata"
         emptyResourceName="columns"
+        isRefreshing={toolbar.isRefreshing}
+        lastFetchedLabel={toolbar.lastFetchedLabel}
+        onRefresh={toolbar.handleRefresh}
         tableKey="data-explorer-table-columns"
+        toolbarFilters={
+          <>
+            <DataTableFilter
+              onChange={setSearchValue}
+              placeholder="Search columns…"
+              value={searchValue}
+            />
+            {filters}
+            <span className="text-muted-foreground ms-auto text-xs">
+              Catalog metadata
+            </span>
+          </>
+        }
       />
     </div>
   );

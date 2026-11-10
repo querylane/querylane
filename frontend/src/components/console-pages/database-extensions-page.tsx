@@ -12,6 +12,8 @@ import {
   presentExtensions,
 } from "@/components/console-pages/database-extensions-filters";
 import { EmptyState } from "@/components/empty-state";
+import { ListCells } from "@/components/list-view/list-cells";
+import { ListSortHeader } from "@/components/list-view/list-sort-header";
 import {
   Accordion,
   AccordionContent,
@@ -53,7 +55,9 @@ import {
 import {
   type ListColumnOption,
   useListColumnSelection,
+  useListSorting,
 } from "@/lib/list-columns";
+import { listSortDirection, sortListRows } from "@/lib/list-layout";
 import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
@@ -98,12 +102,12 @@ function StatusCell({ extension }: { extension: PresentedExtension }) {
 
 function LedgerRow({
   extension,
-  visible,
+  order,
   isSelected,
   onSelect,
 }: {
   extension: PresentedExtension;
-  visible: ReadonlySet<string>;
+  order: readonly string[];
   isSelected: boolean;
   onSelect: (key: string) => void;
 }) {
@@ -116,45 +120,50 @@ function LedgerRow({
       }}
       presentation={installed ? "extension-installed" : "extension-available"}
     >
-      {visible.has("name") && (
-        <TableCell>
-          <Button
-            aria-expanded={isSelected}
-            aria-haspopup="dialog"
-            className="h-auto min-h-0 justify-start whitespace-normal"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(extension.key);
-            }}
-            presentation="extension"
-            size="xs"
-            type="button"
-            variant="ghost"
-          >
-            {extension.displayName}
-          </Button>
-        </TableCell>
-      )}
-      {visible.has("status") && (
-        <TableCell>
-          <StatusCell extension={extension} />
-        </TableCell>
-      )}
-      {visible.has("version") && (
-        <TableCell presentation="numeric-muted">
-          {extension.versionLabel}
-        </TableCell>
-      )}
-      {visible.has("category") && (
-        <TableCell presentation="muted-small">
-          {extension.category ?? EMPTY_VALUE}
-        </TableCell>
-      )}
-      {visible.has("description") && (
-        <TableCell className="max-w-md" presentation="description">
-          {extension.description}
-        </TableCell>
-      )}
+      <ListCells
+        cells={{
+          name: (
+            <TableCell>
+              <Button
+                aria-expanded={isSelected}
+                aria-haspopup="dialog"
+                className="h-auto min-h-0 justify-start whitespace-normal"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(extension.key);
+                }}
+                presentation="extension"
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                {extension.displayName}
+              </Button>
+            </TableCell>
+          ),
+          status: (
+            <TableCell>
+              <StatusCell extension={extension} />
+            </TableCell>
+          ),
+          version: (
+            <TableCell presentation="numeric-muted">
+              {extension.versionLabel}
+            </TableCell>
+          ),
+          category: (
+            <TableCell presentation="muted-small">
+              {extension.category ?? EMPTY_VALUE}
+            </TableCell>
+          ),
+          description: (
+            <TableCell className="max-w-md" presentation="description">
+              {extension.description}
+            </TableCell>
+          ),
+        }}
+        order={order}
+      />
     </TableRow>
   );
 }
@@ -171,6 +180,7 @@ function statusTabLabel(label: string, count: number) {
 }
 
 function LedgerToolbar({
+  actions,
   category,
   categoryOptions,
   extensions,
@@ -181,6 +191,7 @@ function LedgerToolbar({
   search,
   status,
 }: {
+  actions: React.ReactNode;
   category: string;
   categoryOptions: {
     label: string;
@@ -198,66 +209,69 @@ function LedgerToolbar({
     (extension) => extension.statusFilter === "installed"
   ).length;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative w-full sm:w-64">
-        <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-        <Input
-          aria-label="Search extensions…"
-          onChange={(event) => {
-            onSearchChange(event.target.value);
+    <div className="flex min-w-0 items-start gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-64">
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            aria-label="Search extensions…"
+            onChange={(event) => {
+              onSearchChange(event.target.value);
+            }}
+            placeholder="Search extensions…"
+            presentation="search"
+            value={search}
+          />
+        </div>
+        <Tabs
+          onValueChange={(value: string) => {
+            if (
+              value === "All" ||
+              value === "installed" ||
+              value === "available"
+            ) {
+              onStatusChange(value);
+            }
           }}
-          placeholder="Search extensions…"
-          presentation="search"
-          value={search}
-        />
-      </div>
-      <Tabs
-        onValueChange={(value: string) => {
-          if (
-            value === "All" ||
-            value === "installed" ||
-            value === "available"
-          ) {
-            onStatusChange(value);
-          }
-        }}
-        value={status}
-      >
-        <TabsList>
-          <TabsTrigger value="All">
-            {statusTabLabel("All", extensions.length)}
-          </TabsTrigger>
-          <TabsTrigger value="installed">
-            {statusTabLabel("Installed", installedCount)}
-          </TabsTrigger>
-          <TabsTrigger value="available">
-            {statusTabLabel("Available", extensions.length - installedCount)}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      {categoryOptions.length > 0 ? (
-        <Select
-          onValueChange={(value: string | null) => {
-            onCategoryChange(value ?? "All");
-          }}
-          value={category}
+          value={status}
         >
-          <SelectTrigger aria-label="Category" className="w-44">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All categories</SelectItem>
-            {categoryOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
-      <span className="text-muted-foreground ml-auto text-xs">
-        {filteredCount} of {extensions.length} extensions
-      </span>
+          <TabsList className="min-h-9 max-w-full flex-wrap group-data-horizontal/tabs:h-auto">
+            <TabsTrigger value="All">
+              {statusTabLabel("All", extensions.length)}
+            </TabsTrigger>
+            <TabsTrigger value="installed">
+              {statusTabLabel("Installed", installedCount)}
+            </TabsTrigger>
+            <TabsTrigger value="available">
+              {statusTabLabel("Available", extensions.length - installedCount)}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {categoryOptions.length > 0 ? (
+          <Select
+            onValueChange={(value: string | null) => {
+              onCategoryChange(value ?? "All");
+            }}
+            value={category}
+          >
+            <SelectTrigger aria-label="Category" className="w-44">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All categories</SelectItem>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        <span className="text-muted-foreground ms-auto text-xs">
+          {filteredCount} of {extensions.length} extensions
+        </span>
+      </div>
+      <div className="flex h-9 shrink-0 items-center">{actions}</div>
     </div>
   );
 }
@@ -449,28 +463,44 @@ function ExtensionsLedger({
     "database-extensions",
     EXTENSION_COLUMNS
   );
-  const visible = new Set(columnSelection.visibleIds);
+  const sortState = useListSorting(
+    "database-extensions",
+    EXTENSION_COLUMNS.map((column) => column.id)
+  );
   const [search, setSearch] = useUrlTableSearch(searchRoute);
   const [status, setStatus] = useState<ExtensionStatusFilter>("All");
   const [category, setCategory] = useState("All");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const categoryOptions = extensionCategoryOptions(extensions);
-  const filtered = filterPresentedExtensions(extensions, {
-    category,
-    search,
-    status,
-  });
+  const filtered = sortListRows(
+    filterPresentedExtensions(extensions, {
+      category,
+      search,
+      status,
+    }),
+    sortState.sorting,
+    {
+      name: (row) => row.displayName,
+      status: (row) => row.statusFilter,
+      version: (row) => row.versionLabel,
+      category: (row) => row.category,
+      description: (row) => row.description,
+    }
+  );
   const selected = extensions.find(
     (extension) => extension.key === selectedKey
   );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <ListColumnSelector columns={EXTENSION_COLUMNS} {...columnSelection} />
-      </div>
       <LedgerToolbar
+        actions={
+          <ListColumnSelector
+            columns={EXTENSION_COLUMNS}
+            {...columnSelection}
+          />
+        }
         category={category}
         categoryOptions={categoryOptions}
         extensions={extensions}
@@ -492,13 +522,25 @@ function ExtensionsLedger({
           <Table>
             <TableHeader>
               <TableRow presentation="inspector">
-                {visible.has("name") && <TableHead>Name</TableHead>}
-                {visible.has("status") && <TableHead>Status</TableHead>}
-                {visible.has("version") && <TableHead>Version</TableHead>}
-                {visible.has("category") && <TableHead>Category</TableHead>}
-                {visible.has("description") && (
-                  <TableHead>Description</TableHead>
-                )}
+                {columnSelection.visibleIds.map((id) => (
+                  <TableHead
+                    aria-label={
+                      EXTENSION_COLUMNS.find((column) => column.id === id)
+                        ?.label
+                    }
+                    aria-sort={listSortDirection(id, sortState.sorting)}
+                    key={id}
+                  >
+                    <ListSortHeader
+                      id={id}
+                      label={
+                        EXTENSION_COLUMNS.find((column) => column.id === id)
+                          ?.label ?? id
+                      }
+                      {...sortState}
+                    />
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -512,7 +554,7 @@ function ExtensionsLedger({
                       currentKey === key ? null : key
                     );
                   }}
-                  visible={visible}
+                  order={columnSelection.visibleIds}
                 />
               ))}
             </TableBody>

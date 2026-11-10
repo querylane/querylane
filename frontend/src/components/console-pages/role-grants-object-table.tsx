@@ -180,31 +180,7 @@ function KindFilteredTable<T extends RowData>({
   return (
     <div className="flex flex-col gap-3">
       {/* value stays urgent so the input reflects keystrokes immediately */}
-      <DataTableFilterToolbar
-        dataSlot="role-grants-filter-bar"
-        facets={[
-          {
-            label: "Kind",
-            onChange: (values) => {
-              onKindChange(values.at(-1) ?? "all");
-            },
-            options: kindOptions,
-            selected: activeKind === "all" ? [] : [activeKind],
-            singleSelect: true,
-          },
-        ]}
-        onClearAll={() => {
-          if (onClearAll) {
-            onClearAll();
-            return;
-          }
-          onKindChange("all");
-          onSearchChange("");
-        }}
-        onSearchChange={onSearchChange}
-        searchPlaceholder={searchPlaceholder}
-        searchValue={search}
-      />
+
       {/* filterValue uses the deferred term so TanStack Table re-filters at
           lower priority, keeping the input responsive on large grant lists */}
       <DataTable
@@ -216,6 +192,33 @@ function KindFilteredTable<T extends RowData>({
         initialSorting={initialSorting}
         onFilterChange={onSearchChange}
         tableKey={tableKey}
+        toolbarFilters={
+          <DataTableFilterToolbar
+            dataSlot="role-grants-filter-bar"
+            facets={[
+              {
+                label: "Kind",
+                onChange: (values) => {
+                  onKindChange(values.at(-1) ?? "all");
+                },
+                options: kindOptions,
+                selected: activeKind === "all" ? [] : [activeKind],
+                singleSelect: true,
+              },
+            ]}
+            onClearAll={() => {
+              if (onClearAll) {
+                onClearAll();
+                return;
+              }
+              onKindChange("all");
+              onSearchChange("");
+            }}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={searchPlaceholder}
+            searchValue={search}
+          />
+        }
       />
     </div>
   );

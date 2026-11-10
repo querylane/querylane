@@ -20,9 +20,11 @@ import {
   DataTable,
   type DataTableColumnDef,
   DataTableFilter,
+  listColumnDefinitions,
   SortableHeader,
 } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   rolesForInstanceQueryInput,
@@ -40,7 +42,7 @@ import {
   isInstanceRolesTab,
   isInstanceRolesType,
 } from "@/lib/instance-roles-search";
-import { useListColumns } from "@/lib/list-columns";
+import { useListColumnSelection, useListColumns } from "@/lib/list-columns";
 import { listReadMask } from "@/lib/list-read-mask";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import {
@@ -177,7 +179,7 @@ const COLUMNS: DataTableColumnDef<Role>[] = [
   },
   {
     cell: ({ row }) => <LoginCell role={row.original} />,
-    enableSorting: false,
+    accessorFn: (role) => role.attributes?.canLogin ?? false,
     header: "Login",
     id: "login",
   },
@@ -260,6 +262,7 @@ function roleMatchesTableFilters(
 }
 
 function RolesDetailsContent({
+  columnSelection,
   error,
   filter,
   isPending,
@@ -269,6 +272,7 @@ function RolesDetailsContent({
   roleCount,
   roles,
 }: {
+  columnSelection: ReturnType<typeof useListColumnSelection>;
   error: unknown;
   filter: string;
   isPending: boolean;
@@ -296,6 +300,7 @@ function RolesDetailsContent({
   } else {
     body = (
       <DataTable
+        columnSelection={columnSelection}
         columns={COLUMNS}
         data={roles}
         emptyResourceName="roles"
@@ -386,6 +391,11 @@ export function InstanceRolesPage({
     useState<InstanceRolesTab>("details");
   const activeTab = tab ?? optimisticTab;
 
+  const columnOptions = listColumnDefinitions(COLUMNS);
+  const columnSelection = useListColumnSelection(
+    "instance-roles",
+    columnOptions
+  );
   const { selection: selectedColumns } = useListColumns("instance-roles");
   const readMask = listReadMask(
     selectedColumns,
@@ -466,6 +476,7 @@ export function InstanceRolesPage({
         replace: false,
         resetScroll: false,
         search: (previous) => ({
+          ...previous,
           ...normalizeRolesNavigateSearch(previous),
           tab: next === "details" ? undefined : next,
         }),
@@ -482,6 +493,7 @@ export function InstanceRolesPage({
         replace: false,
         resetScroll: false,
         search: (previous) => ({
+          ...previous,
           ...normalizeRolesNavigateSearch(previous),
           type: nextType,
         }),
@@ -504,6 +516,7 @@ export function InstanceRolesPage({
 
   const rolesDetailsContent = (
     <RolesDetailsContent
+      columnSelection={columnSelection}
       error={filteredRolesQuery.error}
       filter={filter}
       isPending={filteredRolesQuery.isPending}
@@ -577,32 +590,40 @@ export function InstanceRolesPage({
           {/* One toolbar row: search + type filter lead on the left like every
               other page's toolbar; the view switcher sits on the right because
               both filters apply to the table and the access map alike. */}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <div className="min-w-0 flex-1 sm:flex-none">
-              <DataTableFilter
-                onChange={handleAsyncAction(setFilter)}
-                placeholder="Search roles…"
-                value={filter}
+          <div className="flex min-w-0 flex-wrap items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <div className="min-w-0 sm:flex-none">
+                <DataTableFilter
+                  onChange={handleAsyncAction(setFilter)}
+                  placeholder="Search roles…"
+                  value={filter}
+                />
+              </div>
+              <DataTableFacetedFilter
+                onSelectedValuesChange={(values) => {
+                  handleRoleTypeChange(
+                    values.find((value) => isInstanceRolesType(value))
+                  );
+                }}
+                options={ROLE_TYPE_FILTERS.map((entry) => ({
+                  count: counts[entry.id],
+                  label: entry.label,
+                  value: entry.id,
+                }))}
+                selectedValues={[type].filter((value) =>
+                  isInstanceRolesType(value)
+                )}
+                singleSelect={true}
+                title="Type"
               />
             </div>
-            <DataTableFacetedFilter
-              onSelectedValuesChange={(values) => {
-                handleRoleTypeChange(
-                  values.find((value) => isInstanceRolesType(value))
-                );
-              }}
-              options={ROLE_TYPE_FILTERS.map((entry) => ({
-                count: counts[entry.id],
-                label: entry.label,
-                value: entry.id,
-              }))}
-              selectedValues={[type].filter((value) =>
-                isInstanceRolesType(value)
-              )}
-              singleSelect={true}
-              title="Type"
-            />
-            <TabsList className="shrink-0 basis-full sm:ml-auto sm:basis-auto">
+            <div hidden={activeTab !== "details"}>
+              <ListColumnSelector
+                columns={columnOptions}
+                {...columnSelection}
+              />
+            </div>
+            <TabsList className="shrink-0 basis-full group-data-horizontal/tabs:h-8 sm:basis-auto">
               <TabsTrigger value="details">Table</TabsTrigger>
               <TabsTrigger value="map">Access map</TabsTrigger>
             </TabsList>

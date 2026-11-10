@@ -857,14 +857,6 @@ function InstanceActivityPage({
         ) : null}
 
         <section className="flex flex-col gap-3">
-          <DataTableFilterToolbar
-            dataSlot="activity-filter-bar"
-            facets={facets}
-            onClearAll={handleClearAll}
-            onSearchChange={handleAsyncAction(setSearch)}
-            searchPlaceholder="Search query, user, app…"
-            searchValue={search}
-          />
           <DataTable
             columns={ACTIVITY_COLUMNS}
             data={rows}
@@ -874,6 +866,16 @@ function InstanceActivityPage({
               setSelectedPid(row.pid);
             }}
             tableKey="instance-activity-sessions"
+            toolbarFilters={
+              <DataTableFilterToolbar
+                dataSlot="activity-filter-bar"
+                facets={facets}
+                onClearAll={handleClearAll}
+                onSearchChange={handleAsyncAction(setSearch)}
+                searchPlaceholder="Search query, user, app…"
+                searchValue={search}
+              />
+            }
           />
         </section>
       </AsyncSectionState>

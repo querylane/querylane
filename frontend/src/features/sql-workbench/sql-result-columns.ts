@@ -20,4 +20,11 @@ function uniqueColumns(columns: readonly TableResultColumn[]) {
   });
 }
 
-export { uniqueColumns };
+function sqlResultColumnOptions(columns: readonly TableResultColumn[]) {
+  return uniqueColumns(columns).map((column) => ({
+    id: column.columnName,
+    label: column.columnName,
+  }));
+}
+
+export { sqlResultColumnOptions, uniqueColumns };
