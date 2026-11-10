@@ -1,4 +1,9 @@
 import type { Request } from "playwright/test";
+import {
+  DATABASE_URL,
+  EXTENSIONS_URL,
+  mockConsoleResources,
+} from "../visual/console-resource-fixtures";
 import { expect, test } from "./base";
 import { mockDataExplorerApp } from "./data-explorer-fixtures";
 import { mockRpc } from "./helpers";
@@ -105,6 +110,76 @@ for (const scenario of [
             .length
       )
       .toBe(1);
+    expect(errors).toEqual([]);
+  });
+}
+
+for (const destination of [
+  { interaction: "hover", label: "SQL workbench", path: "workbench" },
+  { interaction: "focus", label: "SQL", path: "sql" },
+] as const) {
+  test(`${destination.label} ${destination.interaction} failure stays code-only and navigation retries the chunk`, async ({
+    page,
+  }) => {
+    await mockConsoleResources(page);
+    await page.clock.install();
+    const rpcRequests: string[] = [];
+    const pending = new Set<Request>();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => {
+      errors.push(error.message);
+    });
+    page.on("request", (request) => {
+      if (request.method() === "POST") {
+        rpcRequests.push(request.url());
+        pending.add(request);
+      }
+      if (request.resourceType() === "script") {
+        pending.add(request);
+      }
+    });
+    page.on("requestfinished", (request) => pending.delete(request));
+    page.on("requestfailed", (request) => pending.delete(request));
+    await page.goto(EXTENSIONS_URL);
+    await expect(
+      page.getByRole("heading", { name: "Extensions", exact: true })
+    ).toBeVisible();
+    await page.clock.setSystemTime(Date.now() + 310_000);
+    await page.clock.runFor(1000);
+    await expect.poll(() => pending.size).toBe(0);
+    const initialRpcRequests = [...rpcRequests];
+
+    let failedImport = false;
+    // Fail a real deferred script, not a substitute route component.
+    await page.route("**/static/js/async/*.js", async (route) => {
+      if (failedImport) {
+        await route.continue();
+      } else {
+        failedImport = true;
+        await route.abort("failed");
+      }
+    });
+    const link = page.getByRole("link", {
+      exact: true,
+      name: destination.label,
+    });
+    await (destination.interaction === "hover" ? link.hover() : link.focus());
+    await expect.poll(() => failedImport).toBe(true);
+    await page.clock.runFor(1000);
+    await expect.poll(() => pending.size).toBe(0);
+    expect(rpcRequests).toEqual(initialRpcRequests);
+    await expect(page).toHaveURL(EXTENSIONS_URL);
+    await expect(
+      page.getByRole("heading", { name: "Extensions", exact: true })
+    ).toBeVisible();
+
+    await (destination.interaction === "focus"
+      ? link.press("Enter")
+      : link.click());
+    await expect(page).toHaveURL(`${DATABASE_URL}/${destination.path}`);
+    await expect(
+      page.getByRole("textbox", { name: "SQL editor" })
+    ).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
