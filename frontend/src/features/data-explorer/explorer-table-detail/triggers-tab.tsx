@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
+import { PaginationFooter } from "@/components/querylane-ui/pagination-footer";
 import { RefreshControl } from "@/components/querylane-ui/refresh-control";
 import { SqlSyntaxHighlight } from "@/components/querylane-ui/sql-code-block";
 import { SearchEmptyState } from "@/components/search-empty-state";
