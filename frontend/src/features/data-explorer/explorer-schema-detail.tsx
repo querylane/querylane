@@ -317,14 +317,6 @@ function SchemaObjectsTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <DataTableFilterToolbar
-        dataSlot="schema-object-filter-bar"
-        facets={facets}
-        onClearAll={handleClearAll}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search objects…"
-        searchValue={search}
-      />
       <DataTable
         columns={schemaObjectColumns()}
         data={visibleRows}
@@ -341,6 +333,16 @@ function SchemaObjectsTable({
           }
         }}
         tableKey="schema-objects"
+        toolbarFilters={
+          <DataTableFilterToolbar
+            dataSlot="schema-object-filter-bar"
+            facets={facets}
+            onClearAll={handleClearAll}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search objects…"
+            searchValue={search}
+          />
+        }
       />
     </div>
   );

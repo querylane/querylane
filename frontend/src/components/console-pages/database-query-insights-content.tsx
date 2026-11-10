@@ -11,6 +11,8 @@ import {
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { AppInlineError } from "@/components/app-error-view";
 import { EmptyState } from "@/components/empty-state";
+import { ListCells } from "@/components/list-view/list-cells";
+import { ListSortHeader } from "@/components/list-view/list-sort-header";
 import {
   Alert,
   AlertAction,
@@ -54,7 +56,13 @@ import { buildDatabaseName, formatBytes } from "@/lib/console-resources";
 import {
   type ListColumnOption,
   useListColumnSelection,
+  useListSorting,
 } from "@/lib/list-columns";
+import {
+  type ListSort,
+  listSortDirection,
+  sortListRows,
+} from "@/lib/list-layout";
 import {
   DEFAULT_PAGE_SIZE,
   isPageSize,
@@ -540,19 +548,18 @@ const TOP_QUERY_COLUMNS = [
 ] satisfies ListColumnOption[];
 
 function TopQueriesTable({
+  columnSelection,
   onSelectQuery,
   queries,
+  sortState,
   selectedQueryKey,
 }: {
+  columnSelection: ReturnType<typeof useListColumnSelection>;
   onSelectQuery: (query: IndexedQueryRuntimeInsight) => void;
   queries: IndexedQueryRuntimeInsight[];
+  sortState: { sorting: ListSort[]; setSorting: (next: ListSort[]) => void };
   selectedQueryKey: string | null;
 }) {
-  const columnSelection = useListColumnSelection(
-    "database-top-queries",
-    TOP_QUERY_COLUMNS
-  );
-  const visible = new Set(columnSelection.visibleIds);
   if (queries.length === 0) {
     return (
       <div className="text-muted-foreground px-5 py-8 text-sm">
@@ -563,35 +570,33 @@ function TopQueriesTable({
 
   return (
     <div>
-      <div className="flex justify-end p-2">
-        <ListColumnSelector columns={TOP_QUERY_COLUMNS} {...columnSelection} />
-      </div>
       <Table>
         <TableHeader>
           <TableRow presentation="static">
-            {visible.has("query") && (
-              <TableHead presentation="insight-leading">Query</TableHead>
-            )}
-            {visible.has("calls") && (
-              <TableHead className="text-right" presentation="insight">
-                Calls
+            {columnSelection.visibleIds.map((id) => (
+              <TableHead
+                aria-label={
+                  TOP_QUERY_COLUMNS.find((column) => column.id === id)?.label
+                }
+                aria-sort={listSortDirection(id, sortState.sorting)}
+                className={cn(
+                  id === "relative" && "w-28",
+                  (id === "calls" || id === "mean" || id === "total") &&
+                    "text-right"
+                )}
+                key={id}
+                presentation={id === "query" ? "insight-leading" : "insight"}
+              >
+                <ListSortHeader
+                  id={id}
+                  label={
+                    TOP_QUERY_COLUMNS.find((column) => column.id === id)
+                      ?.label ?? id
+                  }
+                  {...sortState}
+                />
               </TableHead>
-            )}
-            {visible.has("mean") && (
-              <TableHead className="text-right" presentation="insight">
-                Mean
-              </TableHead>
-            )}
-            {visible.has("total") && (
-              <TableHead className="text-right" presentation="insight">
-                Total
-              </TableHead>
-            )}
-            {visible.has("relative") && (
-              <TableHead className="w-28" presentation="insight">
-                Relative
-              </TableHead>
-            )}
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -605,60 +610,65 @@ function TopQueriesTable({
                 key={entry.selectionKey}
                 presentation={selected ? "selected" : undefined}
               >
-                {visible.has("query") && (
-                  <TableCell
-                    className="max-w-[34rem] min-w-0"
-                    presentation="insight-leading"
-                  >
-                    <Button
-                      aria-label={queryLabel}
-                      aria-pressed={selected}
-                      className="h-auto w-full justify-start overflow-hidden text-left"
-                      onClick={() => {
-                        onSelectQuery(entry);
-                      }}
-                      presentation="query"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <SqlCodeBlock
-                        copyable={false}
-                        sql={queryLabel}
-                        variant="inline"
-                      />
-                    </Button>
-                  </TableCell>
-                )}
-                {visible.has("calls") && (
-                  <TableCell
-                    className="text-right"
-                    presentation="numeric-muted"
-                  >
-                    {formatInsightInteger(query.calls)}
-                  </TableCell>
-                )}
-                {visible.has("mean") && (
-                  <TableCell
-                    className="text-right"
-                    presentation="numeric-muted"
-                  >
-                    {formatInsightMs(query.meanTimeMs)}
-                  </TableCell>
-                )}
-                {visible.has("total") && (
-                  <TableCell className="text-right" presentation="numeric">
-                    {formatInsightMs(query.totalTimeMs)}
-                  </TableCell>
-                )}
-                {visible.has("relative") && (
-                  <TableCell>
-                    <Progress
-                      aria-label={`Runtime relative to top query for ${queryLabel}`}
-                      density="compact"
-                      value={insightProgressValue(query.totalTimeRatio)}
-                    />
-                  </TableCell>
-                )}
+                <ListCells
+                  cells={{
+                    query: (
+                      <TableCell
+                        className="max-w-[34rem] min-w-0"
+                        presentation="insight-leading"
+                      >
+                        <Button
+                          aria-label={queryLabel}
+                          aria-pressed={selected}
+                          className="h-auto w-full justify-start overflow-hidden text-left"
+                          onClick={() => {
+                            onSelectQuery(entry);
+                          }}
+                          presentation="query"
+                          type="button"
+                          variant="ghost"
+                        >
+                          <SqlCodeBlock
+                            copyable={false}
+                            sql={queryLabel}
+                            variant="inline"
+                          />
+                        </Button>
+                      </TableCell>
+                    ),
+                    calls: (
+                      <TableCell
+                        className="text-right"
+                        presentation="numeric-muted"
+                      >
+                        {formatInsightInteger(query.calls)}
+                      </TableCell>
+                    ),
+                    mean: (
+                      <TableCell
+                        className="text-right"
+                        presentation="numeric-muted"
+                      >
+                        {formatInsightMs(query.meanTimeMs)}
+                      </TableCell>
+                    ),
+                    total: (
+                      <TableCell className="text-right" presentation="numeric">
+                        {formatInsightMs(query.totalTimeMs)}
+                      </TableCell>
+                    ),
+                    relative: (
+                      <TableCell>
+                        <Progress
+                          aria-label={`Runtime relative to top query for ${queryLabel}`}
+                          density="compact"
+                          value={insightProgressValue(query.totalTimeRatio)}
+                        />
+                      </TableCell>
+                    ),
+                  }}
+                  order={columnSelection.visibleIds}
+                />
               </TableRow>
             );
           })}
@@ -855,17 +865,35 @@ function TopQueriesCard({
   partialError: Status | undefined;
   selectedQueryKey: string | null;
 }) {
+  const columnSelection = useListColumnSelection(
+    "database-top-queries",
+    TOP_QUERY_COLUMNS
+  );
+  const sortState = useListSorting(
+    "database-top-queries",
+    TOP_QUERY_COLUMNS.map((column) => column.id)
+  );
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<QueryKindFilter>("all");
   const [meanFilter, setMeanFilter] = useState<MeanFilterValue>("any");
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState<QueryPageSize>(DEFAULT_PAGE_SIZE);
-  const queries = filterQueries({
-    kind,
-    meanThreshold: meanFilterThreshold(meanFilter),
-    queries: insights.topQueries,
-    search,
-  });
+  const queries = sortListRows(
+    filterQueries({
+      kind,
+      meanThreshold: meanFilterThreshold(meanFilter),
+      queries: insights.topQueries,
+      search,
+    }),
+    sortState.sorting,
+    {
+      query: (row) => queryInsightLabel(row.query),
+      calls: (row) => row.query.calls,
+      mean: (row) => row.query.meanTimeMs,
+      total: (row) => row.query.totalTimeMs,
+      relative: (row) => row.query.totalTimeRatio,
+    }
+  );
   const pageCount = queryPageCount(queries.length, pageSize);
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
   const pageStart = safePageIndex * pageSize;
@@ -946,21 +974,30 @@ function TopQueriesCard({
           </div>
         </div>
         {insights.queryStatsAvailable ? (
-          <DataTableFilterToolbar
-            dataSlot="query-insights-filter-bar"
-            facets={facets}
-            onClearAll={handleClearAll}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder="Search queries…"
-            searchValue={search}
-          />
+          <div className="flex min-w-0 items-start gap-2">
+            <DataTableFilterToolbar
+              className="flex-1"
+              dataSlot="query-insights-filter-bar"
+              facets={facets}
+              onClearAll={handleClearAll}
+              onSearchChange={handleSearchChange}
+              searchPlaceholder="Search queries…"
+              searchValue={search}
+            />
+            <ListColumnSelector
+              columns={TOP_QUERY_COLUMNS}
+              {...columnSelection}
+            />
+          </div>
         ) : null}
       </CardHeader>
       {insights.queryStatsAvailable ? (
         <TopQueriesTable
+          columnSelection={columnSelection}
           onSelectQuery={onSelectQuery}
           queries={pagedQueries}
           selectedQueryKey={selectedQueryKey}
+          sortState={sortState}
         />
       ) : (
         <MetricUnavailableNotice

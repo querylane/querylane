@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   buildExport,
   type ExportFormat,
@@ -31,6 +32,7 @@ import {
   gridEmptyState,
 } from "@/features/sql-workbench/sql-command-outcome";
 import { canRetrySqlExecution } from "@/features/sql-workbench/sql-execution-error";
+import { sqlResultColumnOptions } from "@/features/sql-workbench/sql-result-columns";
 import { QUERY_RESULT_RESOURCE_NAME } from "@/features/sql-workbench/sql-result-resource";
 import { SqlResultsGrid } from "@/features/sql-workbench/sql-results-grid";
 import {
@@ -47,6 +49,7 @@ import type {
   SqlExplain,
 } from "@/features/sql-workbench/use-sql-execution";
 import { downloadBlob } from "@/lib/download-blob";
+import { useListColumnSelection } from "@/lib/list-columns";
 import type { AppUiError } from "@/lib/ui-error-types";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
@@ -275,9 +278,11 @@ function ExecutionError({
 }
 
 function ResultsBody({
+  columnSelection,
   execution,
   onRetry,
 }: {
+  columnSelection: ReturnType<typeof useListColumnSelection>;
   execution: SqlExecution | undefined;
   onRetry: () => Promise<unknown> | undefined;
 }) {
@@ -296,6 +301,7 @@ function ResultsBody({
   if (execution.columns.length > 0) {
     return (
       <SqlResultsGrid
+        columnSelection={columnSelection}
         columns={execution.columns}
         emptyState={gridEmptyState({
           rowCount: execution.rows.length,
@@ -450,6 +456,73 @@ function CountPill({ count }: { count: number }) {
   );
 }
 
+function ResultsToolbar({
+  activeTab,
+  columnOptions,
+  columnSelection,
+  execution,
+  messageCount,
+  onTabChange,
+}: {
+  activeTab: ResultsTab;
+  columnOptions: ReturnType<typeof sqlResultColumnOptions>;
+  columnSelection: ReturnType<typeof useListColumnSelection>;
+  execution: SqlExecution | undefined;
+  messageCount: number;
+  onTabChange: (tab: ResultsTab) => void;
+}) {
+  return (
+    <div className="border-border flex min-h-10 flex-wrap items-center justify-between gap-2 border-b px-2">
+      <Tabs
+        onValueChange={(value) => {
+          onTabChange(parseResultsTab(value));
+        }}
+        value={activeTab}
+      >
+        <TabsList className="h-8" presentation="sql-results" variant="line">
+          <TabsTrigger
+            className="h-8"
+            presentation="sql-compact"
+            value="results"
+          >
+            <Table2 aria-hidden="true" className="size-3.5" />
+            Results
+          </TabsTrigger>
+          <TabsTrigger
+            className="h-8"
+            presentation="sql-compact"
+            value="messages"
+          >
+            <MessageSquareText aria-hidden="true" className="size-3.5" />
+            Messages
+            <CountPill count={messageCount} />
+          </TabsTrigger>
+          <TabsTrigger className="h-8" presentation="sql-compact" value="plan">
+            <Waypoints aria-hidden="true" className="size-3.5" />
+            Plan
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {/* The Run status and export describe the Results tab. The Plan tab
+            has its own header for the EXPLAIN that produced it, so showing
+            the last Run's status there would mix two operations. */}
+      <div className="flex items-center gap-3 pr-1 text-xs">
+        {execution && activeTab !== "plan" ? (
+          <ExecutionStatusLine execution={execution} />
+        ) : null}
+        {execution &&
+        activeTab === "results" &&
+        execution.columns.length > 0 ? (
+          <ListColumnSelector columns={columnOptions} {...columnSelection} />
+        ) : null}
+        {execution && activeTab === "results" ? (
+          <ExportMenu execution={execution} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function SqlResultsPane({
   activeTab,
   execution,
@@ -463,6 +536,8 @@ function SqlResultsPane({
   onRetry: () => Promise<unknown> | undefined;
   onTabChange: (tab: ResultsTab) => void;
 }) {
+  const columnOptions = sqlResultColumnOptions(execution?.columns ?? []);
+  const columnSelection = useListColumnSelection("sql-results", columnOptions);
   const messageCount =
     (execution?.notices.length ?? 0) + (explain?.notices.length ?? 0);
   return (
@@ -473,60 +548,25 @@ function SqlResultsPane({
       // That defeats virtualization and scrolls the tab strip and header away.
       className="bg-background flex h-full min-h-0 flex-1 flex-col"
     >
-      <div className="border-border flex min-h-10 flex-wrap items-center justify-between gap-2 border-b px-2">
-        <Tabs
-          onValueChange={(value) => {
-            onTabChange(parseResultsTab(value));
-          }}
-          value={activeTab}
-        >
-          <TabsList className="h-8" presentation="sql-results" variant="line">
-            <TabsTrigger
-              className="h-8"
-              presentation="sql-compact"
-              value="results"
-            >
-              <Table2 aria-hidden="true" className="size-3.5" />
-              Results
-            </TabsTrigger>
-            <TabsTrigger
-              className="h-8"
-              presentation="sql-compact"
-              value="messages"
-            >
-              <MessageSquareText aria-hidden="true" className="size-3.5" />
-              Messages
-              <CountPill count={messageCount} />
-            </TabsTrigger>
-            <TabsTrigger
-              className="h-8"
-              presentation="sql-compact"
-              value="plan"
-            >
-              <Waypoints aria-hidden="true" className="size-3.5" />
-              Plan
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        {/* The Run status and export describe the Results tab. The Plan tab
-            has its own header for the EXPLAIN that produced it, so showing
-            the last Run's status there would mix two operations. */}
-        <div className="flex items-center gap-3 pr-1 text-xs">
-          {execution && activeTab !== "plan" ? (
-            <ExecutionStatusLine execution={execution} />
-          ) : null}
-          {execution && activeTab === "results" ? (
-            <ExportMenu execution={execution} />
-          ) : null}
-        </div>
-      </div>
+      <ResultsToolbar
+        activeTab={activeTab}
+        columnOptions={columnOptions}
+        columnSelection={columnSelection}
+        execution={execution}
+        messageCount={messageCount}
+        onTabChange={onTabChange}
+      />
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col",
           activeTab !== "results" && "hidden"
         )}
       >
-        <ResultsBody execution={execution} onRetry={onRetry} />
+        <ResultsBody
+          columnSelection={columnSelection}
+          execution={execution}
+          onRetry={onRetry}
+        />
       </div>
       {activeTab === "messages" ? (
         <MessagesBody execution={execution} explain={explain} />

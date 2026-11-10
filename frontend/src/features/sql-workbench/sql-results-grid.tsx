@@ -4,9 +4,14 @@ import { ResultDataGrid } from "@/components/data-grid/table-data-grid/result-da
 import type { GridEmptyMessage } from "@/components/data-grid/table-data-grid/result-data-grid-types";
 import { staticColumnLayout } from "@/components/data-grid/table-data-grid/use-table-column-layout";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
-import { uniqueColumns } from "@/features/sql-workbench/sql-result-columns";
+import {
+  sqlResultColumnOptions,
+  uniqueColumns,
+} from "@/features/sql-workbench/sql-result-columns";
 import { QUERY_RESULT_RESOURCE_NAME } from "@/features/sql-workbench/sql-result-resource";
-import { useListColumnSelection } from "@/lib/list-columns";
+import { sortSqlResultRows } from "@/features/sql-workbench/sql-result-sort";
+import { reorderVisibleTableColumns } from "@/features/user-settings/table-column-layout-settings";
+import { useListColumnSelection, useListSorting } from "@/lib/list-columns";
 import type {
   TableResultColumn,
   TableResultRow,
@@ -15,15 +20,17 @@ import type {
 /**
  * Query results in the Data Explorer's grid: multi-cell selection, the cell
  * context menu, copy, the value dialog and the record drawer. Column visibility
- * is presentation-only: the complete result and SQL remain unchanged. Sorting,
- * filtering and paging still belong to the statement that produced the result.
+ * and sorting are presentation-only: the backing result and SQL remain unchanged.
+ * Filtering and paging still belong to the statement that produced the result.
  */
 function SqlResultsGrid({
+  columnSelection: providedColumnSelection,
   columns,
   emptyState,
   resultKey,
   rows,
 }: {
+  columnSelection?: ReturnType<typeof useListColumnSelection>;
   columns: readonly TableResultColumn[];
   /** Shown under the header while the grid has no rows; omit while streaming. */
   emptyState?: GridEmptyMessage | undefined;
@@ -32,17 +39,50 @@ function SqlResultsGrid({
   rows: readonly TableResultRow[];
 }) {
   const resultColumns = uniqueColumns(columns);
-  const options = resultColumns.map((column) => ({
-    id: column.columnName,
-    label: column.columnName,
-  }));
-  const columnSelection = useListColumnSelection("sql-results", options);
+  const options = sqlResultColumnOptions(columns);
+  const fallbackColumnSelection = useListColumnSelection(
+    "sql-results",
+    options
+  );
+  const columnSelection = providedColumnSelection ?? fallbackColumnSelection;
   const visible = new Set(columnSelection.visibleIds);
+  const sortState = useListSorting(
+    "sql-results",
+    options.map((option) => option.id)
+  );
+  const byName = new Map(
+    resultColumns.map((column) => [column.columnName, column])
+  );
+  const displayColumns = columnSelection.visibleIds.flatMap((id) => {
+    const column = byName.get(id);
+    return column ? [column] : [];
+  });
   const columnLayout = {
     ...staticColumnLayout(resultColumns),
-    displayColumns: resultColumns.filter((column) =>
-      visible.has(column.columnName)
-    ),
+    displayColumns,
+    columnOrder: columnSelection.columnOrder,
+    setColumnOrder: columnSelection.setColumnOrder,
+    reset: columnSelection.resetColumns,
+    reorderColumns: (sourceColumnKey: string, targetColumnKey: string) => {
+      columnSelection.setColumnOrder(
+        reorderVisibleTableColumns({
+          order: columnSelection.columnOrder,
+          hiddenColumns: resultColumns.flatMap((column) =>
+            visible.has(column.columnName) ? [] : [column.columnName]
+          ),
+          sourceColumnKey,
+          targetColumnKey,
+        })
+      );
+    },
+    setColumnVisibility: (id: string, shown: boolean) => {
+      const ids = options.flatMap((option) =>
+        (option.id === id ? shown : visible.has(option.id)) ? [option.id] : []
+      );
+      columnSelection.setSelection(
+        ids.length === options.length ? undefined : ids
+      );
+    },
     hiddenColumnKeys: new Set(
       resultColumns.flatMap((column) =>
         visible.has(column.columnName) ? [] : [column.columnName]
@@ -52,22 +92,35 @@ function SqlResultsGrid({
   };
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex justify-end py-2">
-        <ListColumnSelector columns={options} {...columnSelection} />
-      </div>
+      {providedColumnSelection ? null : (
+        <div className="flex justify-end py-2">
+          <ListColumnSelector columns={options} {...columnSelection} />
+        </div>
+      )}
       <ResultDataGrid
         ariaLabel="Query results"
         columnLayout={columnLayout}
-        columnMenu={false}
         emptyMessage={emptyState}
         fill={true}
+        onSortChange={(sorts) => {
+          sortState.setSorting(
+            sorts.map((sort) => ({
+              id: sort.columnKey,
+              desc: sort.direction === "DESC",
+            }))
+          );
+        }}
         recordTitle="Query result"
-        resetKey={resultKey}
+        resetKey={`${resultKey}:${JSON.stringify(sortState.sorting)}`}
         resourceName={QUERY_RESULT_RESOURCE_NAME}
         resultColumns={resultColumns}
-        resultRows={rows}
+        resultRows={sortSqlResultRows(rows, resultColumns, sortState.sorting)}
         rowSelection={false}
         showRowNumbers={true}
+        sortColumns={sortState.sorting.map((sort) => ({
+          columnKey: sort.id,
+          direction: sort.desc ? "DESC" : "ASC",
+        }))}
         toolbar={false}
       />
     </div>
