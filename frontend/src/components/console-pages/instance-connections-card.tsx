@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Lock, Timer, Users } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
+import { ListCells } from "@/components/list-view/list-cells";
+import { ListSortHeader } from "@/components/list-view/list-sort-header";
 import {
   Card,
   CardContent,
@@ -20,7 +22,13 @@ import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   type ListColumnOption,
   useListColumnSelection,
+  useListSorting,
 } from "@/lib/list-columns";
+import {
+  type ListSort,
+  listSortDirection,
+  sortListRows,
+} from "@/lib/list-layout";
 import { formatElapsedDuration } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
 import type {
@@ -251,34 +259,38 @@ function Count({ bold = false, value }: { bold?: boolean; value: number }) {
  * Swatch-only state headers: at the card's fixed column width, text headers
  * left no room for application names.
  */
-function LedgerHeader({ visible }: { visible: ReadonlySet<string> }) {
+function LedgerHeader({
+  order,
+  sortState,
+}: {
+  order: readonly string[];
+  sortState: { sorting: ListSort[]; setSorting: (next: ListSort[]) => void };
+}) {
   return (
     <TableHeader>
       <TableRow presentation="static">
-        <TableHead className="h-7" presentation="connection-leading">
-          Application
-        </TableHead>
-        {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
-          (state) => (
+        {order.map((id) => {
+          const state = CONNECTION_STATES.find(
+            (candidate) => candidate.key === id
+          );
+          const label =
+            LEDGER_COLUMNS.find((column) => column.id === id)?.label ?? id;
+          return (
             <TableHead
-              className="h-7 w-9 text-right"
-              key={state.key}
-              presentation="connection"
-              title={state.label}
+              aria-label={label}
+              aria-sort={listSortDirection(id, sortState.sorting)}
+              className="h-7"
+              key={id}
+              presentation={
+                id === "application" ? "connection-leading" : "connection"
+              }
             >
-              <Swatch className={state.className} />
-              <span className="sr-only">{state.label}</span>
+              <ListSortHeader id={id} label={label} {...sortState}>
+                {state ? <Swatch className={state.className} /> : label}
+              </ListSortHeader>
             </TableHead>
-          )
-        )}
-        {visible.has("total") && (
-          <TableHead
-            className="h-7 w-9 text-right"
-            presentation="connection-trailing"
-          >
-            Total
-          </TableHead>
-        )}
+          );
+        })}
       </TableRow>
     </TableHeader>
   );
@@ -286,81 +298,93 @@ function LedgerHeader({ visible }: { visible: ReadonlySet<string> }) {
 
 function LedgerRow({
   app,
-  visible,
+  order,
 }: {
   app: ApplicationConnections;
-  visible: ReadonlySet<string>;
+  order: readonly string[];
 }) {
   return (
     <TableRow>
-      <TableCell className="w-full max-w-0" presentation="connection-name">
-        <ApplicationLabel name={app.applicationName} />
-      </TableCell>
-      {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
-        (state) => (
-          <TableCell
-            className="w-9 text-right"
-            key={state.key}
-            presentation="connection-value"
-          >
-            <Count value={app[state.key]} />
-          </TableCell>
-        )
-      )}
-      {visible.has("total") && (
-        <TableCell className="w-9 text-right" presentation="connection-total">
-          <Count bold={true} value={app.totalConnections} />
-        </TableCell>
-      )}
+      <ListCells
+        cells={{
+          application: (
+            <TableCell
+              className="w-full max-w-0"
+              presentation="connection-name"
+            >
+              <ApplicationLabel name={app.applicationName} />
+            </TableCell>
+          ),
+          ...Object.fromEntries(
+            CONNECTION_STATES.map((state) => [
+              state.key,
+              <TableCell
+                className="w-9 text-right"
+                key={state.key}
+                presentation="connection-value"
+              >
+                <Count value={app[state.key]} />
+              </TableCell>,
+            ])
+          ),
+          total: (
+            <TableCell
+              className="w-9 text-right"
+              presentation="connection-total"
+            >
+              <Count bold={true} value={app.totalConnections} />
+            </TableCell>
+          ),
+        }}
+        order={order}
+      />
     </TableRow>
   );
 }
 
 function LedgerFooter({
   activity,
-  visible,
+  order,
 }: {
   activity: ConnectionActivityHealth;
-  visible: ReadonlySet<string>;
+  order: readonly string[];
 }) {
   return (
     <TableFooter presentation="transparent">
       <TableRow presentation="static">
-        <TableCell
-          className="w-full max-w-0"
-          presentation="connection-name-summary"
-        >
-          Total
-        </TableCell>
-        {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
-          (state) => (
-            <TableCell
-              className="w-9 text-right"
-              key={state.key}
-              presentation="connection-value-summary"
-            >
-              <Count bold={true} value={activity[state.key]} />
-            </TableCell>
-          )
-        )}
-        {visible.has("total") && (
-          <TableCell
-            className="w-9 text-right"
-            presentation="connection-total-summary"
-          >
-            <Count bold={true} value={activity.totalConnections} />
-          </TableCell>
-        )}
+        <ListCells
+          cells={{
+            application: (
+              <TableCell presentation="connection-name">Total</TableCell>
+            ),
+            ...Object.fromEntries(
+              CONNECTION_STATES.map((state) => [
+                state.key,
+                <TableCell
+                  className="w-9 text-right"
+                  key={state.key}
+                  presentation="connection-value-summary"
+                >
+                  <Count bold={true} value={activity[state.key]} />
+                </TableCell>,
+              ])
+            ),
+            total: (
+              <TableCell
+                className="w-9 text-right"
+                presentation="connection-total-summary"
+              >
+                <Count bold={true} value={activity.totalConnections} />
+              </TableCell>
+            ),
+          }}
+          order={order}
+        />
       </TableRow>
     </TableFooter>
   );
 }
 
-/**
- * One row per application (top talkers first, as the backend orders them),
- * one column per state, instance totals in the footer. The totals row stays
- * authoritative even when by_application is capped or empty.
- */
 function ApplicationLedger({
   activity,
 }: {
@@ -371,7 +395,20 @@ function ApplicationLedger({
     LEDGER_COLUMNS
   );
   const visible = new Set(columnSelection.visibleIds);
-  const shown = activity.byApplication.slice(0, MAX_APPLICATION_ROWS);
+  const sortState = useListSorting(
+    "instance-applications",
+    LEDGER_COLUMNS.map((column) => column.id)
+  );
+  const shown = sortListRows(activity.byApplication, sortState.sorting, {
+    application: (row) => row.applicationName,
+    total: (row) => row.totalConnections,
+    ...Object.fromEntries(
+      CONNECTION_STATES.map((state) => [
+        state.key,
+        (row: ApplicationConnections) => row[state.key],
+      ])
+    ),
+  }).slice(0, MAX_APPLICATION_ROWS);
 
   return (
     <>
@@ -380,7 +417,10 @@ function ApplicationLedger({
         <ListColumnSelector columns={LEDGER_COLUMNS} {...columnSelection} />
       </div>
       <Table presentation="compact">
-        <LedgerHeader visible={visible} />
+        <LedgerHeader
+          order={columnSelection.visibleIds}
+          sortState={sortState}
+        />
         <TableBody>
           {shown.length === 0 ? (
             <TableRow presentation="static">
@@ -397,12 +437,12 @@ function ApplicationLedger({
               <LedgerRow
                 app={app}
                 key={app.applicationName}
-                visible={visible}
+                order={columnSelection.visibleIds}
               />
             ))
           )}
         </TableBody>
-        <LedgerFooter activity={activity} visible={visible} />
+        <LedgerFooter activity={activity} order={columnSelection.visibleIds} />
       </Table>
     </>
   );

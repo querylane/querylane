@@ -36,7 +36,11 @@ function Lists() {
       <section aria-label="First">
         <DataTable
           columns={columns}
-          data={[{ name: "analytics", owner: "postgres" }]}
+          data={[
+            { name: "zebra", owner: "alice" },
+            { name: "analytics", owner: "postgres" },
+            { name: "omega", owner: "bob" },
+          ]}
           tableKey="first"
         />
       </section>
@@ -74,7 +78,17 @@ test("selections stay in the current URL, survive reload, preserve filters and i
   render(<RouterProvider router={router} />);
   const first = await screen.findByRole("region", { name: "First" });
   await user.click(within(first).getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitemcheckbox", { name: "Owner" }));
+  const menu = screen.getByRole("menu");
+  expect(within(menu).getAllByRole("menuitemcheckbox")).toHaveLength(2);
+  expect(within(menu).queryByRole("button")).toBeNull();
+  await user.click(
+    within(menu).getByRole("menuitemcheckbox", { name: "Owner" })
+  );
+  expect(screen.getByRole("menu")).toBeTruthy();
+  await user.keyboard("{Escape}");
+  expect(within(first).getByRole("button", { name: "Columns" })).toBe(
+    document.activeElement
+  );
   await waitFor(() => {
     expect(router.state.location.search).toEqual({
       q: "analytics",
@@ -113,4 +127,65 @@ test("selections stay in the current URL, survive reload, preserve filters and i
       { name: "Owner" }
     )
   ).toBeTruthy();
+});
+
+test("row sorting and column order survive reload, preserve filters and isolate lists", async () => {
+  const user = userEvent.setup();
+  const router = testRouter(
+    `/lists?q=analytics&columnOrder=${encodeURIComponent(JSON.stringify({ first: ["owner", "name"] }))}`
+  );
+  render(<RouterProvider router={router} />);
+  const first = await screen.findByRole("region", { name: "First" });
+  await user.click(
+    within(first).getByRole("button", { name: "Name, not sorted" })
+  );
+  await waitFor(() => {
+    expect(router.state.location.search).toEqual({
+      q: "analytics",
+      listSort: { first: [{ id: "name", desc: false }] },
+      columnOrder: { first: ["owner", "name"] },
+    });
+  });
+  expect(within(first).getAllByRole("row")[1]?.textContent).toBe(
+    "postgresanalytics"
+  );
+  expect(
+    within(first)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent)
+  ).toEqual(["Owner", "Name"]);
+  const url = router.state.location.href;
+  cleanup();
+  const restoredRouter = testRouter(url);
+  render(<RouterProvider router={restoredRouter} />);
+  const restored = await screen.findByRole("region", { name: "First" });
+  expect(
+    within(restored)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent)
+  ).toEqual(["Owner", "Name"]);
+  expect(within(restored).getAllByRole("row")[1]?.textContent).toBe(
+    "postgresanalytics"
+  );
+  expect(
+    within(screen.getByRole("region", { name: "Second" }))
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent)
+  ).toEqual(["Name", "Owner"]);
+  await user.click(within(restored).getByRole("button", { name: "Columns" }));
+  await user.click(screen.getByRole("menuitem", { name: "Reset columns" }));
+  await waitFor(() => {
+    expect(restoredRouter.state.location.search).toEqual({
+      q: "analytics",
+      listSort: { first: [{ id: "name", desc: false }] },
+    });
+  });
+  expect(
+    within(restored)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent)
+  ).toEqual(["Name", "Owner"]);
+  expect(within(restored).getAllByRole("row")[1]?.textContent).toBe(
+    "analyticspostgres"
+  );
 });

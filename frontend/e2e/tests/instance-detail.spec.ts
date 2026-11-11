@@ -704,6 +704,7 @@ test("list columns: bookmark, reload and reset preserve the roles view", async (
   );
   await page.getByRole("button", { name: "Columns", exact: true }).click();
   await page.getByRole("menuitem", { name: "Reset columns" }).click();
+  await page.keyboard.press("Escape");
   await expect(table.getByRole("columnheader", { name: "Role" })).toBeVisible();
   await expect(page).not.toHaveURL(COLUMNS_URL_RE);
 });

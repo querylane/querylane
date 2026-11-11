@@ -22,6 +22,7 @@ import {
   type ClipboardEvent as ReactClipboardEvent,
   type ReactNode,
   StrictMode,
+  useState,
 } from "react";
 import type { DefaultColumnOptions, Renderers } from "react-data-grid";
 import {
@@ -1762,59 +1763,132 @@ describe("table data grid error recovery", () => {
   });
 });
 
+function SharedColumnSelectionGrid({
+  tableName,
+  onSelectionChange,
+}: {
+  tableName: string;
+  onSelectionChange: (key: string, selection: string[] | undefined) => void;
+}) {
+  const tableKey = `table-data:${tableName}`;
+  const [selection, updateSelection] = useState<string[] | undefined>([
+    "measurement",
+  ]);
+  return (
+    <ColumnSelectionContext
+      value={{
+        selections: selection === undefined ? {} : { [tableKey]: selection },
+        setSelection: (key, next) => {
+          onSelectionChange(key, next);
+          updateSelection(next);
+        },
+      }}
+    >
+      <TableDataGrid name={tableName} />
+    </ColumnSelectionContext>
+  );
+}
+
 describe("bookmarked table data columns", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
-  test("restoring all columns omits the default URL selection", async () => {
+  test("explicit catalog order remains shareable over a personal column order", async () => {
     const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     const tableName =
       "instances/prod/databases/app/schemas/public/tables/measurements";
-    const setSelection = rs.fn();
+    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
+      order: ["observed_at", "measurement"],
+      hiddenColumns: [],
+    });
+    const setOrder = rs.fn();
     render(
       <ColumnSelectionContext
         value={{
-          selections: { [`table-data:${tableName}`]: ["measurement"] },
-          setSelection,
+          selections: {},
+          setSelection: rs.fn(),
+          layout: {
+            orders: {},
+            sortings: {},
+            setOrder,
+            setSorting: rs.fn(),
+            resetColumns: rs.fn(),
+          },
         }}
       >
         <TableDataGrid name={tableName} />
       </ColumnSelectionContext>
     );
     await user.click(screen.getByRole("button", { name: "Columns" }));
-    await user.click(screen.getByRole("checkbox", { name: "observed_at" }));
-    expect(setSelection).toHaveBeenCalledWith(
-      `table-data:${tableName}`,
-      undefined
+    await user.click(
+      screen.getByRole("button", { name: "Move observed_at down" })
     );
+    expect(setOrder).toHaveBeenCalledWith(`table-data:${tableName}`, [
+      "measurement",
+      "observed_at",
+    ]);
   });
-  test("bookmarked columns override personal hidden columns", () => {
+  test("restoring all columns keeps a shareable selection that can be reset", async () => {
+    const user = userEvent.setup();
     seedRowsQueryWithRawClipboardValues();
     const tableName =
       "instances/prod/databases/app/schemas/public/tables/measurements";
-    useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
-      order: ["measurement", "observed_at"],
-      hiddenColumns: ["measurement"],
-    });
+    const tableKey = `table-data:${tableName}`;
+    const setSelection = rs.fn();
     render(
-      <ColumnSelectionContext
-        value={{
-          selections: { [`table-data:${tableName}`]: ["measurement"] },
-          setSelection: rs.fn(),
-        }}
-      >
-        <TableDataGrid name={tableName} />
-      </ColumnSelectionContext>
+      <SharedColumnSelectionGrid
+        onSelectionChange={setSelection}
+        tableName={tableName}
+      />
     );
-    expect(
-      reactDataGrid.dataGrid.mock.calls
-        .at(-1)?.[0]
-        ?.columns?.map((column) => column.key)
-    ).not.toContain("observed_at");
-    expect(
-      reactDataGrid.dataGrid.mock.calls
-        .at(-1)?.[0]
-        ?.columns?.map((column) => column.key)
-    ).toContain("measurement");
+    await user.click(screen.getByRole("button", { name: "Columns" }));
+    await user.click(screen.getByRole("checkbox", { name: "observed_at" }));
+    expect(setSelection).toHaveBeenCalledWith(tableKey, [
+      "measurement",
+      "observed_at",
+    ]);
+    const reset = screen.getByRole("button", { name: "Reset columns" });
+    expect(reset.getAttribute("disabled")).toBeNull();
+    await user.click(reset);
+    expect(setSelection).toHaveBeenLastCalledWith(tableKey, undefined);
+    expect(reset.getAttribute("disabled")).not.toBeNull();
   });
+  test.each([
+    { selection: ["measurement"], observedAtVisible: false },
+    {
+      selection: ["measurement", "observed_at"],
+      observedAtVisible: true,
+    },
+  ])(
+    "bookmarked columns $selection override personal hidden columns",
+    ({ selection, observedAtVisible }) => {
+      seedRowsQueryWithRawClipboardValues();
+      const tableName =
+        "instances/prod/databases/app/schemas/public/tables/measurements";
+      useTableColumnLayoutSettingsStore.getState().setLayout(tableName, {
+        order: ["measurement", "observed_at"],
+        hiddenColumns: ["measurement"],
+      });
+      render(
+        <ColumnSelectionContext
+          value={{
+            selections: { [`table-data:${tableName}`]: selection },
+            setSelection: rs.fn(),
+          }}
+        >
+          <TableDataGrid name={tableName} />
+        </ColumnSelectionContext>
+      );
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.some((column) => column.key === "observed_at")
+      ).toBe(observedAtVisible);
+      expect(
+        reactDataGrid.dataGrid.mock.calls
+          .at(-1)?.[0]
+          ?.columns?.map((column) => column.key)
+      ).toContain("measurement");
+    }
+  );
 });

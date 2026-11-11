@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { compareListCellValues, listSortDirection } from "@/lib/list-layout";
+
+import { useEffect, useEffectEvent, useId } from "react";
 import {
   type Column,
   type ColumnDef,
@@ -11,6 +13,8 @@ import {
   type SortingState,
   Subscribe,
   columnFilteringFeature,
+  columnOrderingFeature,
+  functionalUpdate,
   columnVisibilityFeature,
   createFilteredRowModel,
   createPaginatedRowModel,
@@ -31,6 +35,7 @@ import { SearchEmptyState } from "@/components/search-empty-state";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   useListColumnSelection,
+  useListSorting,
   type ListColumnOption,
 } from "@/lib/list-columns";
 import { Input } from "@/components/ui/input";
@@ -57,6 +62,7 @@ interface DataTableColumnMeta {
 }
 
 const dataTableFeatures = tableFeatures({
+  columnOrderingFeature,
   columnFilteringFeature,
   columnVisibilityFeature,
   columnMeta: metaHelper<DataTableColumnMeta>(),
@@ -81,6 +87,7 @@ type DataTableColumnDef<TData extends RowData> = ColumnDef<
 >;
 
 interface DataTableState {
+  columnOrder: string[];
   columnVisibility: ColumnVisibilityState;
   columnFilters: ColumnFiltersState;
   pagination: PaginationState;
@@ -123,6 +130,8 @@ type DataTableRowProps = Pick<
 
 interface DataTableProps<TData extends RowData> {
   columns: DataTableColumnDef<TData>[];
+  /** Externally owned selection; its picker is rendered in the caller toolbar. */
+  columnSelection?: ReturnType<typeof useListColumnSelection>;
   data: TData[];
   emptyResourceName?: string;
   filterColumn?: string;
@@ -232,6 +241,9 @@ function listColumnDefinitions<TData extends RowData>(
           {
             id,
             required: column.enableHiding === false,
+            sortable:
+              column.enableSorting !== false &&
+              ("accessorKey" in column || "accessorFn" in column),
             label:
               column.meta?.label ??
               (typeof column.header === "string"
@@ -247,6 +259,7 @@ function listColumnDefinitions<TData extends RowData>(
 
 function DataTable<TData extends RowData>({
   columns,
+  columnSelection: providedColumnSelection,
   data,
   emptyResourceName = "results",
   filterColumn,
@@ -270,9 +283,13 @@ function DataTable<TData extends RowData>({
   const controlledFilterValue = controlled ? (filterValue ?? "") : undefined;
 
   const definitions = listColumnDefinitions(columns);
-  const { visibleIds, setSelection } = useListColumnSelection(
+  const fallbackColumnSelection = useListColumnSelection(tableKey, definitions);
+  const columnSelection = providedColumnSelection ?? fallbackColumnSelection;
+  const { visibleIds, columnOrder } = columnSelection;
+  const { sorting, setSorting } = useListSorting(
     tableKey,
-    definitions
+    definitions.filter((column) => column.sortable).map((column) => column.id),
+    initialSorting
   );
   const visible = new Set(visibleIds);
   const columnVisibility = Object.fromEntries(
@@ -284,8 +301,14 @@ function DataTable<TData extends RowData>({
       key: tableKey ?? `querylane-data-table-${fallbackTableKey}`,
       columns,
       data,
+      defaultColumn: { sortUndefined: "last", sortFn: (left, right, id) => compareListCellValues(left.getValue(id), right.getValue(id)) },
       enableSortingRemoval: true,
-      state: { columnVisibility },
+      autoResetPageIndex: false,
+      state: { columnVisibility, columnOrder, sorting },
+      onColumnOrderChange: (updater) =>
+        columnSelection.setColumnOrder(functionalUpdate(updater, columnOrder)),
+      onSortingChange: (updater) =>
+        setSorting(functionalUpdate(updater, sorting)),
       initialState: {
         pagination: { pageIndex: 0, pageSize },
         sorting: initialSorting ?? [],
@@ -295,11 +318,23 @@ function DataTable<TData extends RowData>({
       sortDescFirst: false,
     },
     (state) => ({
+      columnOrder: state.columnOrder,
       columnFilters: state.columnFilters,
       columnVisibility: state.columnVisibility,
       pagination: state.pagination,
       sorting: state.sorting,
     })
+  );
+  const sortingKey = JSON.stringify(sorting);
+  const filterKey = JSON.stringify(table.state.columnFilters);
+  const resetPage = useEffectEvent(() => {
+    table.setPageIndex(0);
+  });
+  useEffect(
+    function resetPageAfterSortOrFilterChange() {
+      resetPage();
+    },
+    [data, sortingKey, filterKey]
   );
   useEffect(
     function syncControlledFilterValue() {
@@ -324,12 +359,8 @@ function DataTable<TData extends RowData>({
     [controlled, controlledFilterValue, filterColumn, table]
   );
 
-  const columnSelector = tableKey ? (
-    <ListColumnSelector
-      columns={definitions}
-      visibleIds={visibleIds}
-      setSelection={setSelection}
-    />
+  const columnSelector = tableKey && !providedColumnSelection ? (
+    <ListColumnSelector columns={definitions} {...columnSelection} />
   ) : null;
 
   const pageCount = Math.max(1, table.getPageCount());
@@ -372,28 +403,18 @@ function DataTable<TData extends RowData>({
     : toolbarFilters;
   const toolbarControls =
     quicksearch || toolbarFilterContent ? (
-      <div
-        className={cn(
-          "flex min-w-0 flex-wrap items-center gap-2",
-          refreshControl && "flex-1"
-        )}
-      >
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         {quicksearch}
         {toolbarFilterContent}
       </div>
     ) : null;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       {toolbarControls || refreshControl || columnSelector ? (
-        <div
-          className={cn(
-            "flex min-h-8 flex-wrap items-center gap-2",
-            refreshControl ? "justify-between" : "justify-end"
-          )}
-        >
+        <div className="flex min-h-8 min-w-0 items-start gap-2">
           {toolbarControls}
-          <div className="flex items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-2">
             {columnSelector}
             {refreshControl}
           </div>
@@ -415,8 +436,20 @@ function DataTable<TData extends RowData>({
                       header.column.columnDef.meta?.headerClassName
                     )}
                     key={header.id}
+                    aria-label={
+                      typeof header.column.columnDef.header === "string"
+                        ? header.column.columnDef.header
+                        : undefined
+                    }
+                    aria-sort={listSortDirection(header.column.id, sorting)}
                   >
-                    {header.isPlaceholder ? null : (
+                    {header.isPlaceholder ? null : typeof header.column
+                        .columnDef.header === "string" &&
+                      header.column.getCanSort() ? (
+                      <SortableHeader column={header.column}>
+                        {header.column.columnDef.header}
+                      </SortableHeader>
+                    ) : (
                       <table.FlexRender header={header} />
                     )}
                   </TableHead>
@@ -512,5 +545,5 @@ function DataTable<TData extends RowData>({
   );
 }
 
-export { DataTable, DataTableFilter, SortableHeader };
+export { DataTable, DataTableFilter, SortableHeader, listColumnDefinitions };
 export type { DataTableColumnDef, DataTableProps };

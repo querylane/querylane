@@ -14,10 +14,12 @@ function ListColumnSelector({
   columns,
   visibleIds,
   setSelection,
+  resetColumns,
 }: {
   columns: readonly ListColumnOption[];
   visibleIds: readonly string[];
   setSelection: (selection: string[] | undefined) => void;
+  resetColumns?: () => void;
 }) {
   const visible = new Set(visibleIds);
   return (
@@ -59,7 +61,10 @@ function ListColumnSelector({
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setSelection(undefined)}>
+        <DropdownMenuItem onClick={() => {
+          if (resetColumns) resetColumns();
+          else setSelection(undefined);
+        }}>
           Reset columns
         </DropdownMenuItem>
       </DropdownMenuContent>
