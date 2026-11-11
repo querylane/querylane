@@ -452,7 +452,9 @@ function DefinitionTab({
         <span aria-hidden="true">·</span>
         <span>
           generated live from{" "}
-          <code className="bg-muted rounded px-1 py-0.5">pg_catalog</code>
+          <code className="bg-muted text-foreground rounded px-1 py-0.5">
+            pg_catalog
+          </code>
         </span>
         <span aria-hidden="true">·</span>
         <span>{toolbar.lastFetchedLabel}</span>

@@ -111,6 +111,37 @@ function colorContrastRatio(first: string, second: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+// Composite the real ancestor paints, including the translucent selected-cell
+// overlay; the screenshot frame alone misses this contrast counterexample.
+function paintedCellBackground(element: HTMLElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Expected a 2D canvas context for painted backgrounds.");
+  }
+  const layers: string[] = [];
+  for (
+    let current: HTMLElement | null = element;
+    current;
+    current = current.parentElement
+  ) {
+    layers.push(getComputedStyle(current).backgroundColor);
+  }
+  context.fillStyle = "white";
+  context.fillRect(0, 0, 1, 1);
+  for (const layer of layers.toReversed()) {
+    context.fillStyle = layer;
+    context.fillRect(0, 0, 1, 1);
+  }
+  const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+  if (red === undefined || green === undefined || blue === undefined) {
+    throw new Error("Expected a painted RGB pixel.");
+  }
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
 function columnLayoutProps(columns: TableResultColumn[]) {
   return {
     columnOrder: columns.map((resultColumn) => resultColumn.columnName),
@@ -888,6 +919,39 @@ test("interactive cell actions do not change the cell selection", async () => {
     .element(page.getByRole("dialog", { name: "public.customers" }))
     .toBeVisible();
   expect(selectedCellCount()).toBe(0);
+});
+
+test("selected foreign key reference contrasts with its actual painted cell background", async () => {
+  await renderOrdersGrid(EXPANDED_GRID_CLASS);
+  await page.getByText("arun.patel@example.com", { exact: true }).click();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await page.keyboard.press("Shift+ArrowLeft");
+  const [reference] = screen.getAllByRole("button", {
+    name: "Open customer_id reference 214",
+  });
+  const selectedCell = reference?.closest(".rdg-cell");
+  if (!(reference && selectedCell instanceof HTMLElement)) {
+    throw new Error("Expected a reference inside the selected grid cell.");
+  }
+  await rs.waitFor(() => {
+    expect(selectedCell.getAttribute("data-cell-range-selected")).toBe("true");
+  });
+  expect(
+    colorContrastRatio(
+      getComputedStyle(reference).color,
+      paintedCellBackground(selectedCell)
+    )
+  ).toBeGreaterThanOrEqual(4.5);
+  await page
+    .getByRole("button", { name: "Open customer_id reference 214" })
+    .first()
+    .hover();
+  expect(
+    colorContrastRatio(
+      getComputedStyle(reference).color,
+      paintedCellBackground(selectedCell)
+    )
+  ).toBeGreaterThanOrEqual(4.5);
 });
 
 test("foreign key reference popover keeps the source table visible", async () => {
