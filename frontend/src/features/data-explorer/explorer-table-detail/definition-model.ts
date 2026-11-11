@@ -4,6 +4,7 @@ import { derivePartitionTabCount } from "@/features/data-explorer/explorer-table
 import { parseTableQualifiedName } from "@/lib/console-resources";
 import { isNonEmptyString } from "@/lib/value-guards";
 import {
+  GeneratedColumnKind,
   type IdentityGeneration,
   Table_TableType,
   type Column as TableColumn,
@@ -82,7 +83,13 @@ function formatColumnDefinition(column: TableColumn) {
     );
   }
   if (column.isGenerated && column.generationExpression) {
-    parts.push(`GENERATED ALWAYS AS (${column.generationExpression}) STORED`);
+    const storage =
+      column.generatedKind === GeneratedColumnKind.VIRTUAL
+        ? "VIRTUAL"
+        : "STORED";
+    parts.push(
+      `GENERATED ALWAYS AS (${column.generationExpression}) ${storage}`
+    );
   }
   if (!column.isNullable) {
     parts.push("NOT NULL");
@@ -233,6 +240,50 @@ function appendPolicyDefinitionSection(
   });
 }
 
+function hasUnknownGeneration(column: TableColumn) {
+  return (
+    column.isGenerated &&
+    !(
+      column.generationExpression &&
+      [GeneratedColumnKind.STORED, GeneratedColumnKind.VIRTUAL].includes(
+        column.generatedKind
+      )
+    )
+  );
+}
+
+function createTableDefinitionSection(
+  params: Parameters<typeof createTableSql>[0]
+): DefinitionSection {
+  if (params.tableType === Table_TableType.EXTERNAL) {
+    return {
+      content:
+        "Exact foreign-table DDL is unavailable. Use the pg_dump command to preserve its server and options.",
+      detail: "foreign server and options are not exposed",
+      id: "create-table",
+      kind: "note",
+      title: "Foreign table",
+    };
+  }
+  if (params.columns.some(hasUnknownGeneration)) {
+    return {
+      content:
+        "Exact generated-column DDL is unavailable because its storage kind or expression was not returned. Use the pg_dump command to preserve generated columns safely.",
+      detail: "generated-column metadata is incomplete",
+      id: "create-table",
+      kind: "note",
+      title: "Create table",
+    };
+  }
+  return {
+    content: createTableSql(params),
+    detail: `${params.qualifiedTableName} · ${params.columns.length.toLocaleString()} columns · reconstructed from pg_catalog`,
+    id: "create-table",
+    kind: "code",
+    title: "Create table",
+  };
+}
+
 function deriveDefinitionSections({
   columns,
   constraints,
@@ -255,24 +306,13 @@ function deriveDefinitionSections({
   triggers: TableTrigger[];
 }): DefinitionSection[] {
   const { backingConstraintNames } = deriveConstraintKeyRows(constraints);
-  const isForeignTable = tableType === Table_TableType.EXTERNAL;
   const sections: DefinitionSection[] = [
-    {
-      content: isForeignTable
-        ? "Exact foreign-table DDL is unavailable. Use the pg_dump command to preserve its server and options."
-        : createTableSql({
-            columns,
-            partitionMetadata,
-            qualifiedTableName,
-            tableType,
-          }),
-      detail: isForeignTable
-        ? "foreign server and options are not exposed"
-        : `${qualifiedTableName} · ${columns.length.toLocaleString()} columns · reconstructed from pg_catalog`,
-      id: "create-table",
-      kind: isForeignTable ? "note" : "code",
-      title: isForeignTable ? "Foreign table" : "Create table",
-    },
+    createTableDefinitionSection({
+      columns,
+      partitionMetadata,
+      qualifiedTableName,
+      tableType,
+    }),
   ];
   const constraintsText = constraintSql(constraints, qualifiedTableName);
   if (constraintsText) {

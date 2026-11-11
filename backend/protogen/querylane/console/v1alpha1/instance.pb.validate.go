@@ -3089,6 +3089,35 @@ func (m *CheckInstanceActivityResponse) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetLockStatistics()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CheckInstanceActivityResponseValidationError{
+					field:  "LockStatistics",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CheckInstanceActivityResponseValidationError{
+					field:  "LockStatistics",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetLockStatistics()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CheckInstanceActivityResponseValidationError{
+				field:  "LockStatistics",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	for idx, item := range m.GetPartialErrors() {
 		_, _ = idx, item
 
@@ -3394,6 +3423,35 @@ func (m *InstanceHealth) validate(all bool) error {
 		if err := v.Validate(); err != nil {
 			return InstanceHealthValidationError{
 				field:  "Autovacuum",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetLockStatistics()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, InstanceHealthValidationError{
+					field:  "LockStatistics",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, InstanceHealthValidationError{
+					field:  "LockStatistics",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetLockStatistics()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return InstanceHealthValidationError{
+				field:  "LockStatistics",
 				reason: "embedded message failed validation",
 				cause:  err,
 			}
@@ -3957,6 +4015,39 @@ func (m *ReplicationHealth) validate(all bool) error {
 	// no validation rules for WalReceiverActive
 
 	// no validation rules for ReplayLagSeconds
+
+	// no validation rules for StatisticsVisible
+
+	// no validation rules for ReplayLagKnown
+
+	if all {
+		switch v := interface{}(m.GetRecovery()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ReplicationHealthValidationError{
+					field:  "Recovery",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ReplicationHealthValidationError{
+					field:  "Recovery",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetRecovery()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ReplicationHealthValidationError{
+				field:  "Recovery",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	if len(errors) > 0 {
 		return ReplicationHealthMultiError(errors)
@@ -5116,3 +5207,392 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = IOMetricsValidationError{}
+
+// Validate checks the field values on RecoveryHealth with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *RecoveryHealth) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on RecoveryHealth with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in RecoveryHealthMultiError,
+// or nil if none found.
+func (m *RecoveryHealth) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *RecoveryHealth) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Availability
+
+	// no validation rules for PauseState
+
+	// no validation rules for PromotionTriggered
+
+	// no validation rules for ReplayEndLsn
+
+	// no validation rules for ReplayTimeline
+
+	if len(errors) > 0 {
+		return RecoveryHealthMultiError(errors)
+	}
+
+	return nil
+}
+
+// RecoveryHealthMultiError is an error wrapping multiple validation errors
+// returned by RecoveryHealth.ValidateAll() if the designated constraints
+// aren't met.
+type RecoveryHealthMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m RecoveryHealthMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m RecoveryHealthMultiError) AllErrors() []error { return m }
+
+// RecoveryHealthValidationError is the validation error returned by
+// RecoveryHealth.Validate if the designated constraints aren't met.
+type RecoveryHealthValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e RecoveryHealthValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e RecoveryHealthValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e RecoveryHealthValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e RecoveryHealthValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e RecoveryHealthValidationError) ErrorName() string { return "RecoveryHealthValidationError" }
+
+// Error satisfies the builtin error interface
+func (e RecoveryHealthValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sRecoveryHealth.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = RecoveryHealthValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = RecoveryHealthValidationError{}
+
+// Validate checks the field values on LockStatistics with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *LockStatistics) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on LockStatistics with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in LockStatisticsMultiError,
+// or nil if none found.
+func (m *LockStatistics) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *LockStatistics) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Status
+
+	// no validation rules for Summary
+
+	// no validation rules for Availability
+
+	for idx, item := range m.GetByType() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, LockStatisticsValidationError{
+						field:  fmt.Sprintf("ByType[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, LockStatisticsValidationError{
+						field:  fmt.Sprintf("ByType[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return LockStatisticsValidationError{
+					field:  fmt.Sprintf("ByType[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return LockStatisticsMultiError(errors)
+	}
+
+	return nil
+}
+
+// LockStatisticsMultiError is an error wrapping multiple validation errors
+// returned by LockStatistics.ValidateAll() if the designated constraints
+// aren't met.
+type LockStatisticsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m LockStatisticsMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m LockStatisticsMultiError) AllErrors() []error { return m }
+
+// LockStatisticsValidationError is the validation error returned by
+// LockStatistics.Validate if the designated constraints aren't met.
+type LockStatisticsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e LockStatisticsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e LockStatisticsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e LockStatisticsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e LockStatisticsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e LockStatisticsValidationError) ErrorName() string { return "LockStatisticsValidationError" }
+
+// Error satisfies the builtin error interface
+func (e LockStatisticsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sLockStatistics.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = LockStatisticsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = LockStatisticsValidationError{}
+
+// Validate checks the field values on LockTypeStatistics with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *LockTypeStatistics) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on LockTypeStatistics with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// LockTypeStatisticsMultiError, or nil if none found.
+func (m *LockTypeStatistics) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *LockTypeStatistics) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for LockType
+
+	// no validation rules for Waits
+
+	// no validation rules for WaitTimeMs
+
+	// no validation rules for FastpathExceeded
+
+	if all {
+		switch v := interface{}(m.GetStatsResetAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, LockTypeStatisticsValidationError{
+					field:  "StatsResetAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, LockTypeStatisticsValidationError{
+					field:  "StatsResetAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetStatsResetAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return LockTypeStatisticsValidationError{
+				field:  "StatsResetAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return LockTypeStatisticsMultiError(errors)
+	}
+
+	return nil
+}
+
+// LockTypeStatisticsMultiError is an error wrapping multiple validation errors
+// returned by LockTypeStatistics.ValidateAll() if the designated constraints
+// aren't met.
+type LockTypeStatisticsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m LockTypeStatisticsMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m LockTypeStatisticsMultiError) AllErrors() []error { return m }
+
+// LockTypeStatisticsValidationError is the validation error returned by
+// LockTypeStatistics.Validate if the designated constraints aren't met.
+type LockTypeStatisticsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e LockTypeStatisticsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e LockTypeStatisticsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e LockTypeStatisticsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e LockTypeStatisticsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e LockTypeStatisticsValidationError) ErrorName() string {
+	return "LockTypeStatisticsValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e LockTypeStatisticsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sLockTypeStatistics.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = LockTypeStatisticsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = LockTypeStatisticsValidationError{}

@@ -69,7 +69,11 @@ func (d *Postgres) buildPlan(catalog []engine.Column, rowIdentity *api.RowIdenti
 	// Every ORDER BY column (visible or appended tiebreaker) gets a
 	// trailing un-truncated cursor projection so keyset cursors are never
 	// derived from preview-truncated public cells.
-	plan.cursorColumns = resolveCursorColumns(plan.order, idx)
+	if len(rowIdentity.GetColumnNames()) == 0 {
+		plan.order = resolveUnidentifiedOrder(publicCols, params.OrderBy)
+	} else {
+		plan.cursorColumns = resolveCursorColumns(plan.order, idx)
+	}
 
 	if plan.previewMode {
 		// Identity columns are excluded from preview truncation: their
@@ -104,20 +108,6 @@ func (d *Postgres) buildPlan(catalog []engine.Column, rowIdentity *api.RowIdenti
 	plan.orderHash = canonicalOrderHash(plan.order)
 	plan.projectionHash = canonicalProjectionHash(plan.publicColumns)
 
-	if params.PageToken != "" {
-		payload, verr := d.verifyPageToken(params.PageToken, plan, params)
-		if verr != nil {
-			return nil, verr
-		}
-
-		switch payload.GetStrategy() { //nolint:exhaustive // verifyPageToken already enforced
-		case api.PaginationStrategy_PAGINATION_STRATEGY_KEYSET:
-			plan.cursorValues = payload.GetCursorValues()
-		case api.PaginationStrategy_PAGINATION_STRATEGY_OFFSET:
-			plan.offset = payload.GetOffset()
-		}
-	}
-
 	return plan, nil
 }
 
@@ -151,4 +141,22 @@ func buildResultColumnsForPlan(plan *paginationPlan) []*api.TableResultColumn {
 	}
 
 	return out
+}
+
+func (d *Postgres) resumeReadRowsPlan(plan *paginationPlan, params engine.ReadRowsParams) error {
+	if params.PageToken != "" {
+		payload, verr := d.verifyPageToken(params.PageToken, plan, params)
+		if verr != nil {
+			return verr
+		}
+
+		switch payload.GetStrategy() { //nolint:exhaustive // verifyPageToken already enforced
+		case api.PaginationStrategy_PAGINATION_STRATEGY_KEYSET:
+			plan.cursorValues = payload.GetCursorValues()
+		case api.PaginationStrategy_PAGINATION_STRATEGY_OFFSET:
+			plan.offset = payload.GetOffset()
+		}
+	}
+
+	return nil
 }

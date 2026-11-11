@@ -3,8 +3,8 @@
 --
 
 
--- Dumped from database version 16.13
--- Dumped by pg_dump version 16.13
+-- Dumped from database version 16.11
+-- Dumped by pg_dump version 16.11
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -94,7 +94,8 @@ CREATE TABLE public.catalog_column (
     is_generated boolean DEFAULT false NOT NULL,
     generation_expression text DEFAULT ''::text NOT NULL,
     is_identity boolean DEFAULT false NOT NULL,
-    identity_generation integer DEFAULT 0 NOT NULL
+    identity_generation integer DEFAULT 0 NOT NULL,
+    generated_kind integer DEFAULT 0 NOT NULL
 );
 
 
@@ -196,7 +197,9 @@ CREATE TABLE public.catalog_table_constraint (
     on_update integer DEFAULT 0 NOT NULL,
     on_delete integer DEFAULT 0 NOT NULL,
     definition text DEFAULT ''::text NOT NULL,
-    synced_at timestamp with time zone DEFAULT now() NOT NULL
+    synced_at timestamp with time zone DEFAULT now() NOT NULL,
+    is_enforced boolean,
+    is_validated boolean
 );
 
 

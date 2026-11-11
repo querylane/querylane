@@ -123,6 +123,58 @@ func (DataType) EnumDescriptor() ([]byte, []int) {
 	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{0}
 }
 
+// GeneratedColumnKind specifies when a generated column's expression is evaluated.
+type GeneratedColumnKind int32
+
+const (
+	GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED GeneratedColumnKind = 0
+	// The generated value is stored when a row is written.
+	GeneratedColumnKind_GENERATED_COLUMN_KIND_STORED GeneratedColumnKind = 1
+	// The generated value is computed when a row is read.
+	GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL GeneratedColumnKind = 2
+)
+
+// Enum value maps for GeneratedColumnKind.
+var (
+	GeneratedColumnKind_name = map[int32]string{
+		0: "GENERATED_COLUMN_KIND_UNSPECIFIED",
+		1: "GENERATED_COLUMN_KIND_STORED",
+		2: "GENERATED_COLUMN_KIND_VIRTUAL",
+	}
+	GeneratedColumnKind_value = map[string]int32{
+		"GENERATED_COLUMN_KIND_UNSPECIFIED": 0,
+		"GENERATED_COLUMN_KIND_STORED":      1,
+		"GENERATED_COLUMN_KIND_VIRTUAL":     2,
+	}
+)
+
+func (x GeneratedColumnKind) Enum() *GeneratedColumnKind {
+	p := new(GeneratedColumnKind)
+	*p = x
+	return p
+}
+
+func (x GeneratedColumnKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GeneratedColumnKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[1].Descriptor()
+}
+
+func (GeneratedColumnKind) Type() protoreflect.EnumType {
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[1]
+}
+
+func (x GeneratedColumnKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GeneratedColumnKind.Descriptor instead.
+func (GeneratedColumnKind) EnumDescriptor() ([]byte, []int) {
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{1}
+}
+
 // IdentityGeneration specifies how an identity column's value is generated.
 type IdentityGeneration int32
 
@@ -159,11 +211,11 @@ func (x IdentityGeneration) String() string {
 }
 
 func (IdentityGeneration) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[1].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[2].Descriptor()
 }
 
 func (IdentityGeneration) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[1]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[2]
 }
 
 func (x IdentityGeneration) Number() protoreflect.EnumNumber {
@@ -172,7 +224,7 @@ func (x IdentityGeneration) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use IdentityGeneration.Descriptor instead.
 func (IdentityGeneration) EnumDescriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{1}
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{2}
 }
 
 type ConstraintType int32
@@ -217,11 +269,11 @@ func (x ConstraintType) String() string {
 }
 
 func (ConstraintType) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[2].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[3].Descriptor()
 }
 
 func (ConstraintType) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[2]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[3]
 }
 
 func (x ConstraintType) Number() protoreflect.EnumNumber {
@@ -230,7 +282,7 @@ func (x ConstraintType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConstraintType.Descriptor instead.
 func (ConstraintType) EnumDescriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{2}
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{3}
 }
 
 type ReferentialAction int32
@@ -275,11 +327,11 @@ func (x ReferentialAction) String() string {
 }
 
 func (ReferentialAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[3].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[4].Descriptor()
 }
 
 func (ReferentialAction) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[3]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[4]
 }
 
 func (x ReferentialAction) Number() protoreflect.EnumNumber {
@@ -288,7 +340,7 @@ func (x ReferentialAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReferentialAction.Descriptor instead.
 func (ReferentialAction) EnumDescriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{3}
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{4}
 }
 
 type PolicyMode int32
@@ -324,11 +376,11 @@ func (x PolicyMode) String() string {
 }
 
 func (PolicyMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[4].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[5].Descriptor()
 }
 
 func (PolicyMode) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[4]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[5]
 }
 
 func (x PolicyMode) Number() protoreflect.EnumNumber {
@@ -337,7 +389,7 @@ func (x PolicyMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PolicyMode.Descriptor instead.
 func (PolicyMode) EnumDescriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{4}
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{5}
 }
 
 type PolicyCommand int32
@@ -382,11 +434,11 @@ func (x PolicyCommand) String() string {
 }
 
 func (PolicyCommand) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[5].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[6].Descriptor()
 }
 
 func (PolicyCommand) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[5]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[6]
 }
 
 func (x PolicyCommand) Number() protoreflect.EnumNumber {
@@ -395,7 +447,7 @@ func (x PolicyCommand) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PolicyCommand.Descriptor instead.
 func (PolicyCommand) EnumDescriptor() ([]byte, []int) {
-	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{5}
+	return file_querylane_console_v1alpha1_table_proto_rawDescGZIP(), []int{6}
 }
 
 // The type of table object.
@@ -443,11 +495,11 @@ func (x Table_TableType) String() string {
 }
 
 func (Table_TableType) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[6].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[7].Descriptor()
 }
 
 func (Table_TableType) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[6]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[7]
 }
 
 func (x Table_TableType) Number() protoreflect.EnumNumber {
@@ -498,11 +550,11 @@ func (x RowIdentity_Source) String() string {
 }
 
 func (RowIdentity_Source) Descriptor() protoreflect.EnumDescriptor {
-	return file_querylane_console_v1alpha1_table_proto_enumTypes[7].Descriptor()
+	return file_querylane_console_v1alpha1_table_proto_enumTypes[8].Descriptor()
 }
 
 func (RowIdentity_Source) Type() protoreflect.EnumType {
-	return &file_querylane_console_v1alpha1_table_proto_enumTypes[7]
+	return &file_querylane_console_v1alpha1_table_proto_enumTypes[8]
 }
 
 func (x RowIdentity_Source) Number() protoreflect.EnumNumber {
@@ -548,8 +600,11 @@ type Column struct {
 	IsIdentity bool `protobuf:"varint,13,opt,name=is_identity,json=isIdentity,proto3" json:"is_identity,omitempty"`
 	// Output-only. The identity generation strategy, if applicable.
 	IdentityGeneration IdentityGeneration `protobuf:"varint,14,opt,name=identity_generation,json=identityGeneration,proto3,enum=querylane.console.v1alpha1.IdentityGeneration" json:"identity_generation,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Output-only. Storage kind of a generated column. Unspecified for ordinary
+	// columns or when the server's generation kind is not recognized.
+	GeneratedKind GeneratedColumnKind `protobuf:"varint,15,opt,name=generated_kind,json=generatedKind,proto3,enum=querylane.console.v1alpha1.GeneratedColumnKind" json:"generated_kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Column) Reset() {
@@ -678,6 +733,13 @@ func (x *Column) GetIdentityGeneration() IdentityGeneration {
 		return x.IdentityGeneration
 	}
 	return IdentityGeneration_IDENTITY_GENERATION_UNSPECIFIED
+}
+
+func (x *Column) GetGeneratedKind() GeneratedColumnKind {
+	if x != nil {
+		return x.GeneratedKind
+	}
+	return GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED
 }
 
 // A Table represents a table within a Schema.
@@ -1806,7 +1868,13 @@ type TableConstraint struct {
 	// Output-only. Foreign key ON DELETE action, if applicable.
 	OnDelete ReferentialAction `protobuf:"varint,7,opt,name=on_delete,json=onDelete,proto3,enum=querylane.console.v1alpha1.ReferentialAction" json:"on_delete,omitempty"`
 	// Output-only. Raw database definition or normalized SQL snippet.
-	Definition    string `protobuf:"bytes,8,opt,name=definition,proto3" json:"definition,omitempty"`
+	Definition string `protobuf:"bytes,8,opt,name=definition,proto3" json:"definition,omitempty"`
+	// Output-only. Whether PostgreSQL enforces this constraint for new writes.
+	// Absent when enforcement metadata is unavailable, including older API servers.
+	IsEnforced *bool `protobuf:"varint,9,opt,name=is_enforced,json=isEnforced,proto3,oneof" json:"is_enforced,omitempty"`
+	// Output-only. Whether PostgreSQL has validated existing rows against this
+	// constraint. Absent when validation metadata is unavailable.
+	IsValidated   *bool `protobuf:"varint,10,opt,name=is_validated,json=isValidated,proto3,oneof" json:"is_validated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1895,6 +1963,20 @@ func (x *TableConstraint) GetDefinition() string {
 		return x.Definition
 	}
 	return ""
+}
+
+func (x *TableConstraint) GetIsEnforced() bool {
+	if x != nil && x.IsEnforced != nil {
+		return *x.IsEnforced
+	}
+	return false
+}
+
+func (x *TableConstraint) GetIsValidated() bool {
+	if x != nil && x.IsValidated != nil {
+		return *x.IsValidated
+	}
+	return false
 }
 
 type TableIndex struct {
@@ -2324,7 +2406,7 @@ var File_querylane_console_v1alpha1_table_proto protoreflect.FileDescriptor
 
 const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\n" +
-	"&querylane/console/v1alpha1/table.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\xb5\x05\n" +
+	"&querylane/console/v1alpha1/table.proto\x12\x1aquerylane.console.v1alpha1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a-querylane/console/v1alpha1/catalog_sync.proto\"\x92\x06\n" +
 	"\x06Column\x12$\n" +
 	"\vcolumn_name\x18\x01 \x01(\tB\x03\xe0A\x03R\n" +
 	"columnName\x12.\n" +
@@ -2343,7 +2425,8 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x15generation_expression\x18\f \x01(\tB\x03\xe0A\x03R\x14generationExpression\x12$\n" +
 	"\vis_identity\x18\r \x01(\bB\x03\xe0A\x03R\n" +
 	"isIdentity\x12d\n" +
-	"\x13identity_generation\x18\x0e \x01(\x0e2..querylane.console.v1alpha1.IdentityGenerationB\x03\xe0A\x03R\x12identityGenerationR\x04name\"\x9b\x06\n" +
+	"\x13identity_generation\x18\x0e \x01(\x0e2..querylane.console.v1alpha1.IdentityGenerationB\x03\xe0A\x03R\x12identityGeneration\x12[\n" +
+	"\x0egenerated_kind\x18\x0f \x01(\x0e2/.querylane.console.v1alpha1.GeneratedColumnKindB\x03\xe0A\x03R\rgeneratedKindR\x04name\"\x9b\x06\n" +
 	"\x05Table\x12\x1a\n" +
 	"\x04name\x18\x01 \x01(\tB\x06\xe0A\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12O\n" +
@@ -2428,7 +2511,7 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x06parent\x18\x01 \x01(\tB\x85\x01\xe0A\x02\xfaA\x1d\n" +
 	"\x1bconsole.querylane.dev/Table\xbaH_r]2[^instances/[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/databases/[^/]+/schemas/[^/]+/tables/[^/]+$R\x06parent\"a\n" +
 	"\x19ListTableTriggersResponse\x12D\n" +
-	"\btriggers\x18\x01 \x03(\v2(.querylane.console.v1alpha1.TableTriggerR\btriggers\"\xe6\x03\n" +
+	"\btriggers\x18\x01 \x03(\v2(.querylane.console.v1alpha1.TableTriggerR\btriggers\"\xdf\x04\n" +
 	"\x0fTableConstraint\x12,\n" +
 	"\x0fconstraint_name\x18\x01 \x01(\tB\x03\xe0A\x03R\x0econstraintName\x12C\n" +
 	"\x04type\x18\x02 \x01(\x0e2*.querylane.console.v1alpha1.ConstraintTypeB\x03\xe0A\x03R\x04type\x12&\n" +
@@ -2439,7 +2522,13 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\ton_delete\x18\a \x01(\x0e2-.querylane.console.v1alpha1.ReferentialActionB\x03\xe0A\x03R\bonDelete\x12#\n" +
 	"\n" +
 	"definition\x18\b \x01(\tB\x03\xe0A\x03R\n" +
-	"definitionR\x04name\"\x92\x05\n" +
+	"definition\x12)\n" +
+	"\vis_enforced\x18\t \x01(\bB\x03\xe0A\x03H\x00R\n" +
+	"isEnforced\x88\x01\x01\x12+\n" +
+	"\fis_validated\x18\n" +
+	" \x01(\bB\x03\xe0A\x03H\x01R\visValidated\x88\x01\x01B\x0e\n" +
+	"\f_is_enforcedB\x0f\n" +
+	"\r_is_validatedR\x04name\"\x92\x05\n" +
 	"\n" +
 	"TableIndex\x12\"\n" +
 	"\n" +
@@ -2509,7 +2598,11 @@ const file_querylane_console_v1alpha1_table_proto_rawDesc = "" +
 	"\x12\x15\n" +
 	"\x11DATA_TYPE_UNKNOWN\x10\v\x12\x12\n" +
 	"\x0eDATA_TYPE_TIME\x10\f\x12\x17\n" +
-	"\x13DATA_TYPE_TIMESTAMP\x10\r*}\n" +
+	"\x13DATA_TYPE_TIMESTAMP\x10\r*\x81\x01\n" +
+	"\x13GeneratedColumnKind\x12%\n" +
+	"!GENERATED_COLUMN_KIND_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cGENERATED_COLUMN_KIND_STORED\x10\x01\x12!\n" +
+	"\x1dGENERATED_COLUMN_KIND_VIRTUAL\x10\x02*}\n" +
 	"\x12IdentityGeneration\x12#\n" +
 	"\x1fIDENTITY_GENERATION_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aIDENTITY_GENERATION_ALWAYS\x10\x01\x12\"\n" +
@@ -2565,90 +2658,92 @@ func file_querylane_console_v1alpha1_table_proto_rawDescGZIP() []byte {
 	return file_querylane_console_v1alpha1_table_proto_rawDescData
 }
 
-var file_querylane_console_v1alpha1_table_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_querylane_console_v1alpha1_table_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_querylane_console_v1alpha1_table_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_querylane_console_v1alpha1_table_proto_goTypes = []any{
 	(DataType)(0),                             // 0: querylane.console.v1alpha1.DataType
-	(IdentityGeneration)(0),                   // 1: querylane.console.v1alpha1.IdentityGeneration
-	(ConstraintType)(0),                       // 2: querylane.console.v1alpha1.ConstraintType
-	(ReferentialAction)(0),                    // 3: querylane.console.v1alpha1.ReferentialAction
-	(PolicyMode)(0),                           // 4: querylane.console.v1alpha1.PolicyMode
-	(PolicyCommand)(0),                        // 5: querylane.console.v1alpha1.PolicyCommand
-	(Table_TableType)(0),                      // 6: querylane.console.v1alpha1.Table.TableType
-	(RowIdentity_Source)(0),                   // 7: querylane.console.v1alpha1.RowIdentity.Source
-	(*Column)(nil),                            // 8: querylane.console.v1alpha1.Column
-	(*Table)(nil),                             // 9: querylane.console.v1alpha1.Table
-	(*TablePartitionMetadata)(nil),            // 10: querylane.console.v1alpha1.TablePartitionMetadata
-	(*TablePartition)(nil),                    // 11: querylane.console.v1alpha1.TablePartition
-	(*ListTablesRequest)(nil),                 // 12: querylane.console.v1alpha1.ListTablesRequest
-	(*ListTablesResponse)(nil),                // 13: querylane.console.v1alpha1.ListTablesResponse
-	(*GetTableRequest)(nil),                   // 14: querylane.console.v1alpha1.GetTableRequest
-	(*GetTableResponse)(nil),                  // 15: querylane.console.v1alpha1.GetTableResponse
-	(*GetTablePartitionMetadataRequest)(nil),  // 16: querylane.console.v1alpha1.GetTablePartitionMetadataRequest
-	(*GetTablePartitionMetadataResponse)(nil), // 17: querylane.console.v1alpha1.GetTablePartitionMetadataResponse
-	(*ListTableColumnsRequest)(nil),           // 18: querylane.console.v1alpha1.ListTableColumnsRequest
-	(*ListTableColumnsResponse)(nil),          // 19: querylane.console.v1alpha1.ListTableColumnsResponse
-	(*ListTableConstraintsRequest)(nil),       // 20: querylane.console.v1alpha1.ListTableConstraintsRequest
-	(*ListTableConstraintsResponse)(nil),      // 21: querylane.console.v1alpha1.ListTableConstraintsResponse
-	(*ListTableIndexesRequest)(nil),           // 22: querylane.console.v1alpha1.ListTableIndexesRequest
-	(*ListTableIndexesResponse)(nil),          // 23: querylane.console.v1alpha1.ListTableIndexesResponse
-	(*ListTablePoliciesRequest)(nil),          // 24: querylane.console.v1alpha1.ListTablePoliciesRequest
-	(*ListTablePoliciesResponse)(nil),         // 25: querylane.console.v1alpha1.ListTablePoliciesResponse
-	(*ListTableTriggersRequest)(nil),          // 26: querylane.console.v1alpha1.ListTableTriggersRequest
-	(*ListTableTriggersResponse)(nil),         // 27: querylane.console.v1alpha1.ListTableTriggersResponse
-	(*TableConstraint)(nil),                   // 28: querylane.console.v1alpha1.TableConstraint
-	(*TableIndex)(nil),                        // 29: querylane.console.v1alpha1.TableIndex
-	(*TablePolicy)(nil),                       // 30: querylane.console.v1alpha1.TablePolicy
-	(*TableTrigger)(nil),                      // 31: querylane.console.v1alpha1.TableTrigger
-	(*RowIdentity)(nil),                       // 32: querylane.console.v1alpha1.RowIdentity
-	(*timestamppb.Timestamp)(nil),             // 33: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),             // 34: google.protobuf.FieldMask
-	(*CatalogSyncMetadata)(nil),               // 35: querylane.console.v1alpha1.CatalogSyncMetadata
+	(GeneratedColumnKind)(0),                  // 1: querylane.console.v1alpha1.GeneratedColumnKind
+	(IdentityGeneration)(0),                   // 2: querylane.console.v1alpha1.IdentityGeneration
+	(ConstraintType)(0),                       // 3: querylane.console.v1alpha1.ConstraintType
+	(ReferentialAction)(0),                    // 4: querylane.console.v1alpha1.ReferentialAction
+	(PolicyMode)(0),                           // 5: querylane.console.v1alpha1.PolicyMode
+	(PolicyCommand)(0),                        // 6: querylane.console.v1alpha1.PolicyCommand
+	(Table_TableType)(0),                      // 7: querylane.console.v1alpha1.Table.TableType
+	(RowIdentity_Source)(0),                   // 8: querylane.console.v1alpha1.RowIdentity.Source
+	(*Column)(nil),                            // 9: querylane.console.v1alpha1.Column
+	(*Table)(nil),                             // 10: querylane.console.v1alpha1.Table
+	(*TablePartitionMetadata)(nil),            // 11: querylane.console.v1alpha1.TablePartitionMetadata
+	(*TablePartition)(nil),                    // 12: querylane.console.v1alpha1.TablePartition
+	(*ListTablesRequest)(nil),                 // 13: querylane.console.v1alpha1.ListTablesRequest
+	(*ListTablesResponse)(nil),                // 14: querylane.console.v1alpha1.ListTablesResponse
+	(*GetTableRequest)(nil),                   // 15: querylane.console.v1alpha1.GetTableRequest
+	(*GetTableResponse)(nil),                  // 16: querylane.console.v1alpha1.GetTableResponse
+	(*GetTablePartitionMetadataRequest)(nil),  // 17: querylane.console.v1alpha1.GetTablePartitionMetadataRequest
+	(*GetTablePartitionMetadataResponse)(nil), // 18: querylane.console.v1alpha1.GetTablePartitionMetadataResponse
+	(*ListTableColumnsRequest)(nil),           // 19: querylane.console.v1alpha1.ListTableColumnsRequest
+	(*ListTableColumnsResponse)(nil),          // 20: querylane.console.v1alpha1.ListTableColumnsResponse
+	(*ListTableConstraintsRequest)(nil),       // 21: querylane.console.v1alpha1.ListTableConstraintsRequest
+	(*ListTableConstraintsResponse)(nil),      // 22: querylane.console.v1alpha1.ListTableConstraintsResponse
+	(*ListTableIndexesRequest)(nil),           // 23: querylane.console.v1alpha1.ListTableIndexesRequest
+	(*ListTableIndexesResponse)(nil),          // 24: querylane.console.v1alpha1.ListTableIndexesResponse
+	(*ListTablePoliciesRequest)(nil),          // 25: querylane.console.v1alpha1.ListTablePoliciesRequest
+	(*ListTablePoliciesResponse)(nil),         // 26: querylane.console.v1alpha1.ListTablePoliciesResponse
+	(*ListTableTriggersRequest)(nil),          // 27: querylane.console.v1alpha1.ListTableTriggersRequest
+	(*ListTableTriggersResponse)(nil),         // 28: querylane.console.v1alpha1.ListTableTriggersResponse
+	(*TableConstraint)(nil),                   // 29: querylane.console.v1alpha1.TableConstraint
+	(*TableIndex)(nil),                        // 30: querylane.console.v1alpha1.TableIndex
+	(*TablePolicy)(nil),                       // 31: querylane.console.v1alpha1.TablePolicy
+	(*TableTrigger)(nil),                      // 32: querylane.console.v1alpha1.TableTrigger
+	(*RowIdentity)(nil),                       // 33: querylane.console.v1alpha1.RowIdentity
+	(*timestamppb.Timestamp)(nil),             // 34: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),             // 35: google.protobuf.FieldMask
+	(*CatalogSyncMetadata)(nil),               // 36: querylane.console.v1alpha1.CatalogSyncMetadata
 }
 var file_querylane_console_v1alpha1_table_proto_depIdxs = []int32{
 	0,  // 0: querylane.console.v1alpha1.Column.data_type:type_name -> querylane.console.v1alpha1.DataType
-	1,  // 1: querylane.console.v1alpha1.Column.identity_generation:type_name -> querylane.console.v1alpha1.IdentityGeneration
-	6,  // 2: querylane.console.v1alpha1.Table.table_type:type_name -> querylane.console.v1alpha1.Table.TableType
-	33, // 3: querylane.console.v1alpha1.Table.create_time:type_name -> google.protobuf.Timestamp
-	33, // 4: querylane.console.v1alpha1.Table.last_ddl_time:type_name -> google.protobuf.Timestamp
-	11, // 5: querylane.console.v1alpha1.TablePartitionMetadata.child_partitions:type_name -> querylane.console.v1alpha1.TablePartition
-	34, // 6: querylane.console.v1alpha1.ListTablesRequest.read_mask:type_name -> google.protobuf.FieldMask
-	9,  // 7: querylane.console.v1alpha1.ListTablesResponse.tables:type_name -> querylane.console.v1alpha1.Table
-	35, // 8: querylane.console.v1alpha1.ListTablesResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
-	9,  // 9: querylane.console.v1alpha1.GetTableResponse.table:type_name -> querylane.console.v1alpha1.Table
-	10, // 10: querylane.console.v1alpha1.GetTablePartitionMetadataResponse.partition_metadata:type_name -> querylane.console.v1alpha1.TablePartitionMetadata
-	8,  // 11: querylane.console.v1alpha1.ListTableColumnsResponse.columns:type_name -> querylane.console.v1alpha1.Column
-	28, // 12: querylane.console.v1alpha1.ListTableConstraintsResponse.constraints:type_name -> querylane.console.v1alpha1.TableConstraint
-	29, // 13: querylane.console.v1alpha1.ListTableIndexesResponse.indexes:type_name -> querylane.console.v1alpha1.TableIndex
-	30, // 14: querylane.console.v1alpha1.ListTablePoliciesResponse.policies:type_name -> querylane.console.v1alpha1.TablePolicy
-	31, // 15: querylane.console.v1alpha1.ListTableTriggersResponse.triggers:type_name -> querylane.console.v1alpha1.TableTrigger
-	2,  // 16: querylane.console.v1alpha1.TableConstraint.type:type_name -> querylane.console.v1alpha1.ConstraintType
-	3,  // 17: querylane.console.v1alpha1.TableConstraint.on_update:type_name -> querylane.console.v1alpha1.ReferentialAction
-	3,  // 18: querylane.console.v1alpha1.TableConstraint.on_delete:type_name -> querylane.console.v1alpha1.ReferentialAction
-	4,  // 19: querylane.console.v1alpha1.TablePolicy.mode:type_name -> querylane.console.v1alpha1.PolicyMode
-	5,  // 20: querylane.console.v1alpha1.TablePolicy.command:type_name -> querylane.console.v1alpha1.PolicyCommand
-	7,  // 21: querylane.console.v1alpha1.RowIdentity.source:type_name -> querylane.console.v1alpha1.RowIdentity.Source
-	12, // 22: querylane.console.v1alpha1.TableService.ListTables:input_type -> querylane.console.v1alpha1.ListTablesRequest
-	14, // 23: querylane.console.v1alpha1.TableService.GetTable:input_type -> querylane.console.v1alpha1.GetTableRequest
-	16, // 24: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:input_type -> querylane.console.v1alpha1.GetTablePartitionMetadataRequest
-	18, // 25: querylane.console.v1alpha1.TableService.ListTableColumns:input_type -> querylane.console.v1alpha1.ListTableColumnsRequest
-	20, // 26: querylane.console.v1alpha1.TableService.ListTableConstraints:input_type -> querylane.console.v1alpha1.ListTableConstraintsRequest
-	22, // 27: querylane.console.v1alpha1.TableService.ListTableIndexes:input_type -> querylane.console.v1alpha1.ListTableIndexesRequest
-	24, // 28: querylane.console.v1alpha1.TableService.ListTablePolicies:input_type -> querylane.console.v1alpha1.ListTablePoliciesRequest
-	26, // 29: querylane.console.v1alpha1.TableService.ListTableTriggers:input_type -> querylane.console.v1alpha1.ListTableTriggersRequest
-	13, // 30: querylane.console.v1alpha1.TableService.ListTables:output_type -> querylane.console.v1alpha1.ListTablesResponse
-	15, // 31: querylane.console.v1alpha1.TableService.GetTable:output_type -> querylane.console.v1alpha1.GetTableResponse
-	17, // 32: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:output_type -> querylane.console.v1alpha1.GetTablePartitionMetadataResponse
-	19, // 33: querylane.console.v1alpha1.TableService.ListTableColumns:output_type -> querylane.console.v1alpha1.ListTableColumnsResponse
-	21, // 34: querylane.console.v1alpha1.TableService.ListTableConstraints:output_type -> querylane.console.v1alpha1.ListTableConstraintsResponse
-	23, // 35: querylane.console.v1alpha1.TableService.ListTableIndexes:output_type -> querylane.console.v1alpha1.ListTableIndexesResponse
-	25, // 36: querylane.console.v1alpha1.TableService.ListTablePolicies:output_type -> querylane.console.v1alpha1.ListTablePoliciesResponse
-	27, // 37: querylane.console.v1alpha1.TableService.ListTableTriggers:output_type -> querylane.console.v1alpha1.ListTableTriggersResponse
-	30, // [30:38] is the sub-list for method output_type
-	22, // [22:30] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	2,  // 1: querylane.console.v1alpha1.Column.identity_generation:type_name -> querylane.console.v1alpha1.IdentityGeneration
+	1,  // 2: querylane.console.v1alpha1.Column.generated_kind:type_name -> querylane.console.v1alpha1.GeneratedColumnKind
+	7,  // 3: querylane.console.v1alpha1.Table.table_type:type_name -> querylane.console.v1alpha1.Table.TableType
+	34, // 4: querylane.console.v1alpha1.Table.create_time:type_name -> google.protobuf.Timestamp
+	34, // 5: querylane.console.v1alpha1.Table.last_ddl_time:type_name -> google.protobuf.Timestamp
+	12, // 6: querylane.console.v1alpha1.TablePartitionMetadata.child_partitions:type_name -> querylane.console.v1alpha1.TablePartition
+	35, // 7: querylane.console.v1alpha1.ListTablesRequest.read_mask:type_name -> google.protobuf.FieldMask
+	10, // 8: querylane.console.v1alpha1.ListTablesResponse.tables:type_name -> querylane.console.v1alpha1.Table
+	36, // 9: querylane.console.v1alpha1.ListTablesResponse.sync_metadata:type_name -> querylane.console.v1alpha1.CatalogSyncMetadata
+	10, // 10: querylane.console.v1alpha1.GetTableResponse.table:type_name -> querylane.console.v1alpha1.Table
+	11, // 11: querylane.console.v1alpha1.GetTablePartitionMetadataResponse.partition_metadata:type_name -> querylane.console.v1alpha1.TablePartitionMetadata
+	9,  // 12: querylane.console.v1alpha1.ListTableColumnsResponse.columns:type_name -> querylane.console.v1alpha1.Column
+	29, // 13: querylane.console.v1alpha1.ListTableConstraintsResponse.constraints:type_name -> querylane.console.v1alpha1.TableConstraint
+	30, // 14: querylane.console.v1alpha1.ListTableIndexesResponse.indexes:type_name -> querylane.console.v1alpha1.TableIndex
+	31, // 15: querylane.console.v1alpha1.ListTablePoliciesResponse.policies:type_name -> querylane.console.v1alpha1.TablePolicy
+	32, // 16: querylane.console.v1alpha1.ListTableTriggersResponse.triggers:type_name -> querylane.console.v1alpha1.TableTrigger
+	3,  // 17: querylane.console.v1alpha1.TableConstraint.type:type_name -> querylane.console.v1alpha1.ConstraintType
+	4,  // 18: querylane.console.v1alpha1.TableConstraint.on_update:type_name -> querylane.console.v1alpha1.ReferentialAction
+	4,  // 19: querylane.console.v1alpha1.TableConstraint.on_delete:type_name -> querylane.console.v1alpha1.ReferentialAction
+	5,  // 20: querylane.console.v1alpha1.TablePolicy.mode:type_name -> querylane.console.v1alpha1.PolicyMode
+	6,  // 21: querylane.console.v1alpha1.TablePolicy.command:type_name -> querylane.console.v1alpha1.PolicyCommand
+	8,  // 22: querylane.console.v1alpha1.RowIdentity.source:type_name -> querylane.console.v1alpha1.RowIdentity.Source
+	13, // 23: querylane.console.v1alpha1.TableService.ListTables:input_type -> querylane.console.v1alpha1.ListTablesRequest
+	15, // 24: querylane.console.v1alpha1.TableService.GetTable:input_type -> querylane.console.v1alpha1.GetTableRequest
+	17, // 25: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:input_type -> querylane.console.v1alpha1.GetTablePartitionMetadataRequest
+	19, // 26: querylane.console.v1alpha1.TableService.ListTableColumns:input_type -> querylane.console.v1alpha1.ListTableColumnsRequest
+	21, // 27: querylane.console.v1alpha1.TableService.ListTableConstraints:input_type -> querylane.console.v1alpha1.ListTableConstraintsRequest
+	23, // 28: querylane.console.v1alpha1.TableService.ListTableIndexes:input_type -> querylane.console.v1alpha1.ListTableIndexesRequest
+	25, // 29: querylane.console.v1alpha1.TableService.ListTablePolicies:input_type -> querylane.console.v1alpha1.ListTablePoliciesRequest
+	27, // 30: querylane.console.v1alpha1.TableService.ListTableTriggers:input_type -> querylane.console.v1alpha1.ListTableTriggersRequest
+	14, // 31: querylane.console.v1alpha1.TableService.ListTables:output_type -> querylane.console.v1alpha1.ListTablesResponse
+	16, // 32: querylane.console.v1alpha1.TableService.GetTable:output_type -> querylane.console.v1alpha1.GetTableResponse
+	18, // 33: querylane.console.v1alpha1.TableService.GetTablePartitionMetadata:output_type -> querylane.console.v1alpha1.GetTablePartitionMetadataResponse
+	20, // 34: querylane.console.v1alpha1.TableService.ListTableColumns:output_type -> querylane.console.v1alpha1.ListTableColumnsResponse
+	22, // 35: querylane.console.v1alpha1.TableService.ListTableConstraints:output_type -> querylane.console.v1alpha1.ListTableConstraintsResponse
+	24, // 36: querylane.console.v1alpha1.TableService.ListTableIndexes:output_type -> querylane.console.v1alpha1.ListTableIndexesResponse
+	26, // 37: querylane.console.v1alpha1.TableService.ListTablePolicies:output_type -> querylane.console.v1alpha1.ListTablePoliciesResponse
+	28, // 38: querylane.console.v1alpha1.TableService.ListTableTriggers:output_type -> querylane.console.v1alpha1.ListTableTriggersResponse
+	31, // [31:39] is the sub-list for method output_type
+	23, // [23:31] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_querylane_console_v1alpha1_table_proto_init() }
@@ -2657,12 +2752,13 @@ func file_querylane_console_v1alpha1_table_proto_init() {
 		return
 	}
 	file_querylane_console_v1alpha1_catalog_sync_proto_init()
+	file_querylane_console_v1alpha1_table_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_querylane_console_v1alpha1_table_proto_rawDesc), len(file_querylane_console_v1alpha1_table_proto_rawDesc)),
-			NumEnums:      8,
+			NumEnums:      9,
 			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,

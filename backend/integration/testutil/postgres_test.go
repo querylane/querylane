@@ -3,10 +3,14 @@ package testutil
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/distribution/reference"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -110,17 +114,76 @@ func TestPostgreSQLContainerImageIsSupported(t *testing.T) {
 	assert.GreaterOrEqual(t, imageMajor(t), 14)
 }
 
-// imageMajor extracts the PostgreSQL major version from the resolved test
-// image (e.g. "postgres:16-alpine" -> 16).
+// imageMajor extracts the declared major from an explicit PostgreSQL image tag;
+// the integration test independently checks it against server_version_num.
 func imageMajor(t *testing.T) int {
 	t.Helper()
 
-	tag, ok := strings.CutPrefix(postgresImage(), "postgres:")
-	require.True(t, ok, "postgres image should use the official postgres repository")
-
-	majorText, _, _ := strings.Cut(tag, "-")
-	major, err := strconv.Atoi(majorText)
+	major, err := parsePostgresImageMajor(postgresImage())
 	require.NoError(t, err)
 
 	return major
+}
+
+func parsePostgresImageMajor(image string) (int, error) {
+	named, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return 0, fmt.Errorf("parse PostgreSQL test image: %w", err)
+	}
+	if path.Base(reference.Path(named)) != "postgres" {
+		return 0, fmt.Errorf("test image repository must end in postgres: %q", reference.FamiliarName(named))
+	}
+	tagged, ok := named.(reference.Tagged)
+	if !ok {
+		return 0, fmt.Errorf("PostgreSQL test image needs an explicit version tag: %q", image)
+	}
+	version := regexp.MustCompile(`^([1-9][0-9]*)(?:\.[0-9]+)?(?:(?:beta|rc)[1-9][0-9]*)?(?:-[a-z0-9][a-z0-9.-]*)?$`).FindStringSubmatch(tagged.Tag())
+	if version == nil {
+		return 0, fmt.Errorf("invalid PostgreSQL version tag: %q", tagged.Tag())
+	}
+	return strconv.Atoi(version[1])
+}
+
+func TestParsePostgresImageMajor(t *testing.T) {
+	t.Parallel()
+
+	digest := "@sha256:" + strings.Repeat("a", 64)
+	for _, tc := range []struct {
+		image string
+		major int
+	}{
+		{"postgres:18-alpine", 18},
+		{"postgres:18.6-alpine", 18},
+		{"postgres:18.6", 18},
+		{"postgres:19rc1-alpine", 19},
+		{"postgres:19beta3-alpine3.23", 19},
+		{"postgres:19rc1-alpine" + digest, 19},
+		{"docker.io/library/postgres:18.6-alpine" + digest, 18},
+		{"registry.example:5000/cache/postgres:18.6-alpine" + digest, 18},
+		{"registry.example:5000/cache/postgres:19rc1", 19},
+		{"postgres:latest", 0},
+		{"postgres:18garbage", 0},
+		{"postgres:18.6garbage-alpine", 0},
+		{"postgres:18..6-alpine", 0},
+		{"postgres:18rc-alpine", 0},
+		{"postgres:18rc0-alpine", 0},
+		{"postgres:0-alpine", 0},
+		{"postgres", 0},
+		{"postgres" + digest, 0},
+		{"postgres:18.6@sha256:invalid", 0},
+		{"registry.example:5000/cache/not-postgres:18.6-alpine", 0},
+		{"redis:18.6-alpine", 0},
+		{"postgres:18.6-alpine trailing", 0},
+	} {
+		t.Run(tc.image, func(t *testing.T) {
+			t.Parallel()
+			major, err := parsePostgresImageMajor(tc.image)
+			if tc.major == 0 {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.major, major)
+		})
+	}
 }

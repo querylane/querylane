@@ -11,6 +11,7 @@ image="mcr.microsoft.com/playwright:v${playwright_version}-noble"
 
 # Keep dependencies and build output private: a host build must not replace the
 # visual harness while this container's preview server is using it.
+# A private tool prefix also avoids overwriting Node already shipped in the image.
 docker run --rm --ipc=host \
   --volume "${frontend_dir}:/work" \
   --volume /work/node_modules \
@@ -18,6 +19,7 @@ docker run --rm --ipc=host \
   --workdir /work \
   --env CI=1 \
   "${image}" \
-  bash -c "npm install --global --silent node@${node_version} bun@${bun_version} \
+  bash -c "npm install --global --prefix /tmp/querylane-playwright-toolchain --silent node@${node_version} bun@${bun_version} \
+    && export PATH=/tmp/querylane-playwright-toolchain/bin:\$PATH \
     && bun install --frozen-lockfile --ignore-scripts \
     && $*"

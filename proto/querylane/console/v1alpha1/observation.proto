@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package querylane.console.v1alpha1;
+
+// Whether a read-only diagnostic can be observed. Missing capabilities,
+// inaccessible data, and failed collection must not be reported as zero.
+enum ObservationAvailability {
+  OBSERVATION_AVAILABILITY_UNSPECIFIED = 0;
+  OBSERVATION_AVAILABILITY_AVAILABLE = 1;
+  OBSERVATION_AVAILABILITY_UNSUPPORTED = 2;
+  OBSERVATION_AVAILABILITY_RESTRICTED = 3;
+  OBSERVATION_AVAILABILITY_UNAVAILABLE = 4;
+  OBSERVATION_AVAILABILITY_NOT_APPLICABLE = 5;
+}

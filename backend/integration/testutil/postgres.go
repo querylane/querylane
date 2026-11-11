@@ -61,27 +61,26 @@ type PostgreSQLContainer struct {
 // Defaults to the latest PostgreSQL 18 Alpine image; QUERYLANE_TEST_POSTGRES_IMAGE
 // overrides it to run the suite against an older supported major.
 func NewPostgreSQLContainer(ctx context.Context) (*PostgreSQLContainer, error) {
-	return newPostgreSQLContainer(ctx)
+	return newPostgreSQLContainer(ctx, postgresImage())
 }
 
 // NewPostgreSQLContainerWithMaxConnections creates a PostgreSQL testcontainer
 // with a deliberately small physical connection ceiling.
 func NewPostgreSQLContainerWithMaxConnections(ctx context.Context, maxConnections int) (*PostgreSQLContainer, error) {
-	return newPostgreSQLContainer(ctx, testcontainers.WithCmd(
+	return newPostgreSQLContainer(ctx, postgresImage(), testcontainers.WithCmd(
 		"postgres",
 		"-c", "fsync=off",
 		"-c", "max_connections="+strconv.Itoa(maxConnections),
 	))
 }
 
-func newPostgreSQLContainer(ctx context.Context, extraOptions ...testcontainers.ContainerCustomizer) (*PostgreSQLContainer, error) {
-	image := postgresImage()
-
+func newPostgreSQLContainer(ctx context.Context, image string, extraOptions ...testcontainers.ContainerCustomizer) (*PostgreSQLContainer, error) {
 	options := make([]testcontainers.ContainerCustomizer, 0, 4+len(extraOptions))
 	options = append(options,
 		postgres.WithDatabase(containerDatabase),
 		postgres.WithUsername(containerUsername),
 		postgres.WithPassword(containerPassword),
+		testcontainers.WithCmd("postgres", "-c", "shared_preload_libraries=pg_stat_statements"),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
@@ -108,7 +107,7 @@ func newPostgreSQLContainer(ctx context.Context, extraOptions ...testcontainers.
 func RequirePostgreSQLContainerWithMaxConnections(ctx context.Context, t *testing.T, maxConnections int) *PostgreSQLContainer {
 	t.Helper()
 
-	testcontainers.SkipIfProviderIsNotHealthy(t)
+	requirePostgreSQLProvider(ctx, t)
 
 	container, err := NewPostgreSQLContainerWithMaxConnections(ctx, maxConnections)
 	if err != nil {
@@ -123,7 +122,7 @@ func RequirePostgreSQLContainerWithMaxConnections(ctx context.Context, t *testin
 func RequirePostgreSQLContainer(ctx context.Context, t *testing.T) *PostgreSQLContainer {
 	t.Helper()
 
-	testcontainers.SkipIfProviderIsNotHealthy(t)
+	requirePostgreSQLProvider(ctx, t)
 
 	container, err := NewPostgreSQLContainer(ctx)
 	if err != nil {
@@ -131,6 +130,41 @@ func RequirePostgreSQLContainer(ctx context.Context, t *testing.T) *PostgreSQLCo
 	}
 
 	return container
+}
+
+// RequirePostgreSQLContainerWithImage starts a separate server for mixed-major
+// meta database / instance tests. It never changes the default instance image.
+func RequirePostgreSQLContainerWithImage(ctx context.Context, t *testing.T, image string) *PostgreSQLContainer {
+	t.Helper()
+	requirePostgreSQLProvider(ctx, t)
+	container, err := newPostgreSQLContainer(ctx, image)
+	if err != nil {
+		t.Fatalf("failed to start PostgreSQL testcontainer: %v", err)
+	}
+	return container
+}
+
+// Explicit compatibility runs must fail, not silently succeed with skipped SQL.
+func requirePostgreSQLProvider(ctx context.Context, t *testing.T) {
+	t.Helper()
+	if os.Getenv(postgresImageEnv) == "" && os.Getenv("QUERYLANE_TEST_META_POSTGRES_IMAGE") == "" {
+		testcontainers.SkipIfProviderIsNotHealthy(t)
+		return
+	}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("required PostgreSQL provider unavailable: %v", recovered)
+		}
+	}()
+	healthCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	provider, err := testcontainers.ProviderDocker.GetProvider()
+	if err != nil {
+		t.Fatalf("required PostgreSQL provider unavailable: %v", err)
+	}
+	if err := provider.Health(healthCtx); err != nil {
+		t.Fatalf("required PostgreSQL provider unhealthy: %v", err)
+	}
 }
 
 // ConnectionString returns the PostgreSQL connection string for this container.

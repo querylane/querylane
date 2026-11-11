@@ -8,6 +8,7 @@ import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
+import "querylane/console/v1alpha1/observation.proto";
 
 // --------------------------------------------------------------------------
 // Service
@@ -178,8 +179,8 @@ message GetDatabaseQueryInsightsResponse {
   // Errors encountered fetching individual insight categories.
   // The RPC succeeds even when some categories are unavailable. Each Status
   // identifies the failed category via google.rpc.ErrorInfo with metadata key
-  // "metric" set to "query_stats" or "table_stats".
-  repeated google.rpc.Status partial_errors = 2 [(buf.validate.field).repeated.max_items = 2];
+  // "metric" set to "query_stats", "table_stats", or "autovacuum_priorities".
+  repeated google.rpc.Status partial_errors = 2 [(buf.validate.field).repeated.max_items = 3];
 }
 
 // Live query optimization signals for a PostgreSQL database. Statistics are
@@ -213,6 +214,9 @@ message DatabaseQueryInsights {
 
   // Whether table statistics views could be queried.
   bool table_stats_available = 6;
+
+  // Current database-local scores, not a guaranteed autovacuum processing queue.
+  AutovacuumPriorities autovacuum_priorities = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message QueryRuntimeInsight {
@@ -301,4 +305,46 @@ message TableCacheHitInsight {
 
   // Total table size in bytes.
   int64 total_size_bytes = 6 [(buf.validate.field).int64.gte = 0];
+}
+
+// Bounded PostgreSQL 19 autovacuum-priority observations for visible tables.
+message AutovacuumPriorities {
+  ObservationAvailability availability = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string summary = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  repeated AutovacuumTablePriority tables = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).repeated.max_items = 10
+  ];
+}
+
+message AutovacuumTablePriority {
+  string schema_name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string table_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  double score = 3 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  double xid_score = 4 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  double mxid_score = 5 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  double vacuum_score = 6 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  double vacuum_insert_score = 7 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  double analyze_score = 8 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).double.gte = 0
+  ];
+  bool do_vacuum = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  bool do_analyze = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  bool for_wraparound = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

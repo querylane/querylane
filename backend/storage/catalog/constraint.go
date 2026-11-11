@@ -71,6 +71,8 @@ func (r *PGRepository) SyncTableConstraints(ctx context.Context, instanceID, dat
 				table.CatalogTableConstraint.OnDelete,
 				table.CatalogTableConstraint.Definition,
 				table.CatalogTableConstraint.SyncedAt,
+				table.CatalogTableConstraint.IsEnforced,
+				table.CatalogTableConstraint.IsValidated,
 			).
 			MODELS(constraints)
 

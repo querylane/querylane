@@ -94,6 +94,7 @@ func (d *Postgres) ListTableColumns(ctx context.Context, db *sql.DB, schemaName,
 			baseType           string
 			isArray            bool
 			identityGeneration string
+			generatedKind      string
 		)
 
 		err := rows.Scan(
@@ -112,6 +113,7 @@ func (d *Postgres) ListTableColumns(ctx context.Context, db *sql.DB, schemaName,
 			&column.GenerationExpression,
 			&column.IsIdentity,
 			&identityGeneration,
+			&generatedKind,
 		)
 		if err != nil {
 			return nil, classifyQueryError("scan table column", err)
@@ -119,6 +121,7 @@ func (d *Postgres) ListTableColumns(ctx context.Context, db *sql.DB, schemaName,
 
 		column.DataType = pgTypeToDataType(baseType, isArray)
 		column.IdentityGeneration = pgIdentityCharToEnum(identityGeneration)
+		column.GeneratedKind = pgGeneratedCharToEnum(generatedKind)
 		columns = append(columns, column)
 	}
 
@@ -142,6 +145,17 @@ func (d *Postgres) ListTableColumns(ctx context.Context, db *sql.DB, schemaName,
 	}
 
 	return columns, nil
+}
+
+func pgGeneratedCharToEnum(value string) api.GeneratedColumnKind {
+	switch value {
+	case "s":
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_STORED
+	case "v":
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL
+	default:
+		return api.GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED
+	}
 }
 
 func pgIdentityCharToEnum(value string) api.IdentityGeneration {
@@ -185,6 +199,8 @@ func (d *Postgres) ListTableConstraints(ctx context.Context, db *sql.DB, schemaN
 			&onUpdate,
 			&onDelete,
 			&c.Definition,
+			&c.IsEnforced,
+			&c.IsValidated,
 		)
 		if err != nil {
 			return nil, classifyQueryError("scan table constraint", err)
@@ -421,9 +437,9 @@ func pgTypeToDataType(typeName string, isArray bool) api.DataType {
 	}
 
 	switch strings.ToLower(strings.TrimSpace(typeName)) {
-	case "character varying", "varchar", "character", "char", "text", "name", "bpchar":
+	case "character varying", "varchar", "character", "char", "text", "name", "bpchar", "regdatabase":
 		return api.DataType_DATA_TYPE_STRING
-	case "integer", "bigint", "smallint", "int2", "int4", "int8":
+	case "integer", "bigint", "smallint", "int2", "int4", "int8", "oid8":
 		return api.DataType_DATA_TYPE_INTEGER
 	case "numeric", "decimal", "real", "double precision", "float4", "float8":
 		return api.DataType_DATA_TYPE_FLOAT

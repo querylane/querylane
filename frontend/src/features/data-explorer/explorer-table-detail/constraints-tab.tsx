@@ -29,7 +29,6 @@ const KEY_CONSTRAINT_TYPES = new Set<ConstraintType>([
   ConstraintType.PRIMARY_KEY,
   ConstraintType.UNIQUE,
 ]);
-const NOT_VALID_DEFINITION_PATTERN = /(?:^|\s)NOT\s+VALID\s*;?\s*$/iu;
 
 function isKeyConstraint(constraint: TableConstraint) {
   return KEY_CONSTRAINT_TYPES.has(constraint.type);
@@ -41,10 +40,6 @@ function isForeignKeyConstraint(constraint: TableConstraint) {
 
 function formatConstraintColumns(columnNames: string[]) {
   return columnNames.length > 0 ? columnNames.join(", ") : "—";
-}
-
-function hasNotValidDefinition(constraint: TableConstraint) {
-  return NOT_VALID_DEFINITION_PATTERN.test(constraint.definition);
 }
 
 function parseReferencedTableTarget(referencedTable: string) {
@@ -161,10 +156,19 @@ function buildConstraintInventoryColumns({
           <span className="text-foreground truncate font-mono text-xs font-semibold">
             {row.original.constraintName || "—"}
           </span>
-          {hasNotValidDefinition(row.original) ? (
+          {row.original.isEnforced === false ? (
             <Pill
               size="sm"
-              title="Constraint was created NOT VALID and has not been validated yet"
+              title="PostgreSQL does not enforce this constraint for new writes"
+              tone="amber"
+            >
+              Not enforced
+            </Pill>
+          ) : null}
+          {row.original.isValidated === false ? (
+            <Pill
+              size="sm"
+              title="Existing rows have not been validated against this constraint"
               tone="amber"
             >
               Not valid

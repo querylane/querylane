@@ -36,7 +36,11 @@ func buildReadRowsQuery(params engine.ReadRowsParams, plan *paginationPlan) (str
 	}
 
 	for _, c := range plan.cursorColumns {
-		projCols = append(projCols, columnRef(c.Name)+" AS "+quoteIdent(c.Name+cursorAliasSuffix))
+		expr := columnRef(c.Name)
+		if c.Name == ctidColumn {
+			expr = physicalRowIdentitySQL
+		}
+		projCols = append(projCols, expr+" AS "+quoteIdent(c.Name+cursorAliasSuffix))
 	}
 
 	if len(projCols) == 0 {
@@ -88,7 +92,15 @@ func buildReadRowsQuery(params engine.ReadRowsParams, plan *paginationPlan) (str
 				b.WriteString(", ")
 			}
 
+			// Bare ORDER BY names prefer SELECT aliases. Preview columns reuse
+			// their names for truncated values, so bind ordering to the source
+			// relation instead (including system-column identity tiebreakers).
+			b.WriteString(quoteIdent(params.TableName))
+			b.WriteString(".")
 			b.WriteString(quoteIdent(e.column))
+			if e.asText {
+				b.WriteString("::text")
+			}
 
 			if e.dirAsc {
 				b.WriteString(" ASC")

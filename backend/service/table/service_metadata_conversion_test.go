@@ -3,10 +3,32 @@ package table
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/querylane/querylane/backend/engine"
 	v1alpha1 "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 	"github.com/querylane/querylane/backend/resource"
 )
+
+func TestConvertGenerationAndConstraintStateMetadata(t *testing.T) {
+	t.Parallel()
+
+	columns := convertColumns([]engine.Column{{
+		IsGenerated: true, GeneratedKind: v1alpha1.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL,
+	}})
+	assert.Equal(t, v1alpha1.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL, columns[0].GetGeneratedKind())
+	constraints := convertConstraints([]engine.TableConstraint{
+		{IsEnforced: new(false), IsValidated: new(false)},
+		{IsEnforced: new(true), IsValidated: new(true)},
+		{},
+	}, resource.NewSchemaName("prod", "app", "public"))
+	assert.Equal(t, new(false), constraints[0].IsEnforced)
+	assert.Equal(t, new(false), constraints[0].IsValidated)
+	assert.Equal(t, new(true), constraints[1].IsEnforced)
+	assert.Equal(t, new(true), constraints[1].IsValidated)
+	assert.Nil(t, constraints[2].IsEnforced, "unknown must stay distinct from false")
+	assert.Nil(t, constraints[2].IsValidated)
+}
 
 func TestConvertTableMetadataUsesExplicitObjectNameFields(t *testing.T) {
 	t.Parallel()

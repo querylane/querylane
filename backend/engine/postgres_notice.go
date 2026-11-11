@@ -30,7 +30,8 @@ var ErrPostgresNoticeCaptureUnsupported = errors.New("postgres notice capture re
 // Querylane's notice router on every physical connection. Individual requests
 // opt into capture with BeginPostgresNoticeSession, so pooled connections do
 // not share notices across requests. The router is always attached, but it is
-// a no-op while no request-local collector is installed.
+// a no-op between requests. Authentication warnings are buffered once per
+// physical connection and delivered to its first notice-capturing request.
 func OpenPostgresDB(dsn string) (*sql.DB, error) {
 	return openPostgresDBWithBudget(dsn, nil, nil)
 }
@@ -46,7 +47,11 @@ func openPostgresDBWithBudget(dsn string, budget *connectionBudget, targetPolicy
 	applyTargetPolicy(cfg, targetPolicy)
 
 	connector := stdlib.GetConnector(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, conn *pgx.Conn) error {
-		conn.PgConn().CustomData()[postgresNoticeCollectorKey] = &postgresNoticeSlot{}
+		// OnNotice can run during authentication, before AfterConnect.
+		// Keep any bounded startup buffer already installed by the router.
+		if _, ok := conn.PgConn().CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot); !ok {
+			conn.PgConn().CustomData()[postgresNoticeCollectorKey] = &postgresNoticeSlot{}
+		}
 
 		return nil
 	}))
@@ -161,7 +166,8 @@ func routePostgresNotice(pgConn *pgconn.PgConn, notice *pgconn.Notice) {
 
 	slot, ok := pgConn.CustomData()[postgresNoticeCollectorKey].(*postgresNoticeSlot)
 	if !ok {
-		return
+		slot = &postgresNoticeSlot{startup: &postgresNoticeCollector{}}
+		pgConn.CustomData()[postgresNoticeCollectorKey] = slot
 	}
 
 	slot.add(notice)
@@ -170,18 +176,31 @@ func routePostgresNotice(pgConn *pgconn.PgConn, notice *pgconn.Notice) {
 type postgresNoticeSlot struct {
 	mu        sync.Mutex
 	collector *postgresNoticeCollector
+	startup   *postgresNoticeCollector
 }
 
 func (s *postgresNoticeSlot) set(collector *postgresNoticeCollector) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if collector != nil && s.startup != nil {
+		s.startup.mu.Lock()
+		collector.mu.Lock()
+		collector.notices = append(collector.notices, s.startup.notices...)
+		collector.omitted += s.startup.omitted
+		collector.mu.Unlock()
+		s.startup.mu.Unlock()
+		s.startup = nil
+	}
 	s.collector = collector
 }
 
 func (s *postgresNoticeSlot) add(notice *pgconn.Notice) {
 	s.mu.Lock()
 	collector := s.collector
+	if collector == nil {
+		collector = s.startup
+	}
 	s.mu.Unlock()
 
 	if collector == nil {

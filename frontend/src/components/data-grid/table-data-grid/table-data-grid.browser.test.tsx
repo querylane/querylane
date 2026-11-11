@@ -10,9 +10,9 @@ import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-head
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-status-bar";
 import { GridSurface } from "@/components/data-grid/table-data-grid/grid-surface";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { RecordDetailDrawer } from "@/components/data-grid/table-data-grid/record-detail-drawer";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
+import { PaginationFooter } from "@/components/querylane-ui/pagination-footer";
 import { useTableColumnLayoutSettingsStore } from "@/features/user-settings/table-column-layout-settings";
 import { HIGH_VOLUME_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import {

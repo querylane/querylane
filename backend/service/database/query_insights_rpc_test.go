@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
@@ -123,6 +124,38 @@ func TestGetDatabaseQueryInsightsReportsPartialErrors(t *testing.T) {
 	assert.Equal(t, "QUERY_INSIGHTS_UNAVAILABLE", info.GetReason())
 	assert.Equal(t, "query_stats", info.GetMetadata()["metric"])
 	assert.Equal(t, "42P01", info.GetMetadata()["sqlstate"])
+}
+
+func TestGetDatabaseQueryInsightsAllowsEveryCategoryToFail(t *testing.T) {
+	t.Parallel()
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+	metrics := []string{"query_stats", "table_stats", "autovacuum_priorities"}
+	service := NewService(nil, queryInsightsProviderFunc(
+		func(context.Context, resource.DatabaseName) (*engine.DatabaseQueryInsights, error) {
+			insights := &engine.DatabaseQueryInsights{}
+			for _, metric := range metrics {
+				insights.PartialErrors = append(insights.PartialErrors, engine.OverviewMetricError{
+					Metric: metric, Err: engine.ErrQueryUnavailable,
+				})
+			}
+			return insights, nil
+		},
+	))
+	resp, err := service.GetDatabaseQueryInsights(t.Context(), connect.NewRequest(&v1alpha1.GetDatabaseQueryInsightsRequest{
+		Name: "instances/prod/databases/app",
+	}))
+	require.NoError(t, err)
+	require.Len(t, resp.Msg.GetPartialErrors(), len(metrics))
+	validator, err := protovalidate.New()
+	require.NoError(t, err)
+	require.NoError(t, validator.Validate(resp.Msg), "all three partial failures must remain a valid successful response")
+	for i, partial := range resp.Msg.GetPartialErrors() {
+		var info errdetails.ErrorInfo
+		require.NoError(t, partial.GetDetails()[0].UnmarshalTo(&info))
+		assert.Equal(t, metrics[i], info.GetMetadata()["metric"])
+	}
 }
 
 func TestConvertQueryInsightsToProtoReturnsEmptyPayloadWhenProviderHasNoStats(t *testing.T) {

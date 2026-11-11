@@ -17,7 +17,7 @@ SELECT
 		WHERE idx.indrelid = pcl.oid
 			AND idx.indisprimary
 			AND idx.indisvalid
-			AND pa.attnum = ANY(idx.indkey)
+			AND pa.attnum = ANY((idx.indkey::smallint[])[0:idx.indnkeyatts - 1])
 	),
 	COALESCE(pg_catalog.pg_get_expr(pad.adbin, pad.adrelid), ''),
 	COALESCE(info.character_maximum_length, 0),
@@ -29,7 +29,7 @@ SELECT
 			AND idx.indisunique
 			AND idx.indisvalid
 			AND idx.indnkeyatts = 1
-			AND pa.attnum = ANY(idx.indkey)
+			AND pa.attnum = ANY((idx.indkey::smallint[])[0:idx.indnkeyatts - 1])
 	),
 	pt.typname,
 	pt.typcategory = 'A',
@@ -40,7 +40,8 @@ SELECT
 		ELSE ''
 	END,
 	pa.attidentity <> '',
-	pa.attidentity::text
+	pa.attidentity::text,
+	pa.attgenerated::text
 FROM pg_catalog.pg_class pcl
 JOIN pg_catalog.pg_namespace pn
 	ON pn.oid = pcl.relnamespace

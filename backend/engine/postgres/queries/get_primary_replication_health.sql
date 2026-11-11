@@ -1,4 +1,5 @@
 SELECT
+    pg_has_role(current_user, 'pg_read_all_stats', 'USAGE') AS statistics_visible,
     count(*)::integer AS attached_replicas,
     count(*) FILTER (WHERE state = 'streaming')::integer AS streaming_replicas,
     count(*) FILTER (WHERE sync_state IN ('sync', 'quorum'))::integer AS synchronous_replicas,

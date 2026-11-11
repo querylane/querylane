@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +25,11 @@ const (
 // It signs a TableCellFullValueTokenPayload bound to the table resource
 // name, column, and the row's identity values.
 func (d *Postgres) mintFullValueToken(resourceName, column string, identity *api.RowIdentity, identityValues []*api.TableValue) (string, error) {
+	// No identity means a bounded preview can be shown, but cannot be safely
+	// expanded later. Never emit a signed promise that can resolve another row.
+	if len(identity.GetColumnNames()) == 0 {
+		return "", nil
+	}
 	payload := &api.TableCellFullValueTokenPayload{
 		Version:        1,
 		TableName:      resourceName,
@@ -58,6 +64,12 @@ func (d *Postgres) ReadCellValue(ctx context.Context, db *sql.DB, params engine.
 
 	if len(params.IdentityValues) != len(identity.GetColumnNames()) {
 		return nil, fmt.Errorf("%w: token identity values mismatch", engine.ErrInvalidPageToken)
+	}
+
+	if identity.GetSource() == api.RowIdentity_SOURCE_OPAQUE_ROW_KEY {
+		if len(identity.GetColumnNames()) != 1 || identity.GetColumnNames()[0] != ctidColumn || !validPhysicalIdentity(params.IdentityValues[0]) {
+			return nil, fmt.Errorf("%w: physical row identity expired; reload rows", engine.ErrInvalidPageToken)
+		}
 	}
 
 	// Look up the column to know whether it's preview-eligible (so we can
@@ -98,6 +110,9 @@ func (d *Postgres) ReadCellValue(ctx context.Context, db *sql.DB, params engine.
 	)
 
 	if err := row.Scan(&raw, &size); err != nil {
+		if errors.Is(err, sql.ErrNoRows) && identity.GetSource() == api.RowIdentity_SOURCE_OPAQUE_ROW_KEY {
+			return nil, fmt.Errorf("%w: physical row changed; reload rows", engine.ErrInvalidPageToken)
+		}
 		return nil, classifyQueryError("read cell value", err)
 	}
 
@@ -142,7 +157,7 @@ func buildReadCellValueSQL(schemaName, tableName string, col engine.Column, iden
 		}
 
 		if name == ctidColumn {
-			fmt.Fprintf(&b, "ctid = $%d::tid", i+1)
+			fmt.Fprintf(&b, "ctid = split_part($%d::text, ':', 4)::tid AND tableoid = split_part($%d::text, ':', 1)::oid AND pg_catalog.pg_relation_filenode(tableoid) = split_part($%d::text, ':', 2)::oid AND xmin::text = split_part($%d::text, ':', 3)", i+1, i+1, i+1, i+1)
 			continue
 		}
 

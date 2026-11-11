@@ -5,7 +5,7 @@ WITH ranked AS (
         calls::bigint AS calls,
         total_exec_time::double precision AS total_time_ms,
         mean_exec_time::double precision AS mean_time_ms
-    FROM pg_stat_statements
+    FROM %s.pg_stat_statements
     WHERE dbid = (
         SELECT oid
         FROM pg_database

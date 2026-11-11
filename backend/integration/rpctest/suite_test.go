@@ -30,7 +30,8 @@ const (
 type RPCSuite struct {
 	suite.Suite
 
-	pgContainer *testutil.PostgreSQLContainer
+	pgContainer   *testutil.PostgreSQLContainer
+	metaContainer *testutil.PostgreSQLContainer
 
 	serverURL  string
 	instanceID string // ID of the registered external instance
@@ -64,8 +65,14 @@ func (s *RPCSuite) SetupSuite() {
 
 	s.pgContainer = pg
 
+	// Keep meta database and user instance versions independently selectable.
+	meta := pg
+	if image := os.Getenv("QUERYLANE_TEST_META_POSTGRES_IMAGE"); image != "" {
+		meta = testutil.RequirePostgreSQLContainerWithImage(ctx, t, image)
+	}
+	s.metaContainer = meta
 	// 2. Create meta database (server handles migrations on boot).
-	_, err := pg.CreateDatabase(ctx, metaDBName)
+	_, err := meta.CreateDatabase(ctx, metaDBName)
 	require.NoError(t, err, "create meta database")
 
 	// 3. Create external database and seed sample data.
@@ -81,6 +88,11 @@ func (s *RPCSuite) SetupSuite() {
 	err = extDB.Close()
 	require.NoError(t, err, "close external database")
 
+	metaHost, err := meta.Host(ctx)
+	require.NoError(t, err)
+	metaPort, err := meta.MappedPort(ctx)
+	require.NoError(t, err)
+
 	// 4. Build config YAML pointing at the meta database.
 	host, err := pg.Host(ctx)
 	require.NoError(t, err)
@@ -95,11 +107,17 @@ func (s *RPCSuite) SetupSuite() {
   username: testuser
   password: testpass
   ssl_mode: disable
+limits:
+  # This suite performs many connection tests from a single loopback caller.
+  # Keep production defaults intact; rate limiting has dedicated unit tests.
+  connection_tests:
+    per_caller_per_minute: 100
+    burst: 100
 instance_targets:
   allowed_cidrs:
     - 0.0.0.0/0
     - ::/0
-`, host, port, metaDBName)
+`, metaHost, metaPort, metaDBName)
 
 	configDir := t.TempDir()
 	configPath := filepath.Join(configDir, "config.yaml")
@@ -152,6 +170,9 @@ instance_targets:
 }
 
 func (s *RPCSuite) TearDownSuite() {
+	if s.metaContainer != nil && s.metaContainer != s.pgContainer {
+		_ = s.metaContainer.Cleanup(context.Background())
+	}
 	if s.pgContainer != nil {
 		_ = s.pgContainer.Cleanup(context.Background())
 	}

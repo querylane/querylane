@@ -3,6 +3,7 @@ import {
   DEFAULT_POSTGRES_PORT,
   type InstanceRecord,
 } from "@/components/console-pages/instance-config-model";
+import { observationAvailabilityLabel } from "@/components/console-pages/pg19-observation";
 import {
   type DbConnectionStatus,
   formatBytes,
@@ -15,6 +16,7 @@ import {
   formatSslMode,
   formatSslNegotiation,
 } from "@/lib/protobuf-enums";
+import { formatInsightMs } from "@/lib/query-insights";
 import { isNonEmptyString } from "@/lib/value-guards";
 import { ErrorInfoSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { Status } from "@/protogen/google/rpc/status_pb";
@@ -22,8 +24,10 @@ import type {
   AutovacuumHealth,
   ConnectionActivityHealth,
   InstanceHealth,
+  LockStatistics,
   PgStatStatementsHealth,
   PostgresConfig,
+  RecoveryHealth,
   ReplicationHealth,
   ServerInfo,
   StatsAccessHealth,
@@ -34,6 +38,7 @@ import {
   PostgresConfig_SslNegotiation,
   ServerInfo_ReplicationRole,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { ObservationAvailability } from "@/protogen/querylane/console/v1alpha1/observation_pb";
 
 type HealthRowTone = "error" | "muted" | "ok" | "warning";
 
@@ -56,6 +61,7 @@ const HEALTH_CHECK_KEYS = [
   "stats_access",
   "pg_stat_statements",
   "autovacuum",
+  "lock_statistics",
 ] as const;
 
 type HealthCheckKey = (typeof HEALTH_CHECK_KEYS)[number];
@@ -236,6 +242,141 @@ function buildConnectionActivityRow(
   };
 }
 
+function recoveryNeedsAttention(recovery: RecoveryHealth | undefined) {
+  if (
+    !recovery ||
+    recovery.availability !== ObservationAvailability.AVAILABLE
+  ) {
+    return false;
+  }
+  return (
+    recovery.pauseState === "paused" ||
+    recovery.pauseState === "pause requested" ||
+    recovery.promotionTriggered
+  );
+}
+
+function recoveryDetails(
+  recovery: RecoveryHealth | undefined
+): HealthRowDetail[] {
+  const detail: HealthRowDetail[] = [
+    {
+      label: "Recovery",
+      value: observationAvailabilityLabel(
+        recovery?.availability ?? ObservationAvailability.UNSPECIFIED
+      ),
+    },
+  ];
+  if (
+    !recovery ||
+    recovery.availability !== ObservationAvailability.AVAILABLE
+  ) {
+    return detail;
+  }
+  return [
+    ...detail,
+    { label: "Recovery pause state", value: recovery.pauseState || "Unknown" },
+    {
+      label: "Promotion triggered",
+      value: formatYesNo(recovery.promotionTriggered),
+    },
+    { label: "Replay end LSN", value: recovery.replayEndLsn || "Unknown" },
+    {
+      label: "Replay timeline",
+      value:
+        recovery.replayTimeline > 0
+          ? String(recovery.replayTimeline)
+          : "Unknown",
+    },
+  ];
+}
+
+function primaryReplicationDetails(
+  replication: ReplicationHealth
+): HealthRowDetail[] {
+  return [
+    {
+      label: "Attached replicas",
+      value: replication.statisticsVisible
+        ? String(replication.attachedReplicas)
+        : "Unknown",
+    },
+    {
+      label: "Streaming replicas",
+      value: replication.statisticsVisible
+        ? String(replication.streamingReplicas)
+        : "Unknown",
+    },
+    {
+      label: "Synchronous replicas",
+      value: replication.statisticsVisible
+        ? String(replication.synchronousReplicas)
+        : "Unknown",
+    },
+    {
+      label: "Max replication lag",
+      value: replication.statisticsVisible
+        ? formatBytes(replication.maxReplicationLagBytes)
+        : "Unknown",
+    },
+  ];
+}
+
+function replicaReplicationDetails(
+  replication: ReplicationHealth
+): HealthRowDetail[] {
+  return [
+    {
+      label: "WAL receiver",
+      value: replication.walReceiverActive ? "Active" : "Not active",
+    },
+    {
+      label: "Last transaction replay age",
+      value: replication.replayLagKnown
+        ? formatShortDuration(Number(replication.replayLagSeconds))
+        : "Unknown",
+    },
+  ];
+}
+
+function replicationSummary(
+  replication: ReplicationHealth,
+  role: ServerInfo_ReplicationRole
+) {
+  const roleLabel = formatReplicationRole(role);
+  if (role !== replication.role) {
+    return `Health check reports ${formatReplicationRole(replication.role)}. Server info reports ${roleLabel}.`;
+  }
+  let summary = `${roleLabel} · detailed replication statistics unavailable`;
+  if (replication.statisticsVisible) {
+    summary =
+      replication.summary.trim() ||
+      `${roleLabel} · ${replication.streamingReplicas} streaming`;
+  }
+  const { recovery } = replication;
+  if (recovery && recoveryNeedsAttention(recovery)) {
+    summary += recovery.promotionTriggered
+      ? " · promotion triggered"
+      : ` · recovery ${recovery.pauseState}`;
+  }
+  return summary;
+}
+
+function replicationTone(
+  replication: ReplicationHealth,
+  rolesDisagree: boolean
+): HealthRowTone {
+  if (replication.status === HealthCheckStatus.ERROR) {
+    return "error";
+  }
+  if (rolesDisagree || recoveryNeedsAttention(replication.recovery)) {
+    return "warning";
+  }
+  return replication.statisticsVisible
+    ? toneFromHealthCheckStatus(replication.status)
+    : "muted";
+}
+
 function buildReplicationRow(
   replication: ReplicationHealth | undefined,
   reason: string | undefined,
@@ -244,61 +385,25 @@ function buildReplicationRow(
   if (!replication) {
     return unavailableRow({ id: "replication", label: "Replication", reason });
   }
-
-  const reportedServerRole = resolveReportedReplicationRole(
+  const role = resolveReportedReplicationRole(
     replication.role,
     serverReplicationRole
   );
-  const rolesDisagree = reportedServerRole !== replication.role;
-  const healthRoleLabel = formatReplicationRole(replication.role);
-  const roleLabel = formatReplicationRole(reportedServerRole);
-  const summary = rolesDisagree
-    ? `Health check reports ${healthRoleLabel}. Server info reports ${roleLabel}.`
-    : replication.summary.trim() ||
-      `${roleLabel} · ${replication.streamingReplicas} streaming`;
-  const detail: HealthRowDetail[] = [{ label: "Role", value: roleLabel }];
-
-  if (reportedServerRole === ServerInfo_ReplicationRole.REPLICA) {
-    detail.push(
-      {
-        label: "WAL receiver",
-        value: replication.walReceiverActive ? "Active" : "Not active",
-      },
-      {
-        label: "Replay lag",
-        value: formatShortDuration(Number(replication.replayLagSeconds)),
-      }
-    );
-  } else {
-    detail.push(
-      {
-        label: "Attached replicas",
-        value: String(replication.attachedReplicas),
-      },
-      {
-        label: "Streaming replicas",
-        value: String(replication.streamingReplicas),
-      },
-      {
-        label: "Synchronous replicas",
-        value: String(replication.synchronousReplicas),
-      },
-      {
-        label: "Max replication lag",
-        value: formatBytes(replication.maxReplicationLagBytes),
-      }
-    );
-  }
+  const roleDetails =
+    role === ServerInfo_ReplicationRole.REPLICA
+      ? replicaReplicationDetails(replication)
+      : primaryReplicationDetails(replication);
 
   return {
-    detail,
+    detail: [
+      { label: "Role", value: formatReplicationRole(role) },
+      ...roleDetails,
+      ...recoveryDetails(replication.recovery),
+    ],
     id: "replication",
     label: "Replication",
-    summary,
-    tone:
-      rolesDisagree && replication.status !== HealthCheckStatus.ERROR
-        ? "warning"
-        : toneFromHealthCheckStatus(replication.status),
+    summary: replicationSummary(replication, role),
+    tone: replicationTone(replication, role !== replication.role),
   };
 }
 
@@ -335,11 +440,11 @@ function buildStatsAccessRow(
       { label: "Connected role", value: statsAccess.currentUser || "—" },
       { label: "Superuser", value: formatYesNo(statsAccess.superuser) },
       {
-        label: "pg_monitor member",
+        label: "pg_monitor privileges effective",
         value: formatYesNo(statsAccess.pgMonitorMember),
       },
       {
-        label: "pg_read_all_stats member",
+        label: "pg_read_all_stats privileges effective",
         value: formatYesNo(statsAccess.pgReadAllStatsMember),
       },
       {
@@ -454,6 +559,61 @@ function buildAutovacuumRow(
   };
 }
 
+function buildLockStatisticsRow(
+  statistics: LockStatistics,
+  reason: string | undefined
+): HealthRowModel {
+  const available =
+    statistics.availability === ObservationAvailability.AVAILABLE;
+  const detail: HealthRowDetail[] = [
+    {
+      label: "Observation",
+      value: observationAvailabilityLabel(statistics.availability),
+    },
+  ];
+  if (available) {
+    detail.push(
+      {
+        label: "Completed waits",
+        value: statistics.byType
+          .reduce((total, row) => total + row.waits, 0n)
+          .toLocaleString(),
+      },
+      {
+        label: "Cumulative wait time",
+        value: formatInsightMs(
+          statistics.byType.reduce((total, row) => total + row.waitTimeMs, 0)
+        ),
+      },
+      {
+        label: "Fast-path capacity misses",
+        value: statistics.byType
+          .reduce((total, row) => total + row.fastpathExceeded, 0n)
+          .toLocaleString(),
+      },
+      {
+        label: "Scope",
+        value: "Instance-wide, since statistics reset; not current blockers",
+      }
+    );
+  }
+  let summary =
+    statistics.summary.trim() ||
+    (available
+      ? "Cumulative completed waits exceeding deadlock_timeout"
+      : observationAvailabilityLabel(statistics.availability));
+  if (isNonEmptyString(reason)) {
+    summary = reason;
+  }
+  return {
+    detail,
+    id: "lock-statistics",
+    label: "Lock statistics",
+    summary,
+    tone: available ? "ok" : "muted",
+  };
+}
+
 /**
  * Rows for a connected instance, sourced from the CheckInstanceHealth RPC.
  * A category left unset by the backend (see partial_errors) renders as a
@@ -481,6 +641,9 @@ function buildLiveHealthRows(
       reasons.pg_stat_statements
     ),
     buildAutovacuumRow(health?.autovacuum, reasons.autovacuum),
+    ...(health?.lockStatistics
+      ? [buildLockStatisticsRow(health.lockStatistics, reasons.lock_statistics)]
+      : []),
   ];
 }
 

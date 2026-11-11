@@ -24,6 +24,7 @@ import { CatalogSyncMetadataSchema } from "@/protogen/querylane/console/v1alpha1
 import { SQLService } from "@/protogen/querylane/console/v1alpha1/sql_pb";
 import {
   DataType,
+  GeneratedColumnKind,
   TableSchema,
   TableService,
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
@@ -1036,6 +1037,30 @@ test("data explorer table columns show generated and identity metadata", async (
   expect(badgeRow.scrollWidth).toBeLessThanOrEqual(badgeRow.clientWidth);
 });
 
+test.each([
+  [GeneratedColumnKind.STORED, "GENERATED STORED"],
+  [GeneratedColumnKind.VIRTUAL, "GENERATED VIRTUAL"],
+  [GeneratedColumnKind.UNSPECIFIED, "GENERATED"],
+] as const)(
+  "generated storage kind %s has an accurate badge",
+  async (kind, label) => {
+    await renderTable(
+      customersSchema({
+        columns: [
+          column("name_length", [DataType.INTEGER, "int4"], {
+            generatedKind: kind,
+            generationExpression: "length(name)",
+            isGenerated: true,
+          }),
+        ],
+      }),
+      "customers",
+      "columns"
+    );
+    await expect.element(page.getByText(label, { exact: true })).toBeVisible();
+  }
+);
+
 test("data explorer table tabs stay visible when column metadata overflows", async () => {
   const customers = customersSchema();
   await renderWithCatalog(
@@ -1258,9 +1283,24 @@ test("data explorer constraints tab covers validation and action states", async 
       )
     )
     .toBeVisible();
+  const unenforced = page.getByRole("row").filter({
+    has: page.getByText("customers_status_check", { exact: true }),
+  });
   await expect
-    .element(page.getByText("Not valid", { exact: true }))
+    .element(unenforced.getByText("Not enforced", { exact: true }))
     .toBeVisible();
+  await expect
+    .element(unenforced.getByText("Not valid", { exact: true }))
+    .toBeVisible();
+  const legacy = page.getByRole("row").filter({
+    has: page.getByText("customers_legacy_status_check", { exact: true }),
+  });
+  await expect
+    .element(legacy.getByText("Not valid", { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(legacy.getByText("Not enforced", { exact: true }))
+    .not.toBeVisible();
   await expect.element(page.getByText("CHECK").first()).toBeVisible();
   await expect.element(page.getByText("EXCLUSION")).toBeVisible();
   expect(document.body.textContent).not.toContain(

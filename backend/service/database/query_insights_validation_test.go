@@ -7,6 +7,7 @@ import (
 	"buf.build/go/protovalidate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -41,6 +42,14 @@ func TestDatabaseQueryInsightsProtoValidationRejectsLowSignalPayloads(t *testing
 			name:          "response requires query insights payload",
 			msg:           &v1alpha1.GetDatabaseQueryInsightsResponse{},
 			wantViolation: "query_insights",
+		},
+		{
+			name: "partial errors remain bounded to the three collectors",
+			msg: &v1alpha1.GetDatabaseQueryInsightsResponse{
+				QueryInsights: &v1alpha1.DatabaseQueryInsights{ObservedAt: observedAt},
+				PartialErrors: []*rpcstatus.Status{{}, {}, {}, {}},
+			},
+			wantViolation: "partial_errors",
 		},
 		{
 			name: "top queries are capped to the backend limit",
