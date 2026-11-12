@@ -2,7 +2,7 @@
 
 import { CircleCheck, CircleExclamationPoint, Save } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import {
   type InstanceLabelEntry,
@@ -246,12 +246,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={displayNameId}>
           Display name
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.displayName)}
-          data-instance-config-field="displayName"
-          disabled={isConfigManaged}
-          id={displayNameId}
-          {...form.register("displayName")}
+        <Controller
+          control={form.control}
+          name="displayName"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.displayName)}
+              data-instance-config-field="displayName"
+              disabled={isConfigManaged}
+              id={displayNameId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.displayName} />
       </div>
@@ -259,12 +273,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={hostId}>
           Host
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.host)}
-          data-instance-config-field="host"
-          disabled={isConfigManaged}
-          id={hostId}
-          {...form.register("config.host")}
+        <Controller
+          control={form.control}
+          name="config.host"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.host)}
+              data-instance-config-field="host"
+              disabled={isConfigManaged}
+              id={hostId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.host} />
       </div>
@@ -272,13 +300,27 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={portId}>
           Port
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.port)}
-          data-instance-config-field="port"
-          disabled={isConfigManaged}
-          id={portId}
-          type="number"
-          {...form.register("config.port", { valueAsNumber: true })}
+        <Controller
+          control={form.control}
+          name="config.port"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.port)}
+              data-instance-config-field="port"
+              disabled={isConfigManaged}
+              id={portId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value === "" ? Number.NaN : Number(value));
+              }}
+              ref={field.ref}
+              type="number"
+              value={Number.isFinite(field.value) ? String(field.value) : ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.port} />
       </div>
@@ -286,12 +328,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={databaseId}>
           Default database
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.database)}
-          data-instance-config-field="database"
-          disabled={isConfigManaged}
-          id={databaseId}
-          {...form.register("config.database")}
+        <Controller
+          control={form.control}
+          name="config.database"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.database)}
+              data-instance-config-field="database"
+              disabled={isConfigManaged}
+              id={databaseId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.database} />
       </div>
@@ -299,12 +355,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={usernameId}>
           Username
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.username)}
-          data-instance-config-field="username"
-          disabled={isConfigManaged}
-          id={usernameId}
-          {...form.register("config.username")}
+        <Controller
+          control={form.control}
+          name="config.username"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.username)}
+              data-instance-config-field="username"
+              disabled={isConfigManaged}
+              id={usernameId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.username} />
       </div>
@@ -312,15 +382,29 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={passwordId}>
           Password
         </label>
-        <PasswordInput
-          aria-describedby={
-            credentialsUnreadable ? credentialGuidanceId : undefined
-          }
-          aria-invalid={Boolean(fieldErrors.password)}
-          data-instance-config-field="password"
-          disabled={isConfigManaged}
-          id={passwordId}
-          {...form.register("config.password")}
+        <Controller
+          control={form.control}
+          name="config.password"
+          render={({ field }) => (
+            <PasswordInput
+              aria-describedby={
+                credentialsUnreadable ? credentialGuidanceId : undefined
+              }
+              aria-invalid={Boolean(fieldErrors.password)}
+              data-instance-config-field="password"
+              disabled={isConfigManaged}
+              id={passwordId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.password} />
       </div>
@@ -548,6 +632,7 @@ function InstanceConfigurationSection({
       action={
         isConfigManaged ? null : (
           <DisabledReasonButton
+            data-agent-confirm="Updates the saved instance connection. Ask the person to save these changes manually."
             disabled={pending}
             disabledReason={saveDisabledReason}
             onClick={handleAsyncAction(handleSaveClick)}

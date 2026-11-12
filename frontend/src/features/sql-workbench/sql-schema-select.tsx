@@ -191,12 +191,8 @@ function SqlSchemaSelect({
         }
       />
       <PopoverContent align="end" className="w-72" presentation="detail">
-        <Command shouldFilter={false}>
-          <CommandInput
-            onValueChange={setSearch}
-            placeholder="Search schemas…"
-            value={search}
-          />
+        <Command filter={false} onQueryChange={setSearch} query={search}>
+          <CommandInput placeholder="Search schemas…" />
           <CommandList presentation="search">
             <CommandEmpty presentation="compact">
               {schemas.isPending ? "Loading schemas…" : "No matching schema."}

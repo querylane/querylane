@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@ui-sdk/react/toast";
 import {
   Ban,
   CircleCheck,
@@ -11,7 +12,6 @@ import {
   Waypoints,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
-import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { Tabs, TabsList, TabsTrigger } from "@/components/querylane-ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -238,7 +238,7 @@ function CommandResult({ execution }: { execution: SqlExecution }) {
   return (
     <div
       className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center"
-      data-slot="sql-command-result"
+      data-querylane-slot="sql-command-result"
     >
       <CircleCheck aria-hidden="true" className="size-6 text-success" />
       {isNonEmptyString(outcome.tag) ? (

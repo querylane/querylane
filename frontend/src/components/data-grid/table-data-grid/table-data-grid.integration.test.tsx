@@ -248,7 +248,7 @@ rs.mock("@/lib/download-blob", () => ({
   downloadBlob: downloadBlobMock,
 }));
 
-rs.mock("sonner", () => ({ toast: toastMock }));
+rs.mock("@ui-sdk/react/toast", () => ({ toast: toastMock }));
 
 const writeClipboardMock = rs.hoisted(() => rs.fn());
 const writeClipboardDeferredMock = rs.hoisted(() =>
@@ -818,7 +818,7 @@ describe("table data grid foreign key references", () => {
       name: "public.carriers",
     });
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    expect(preview.getAttribute("data-slot")).toBe("popover-content");
+    expect(preview.getAttribute("data-querylane-slot")).toBe("popover-content");
     expect(
       within(preview).getByRole("status", { name: "Referenced row loaded" })
     ).toBeTruthy();
@@ -1746,7 +1746,9 @@ describe("table data grid error recovery", () => {
     expect(
       screen.getByRole("heading", { name: "Filter not applied" })
     ).toBeTruthy();
-    expect(screen.getByText("email is not available.")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "email is not available."
+    );
     expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Clear filters" }));

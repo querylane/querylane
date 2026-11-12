@@ -214,7 +214,7 @@ function RowLimitSelect({
         size="sm"
       >
         <SelectValue>
-          {(selected: string) => `${formatCount(Number(selected))} rows`}
+          {({ value: selected }) => `${formatCount(Number(selected))} rows`}
         </SelectValue>
       </SelectTrigger>
       <SelectContent align="end">

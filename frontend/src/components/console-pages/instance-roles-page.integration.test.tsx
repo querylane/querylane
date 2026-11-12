@@ -255,8 +255,8 @@ describe("instance roles page", () => {
     expect(
       screen
         .getByRole("tab", { name: "Access map" })
-        .hasAttribute("data-active")
-    ).toBe(true);
+        .getAttribute("aria-selected")
+    ).toBe("true");
     expect(screen.getByLabelText("Role access map")).toBeTruthy();
     expect(screen.getByText("Objects")).toBeTruthy();
     expect(screen.getByText("orders")).toBeTruthy();

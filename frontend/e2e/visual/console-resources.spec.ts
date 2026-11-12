@@ -47,7 +47,7 @@ function pageContent(page: Page) {
 
 // The form card alone: save toasts float over the page corner.
 function configurationCard(page: Page) {
-  return innermost(page, '[data-slot="card"]', "Configuration");
+  return innermost(page, '[data-querylane-slot="card"]', "Configuration");
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -123,7 +123,7 @@ test.describe("instance overview", () => {
       page.getByText("Showing the last loaded data until refresh succeeds.")
     ).toBeVisible();
     await expect(pageContent(page).getByText("customer_events")).toBeVisible();
-    await expect(page.getByText("Connected", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Connected", { exact: true })).toBeHidden();
     await expect(pageContent(page)).toHaveScreenshot(
       "backend-instance-overview-meta-database-unavailable.png"
     );
@@ -284,7 +284,11 @@ test.describe("database overview", () => {
     await mockConsoleResources(page, { metrics: true });
     await page.goto(DATABASE_URL);
 
-    const statStrip = innermost(page, '[data-slot="card"]', "Total size");
+    const statStrip = innermost(
+      page,
+      '[data-querylane-slot="card"]',
+      "Total size"
+    );
     await expectPassiveSparkline(page, statStrip);
     await expect(statStrip).toHaveScreenshot(
       "backend-database-overview-stat-strip-mobile.png"
@@ -310,19 +314,21 @@ test.describe("database overview", () => {
       await drawer
         .getByRole("textbox", { name: "Search queries…" })
         .fill("SELECT");
-      await drawer.getByRole("button", { name: "Type" }).click();
-      await page
-        .getByRole("menuitemcheckbox", { name: "Read queries" })
-        .click();
+      await drawer.getByRole("combobox", { name: "Type" }).click();
+      await page.getByRole("option", { name: "Read queries" }).click();
       await drawer.getByText("Top queries by total time").click();
       await expect(
-        drawer.getByRole("button", { name: "Type Read queries" })
+        drawer.getByRole("combobox", { name: "Type Read queries" })
       ).toBeVisible();
       await expect(
         drawer.getByRole("button", { name: "Clear all" })
       ).toBeVisible();
       await expect(
-        innermost(page, '[data-slot="card"]', "Top queries by total time")
+        innermost(
+          page,
+          '[data-querylane-slot="card"]',
+          "Top queries by total time"
+        )
       ).toHaveScreenshot("backend-database-query-insights-active-filters.png");
     });
   });

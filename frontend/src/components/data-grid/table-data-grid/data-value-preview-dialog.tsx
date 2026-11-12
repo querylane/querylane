@@ -8,6 +8,7 @@ function DataValuePreviewDialog({
   format,
   isTruncated,
   onOpenChange,
+  open,
   raw,
   rawType,
 }: {
@@ -16,6 +17,7 @@ function DataValuePreviewDialog({
   format: "JSON" | "text";
   isTruncated: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
   raw: string;
   rawType: string;
 }) {
@@ -29,7 +31,7 @@ function DataValuePreviewDialog({
       }
       isTruncated={isTruncated}
       onOpenChange={onOpenChange}
-      open={true}
+      open={open}
       raw={raw}
       title={`${columnName} ${format}`}
     >

@@ -1,5 +1,4 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
@@ -7,6 +6,7 @@ import * as actualRouter from "@tanstack/react-router" with {
 import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
 import { RoleDetailPage } from "@/components/console-pages/role-detail-page";
 import { DatabaseService } from "@/protogen/querylane/console/v1alpha1/database_pb";
@@ -162,11 +162,11 @@ test("console roles list shows an inline type filter, sortable columns, and role
     .element(page.getByRole("tab", { name: "Access map" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Type" }))
+    .element(page.getByRole("combobox", { name: "Type" }))
     .toBeVisible();
   const tabList = screen.getByRole("tablist");
   const search = screen.getByPlaceholderText("Search roles…");
-  const typeFilter = screen.getByRole("button", { name: "Type" });
+  const typeFilter = screen.getByRole("combobox", { name: "Type" });
   expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
     search.getBoundingClientRect().right
   );
@@ -427,7 +427,7 @@ test("console role schema grants capture active shared filters", async () => {
 
   await page.getByRole("textbox", { name: "Search objects…" }).fill("orders");
   await expect
-    .element(page.getByRole("button", { name: "Kind Table" }))
+    .element(page.getByRole("combobox", { name: "Kind Table" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Clear all" }))

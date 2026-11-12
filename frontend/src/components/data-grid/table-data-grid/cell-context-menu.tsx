@@ -24,7 +24,7 @@ function CellContextMenu({
   returnFocusTo,
   top,
 }: CellContextMenuProps) {
-  // Point anchor at the right-click position; Base UI's positioner keeps the
+  // Point anchor at the right-click position; UI SDK keeps the
   // menu inside the viewport (flip/shift) near window edges.
   const anchor = {
     getBoundingClientRect: () => ({
@@ -53,6 +53,7 @@ function CellContextMenu({
         anchor={anchor}
         aria-label="Cell actions"
         className="w-auto min-w-40"
+        data-agent-hidden={true}
         finalFocus={() => returnFocusTo}
         sideOffset={0}
       >

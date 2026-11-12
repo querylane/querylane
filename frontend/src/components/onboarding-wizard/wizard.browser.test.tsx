@@ -1,11 +1,11 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { beforeEach, describe, expect, rs, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import {
   OnboardingBrowserHarness,
   ScreenshotFrame,
 } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
 import { OnboardingWizardContent } from "@/components/onboarding-wizard/wizard-content";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
@@ -26,7 +26,6 @@ import {
 
 const ADVANCED_CONNECTION_OPTIONS_RE = /Advanced connection options/u;
 const INVALID_CONNECTION_STRING_RE = /Invalid connection string/u;
-const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 
 rs.mock("@/hooks/api/instance", () => ({
   useTestInstanceConnectionMutation: () => ({
@@ -122,10 +121,7 @@ describe("onboarding wizard — browser behavior", () => {
 
     const continueButton = page.getByRole("button", { name: "Continue" });
     await expect.element(continueButton).toBeDisabled();
-    await page
-      .locator(TOOLTIP_TRIGGER_SELECTOR)
-      .filter({ has: continueButton })
-      .hover();
+    await continueButton.hover();
     await expect
       .element(page.getByText("Test this connection before continuing.").last())
       .toBeVisible();
@@ -298,4 +294,13 @@ describe("onboarding wizard — browser behavior", () => {
       .toBeVisible();
     await expect.element(page.getByText("Ready to go!")).toBeVisible();
   });
+});
+
+test("UI-configured numeric port stays blank while being edited", async () => {
+  await openConfigurePhase("ui_configured");
+  const port = page.getByLabel("Port");
+  await port.fill("");
+  await expect.element(port).toHaveValue("");
+  await port.fill("6432");
+  await expect.element(port).toHaveValue("6432");
 });

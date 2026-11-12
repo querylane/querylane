@@ -1,4 +1,4 @@
-import type { SelectRoot } from "@base-ui/react/select";
+import type { SelectProps } from "@ui-sdk/react/select";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import {
@@ -7,8 +7,6 @@ import {
   SelectGroup as BaseSelectGroup,
   SelectItem as BaseSelectItem,
   SelectLabel as BaseSelectLabel,
-  SelectScrollDownButton as BaseSelectScrollDownButton,
-  SelectScrollUpButton as BaseSelectScrollUpButton,
   SelectSeparator as BaseSelectSeparator,
   SelectTrigger as BaseSelectTrigger,
   SelectValue as BaseSelectValue,
@@ -16,9 +14,9 @@ import {
 import { cn } from "@/lib/utils";
 
 function Select<Value, Multiple extends boolean | undefined = false>(
-  props: SelectRoot.Props<Value, Multiple>
+  props: SelectProps<Value, Multiple>
 ) {
-  return <BaseSelect {...props} />;
+  return <BaseSelect<Value, Multiple> {...props} />;
 }
 
 const selectContentPresentations = cva("", {
@@ -57,7 +55,7 @@ function SelectItem({
   return (
     <BaseSelectItem
       className={cn(
-        "[&>div:first-child]:!min-w-0 [&>div:first-child]:!shrink [&>div:first-child]:!flex-col [&>div:first-child]:!items-start [&>div:first-child]:!gap-0.5 [&>div:first-child]:!whitespace-normal",
+        "[&>[data-querylane-slot=select-item-text]]:min-w-0 [&>[data-querylane-slot=select-item-text]]:shrink [&>[data-querylane-slot=select-item-text]]:flex-col [&>[data-querylane-slot=select-item-text]]:items-start [&>[data-querylane-slot=select-item-text]]:gap-0.5 [&>[data-querylane-slot=select-item-text]]:whitespace-normal",
         presentation === "onboarding" &&
           "rounded-xl px-4 py-3 text-white focus:bg-white/7 focus:text-white",
         className
@@ -69,18 +67,6 @@ function SelectItem({
 
 function SelectLabel(props: ComponentProps<typeof BaseSelectLabel>) {
   return <BaseSelectLabel {...props} />;
-}
-
-function SelectScrollDownButton(
-  props: ComponentProps<typeof BaseSelectScrollDownButton>
-) {
-  return <BaseSelectScrollDownButton {...props} />;
-}
-
-function SelectScrollUpButton(
-  props: ComponentProps<typeof BaseSelectScrollUpButton>
-) {
-  return <BaseSelectScrollUpButton {...props} />;
 }
 
 function SelectSeparator(props: ComponentProps<typeof BaseSelectSeparator>) {
@@ -121,8 +107,6 @@ export {
   SelectGroup,
   SelectItem,
   SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
   SelectSeparator,
   SelectTrigger,
   SelectValue,

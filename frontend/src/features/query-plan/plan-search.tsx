@@ -27,8 +27,8 @@ function PlanSearch({
         <Input
           aria-label="Search plan operators"
           className="h-7"
-          onChange={(event) => {
-            setQuery(event.target.value);
+          onValueChange={(value) => {
+            setQuery(value);
           }}
           placeholder="Search operators, relations or indexes"
           presentation="compact"

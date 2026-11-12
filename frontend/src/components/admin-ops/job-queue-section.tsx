@@ -10,8 +10,8 @@ import {
 import { AsyncSectionState } from "@/components/async-section-state";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import { Button } from "@/components/ui/button";
-import type { DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import {
   Select,
   SelectContent,

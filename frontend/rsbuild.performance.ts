@@ -63,7 +63,8 @@ const managedChunkCacheGroups = {
     name: "sql-editor",
     priority: 31,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/u,
+    // The SQL-only UI SDK resizer belongs with the editor, not shared UI.
+    test: /[/\\]node_modules[/\\](?:(?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]|@ui-sdk[/\\](?:core[/\\]dist[/\\]components[/\\]resizable[/\\]|react[/\\]dist[/\\]resizable\.))/u,
   },
   // The PostgreSQL grammar and the Lezer runtime load alongside the editor
   // core; keeping them apart holds each chunk under the async script cap.
@@ -93,7 +94,7 @@ const managedChunkCacheGroups = {
     name: "ui-vendor",
     priority: 10,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@base-ui|lucide-react)[/\\]/u,
+    test: /[/\\]node_modules[/\\](?:@ui-sdk|lucide-react)[/\\]/u,
   },
 } satisfies NonNullable<SplitChunksConfig["cacheGroups"]>;
 

@@ -7,7 +7,6 @@ import {
   DropdownMenuGroup as BaseDropdownMenuGroup,
   DropdownMenuItem as BaseDropdownMenuItem,
   DropdownMenuLabel as BaseDropdownMenuLabel,
-  DropdownMenuPortal as BaseDropdownMenuPortal,
   DropdownMenuRadioGroup as BaseDropdownMenuRadioGroup,
   DropdownMenuRadioItem as BaseDropdownMenuRadioItem,
   DropdownMenuSeparator as BaseDropdownMenuSeparator,
@@ -84,11 +83,6 @@ function DropdownMenuGroup(
 ) {
   return <BaseDropdownMenuGroup {...props} />;
 }
-function DropdownMenuPortal(
-  props: ComponentProps<typeof BaseDropdownMenuPortal>
-) {
-  return <BaseDropdownMenuPortal {...props} />;
-}
 function DropdownMenuRadioGroup(
   props: ComponentProps<typeof BaseDropdownMenuRadioGroup>
 ) {
@@ -135,7 +129,6 @@ export {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,

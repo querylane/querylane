@@ -98,8 +98,8 @@ function CommandDialog({
   showCloseButton = false,
   ...props
 }: ComponentProps<typeof BaseCommandDialog>) {
-  // Keep naming content inside the portal: the registry implementation renders
-  // it beside the dialog, exposing a closed palette's text to screen readers.
+  // Keep the title and description in the SDK content so they name only
+  // the open palette.
   return (
     <Dialog {...props}>
       <DialogContent

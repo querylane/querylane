@@ -1,31 +1,17 @@
-# Querylane UI extensions
+# Querylane UI
 
-Keep `src/components/ui/*` as shadcn registry output. Put Querylane-specific variants, forks, and wrappers here instead.
+`src/components/ui` owns styled UI SDK primitives. This directory owns Querylane-specific variants and compositions. Both directories receive the full quality gates; neither is vendored registry output.
 
-Prefer thin wrappers around `@/components/ui/*`. Only fork shadcn internals here when the upstream UI component does not expose the behavior as props or class hooks.
+Use UI SDK parts for interaction behavior and keep existing `variant`, `size`, and finite `presentation` APIs for appearance. Consumers should only pass layout classes. Variant functions and shared types live in separate modules for Fast Refresh.
 
-Wrapper modules should export the whole matching component family so consumers import from 1 place, for example `Sidebar` and `SidebarProvider` both from `@/components/querylane-ui/sidebar`.
+UI SDK owns `data-slot`. Querylane styling and test hooks use `data-querylane-slot` so they cannot replace the SDK's behavior hooks. State selectors follow the SDK's documented attributes, such as `data-selected` and `data-orientation`.
 
-SQL highlighting is Querylane-owned, not a shadcn registry item. Its implementation
-and tests live here alongside the Bash highlighter.
+The sidebar picker uses UI SDK Combobox with an in-popup search field. The navigation drawer uses UI SDK's horizontal Drawer. Specialized CodeMirror, data-grid, chart, and graph engines remain unchanged.
 
-The sidebar combobox and navigation drawer also live here. They preserve the
-popup-contained search, asynchronous database selection, horizontal swipe and
-reduced-motion behavior. Import their complete families from
-`@/components/querylane-ui/combobox` and `@/components/querylane-ui/drawer`, not
-the registry's input-first combobox or snap-point drawer. Their existing consumer
-props and behavior are unchanged.
-The non-component `createComboboxItems` helper has a direct import from
-`@/components/querylane-ui/combobox-items` so component modules support Fast Refresh.
+The package-matched API documentation is in `node_modules/@ui-sdk/react/docs/llms.txt`. UI SDK is pinned to `0.1.0-beta.1`; upgrades must rerun keyboard, focus, accessibility, and visual checks.
 
-## Lint contracts
+## Agent access
 
-Use finite `presentation` variants for Querylane appearance; keep consumer
-`className` values limited to layout. Registry `variant` and `size` props still
-apply. Add reusable semantic choices, not unrestricted class-valued props.
+The header's agent-access control opts the current tab into WebMCP. It is off after every reload. Every `act` step requires approval; read-only SDK discovery may briefly open a popup to inspect its choices. Disabling access cancels pending approval and unregisters the tools. Password and connection-string fields are secret even when a password is visible; Onboarding, the SQL workbench, and row data (including full-value dialogs and query plans) are hidden from the bridge. Saving or creating instance connections, materialized-view refreshes, destructive buttons, and submit buttons carry `data-agent-confirm` and remain human-operated. Mark other sensitive final actions explicitly when adding them.
 
-Oxlint discovers both UI directories. Like the upstream registry preset,
-Querylane component authors may compose sibling appearance and variant functions.
-Raw colors, arbitrary values, inline styles, and unknown classes remain checked
-here; every shadcn rule remains enabled for consumers. The external class markers
-in `oxlint.config.ts` name actual stylesheet or library interaction contracts.
+These permissions govern UI SDK tools, not arbitrary same-origin JavaScript or browser automation. Browsers without WebMCP do not register tools. No backend agent endpoint or credential persistence is added.

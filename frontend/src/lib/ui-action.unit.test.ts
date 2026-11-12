@@ -8,7 +8,7 @@ const mocks = rs.hoisted(() => ({
 }));
 
 rs.mock("@/lib/diagnostics", () => ({ captureException: mocks.capture }));
-rs.mock("sonner", () => ({ toast: { error: mocks.toast } }));
+rs.mock("@ui-sdk/react/toast", () => ({ toast: { error: mocks.toast } }));
 
 describe("handleAsyncAction", () => {
   test("allows an action to return early without creating a promise", () => {

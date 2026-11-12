@@ -11,16 +11,11 @@ import {
   presentCatalogObjectKindOptions,
 } from "@/components/console-pages/database-overview-filters";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
+import { DataTable, SortableHeader } from "@/components/ui/data-table";
+import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter-types";
+import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/ui/data-table-filter-toolbar-types";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CatalogSyncNotice } from "@/features/data-explorer/catalog-sync-notice";
 import type { SchemaSummary } from "@/features/data-explorer/data-explorer-model";
@@ -541,7 +536,10 @@ function SchemaDetail({
 
       <Tabs
         className="min-h-0 flex-1 flex-col"
-        onValueChange={(next: string) => {
+        onValueChange={(next: string | null) => {
+          if (next === null) {
+            return;
+          }
           if (next === "objects" || next === "map") {
             onTabChange(next);
           }

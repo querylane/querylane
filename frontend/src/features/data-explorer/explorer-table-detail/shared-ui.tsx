@@ -3,8 +3,9 @@ import { RefreshCw, X } from "lucide-react";
 import { AppInlineError } from "@/components/app-error-view";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import { Button } from "@/components/querylane-ui/button";
-import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { DataTable } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {
@@ -37,7 +38,7 @@ function FacetFilterBar({ filters }: { filters: FacetFilterDefinition[] }) {
   return (
     <div
       className="flex min-w-0 flex-wrap items-center gap-2"
-      data-slot="facet-filter-bar"
+      data-querylane-slot="facet-filter-bar"
     >
       {visibleFilters.map((filter) => (
         <DataTableFacetedFilter

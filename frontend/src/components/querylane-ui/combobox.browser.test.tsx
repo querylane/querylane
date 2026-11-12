@@ -1,8 +1,8 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import {
   Combobox,
   ComboboxContent,
@@ -12,7 +12,6 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
-import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
 
 interface DatabaseOption {
   id: string;
@@ -26,17 +25,9 @@ function AsyncDatabasePicker({
   options: readonly DatabaseOption[];
   onValueChange: (id: string | null) => void;
 }) {
-  const items = createComboboxItems(options, {
-    getLabel: (database) => database.name,
-    getValue: (database) => database.id,
-  });
   return (
     <ScreenshotFrame>
-      <Combobox
-        autoHighlight={true}
-        items={items}
-        onValueChange={onValueChange}
-      >
+      <Combobox onValueChange={onValueChange}>
         <ComboboxTrigger aria-label="Pick database">
           Pick database
         </ComboboxTrigger>
@@ -44,11 +35,15 @@ function AsyncDatabasePicker({
           <ComboboxInput aria-label="Search databases" />
           <ComboboxEmpty>No databases found</ComboboxEmpty>
           <ComboboxList>
-            {(database: DatabaseOption) => (
-              <ComboboxItem key={database.id} value={database.id}>
+            {options.map((database: DatabaseOption) => (
+              <ComboboxItem
+                key={database.id}
+                label={database.name}
+                value={database.id}
+              >
                 {database.name}
               </ComboboxItem>
-            )}
+            ))}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
@@ -61,7 +56,10 @@ test("async results highlight after typing and duplicate labels retain distinct 
   const { rerender } = await render(
     <AsyncDatabasePicker onValueChange={onValueChange} options={[]} />
   );
-  await page.getByRole("combobox", { name: "Pick database" }).click();
+  await expect
+    .element(page.getByRole("button", { name: "Pick database" }))
+    .toHaveAttribute("aria-haspopup", "listbox");
+  await page.getByRole("button", { name: "Pick database" }).click();
   const input = page.getByRole("combobox", { name: "Search databases" });
   await input.fill("reports");
   await expect.element(page.getByText("No databases found")).toBeVisible();
@@ -89,6 +87,6 @@ test("async results highlight after typing and duplicate labels retain distinct 
   );
   await expect.element(page.getByRole("listbox")).toBeDetached();
   await expect
-    .element(page.getByRole("combobox", { name: "Pick database" }))
+    .element(page.getByRole("button", { name: "Pick database" }))
     .toBeFocused();
 });

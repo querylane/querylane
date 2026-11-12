@@ -1,9 +1,9 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { beforeEach, expect, rs, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
@@ -201,7 +201,7 @@ const extensionsPage = (
 );
 
 function cardRect(label: string) {
-  const card = screen.getByText(label).closest('[data-slot="card"]');
+  const card = screen.getByText(label).closest('[data-querylane-slot="card"]');
   if (!(card instanceof HTMLElement)) {
     throw new TypeError(`Expected ${label} card`);
   }
@@ -259,13 +259,13 @@ test("backend instance overview shows live metrics and database catalog together
     .element(page.getByPlaceholder("Search databases…"))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Kind" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Kind" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Encoding" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Encoding" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Owner" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Owner" }))
     .toBeVisible();
   await expect.element(page.getByText("customer_events")).toBeVisible();
 });
@@ -341,15 +341,15 @@ test("backend instance activity matches the live sessions redesign", async () =>
   const search = page.getByRole("textbox", {
     name: "Search query, user, app…",
   });
-  const stateFilter = page.getByRole("button", {
+  const stateFilter = page.getByRole("combobox", {
     exact: true,
     name: "State",
   });
-  const appFilter = page.getByRole("button", {
+  const appFilter = page.getByRole("combobox", {
     exact: true,
     name: "App",
   });
-  const databaseFilter = page.getByRole("button", {
+  const databaseFilter = page.getByRole("combobox", {
     exact: true,
     name: "DB",
   });
@@ -366,7 +366,7 @@ test("backend instance activity matches the live sessions redesign", async () =>
     .getByRole("textbox", { name: "Search query, user, app…" })
     .getBoundingClientRect();
   const filterBoxes = ["State", "App", "DB"].map((name) =>
-    screen.getByRole("button", { name }).getBoundingClientRect()
+    screen.getByRole("combobox", { name }).getBoundingClientRect()
   );
   expect(searchBox.right).toBeLessThan(filterBoxes[0]?.left ?? 0);
   expect(filterBoxes[0]?.right ?? 0).toBeLessThan(filterBoxes[1]?.left ?? 0);
@@ -580,10 +580,7 @@ test("disabled Insights explains why statistics are unavailable", async () => {
 
   const button = page.getByRole("button", { name: "Insights", exact: true });
   await expect.element(button).toBeDisabled();
-  await page
-    .locator("[data-base-ui-tooltip-trigger]")
-    .filter({ has: button })
-    .hover();
+  await button.hover();
   await expect
     .element(
       page.getByText(
@@ -617,12 +614,12 @@ test("query insights active filters match the shared toolbar", async () => {
   await expect.element(drawer).toBeVisible();
 
   await drawer.getByRole("textbox", { name: "Search queries…" }).fill("SELECT");
-  await drawer.getByRole("button", { name: "Type" }).click();
-  await page.getByRole("menuitemcheckbox", { name: "Read queries" }).click();
+  await drawer.getByRole("combobox", { name: "Type" }).click();
+  await page.getByRole("option", { name: "Read queries" }).click();
   await drawer.getByText("Top queries by total time").click();
 
   await expect
-    .element(drawer.getByRole("button", { name: "Type Read queries" }))
+    .element(drawer.getByRole("combobox", { name: "Type Read queries" }))
     .toBeVisible();
   await expect
     .element(drawer.getByRole("button", { name: "Clear all" }))
@@ -643,7 +640,7 @@ test("partial query insights use the full drawer content width", async () => {
 
   const topQueriesCard = screen
     .getByText("Top queries by total time")
-    .closest('[data-slot="card"]');
+    .closest('[data-querylane-slot="card"]');
   if (!(topQueriesCard instanceof HTMLElement)) {
     throw new TypeError("Expected top queries card");
   }

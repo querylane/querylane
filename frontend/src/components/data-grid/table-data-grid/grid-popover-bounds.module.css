@@ -1,0 +1,6 @@
+.bounded {
+  min-inline-size: 0;
+  max-inline-size: var(--grid-popup-max-width);
+  overflow: auto;
+  translate: var(--grid-popup-offset-x, 0) 0;
+}

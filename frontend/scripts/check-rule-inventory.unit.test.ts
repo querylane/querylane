@@ -253,8 +253,9 @@ test.each([
   },
   {
     config: "biome.jsonc",
-    original: '"src/components/ui/**",',
-    replacement: '"src/components/ui/**", "src/features/**",',
+    original: '"includes": ["src/routeTree.gen.ts", "src/protogen/**"]',
+    replacement:
+      '"includes": ["src/routeTree.gen.ts", "src/protogen/**", "src/features/**"]',
     rule: "authored source presented as generated",
     message: "Quality engine cannot be disabled",
   },

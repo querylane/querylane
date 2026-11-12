@@ -16,10 +16,8 @@ import { useState } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import {
   Tooltip,
   TooltipContent,
@@ -223,7 +221,7 @@ function IndexSummaryStrip({
   return (
     <p
       className="font-mono text-xs text-muted-foreground"
-      data-slot="index-summary-strip"
+      data-querylane-slot="index-summary-strip"
     >
       {segments.join(" · ")}
       {invalidCount > 0 ? (

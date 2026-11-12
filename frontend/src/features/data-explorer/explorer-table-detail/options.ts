@@ -10,7 +10,8 @@ import {
   Rows3,
   ShieldCheck,
 } from "lucide-react";
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
+import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter-types";
+
 import type {
   ColumnDefaultFilter,
   ColumnGenerationFilter,

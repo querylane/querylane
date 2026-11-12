@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
+import { render } from "@/__tests__/render-ui";
 import { DataGridCheckbox } from "@/components/data-grid/table-data-grid/data-grid-checkbox";
 
 test("renders the select-all indeterminate state without a tooltip layer", async () => {

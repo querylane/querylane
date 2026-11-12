@@ -21,7 +21,7 @@ const DEVELOPMENT_PROFILER_PATTERN =
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
-// CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
+// CodeMirror (+ lang-sql, lezer), sql-formatter and the UI SDK resizer
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
 // 203 (was 200): align CodeMirror/Lezer singletons after the security lock refresh.
@@ -45,7 +45,7 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 970 (was 960): main sat at 959.8; the SQL workbench adds ~6.5 KiB of
 // shared code (its icons in ui-vendor, field/resizable wrappers in
 // shared-ui, the route stub). Its own sources, CodeMirror, sql-formatter and
-// react-resizable-panels are guarded by the deferred SQL editor budget.
+// the UI SDK resizer are guarded by the deferred SQL editor budget.
 // 960 (was 950): the instance overview metrics/health work landed at 950.2,
 // exactly at the previous line. Deferred database visualization chunks are
 // split out and guarded by a separate feature budget.
@@ -262,8 +262,6 @@ function isDeferredSqlEditorAsset(distDir: string, relativePath: string) {
       normalizedSource.includes("node_modules/@codemirror/") ||
       normalizedSource.includes("node_modules/@lezer/") ||
       normalizedSource.includes("node_modules/sql-formatter/") ||
-      // Only the workbench's editor/results split uses resizable panels.
-      normalizedSource.includes("node_modules/react-resizable-panels/") ||
       normalizedSource.includes("src/features/sql-workbench/")
     );
   });

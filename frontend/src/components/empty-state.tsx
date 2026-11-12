@@ -29,7 +29,7 @@ export function EmptyState({
   return (
     <Empty
       className={cn("min-h-64", className)}
-      data-slot="app-empty-state"
+      data-querylane-slot="app-empty-state"
       presentation={presentation}
     >
       <EmptyHeader>

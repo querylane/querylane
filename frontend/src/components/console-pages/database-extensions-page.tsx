@@ -215,8 +215,8 @@ function LedgerToolbar({
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             aria-label="Search extensions…"
-            onChange={(event) => {
-              onSearchChange(event.target.value);
+            onValueChange={(value) => {
+              onSearchChange(value);
             }}
             placeholder="Search extensions…"
             presentation="search"
@@ -224,7 +224,10 @@ function LedgerToolbar({
           />
         </div>
         <Tabs
-          onValueChange={(value: string) => {
+          onValueChange={(value: string | null) => {
+            if (value === null) {
+              return;
+            }
             if (
               value === "All" ||
               value === "installed" ||

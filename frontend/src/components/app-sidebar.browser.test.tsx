@@ -1,6 +1,5 @@
 import { TransportProvider } from "@connectrpc/connect-query";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { afterEach, expect, rs, test } from "@rstest/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -12,9 +11,9 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { render } from "@/__tests__/render-ui";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/querylane-ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { assertNever } from "@/lib/assert-never";
 import { getDefaultPreload } from "@/lib/router-options";
 import { ConsoleService } from "@/protogen/querylane/console/v1alpha1/console_pb";
@@ -46,14 +45,12 @@ rs.mock("@/components/querylane-ui/command-palette-context", () => ({
 function SidebarIntentShell() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="sidebar-intent-test-theme">
-      <TooltipProvider>
-        <SidebarProvider>
-          <AppSidebar />
-          <main>
-            <Outlet />
-          </main>
-        </SidebarProvider>
-      </TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <main>
+          <Outlet />
+        </main>
+      </SidebarProvider>
     </ThemeProvider>
   );
 }

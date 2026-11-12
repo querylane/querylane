@@ -1,6 +1,6 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
+import { render } from "@/__tests__/render-ui";
 import { FlowCanvas } from "./flow-canvas";
 
 test("minimap preserves the card surface in both themes", async () => {

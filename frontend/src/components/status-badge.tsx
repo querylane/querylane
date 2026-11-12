@@ -27,7 +27,7 @@ function StatusBadge({
   return (
     <span
       className={cn(statusBadgeVariants({ variant }), className)}
-      data-slot="status-badge"
+      data-querylane-slot="status-badge"
       {...props}
     />
   );

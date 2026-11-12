@@ -71,7 +71,7 @@ test.describe("desktop shell", () => {
     await expect(banner).toBeVisible();
     const bannerBox = await banner.boundingBox();
     const sidebarBox = await page
-      .locator('[data-slot="sidebar-container"]')
+      .locator('[data-querylane-slot="sidebar-container"]')
       .boundingBox();
     expect(sidebarBox?.width ?? 0).toBeGreaterThan(0);
     expect(bannerBox?.x ?? 0).toBeGreaterThanOrEqual(

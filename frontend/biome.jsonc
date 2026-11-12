@@ -1087,7 +1087,6 @@
       "!!**/test-results",
       "!!**/opensrc",
       "!!src/protogen",
-      "!!src/components/ui",
       "!src/routeTree.gen.ts",
       "!!**/bun.lock",
       "!!**/bun.lockb"
@@ -1095,11 +1094,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/components/ui/**",
-        "src/routeTree.gen.ts",
-        "src/protogen/**"
-      ],
+      "includes": ["src/routeTree.gen.ts", "src/protogen/**"],
       "linter": {
         "enabled": false
       },

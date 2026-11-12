@@ -39,11 +39,11 @@ const alertPresentations = cva("", {
       "onboarding-warning": "border-warning-400/20 bg-warning-500/6",
       "onboarding-notice": "border-warning-400/25 bg-warning-500/8",
       "responsive-action":
-        "has-data-[slot=alert-action]:pr-4 sm:has-data-[slot=alert-action]:pr-44",
+        "has-data-[querylane-slot=alert-action]:pr-4 sm:has-data-[querylane-slot=alert-action]:pr-44",
       compact: "px-3 py-2",
-      insights: "has-data-[slot=alert-action]:pr-4",
+      insights: "has-data-[querylane-slot=alert-action]:pr-4",
       "insights-error":
-        "border-destructive/30 bg-destructive/5 has-data-[slot=alert-action]:pr-4",
+        "border-destructive/30 bg-destructive/5 has-data-[querylane-slot=alert-action]:pr-4",
     },
   },
 });

@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "@rstest/core";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 
 afterEach(cleanup);
 

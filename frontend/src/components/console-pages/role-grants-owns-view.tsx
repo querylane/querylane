@@ -1,5 +1,3 @@
-"use client";
-
 import { Crown, Info, Plus } from "lucide-react";
 import { useState } from "react";
 import {
@@ -36,10 +34,8 @@ import {
   PopoverTrigger,
 } from "@/components/querylane-ui/popover";
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import {
   buildOwnedFilter,

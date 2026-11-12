@@ -18,7 +18,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { z } from "zod";
 import { UrlListColumnsProvider } from "@/components/list-columns-provider";
-import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { listColumnsSearchSchema } from "@/lib/list-columns";
 
 afterEach(cleanup);

@@ -49,7 +49,7 @@ function PlanFindings({
       >
         {findings.map(({ node, label }) => (
           <DropdownMenuItem
-            closeOnClick={true}
+            closeOnSelect={true}
             key={`${node.id}:${label}`}
             onClick={() => {
               onSelect(node);

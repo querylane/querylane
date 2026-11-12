@@ -88,7 +88,7 @@ interface ReportAppUiErrorDependencies {
     error: (
       message: string,
       options?: {
-        action?: { label: string; onClick: () => void };
+        action?: { label: string; onAction: () => void };
         description?: string;
         id?: string;
       }

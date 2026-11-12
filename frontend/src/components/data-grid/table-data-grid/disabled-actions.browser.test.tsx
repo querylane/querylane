@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { type Locator, page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
+import { render } from "@/__tests__/render-ui";
 import { ColumnHeaderMenu } from "@/components/data-grid/table-data-grid/column-header-menu";
 import { ColumnsPopover } from "@/components/data-grid/table-data-grid/columns-popover";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
@@ -28,7 +28,9 @@ function column(name: string): TableResultColumn {
 // Disabled controls cannot receive pointer events, so the tooltip hangs off
 // the nearest tooltip trigger: either the control itself or its wrapper.
 async function hoverTooltipTrigger(control: Locator) {
-  const tooltipTrigger = page.locator('[data-slot="tooltip-trigger"]');
+  const tooltipTrigger = page.locator(
+    '[data-querylane-slot="tooltip-trigger"]'
+  );
   await tooltipTrigger
     .filter({ has: control })
     .or(tooltipTrigger.and(control))

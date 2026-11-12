@@ -1,8 +1,7 @@
-"use client";
-
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, Lock, Monitor, Plus } from "lucide-react";
 import React from "react";
+import { AgentAccessToggle } from "@/components/agent-access";
 import { RoleKindBadge } from "@/components/console-pages/role-kind-badge";
 import {
   Command,
@@ -31,7 +30,8 @@ import { SidebarTrigger } from "@/components/querylane-ui/sidebar";
 import { Spinner } from "@/components/querylane-ui/spinner";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { ThemeModeMenu } from "@/components/theme-mode-menu";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+
 import {
   Tooltip,
   TooltipContent,
@@ -280,6 +280,7 @@ function BreadcrumbDropdown({
     return (
       <Tooltip>
         <TooltipTrigger
+          aria-label={breadcrumbTriggerAriaLabel(label, value)}
           render={
             <div
               className={cn(
@@ -313,7 +314,9 @@ function BreadcrumbDropdown({
       <PopoverContent align="start" presentation="detail" width={contentWidth}>
         <Command
           filter={(optionValue, search) =>
-            optionValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+            optionValue.value.toLowerCase().includes(search.toLowerCase())
+              ? 1
+              : 0
           }
         >
           <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />
@@ -470,7 +473,10 @@ function RegisterInstanceCommand({
   if (isConfigManaged) {
     return (
       <Tooltip>
-        <TooltipTrigger render={<div className="cursor-not-allowed" />}>
+        <TooltipTrigger
+          aria-label="Register instance"
+          render={<div className="cursor-not-allowed" />}
+        >
           <CommandItem
             disabled={true}
             presentation="secondary"
@@ -776,6 +782,7 @@ function AdminHeaderActions({
           </span>
         )}
       </a>
+      <AgentAccessToggle />
       <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />
     </div>
   );

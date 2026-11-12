@@ -316,7 +316,7 @@ function PlanMetricControls({
     <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <Select
-          items={METRICS}
+          items={[...METRICS]}
           onValueChange={(value) => {
             if (value) {
               onMetric(value);
@@ -463,7 +463,11 @@ function PlanExplorer({
     <Tabs
       aria-label="Query plan"
       className="@container flex min-h-0 flex-1 flex-col"
-      onValueChange={(value: string) => {
+      data-agent-hidden={true}
+      onValueChange={(value: string | null) => {
+        if (value === null) {
+          return;
+        }
         setMode(value);
         setSelection({ id: selection.id, inspect: false });
         layoutRef.current?.scrollTo({ top: 0, left: 0 });
@@ -565,7 +569,11 @@ function PlanExplorer({
   return (
     <Dialog onOpenChange={setFocused} open={focused}>
       {!focused && content}
-      <DialogContent finalFocus={focusButtonRef} presentation="query-plan">
+      <DialogContent
+        data-agent-hidden={true}
+        finalFocus={() => focusButtonRef.current}
+        presentation="query-plan"
+      >
         <DialogTitle className="sr-only">Query plan</DialogTitle>
         {focused ? content : null}
       </DialogContent>
@@ -703,6 +711,7 @@ function ExplainPlanView({
       <Tabs
         aria-label="Query plan"
         className="flex min-h-0 flex-1 flex-col"
+        data-agent-hidden={true}
         presentation="flush"
         role="region"
         value="raw"

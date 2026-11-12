@@ -1,10 +1,10 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { NullValue } from "@bufbuild/protobuf/wkt";
 import { afterEach, describe, expect, rs, test } from "@rstest/core";
+import { toast } from "@ui-sdk/react/toast";
 import { isValidElement } from "react";
 import type { CalculatedColumn, Column } from "react-data-grid";
 import { renderToStaticMarkup } from "react-dom/server";
-import { toast } from "sonner";
 import { writeClipboard } from "@/components/data-grid/table-data-grid/grid-clipboard";
 import {
   buildColumn,
@@ -39,7 +39,7 @@ rs.mock("@/hooks/api/table-data", () => ({
   useReadRowsQueryActions: tableDataApi.useReadRowsQueryActions,
 }));
 
-rs.mock("sonner", () => ({
+rs.mock("@ui-sdk/react/toast", () => ({
   toast: {
     error: rs.fn(),
     success: rs.fn(),

@@ -139,7 +139,7 @@ describe("database extensions page", () => {
     await user.click(trigger);
 
     const drawer = screen.getByRole("dialog", { name: "pg_trgm details" });
-    expect(drawer.getAttribute("data-slot")).toBe("sheet-content");
+    expect(drawer.getAttribute("data-querylane-slot")).toBe("sheet-content");
     expect(within(drawer).getByText(INSTALLED_PG_TRGM_TEXT)).toBeTruthy();
     expect(within(drawer).getByText(SCHEMA_PUBLIC_TEXT)).toBeTruthy();
     expect(within(drawer).getByText("Try it")).toBeTruthy();

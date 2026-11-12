@@ -1,10 +1,11 @@
 import { create } from "@bufbuild/protobuf";
 import { page } from "@rstest/browser";
-import { act, render } from "@rstest/browser-react";
+import { act } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { InstanceMetricsPanel } from "@/components/console-pages/instance-metrics-panel";
 import { DEFAULT_METRIC_RANGE } from "@/lib/metrics";
 import {
