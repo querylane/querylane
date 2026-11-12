@@ -396,13 +396,15 @@ function ForeignKeyDataCell({
       >
         <span className="truncate">{formatted.display}</span>
       </PopoverTrigger>
-      {open ? (
-        <PopoverContent
-          align="start"
-          className="max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-hidden"
-          presentation="detail"
-          sideOffset={6}
-        >
+      <PopoverContent
+        align="start"
+        className="max-h-[calc(100dvh-1rem)] w-[min(28rem,calc(100vw-1rem))] overflow-hidden"
+        data-agent-hidden={true}
+        finalFocus={() => triggerRef.current}
+        presentation="detail"
+        sideOffset={6}
+      >
+        {open ? (
           <ForeignKeyReferenceContent
             onNavigate={() => {
               setOpen(false);
@@ -411,8 +413,8 @@ function ForeignKeyDataCell({
             renderOpenReferencedTableLink={renderOpenReferencedTableLink}
             request={request}
           />
-        </PopoverContent>
-      ) : null}
+        ) : null}
+      </PopoverContent>
     </Popover>
   );
 }

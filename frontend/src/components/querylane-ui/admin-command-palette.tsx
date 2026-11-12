@@ -89,7 +89,7 @@ const DEFAULT_DATABASE_OBJECT_LIMIT = 5;
 const SEARCH_DATABASE_OBJECT_LIMIT = 10;
 const SEARCH_ROLE_LIMIT = 5;
 const COMMAND_GROUP_CLASS_NAME =
-  "p-0 **:[[cmdk-group-heading]]:px-4 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1 **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-(length:--text-micro-lg) **:[[cmdk-group-heading]]:uppercase **:[[cmdk-group-heading]]:tracking-section";
+  "p-0 **:data-[querylane-slot=command-group-label]:px-4 **:data-[querylane-slot=command-group-label]:pt-2.5 **:data-[querylane-slot=command-group-label]:pb-1 **:data-[querylane-slot=command-group-label]:font-semibold **:data-[querylane-slot=command-group-label]:text-(length:--text-micro-lg) **:data-[querylane-slot=command-group-label]:uppercase **:data-[querylane-slot=command-group-label]:tracking-section";
 const COMMAND_ITEM_CLASS_NAME =
   "rounded-none! px-4 py-2 [&>svg:last-child]:hidden";
 
@@ -428,17 +428,17 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
-      label="Search tables, screens, roles, or saved queries"
-      shouldFilter={false}
+      aria-label="Search tables, screens, roles, or saved queries"
+      className="rounded-xl! p-0 [&_[data-querylane-slot=command-input-wrapper]]:p-0 [&_[data-querylane-slot=input-group-addon]]:pl-4! [&_[data-querylane-slot=input-group]]:h-[52px]! [&_[data-querylane-slot=input-group]]:rounded-none! [&_[data-querylane-slot=input-group]]:border-0! [&_[data-querylane-slot=input-group]]:border-b! [&_[data-querylane-slot=input-group]]:border-border! [&_[data-querylane-slot=input-group]]:bg-transparent! [&_[data-querylane-slot=input-group]]:shadow-none!"
+      filter={false}
+      onQueryChange={setQuery}
+      query={query}
     >
       <div className="relative">
         <CommandInput
           aria-label="Search tables, screens, roles, or saved queries"
           className="pr-16 text-sm"
-          onValueChange={setQuery}
           placeholder="Jump to a table, screen, role, or saved query…"
-          value={query}
         />
         <kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
           esc

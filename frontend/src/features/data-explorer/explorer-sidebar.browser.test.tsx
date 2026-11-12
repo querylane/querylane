@@ -1,8 +1,8 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByTestId } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { ExplorerSidebar } from "@/features/data-explorer/explorer-sidebar";
 
 const defaultSchema = {

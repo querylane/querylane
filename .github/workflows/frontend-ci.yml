@@ -83,8 +83,8 @@ jobs:
         run: bun run doctor:dead-code
       - name: Type check
         run: bun run type:check
-      - name: Verify shadcn registry sync
-        run: bun run scripts/check-shadcn-registry-sync.ts
+      - name: Verify UI SDK migration
+        run: bun run scripts/check-ui-sdk-migration.ts
 
   unit:
     needs: changes

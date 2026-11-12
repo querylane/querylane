@@ -98,3 +98,10 @@ All commits must follow: `type(scope): description`
 - Do not use raw `useQuery` / `useMutation` when ConnectRPC is available (exception: `useTransport`/`callUnaryMethod` pattern with `@connectrpc/connect` imports)
 - Protobuf v2: use `create(Schema, { ... })`. Do not construct messages as object literals with `$typeName`.
 - Protobuf v2: use Standard Schema + protovalidate as react-hook-form resolver instead of duplicating validation in Zod
+
+## UI SDK
+
+- Both UI directories are authored code. Never overwrite them with a shadcn registry command.
+- Read `node_modules/@ui-sdk/react/docs/llms.txt` and the relevant component docs before changing UI SDK usage. For a new behavior, also read the relevant headings in `docs/core.md` and `docs/rendering.md`.
+- UI SDK owns `data-slot`; app-owned styling hooks use `data-querylane-slot`.
+- State updates must use SDK change callbacks so agent actions update application state. Keep credentials secret, query results hidden, and sensitive final actions marked `data-agent-confirm`.

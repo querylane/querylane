@@ -15,14 +15,16 @@ import * as reactQueryActual from "@tanstack/react-query" with {
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "@ui-sdk/react/toast";
 import type { ReactNode } from "react";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
+import { Toaster } from "@/components/ui/toast";
 import type {
   PostgresDatabase,
   PostgresInstance,
@@ -601,8 +603,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  toast.dismiss();
   cleanup();
 });
+
+function render(ui: ReactNode) {
+  return renderReact(
+    <>
+      {ui}
+      <Toaster />
+    </>
+  );
+}
 
 async function renderInstanceConfiguration() {
   const result = render(
@@ -655,7 +667,7 @@ function metaDatabaseUnavailableError() {
 }
 
 function setFieldValue(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.input(screen.getByLabelText(label), { target: { value } });
 }
 
 describe("backend instance configuration save", () => {
@@ -763,7 +775,11 @@ describe("backend instance danger zone", () => {
       }),
       "instances/prod"
     );
-    await user.click(screen.getByRole("button", { name: "Delete instance" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete instance",
+      })
+    );
 
     await waitFor(() => {
       expect(state.deleteInstance).toHaveBeenCalledWith({
@@ -863,7 +879,14 @@ describe("backend instance overview redesign", () => {
 
     renderInstanceOverview();
 
-    const alert = screen.getByRole("alert");
+    const alert = screen
+      .getAllByRole("alert")
+      .find((element) =>
+        within(element).queryByText("Server info unavailable")
+      );
+    if (!alert) {
+      throw new Error("Expected the server info alert");
+    }
     expect(within(alert).getByText("Server info unavailable")).toBeTruthy();
     expect(
       within(alert).getByText(
@@ -961,8 +984,8 @@ describe("backend instance activity", () => {
     expect(within(table).getByText("4211")).toBeTruthy();
 
     await user.click(nextPage);
-    await user.click(within(activity).getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "active" }));
+    await user.click(within(activity).getByRole("combobox", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "active" }));
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
@@ -1137,16 +1160,16 @@ describe("backend instance database list", () => {
       name: "Search databases…",
     });
     expect(search).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Kind" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Encoding" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Kind" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Encoding" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Owner" })).toBeTruthy();
     const filterRail = search.parentElement?.parentElement;
     if (!filterRail) {
       throw new Error("Missing database filter rail");
     }
     expect(
       within(filterRail)
-        .getAllByRole("button")
+        .getAllByRole("combobox")
         .map((button) => button.textContent)
     ).toEqual(["Kind", "Owner", "Encoding"]);
 
@@ -1157,8 +1180,8 @@ describe("backend instance database list", () => {
     expect(screen.queryByText("postgres")).toBeNull();
 
     await user.clear(search);
-    await user.click(screen.getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "System" }));
+    await user.click(screen.getByRole("combobox", { name: "Kind" }));
+    await user.click(screen.getByRole("option", { name: "System" }));
 
     expect(
       await screen.findByRole("button", {

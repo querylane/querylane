@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@ui-sdk/react/toast";
 import { captureException } from "@/lib/diagnostics";
 import { normalizeAppUiError } from "@/lib/ui-error";
 

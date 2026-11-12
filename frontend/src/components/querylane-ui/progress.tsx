@@ -1,4 +1,8 @@
-import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
+import {
+  ProgressIndicator as ProgressPrimitiveIndicator,
+  Progress as ProgressPrimitiveRoot,
+} from "@ui-sdk/react/progress";
+import type * as React from "react";
 import { ProgressTrack as BaseProgressTrack } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -16,26 +20,28 @@ function Progress({
   density = "default",
   value,
   ...props
-}: ProgressPrimitive.Root.Props & {
+}: Omit<React.ComponentProps<typeof ProgressPrimitiveRoot>, "children"> & {
+  children?: React.ReactNode;
+} & {
   variant?: ProgressVariant;
   density?: "default" | "compact";
 }) {
   return (
-    <ProgressPrimitive.Root
+    <ProgressPrimitiveRoot
       className={cn(
         "flex flex-wrap",
         density === "compact" ? "gap-0" : "gap-3",
         className
       )}
-      data-slot="progress"
-      value={value}
+      data-querylane-slot="progress"
+      value={value ?? null}
       {...props}
     >
       {children}
       <BaseProgressTrack>
         <ProgressIndicator variant={variant} />
       </BaseProgressTrack>
-    </ProgressPrimitive.Root>
+    </ProgressPrimitiveRoot>
   );
 }
 
@@ -43,15 +49,17 @@ function ProgressIndicator({
   className,
   variant = "default",
   ...props
-}: ProgressPrimitive.Indicator.Props & { variant?: ProgressVariant }) {
+}: React.ComponentProps<typeof ProgressPrimitiveIndicator> & {
+  variant?: ProgressVariant;
+}) {
   return (
-    <ProgressPrimitive.Indicator
+    <ProgressPrimitiveIndicator
       className={cn(
         "h-full transition-all",
         progressIndicatorVariants[variant],
         className
       )}
-      data-slot="progress-indicator"
+      data-querylane-slot="progress-indicator"
       {...props}
     />
   );

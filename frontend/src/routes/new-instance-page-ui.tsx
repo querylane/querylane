@@ -167,8 +167,8 @@ export function CreateInstanceAdvancedSection({
                 isNonEmptyString(formErrors.instanceId) ? true : undefined
               }
               id={instanceIdInputId}
-              onChange={(event) => {
-                updateField("instanceId", event.target.value);
+              onValueChange={(value) => {
+                updateField("instanceId", value);
               }}
               placeholder="Auto-generated if left blank"
               value={formState.instanceId}
@@ -242,7 +242,9 @@ export function CreateInstanceActions({
   const createButton = (
     <Button
       aria-describedby={canCreate ? undefined : createInstanceTestHintId}
+      data-agent-confirm="Creates an instance connection with the current credentials. Ask the person to create it manually."
       disabled={isPending || isTesting || !canCreate}
+      focusableWhenDisabled={true}
       onClick={handleAsyncAction(handleCreate)}
     >
       {isPending ? (
@@ -269,11 +271,7 @@ export function CreateInstanceActions({
       </Button>
       {showCreateDisabledReason ? (
         <Tooltip>
-          <TooltipTrigger
-            render={<span className="inline-flex cursor-not-allowed" />}
-          >
-            {createButton}
-          </TooltipTrigger>
+          <TooltipTrigger render={createButton} />
           <TooltipContent>
             Test this connection before creating the instance.
           </TooltipContent>

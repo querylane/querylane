@@ -97,13 +97,11 @@ function ArrayPreviewDialog({
   open: boolean;
   parsed: ParsedArray;
 }) {
-  if (!open) {
-    return null;
-  }
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
         className="!flex max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100vw-2rem))] !max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
+        data-agent-hidden={true}
         presentation="spacious"
       >
         <DialogHeader className="shrink-0" presentation="closeable">
@@ -143,7 +141,7 @@ function ArrayPreview({
   raw,
   rawType,
 }: ArrayPreviewProps) {
-  const { onOpenChange, open, openDialog } = useDataValueDialogState();
+  const { mounted, onOpenChange, open, openDialog } = useDataValueDialogState();
   const parsed = parsePostgresArrayLiteral(raw);
   const itemCount = parsed.ok ? parsed.items.length : undefined;
   const summary =
@@ -195,16 +193,18 @@ function ArrayPreview({
       >
         <Maximize2 className="size-3" />
       </Button>
-      <ArrayPreviewDialog
-        columnName={columnName}
-        isTruncated={isTruncated}
-        keyedItems={keyedItems}
-        onOpenChange={onOpenChange}
-        open={open}
-        parsed={parsed}
-        raw={raw}
-        rawType={rawType}
-      />
+      {mounted ? (
+        <ArrayPreviewDialog
+          columnName={columnName}
+          isTruncated={isTruncated}
+          keyedItems={keyedItems}
+          onOpenChange={onOpenChange}
+          open={open}
+          parsed={parsed}
+          raw={raw}
+          rawType={rawType}
+        />
+      ) : null}
     </span>
   );
 }

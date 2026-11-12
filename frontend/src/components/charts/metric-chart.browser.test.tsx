@@ -1,8 +1,8 @@
 import { type Locator, page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { MetricChart, MetricSparkline } from "@/components/charts/metric-chart";
 import {
   CURRENT_LINE_SELECTOR,

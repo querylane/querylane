@@ -328,7 +328,7 @@ function NoRowsOverlay({
   return (
     <div
       className="pointer-events-none absolute inset-x-0 top-9 bottom-0 flex items-center justify-center p-6"
-      data-slot="grid-no-rows-overlay"
+      data-querylane-slot="grid-no-rows-overlay"
     >
       <Empty className="flex-none" presentation="borderless">
         <EmptyHeader>

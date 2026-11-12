@@ -1,8 +1,8 @@
 import { AdminSectionError } from "@/components/admin-ops/admin-section-error";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { SectionCard } from "@/components/console-pages/console-layout";
-import type { DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useListReplicasQuery } from "@/hooks/api/admin";
 import { formatRelativeTimestamp } from "@/lib/admin-ops";

@@ -195,15 +195,16 @@ function CreateInstanceConnectionFields({
             aria-invalid={
               isNonEmptyString(connectionStringError) ? true : undefined
             }
+            data-agent-secret={true}
             id={connectionStringId}
-            onChange={(event) => {
-              setConnectionStringValue(event.target.value);
-              setConnectionStringError(null);
-            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 handleApplyConnectionString();
               }
+            }}
+            onValueChange={(value) => {
+              setConnectionStringValue(value);
+              setConnectionStringError(null);
             }}
             placeholder="postgres://user:password@host:5432/database?sslmode=require"
             value={connectionStringValue}

@@ -41,7 +41,7 @@ function SslModeIcon({
       aria-hidden="true"
       className={cn("size-4 text-muted-foreground", className)}
       data-mode={mode}
-      data-slot="ssl-mode-icon"
+      data-querylane-slot="ssl-mode-icon"
     />
   );
 }
@@ -64,7 +64,7 @@ function SslModeSelectValue({
   const option = getSslModeOption(value);
   return (
     <SelectValue
-      className={className}
+      className={className ?? ""}
       placeholder={placeholder}
       presentation={presentation}
     >

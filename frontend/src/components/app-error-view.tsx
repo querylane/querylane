@@ -1,5 +1,3 @@
-"use client";
-
 import { Bug, Copy, SearchCode, TriangleExclamationPoint } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/querylane-ui/card";
@@ -13,7 +11,8 @@ import {
 } from "@/components/querylane-ui/dialog";
 import { Textarea } from "@/components/querylane-ui/textarea";
 import { RetryActionButton } from "@/components/retry-action-button";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import { handleAsyncAction } from "@/lib/ui-action";
 import type { AppUiError } from "@/lib/ui-error-types";

@@ -84,8 +84,8 @@ function BrowseDialogShell({
         </DialogHeader>
         <Input
           aria-label={`Search ${label.toLowerCase()} by name`}
-          onChange={(event) => {
-            onSearchChange(event.target.value);
+          onValueChange={(value) => {
+            onSearchChange(value);
           }}
           placeholder="Search by name…"
           value={search}

@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
+import { toast } from "@ui-sdk/react/toast";
 import { Check, Copy, Download, Expand, KeyRound, Minus } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import {
   writeClipboard,
   writeClipboardDeferred,
@@ -173,7 +173,7 @@ function RecordField({
       <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-1">
         <div
           className="flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1"
-          data-slot="record-field-value"
+          data-querylane-slot="record-field-value"
         >
           <RecordFieldValue formatted={formatted} />
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
+import { toast } from "@ui-sdk/react/toast";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
@@ -361,6 +361,7 @@ function SqlWorkbench({
   return (
     <Tabs
       className="h-full min-h-0 min-w-0 flex-1"
+      data-agent-hidden={true}
       onValueChange={(tabId) => {
         if (typeof tabId === "string") {
           store.setActiveTab(scope, tabId);
@@ -429,7 +430,7 @@ function SqlWorkbench({
           statementCount={statementCount}
         />
         <ResizablePanelGroup className="min-h-0 flex-1" orientation="vertical">
-          <ResizablePanel defaultSize="42" minSize="15">
+          <ResizablePanel defaultSize={42} minSize={15}>
             <div className="flex h-full min-h-0 flex-col">
               <SqlEditor
                 ariaLabel={`SQL editor, ${activeTab.title}`}
@@ -451,7 +452,7 @@ function SqlWorkbench({
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle={true} />
-          <ResizablePanel defaultSize="58" minSize="20">
+          <ResizablePanel defaultSize={58} minSize={20}>
             <SqlResultsPane
               activeTab={resultsTab}
               execution={activeExecution}

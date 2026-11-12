@@ -110,7 +110,7 @@ function SortPopover({
     ]);
   }
   const addSortControl = (
-    <Select disabled={!canAddMore} onValueChange={addColumn} value="">
+    <Select disabled={!canAddMore} onValueChange={addColumn} value={null}>
       <SelectTrigger
         aria-describedby={canAddMore ? undefined : addSortDisabledReasonId}
         aria-label="Add sort column"
@@ -225,6 +225,7 @@ function SortPopover({
         ) : (
           <Tooltip>
             <TooltipTrigger
+              aria-label="Add sort column"
               render={<span className="block cursor-not-allowed" />}
             >
               {addSortControl}

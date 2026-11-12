@@ -109,7 +109,7 @@ test.describe("data explorer table route", () => {
         NARROW_VIEWPORT.width
       );
       const titleOverflows = await preview
-        .locator('[data-slot="popover-title"]')
+        .locator('[data-querylane-slot="popover-title"]')
         .evaluate((title) => title.scrollWidth > title.clientWidth);
       expect(titleOverflows).toBe(false);
     });

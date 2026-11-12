@@ -1,5 +1,3 @@
-"use client";
-
 import { Link } from "@tanstack/react-router";
 import {
   CircleExclamationPoint,
@@ -24,7 +22,8 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/querylane-ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+
 import {
   Tooltip,
   TooltipContent,
@@ -83,6 +82,7 @@ function DatabaseOverviewHeader({
   const insightsButton = (
     <Button
       disabled={insightsUnavailable}
+      focusableWhenDisabled={true}
       onClick={onViewQueryInsights}
       presentation="icon-label"
       size="sm"
@@ -116,11 +116,7 @@ function DatabaseOverviewHeader({
       <div className="flex items-center gap-2">
         {insightsUnavailable ? (
           <Tooltip>
-            <TooltipTrigger
-              render={<span className="inline-flex cursor-not-allowed" />}
-            >
-              {insightsButton}
-            </TooltipTrigger>
+            <TooltipTrigger render={insightsButton} />
             <TooltipContent>
               Insights are unavailable because PostgreSQL query and table
               statistics cannot be queried. Install pg_stat_statements or grant
@@ -358,18 +354,16 @@ function BackendDatabasePage({
             extensionsPending={extensionsQuery.isPending}
             instanceId={instanceId}
           />
-          {queryInsightsOpen ? (
-            <DatabaseQueryInsightsDrawer
-              databaseId={databaseId}
-              instanceId={instanceId}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setQueryInsightsDatabaseName(null);
-                }
-              }}
-              open={queryInsightsOpen}
-            />
-          ) : null}
+          <DatabaseQueryInsightsDrawer
+            databaseId={databaseId}
+            instanceId={instanceId}
+            onOpenChange={(open) => {
+              if (!open) {
+                setQueryInsightsDatabaseName(null);
+              }
+            }}
+            open={queryInsightsOpen}
+          />
         </div>
       ) : null}
     </ResourcePageState>

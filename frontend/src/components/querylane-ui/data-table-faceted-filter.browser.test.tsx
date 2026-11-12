@@ -1,9 +1,9 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 
 const RGBA_RED_GREEN_BLUE_PATTERN =
@@ -188,33 +188,36 @@ function SearchableFilterFixture() {
 
 test("searchable facets announce checked state, match accents, and reset after closing", async () => {
   await render(<SearchableFilterFixture />);
-  await page.getByRole("button", { name: "Owner", exact: true }).click();
-  const search = page.getByRole("searchbox", { name: "Search owners…" });
+  await page.getByRole("combobox", { name: "Owner", exact: true }).click();
+  const search = page.getByRole("combobox", { name: "Search owners…" });
   await expect.element(search).toBeVisible();
   await search.fill("cafe");
-  const cafe = page.getByRole("menuitemcheckbox", {
+  const cafe = page.getByRole("option", {
     name: "Café",
     exact: true,
   });
   await expect.element(cafe).toBeVisible();
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Billing" }))
+    .element(page.getByRole("option", { name: "Billing" }))
     .not.toBeVisible();
   await search.press("Enter");
-  await expect.element(cafe).toHaveAttribute("aria-checked", "true");
+  await expect.element(cafe).toHaveAttribute("aria-selected", "true");
   await search.fill("missing owner");
   await expect.element(page.getByText("No options found.")).toBeVisible();
   await search.press("Escape");
-  const trigger = page.getByRole("button", { name: "Owner Café", exact: true });
+  const trigger = page.getByRole("combobox", {
+    name: "Owner Café",
+    exact: true,
+  });
   await expect.element(trigger).toBeFocused();
   await trigger.click();
   await expect.element(search).toHaveValue("");
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Billing" }))
+    .element(page.getByRole("option", { name: "Billing" }))
     .toBeVisible();
-  await page.getByRole("menuitem", { name: "Clear filter" }).click();
+  await page.getByRole("button", { name: "Clear filter" }).click();
   await expect
-    .element(page.getByRole("button", { name: "Owner", exact: true }))
+    .element(page.getByRole("combobox", { name: "Owner", exact: true }))
     .toBeVisible();
 });
 
@@ -244,25 +247,25 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
   await renderSelectedOwnerFilter();
 
   await page
-    .getByRole("button", { exact: true, name: "Owner neondb_owner" })
+    .getByRole("combobox", { exact: true, name: "Owner neondb_owner" })
     .click();
-  const selectedOption = page.getByRole("menuitemcheckbox", {
+  const selectedOption = page.getByRole("option", {
     exact: true,
     name: "neondb_owner",
   });
   await selectedOption.hover();
 
-  const optionElement = getByRole(document.body, "menuitemcheckbox", {
+  const optionElement = getByRole(document.body, "option", {
     name: "neondb_owner",
   });
-  expect(optionElement.getAttribute("aria-checked")).toBe("true");
+  expect(optionElement.getAttribute("aria-selected")).toBe("true");
   expect(optionElement.hasAttribute("data-highlighted")).toBe(true);
 
   const checkbox = optionElement.querySelector(
-    '[data-slot="faceted-filter-checkbox"]'
+    '[data-querylane-slot="faceted-filter-checkbox"]'
   );
   const checkmark = checkbox?.querySelector(
-    '[data-slot="faceted-filter-checkbox-check"]'
+    '[data-querylane-slot="faceted-filter-checkbox-check"]'
   );
   if (!(checkbox && checkmark)) {
     throw new Error(
@@ -285,31 +288,31 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
 test("single-select filter replaces the previous option and shows counts", async () => {
   await render(<SingleSelectFilterFixture />);
 
-  await page.getByRole("button", { name: TYPE_USER_PATTERN }).click();
+  await page.getByRole("combobox", { name: TYPE_USER_PATTERN }).click();
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: SUPERUSER_PATTERN }))
+    .element(page.getByRole("option", { name: SUPERUSER_PATTERN }))
     .toBeVisible();
 
-  await page.getByRole("menuitemcheckbox", { name: SUPERUSER_PATTERN }).click();
+  await page.getByRole("option", { name: SUPERUSER_PATTERN }).click();
 
   await expect
-    .element(page.getByRole("button", { name: TYPE_SUPERUSER_PATTERN }))
+    .element(page.getByRole("combobox", { name: TYPE_SUPERUSER_PATTERN }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: TYPE_USER_PATTERN }))
+    .element(page.getByRole("combobox", { name: TYPE_USER_PATTERN }))
     .toBeDetached();
 });
 
 test("filter option counts stay beside their labels", async () => {
   await render(<SingleSelectFilterFixture />);
 
-  await page.getByRole("button", { name: TYPE_USER_PATTERN }).click();
-  const option = page.getByRole("menuitemcheckbox", {
+  await page.getByRole("combobox", { name: TYPE_USER_PATTERN }).click();
+  const option = page.getByRole("option", {
     name: SUPERUSER_PATTERN,
   });
   await expect.element(option).toBeVisible();
 
-  const optionElement = getByRole(document.body, "menuitemcheckbox", {
+  const optionElement = getByRole(document.body, "option", {
     name: SUPERUSER_PATTERN,
   });
   const [label, count] = optionElement.querySelectorAll(":scope > span");
@@ -325,47 +328,51 @@ test("filter option counts stay beside their labels", async () => {
 test("fixed enum filters omit search without changing option behavior", async () => {
   await render(<FixedEnumFilterFixture />);
 
-  await page.getByRole("button", { name: "Status" }).click();
+  await page.getByRole("combobox", { name: "Status" }).click();
 
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Active" }))
+    .element(page.getByRole("option", { name: "Active" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Paused" }))
+    .element(page.getByRole("option", { name: "Paused" }))
     .toBeVisible();
-  const activeOption = getByRole(document.body, "menuitemcheckbox", {
+  const activeOption = getByRole(document.body, "option", {
     name: "Active",
   });
-  expect(activeOption.getAttribute("aria-checked")).toBe("false");
-  await expect.element(page.getByRole("combobox")).toBeDetached();
-
-  await page.getByRole("menuitemcheckbox", { name: "Active" }).click();
+  expect(activeOption.getAttribute("aria-selected")).toBe("false");
   await expect
-    .element(page.getByRole("button", { name: STATUS_ACTIVE_PATTERN }))
+    .element(page.getByRole("combobox", { name: "Search status…" }))
+    .toBeDetached();
+
+  await page.getByRole("option", { name: "Active" }).click();
+  await expect
+    .element(page.getByRole("combobox", { name: STATUS_ACTIVE_PATTERN }))
     .toBeVisible();
 });
 
 test("fixed enum filters support keyboard selection and restore trigger focus", async () => {
   await render(<FixedEnumFilterFixture />);
 
-  const trigger = page.getByRole("button", { name: "Status" });
+  const trigger = page.getByRole("combobox", { name: "Status" });
   await expect.element(trigger).toBeVisible();
-  const triggerElement = getByRole(document.body, "button", { name: "Status" });
+  const triggerElement = getByRole(document.body, "combobox", {
+    name: "Status",
+  });
   await trigger.focus();
   await trigger.press("Enter");
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Active" }))
+    .element(page.getByRole("option", { name: "Active" }))
     .toBeVisible();
-  const active = page.getByRole("menuitemcheckbox", { name: "Active" });
+  const active = page.getByRole("option", { name: "Active" });
   await expect.element(active).toBeFocused();
   await active.press("ArrowDown");
-  const paused = page.getByRole("menuitemcheckbox", { name: "Paused" });
+  const paused = page.getByRole("option", { name: "Paused" });
   await expect.element(paused).toBeFocused();
   await paused.press("Enter");
-  await expect.element(paused).toHaveAttribute("aria-checked", "true");
+  await expect.element(paused).toHaveAttribute("aria-selected", "true");
 
   await expect
-    .element(page.getByRole("button", { name: STATUS_PAUSED_PATTERN }))
+    .element(page.getByRole("combobox", { name: STATUS_PAUSED_PATTERN }))
     .toBeVisible();
   await paused.press("Escape");
   await expect.poll(() => document.activeElement).toBe(triggerElement);
@@ -375,13 +382,13 @@ test("selected badges follow option order and hide stale values", async () => {
   await render(<SelectedBadgeOrderFixture />);
 
   await expect
-    .element(page.getByRole("button", { name: "Mode Primary Replica" }))
+    .element(page.getByRole("combobox", { name: "Mode Primary Replica" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: "Status Unavailable" }))
+    .element(page.getByRole("combobox", { name: "Status Unavailable" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: INTERNAL_STALE_ID_PATTERN }))
+    .element(page.getByRole("combobox", { name: INTERNAL_STALE_ID_PATTERN }))
     .toBeDetached();
 });
 
@@ -395,9 +402,9 @@ test("a facet remains open when refreshed options make it searchable", async () 
       title="Status"
     />
   );
-  await page.getByRole("button", { name: "Status", exact: true }).click();
+  await page.getByRole("combobox", { name: "Status", exact: true }).click();
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Active" }))
+    .element(page.getByRole("option", { name: "Active" }))
     .toBeVisible();
   await rerender(
     <DataTableFacetedFilter
@@ -415,11 +422,11 @@ test("a facet remains open when refreshed options make it searchable", async () 
       title="Status"
     />
   );
-  const search = page.getByRole("searchbox", { name: "Search status…" });
+  const search = page.getByRole("combobox", { name: "Search status…" });
   await expect.element(search).toBeVisible();
   await search.fill("pending");
   await expect
-    .element(page.getByRole("menuitemcheckbox", { name: "Pending" }))
+    .element(page.getByRole("option", { name: "Pending" }))
     .toBeVisible();
 });
 
@@ -433,9 +440,9 @@ test("empty facets explain unavailable options and restore focus on Escape", asy
       title="Owner"
     />
   );
-  const trigger = page.getByRole("button", { name: "Owner", exact: true });
+  const trigger = page.getByRole("combobox", { name: "Owner", exact: true });
   await trigger.click();
   await expect.element(page.getByText("No owners available.")).toBeVisible();
-  await page.getByRole("menu", { name: "Owner options" }).press("Escape");
+  await page.getByRole("listbox").press("Escape");
   await expect.element(trigger).toBeFocused();
 });

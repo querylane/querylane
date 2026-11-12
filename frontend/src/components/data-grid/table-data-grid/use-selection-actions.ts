@@ -1,6 +1,6 @@
+import { toast } from "@ui-sdk/react/toast";
 import type { ClipboardEvent } from "react";
 import type { CellCopyArgs, Column } from "react-data-grid";
-import { toast } from "sonner";
 import {
   type CellSelectionBlocks,
   collectCellSelectionBlocks,

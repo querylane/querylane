@@ -134,7 +134,7 @@ function PlanOverview({
                 {ranked.map((node) => (
                   <DropdownMenuRadioItem
                     aria-label={`Inspect work for ${planNodeTitle(node)}: ${formatPlanMs(node.exclusiveMs ?? 0)}`}
-                    closeOnClick={true}
+                    closeOnSelect={true}
                     key={node.id}
                     value={node.id}
                   >

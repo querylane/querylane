@@ -57,7 +57,9 @@ test("home: instanceId search opens the requested instance instead of the first 
     page.getByRole("heading", { name: "Reporting Postgres" })
   ).toBeVisible();
   await expect(
-    page.getByText("reporting.db.local:5432", { exact: true })
+    page
+      .getByText("reporting.db.local:5432", { exact: true })
+      .filter({ visible: true })
   ).toBeVisible();
 });
 

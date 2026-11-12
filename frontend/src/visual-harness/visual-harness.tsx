@@ -1,4 +1,3 @@
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/theme-provider";
 import {
   isVisualScenarioName,
@@ -22,15 +21,13 @@ function VisualHarness({ scenario }: { scenario: string }) {
   // The theme follows prefers-color-scheme, which each Playwright project sets.
   return (
     <ThemeProvider storageKey="querylane-visual-harness-theme">
-      <TooltipProvider>
-        <main
-          aria-label="Visual scenario"
-          className="inline-block bg-background p-6 text-foreground"
-          data-testid="visual-frame"
-        >
-          <Scenario />
-        </main>
-      </TooltipProvider>
+      <main
+        aria-label="Visual scenario"
+        className="inline-block bg-background p-6 text-foreground"
+        data-testid="visual-frame"
+      >
+        <Scenario />
+      </main>
     </ThemeProvider>
   );
 }

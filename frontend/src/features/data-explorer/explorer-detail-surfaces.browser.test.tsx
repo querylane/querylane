@@ -1,7 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import type { Transport } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
@@ -9,6 +8,7 @@ import * as actualRouter from "@tanstack/react-router" with {
 import { screen } from "@testing-library/dom";
 import type { ComponentProps, ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { SchemaDetail } from "@/features/data-explorer/explorer-schema-detail";
 import { ExplorerSchemaMap } from "@/features/data-explorer/explorer-schema-map";
 import { TableDetail } from "@/features/data-explorer/explorer-table-detail";
@@ -197,7 +197,7 @@ afterEach(() => {
 
 function requireFacetFilterBar(description: string) {
   const filterBar = document.querySelector<HTMLElement>(
-    '[data-slot="facet-filter-bar"]'
+    '[data-querylane-slot="facet-filter-bar"]'
   );
   if (!filterBar) {
     throw new Error(`Expected ${description} to render.`);
@@ -208,7 +208,7 @@ function requireFacetFilterBar(description: string) {
 
 function requireIndexSummaryStrip() {
   const strip = document.querySelector<HTMLElement>(
-    '[data-slot="index-summary-strip"]'
+    '[data-querylane-slot="index-summary-strip"]'
   );
   if (!strip) {
     throw new Error("Expected the index summary strip to render.");
@@ -451,10 +451,10 @@ test("data explorer schema detail keeps dense table summaries scannable", async 
     .element(page.getByRole("cell", { name: "488.3 MB" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: KIND_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: KIND_FILTER_RE }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: OWNER_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: OWNER_FILTER_RE }))
     .not.toBeAttached();
   await expect
     .element(page.getByRole("tab", { name: OBJECTS_TAB_RE }))
@@ -487,24 +487,22 @@ test("data explorer schema detail captures active object filters", async () => {
     { schemas: [SALES_SCHEMA] }
   );
 
-  await page.getByRole("button", { name: KIND_FILTER_RE }).click();
+  await page.getByRole("combobox", { name: KIND_FILTER_RE }).click();
   await page
-    .getByRole("menuitemcheckbox", { name: MATERIALIZED_VIEWS_OPTION_RE })
+    .getByRole("option", { name: MATERIALIZED_VIEWS_OPTION_RE })
     .click();
   await page.getByRole("heading", { name: "sales" }).click();
-  await page.getByRole("button", { name: OWNER_FILTER_RE }).click();
-  await page
-    .getByRole("menuitemcheckbox", { name: ANALYTICS_OWNER_OPTION_RE })
-    .click();
+  await page.getByRole("combobox", { name: OWNER_FILTER_RE }).click();
+  await page.getByRole("option", { name: ANALYTICS_OWNER_OPTION_RE }).click();
   await page.getByRole("heading", { name: "sales" }).click();
 
   await expect.element(page.getByText("daily_rollups")).toBeVisible();
   await expect.element(page.getByText("orders")).not.toBeAttached();
   await expect
-    .element(page.getByRole("button", { name: ACTIVE_KIND_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: ACTIVE_KIND_FILTER_RE }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: ACTIVE_OWNER_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: ACTIVE_OWNER_FILTER_RE }))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Clear all" }))
@@ -554,7 +552,7 @@ test("data explorer schema map shows relationships without a floating help overl
     .toBeVisible();
   await expect.element(page.getByText(EXPLORER_DATABASE_ID)).toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: SCHEMA_MAP_FILTER_RE }))
     .toBeVisible();
   await expect.element(page.getByText("shipment_event")).toBeVisible();
   await expect.element(page.getByText("shipments")).toBeVisible();
@@ -575,15 +573,15 @@ test("data explorer schema map shows relationships without a floating help overl
     )
   );
 
-  await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+  await page.getByRole("combobox", { name: SCHEMA_MAP_FILTER_RE }).click();
   await page
-    .getByRole("menuitemcheckbox", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
+    .getByRole("option", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
     .click();
   expect(requestedResources(requests, "ListTableColumns")).toContain(
     tableResource("catalog", "ports")
   );
   await expect
-    .element(page.getByRole("button", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: SCHEMA_MAP_ACTIVE_FILTER_RE }))
     .toBeVisible();
   await page.getByRole("button", { name: "Reset" }).click();
 
@@ -672,15 +670,15 @@ test("data explorer schema map uses a compact schema filter at narrow widths", a
   );
 
   await expect
-    .element(page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: SCHEMA_MAP_FILTER_RE }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: SCHEMA_MAP_ALL_CHIP_RE }))
+    .element(page.getByRole("combobox", { name: SCHEMA_MAP_ALL_CHIP_RE }))
     .not.toBeAttached();
 
-  await page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE }).click();
+  await page.getByRole("combobox", { name: SCHEMA_MAP_FILTER_RE }).click();
   await page
-    .getByRole("menuitemcheckbox", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
+    .getByRole("option", { name: SCHEMA_MAP_CATALOG_OPTION_RE })
     .click();
 
   await expect.element(page.getByText("ports")).toBeVisible();
@@ -773,18 +771,18 @@ test("data explorer schema map emphasizes incoming and outgoing relationships", 
 test("data explorer schema map places controls directly after the schema filter", async () => {
   await renderMap(<ShippingMap />);
 
-  const schemaFilterLocator = page.getByRole("button", {
+  const schemaFilterLocator = page.getByRole("combobox", {
     name: SCHEMA_MAP_FILTER_RE,
   });
   await expect.element(schemaFilterLocator).toBeVisible();
-  const schemaFilter = screen.getByRole("button", {
+  const schemaFilter = screen.getByRole("combobox", {
     name: SCHEMA_MAP_FILTER_RE,
   });
-  expect(
-    schemaFilter.nextElementSibling?.querySelector(
-      'input[aria-label="Find a table"]'
-    )
-  ).not.toBeNull();
+  const search = screen.getByRole("searchbox", { name: "Find a table" });
+  const filterBounds = schemaFilter.getBoundingClientRect();
+  const searchBounds = search.getBoundingClientRect();
+  expect(searchBounds.left).toBeGreaterThan(filterBounds.right);
+  expect(Math.abs(searchBounds.top - filterBounds.top)).toBeLessThanOrEqual(1);
 });
 
 test("data explorer schema map surfaces partial catalog failures and truncation", async () => {
@@ -930,39 +928,29 @@ test("data explorer table columns match the redesign inventory", async () => {
     )
   ).toBeLessThanOrEqual(4);
 
-  await page.getByRole("button", { exact: true, name: "Key" }).click();
+  await page.getByRole("combobox", { exact: true, name: "Key" }).click();
   await Promise.all(
     ["Primary key", "Foreign key", "Unique", "Index", "No key"].map((option) =>
       expect
-        .element(
-          page.getByRole("menuitemcheckbox", { exact: true, name: option })
-        )
+        .element(page.getByRole("option", { exact: true, name: option }))
         .toBeVisible()
     )
   );
-  await page.getByRole("button", { exact: true, name: "Key" }).click();
+  await page.getByRole("combobox", { exact: true, name: "Key" }).click();
 
-  await page.getByRole("button", { exact: true, name: "Generation" }).click();
+  await page.getByRole("combobox", { exact: true, name: "Generation" }).click();
   await expect
-    .element(
-      page.getByRole("menuitemcheckbox", { exact: true, name: "Identity" })
-    )
+    .element(page.getByRole("option", { exact: true, name: "Identity" }))
     .toBeVisible();
   await expect
-    .element(
-      page.getByRole("menuitemcheckbox", { exact: true, name: "Generated" })
-    )
+    .element(page.getByRole("option", { exact: true, name: "Generated" }))
     .toBeVisible();
   await expect
-    .element(
-      page.getByRole("menuitemcheckbox", { exact: true, name: "Regular" })
-    )
+    .element(page.getByRole("option", { exact: true, name: "Regular" }))
     .toBeVisible();
+  await page.getByRole("option", { exact: true, name: "Generated" }).click();
   await page
-    .getByRole("menuitemcheckbox", { exact: true, name: "Generated" })
-    .click();
-  await page
-    .getByRole("button", { name: GENERATED_GENERATION_FILTER_RE })
+    .getByRole("combobox", { name: GENERATED_GENERATION_FILTER_RE })
     .click();
   await expect.element(page.getByText("route_code")).toBeVisible();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(1);
@@ -1049,7 +1037,7 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
 
   await page.getByRole("tab", { exact: true, name: "Columns 4" }).click();
 
-  const tabsList = document.querySelector('[data-slot="tabs-list"]');
+  const tabsList = document.querySelector('[data-querylane-slot="tabs-list"]');
   const tabsScroller = tabsList?.parentElement;
   if (!(tabsList && tabsScroller)) {
     throw new Error("Expected table detail tabs to render.");
@@ -1074,7 +1062,7 @@ test("data explorer table indexes have a redesigned table baseline", async () =>
   const indexSearch = screen.getByRole("textbox", { name: "Search indexes…" });
   const indexFilterBar = requireFacetFilterBar("index facet filters");
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Method" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
@@ -1139,7 +1127,7 @@ test("data explorer table indexes constraints policies and triggers stay readabl
     .element(constraintsPanel.getByText("public.accounts ↗"))
     .toBeVisible();
   expect(
-    document.querySelector('[data-slot="facet-filter-bar"]')
+    document.querySelector('[data-querylane-slot="facet-filter-bar"]')
   ).not.toBeNull();
   expect(document.querySelector("table")).not.toBeNull();
   expect(document.body.textContent).not.toContain(
@@ -1211,10 +1199,10 @@ test("data explorer constraints tab matches the redesigned table", async () => {
     )
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { name: KIND_FILTER_RE }))
+    .element(page.getByRole("combobox", { name: KIND_FILTER_RE }))
     .toBeVisible();
   expect(
-    document.querySelector('[data-slot="facet-filter-bar"]')
+    document.querySelector('[data-querylane-slot="facet-filter-bar"]')
   ).not.toBeNull();
   expect(document.querySelector("table")).not.toBeNull();
   expect(document.body.textContent).not.toContain(
@@ -1283,7 +1271,7 @@ test("data explorer table policies explain RLS composition", async () => {
     .element(page.getByRole("textbox", { name: "Search policies…" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Mode" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Mode" }))
     .toBeVisible();
   const pageSizeHeight = screen
     .getByRole("combobox", { name: "Rows per page" })
@@ -1355,7 +1343,7 @@ test("data explorer table indexes match the redesign complex usage scenario", as
     .element(page.getByRole("textbox", { name: "Search indexes…" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Method" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Method" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("combobox", { name: "Rows per page" }))
@@ -1399,7 +1387,7 @@ test("data explorer table triggers match redesign", async () => {
     exact: true,
     name: "Search triggers…",
   });
-  const triggerStateFilter = page.getByRole("button", {
+  const triggerStateFilter = page.getByRole("combobox", {
     exact: true,
     name: "State",
   });
@@ -1409,7 +1397,7 @@ test("data explorer table triggers match redesign", async () => {
     .getByRole("textbox", { name: "Search triggers…" })
     .getBoundingClientRect();
   const stateBounds = screen
-    .getByRole("button", { name: "State" })
+    .getByRole("combobox", { name: "State" })
     .getBoundingClientRect();
   expect(stateBounds.left).toBeGreaterThan(searchBounds.right);
   expect(Math.abs(stateBounds.top - searchBounds.top)).toBeLessThanOrEqual(1);
@@ -1434,7 +1422,7 @@ test("data explorer table triggers match redesign", async () => {
   await document.fonts.ready;
 
   await triggerStateFilter.click();
-  const disabledOption = page.getByRole("menuitemcheckbox", {
+  const disabledOption = page.getByRole("option", {
     exact: true,
     name: "Disabled",
   });
@@ -1448,7 +1436,7 @@ test("data explorer table triggers match redesign", async () => {
     .element(page.getByText("trg_shipments_notify").first())
     .toBeVisible();
   await page
-    .getByRole("button", { exact: true, name: "State Disabled" })
+    .getByRole("combobox", { exact: true, name: "State Disabled" })
     .click();
   await triggerSearch.fill("missing");
   await expect.element(page.getByText("No triggers found")).toBeVisible();
@@ -1473,7 +1461,7 @@ test("data explorer trigger cards paginate dense resources", async () => {
     name: "Triggers per page",
   });
   const paginationFooter = pageSizeSelect.closest(
-    '[data-slot="pagination-footer"]'
+    '[data-querylane-slot="pagination-footer"]'
   );
   if (!paginationFooter) {
     throw new Error("expected trigger pagination footer");
@@ -1528,7 +1516,7 @@ test("data explorer table definition tab has a visual baseline", async () => {
     .element(page.getByRole("heading", { name: "Triggers" }))
     .toBeVisible();
   await expect
-    .element(page.getByText("Copy all steps", { exact: true }))
+    .element(page.getByRole("button", { name: "Copy all steps", exact: true }))
     .toBeVisible();
   expect(
     document.querySelectorAll(
@@ -1558,7 +1546,7 @@ test("data explorer table definition stays a full-width vertical flow", async ()
   function cardForHeading(name: string) {
     const card = screen
       .getByRole("heading", { name })
-      .closest<HTMLElement>('[data-slot="card"]');
+      .closest<HTMLElement>('[data-querylane-slot="card"]');
     if (!card) {
       throw new Error(`Expected the ${name} card to render.`);
     }
@@ -1615,7 +1603,7 @@ test("data explorer definition toolbar keeps refresh reachable when narrow", asy
   });
   const reproduceCard = screen
     .getByRole("heading", { name: "Reproduce locally" })
-    .closest<HTMLElement>('[data-slot="card"]');
+    .closest<HTMLElement>('[data-querylane-slot="card"]');
   const definitionFlow = reproduceCard?.parentElement;
   if (!(reproduceCard && definitionFlow)) {
     throw new Error("Expected the highlighted definition flow to render.");
@@ -1664,7 +1652,9 @@ test("data explorer index table stays inside narrow surfaces", async () => {
   const columnsCell = screen.getByTitle(
     "(status, account_id) INCLUDE (last_seen_at)"
   );
-  const tableContainer = columnsCell.closest('[data-slot="table-container"]');
+  const tableContainer = columnsCell.closest(
+    '[data-querylane-slot="table-container"]'
+  );
   const frame = screen.getByTestId("screenshot-frame");
 
   if (!(tableContainer && Boolean(frame))) {
@@ -1726,12 +1716,12 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     .toBeVisible();
   expect(
     document.querySelector(
-      '[data-empty-category="indexes"] [data-slot="empty-state-panel"]'
+      '[data-empty-category="indexes"] [data-querylane-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
   expect(
     document.querySelector(
-      '[data-empty-category="indexes"] [data-slot="empty-icon"] svg'
+      '[data-empty-category="indexes"] [data-querylane-slot="empty-icon"] svg'
     )
   ).toBeNull();
 
@@ -1741,7 +1731,7 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     .toBeVisible();
   expect(
     document.querySelector(
-      '[data-empty-category="constraints"] [data-slot="empty-state-panel"]'
+      '[data-empty-category="constraints"] [data-querylane-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
 
@@ -1751,7 +1741,7 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     .toBeVisible();
   expect(
     document.querySelector(
-      '[data-empty-category="policies"] [data-slot="empty-state-panel"]'
+      '[data-empty-category="policies"] [data-querylane-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
   await expect
@@ -1767,7 +1757,7 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     .toBeVisible();
   expect(
     document.querySelector(
-      '[data-empty-category="triggers"] [data-slot="empty-state-panel"]'
+      '[data-empty-category="triggers"] [data-querylane-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
 
@@ -1777,7 +1767,7 @@ test("data explorer table empty resource tabs use shared empty panels", async ()
     .toBeVisible();
   expect(
     document.querySelector(
-      '[data-empty-category="partitions"] [data-slot="empty-state-panel"]'
+      '[data-empty-category="partitions"] [data-querylane-slot="empty-state-panel"]'
     )
   ).not.toBeNull();
 });
@@ -1816,7 +1806,7 @@ test("data explorer table partitions matches the imported redesign fixture", asy
     .toBeVisible();
   await expect.element(page.getByText("2026-01-01 → 2026-04-01")).toBeVisible();
   await expect
-    .element(page.getByRole("button", { exact: true, name: "Schema" }))
+    .element(page.getByRole("combobox", { exact: true, name: "Schema" }))
     .not.toBeAttached();
   await expect
     .element(page.getByRole("button", { exact: true, name: "Bound kind" }))

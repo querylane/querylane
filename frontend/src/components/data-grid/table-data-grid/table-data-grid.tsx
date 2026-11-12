@@ -1,9 +1,9 @@
 "use client";
 
 import { create } from "@bufbuild/protobuf";
+import { toast } from "@ui-sdk/react/toast";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { SortColumn } from "react-data-grid";
-import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import type {
   RenderOpenReferencedTableLink,

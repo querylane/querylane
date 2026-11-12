@@ -55,26 +55,22 @@ test.describe("schema overview", () => {
     const heading = page.getByRole("heading", { exact: true, name: "sales" });
 
     await test.step("filter by kind", async () => {
-      await page.getByRole("button", { name: KIND_FILTER_RE }).click();
-      await page
-        .getByRole("menuitemcheckbox", { name: "Materialized views" })
-        .click();
+      await page.getByRole("combobox", { name: KIND_FILTER_RE }).click();
+      await page.getByRole("option", { name: "Materialized views" }).click();
       await heading.click();
     });
 
     await test.step("filter by owner", async () => {
-      await page.getByRole("button", { name: OWNER_FILTER_RE }).click();
-      await page
-        .getByRole("menuitemcheckbox", { name: "analytics_owner" })
-        .click();
+      await page.getByRole("combobox", { name: OWNER_FILTER_RE }).click();
+      await page.getByRole("option", { name: "analytics_owner" }).click();
       await heading.click();
     });
 
     await expect(
-      page.getByRole("button", { name: ACTIVE_KIND_FILTER_RE })
+      page.getByRole("combobox", { name: ACTIVE_KIND_FILTER_RE })
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: ACTIVE_OWNER_FILTER_RE })
+      page.getByRole("combobox", { name: ACTIVE_OWNER_FILTER_RE })
     ).toBeVisible();
     await expect(pageContent(page)).toHaveScreenshot(
       "schema-detail-active-filters.png"
@@ -128,7 +124,7 @@ test.describe("schema map", () => {
     await page.goto(explorerUrl({ schema: "shipping", tab: "map" }));
 
     await expect(
-      page.getByRole("button", { name: SCHEMA_MAP_FILTER_RE })
+      page.getByRole("combobox", { name: SCHEMA_MAP_FILTER_RE })
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "shipping.shipments" })

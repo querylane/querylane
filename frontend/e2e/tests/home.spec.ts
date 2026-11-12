@@ -62,7 +62,9 @@ test("home: ready catalog redirects to first instance overview", {
   await expect(
     page.getByRole("heading", { name: "Production Postgres" })
   ).toBeVisible();
-  await expect(page.getByText("db.local:5432", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("db.local:5432", { exact: true }).filter({ visible: true })
+  ).toBeVisible();
   await expect(page.getByText("Primary")).toBeVisible();
 });
 

@@ -1,7 +1,26 @@
+@layer ui-sdk;
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "./fonts/fonts.css";
+
+@custom-variant data-open (&[data-open]:not([data-open="false"]));
+@custom-variant data-closed (&[data-closed]:not([data-closed="false"]));
+@custom-variant data-checked (&[data-checked]:not([data-checked="false"]));
+@custom-variant data-unchecked (
+  &[data-unchecked]:not([data-unchecked="false"])
+);
+@custom-variant data-selected (&[data-selected]:not([data-selected="false"]));
+@custom-variant data-disabled (&[data-disabled]:not([data-disabled="false"]));
+@custom-variant data-active (&[data-active]:not([data-active="false"]));
+@custom-variant data-horizontal (&[data-orientation="horizontal"]);
+@custom-variant data-vertical (&[data-orientation="vertical"]);
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -170,6 +189,15 @@
 }
 
 @theme inline {
+  --radius-button-xs: min(var(--radius-md), 8px);
+  --radius-button-sm: min(var(--radius-md), 10px);
+  --radius-input-group-control: calc(var(--radius) - 5px);
+  --color-secondary-hover: color-mix(
+    in oklch,
+    var(--secondary),
+    var(--foreground) 5%
+  );
+
   --color-permission-700: var(--color-violet-700);
   --color-reference-hover: color-mix(
     in oklch,
@@ -342,7 +370,7 @@
   }
 
   /* TanStack's native tooltip inherits the same popover tokens as app UI. */
-  [data-slot="chart"] {
+  [data-querylane-slot="chart"] {
     --ts-chart-tooltip-background: var(--color-popover);
     --ts-chart-tooltip-border: 1px solid
       color-mix(in oklab, var(--color-border) 50%, transparent);
@@ -355,7 +383,7 @@
     --ts-chart-tooltip-active-row-shadow: none;
   }
 
-  [data-slot="chart"] .querylane-chart-tooltip {
+  [data-querylane-slot="chart"] .querylane-chart-tooltip {
     min-inline-size: 9rem;
   }
 

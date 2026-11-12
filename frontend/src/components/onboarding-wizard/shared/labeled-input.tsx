@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
 
 interface LabeledInputProps
-  extends Omit<ComponentProps<"input">, "className" | "children"> {
+  extends Omit<ComponentProps<typeof Input>, "className" | "children"> {
   className?: string | undefined;
   description?: string | undefined;
   error?: string | undefined;

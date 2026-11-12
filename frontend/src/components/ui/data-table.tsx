@@ -1,44 +1,17 @@
-"use client";
-
-import { compareListCellValues, listSortDirection } from "@/lib/list-layout";
-
-import { useEffect, useEffectEvent, useId } from "react";
 import {
   type Column,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type ColumnVisibilityState,
-  type PaginationState,
-  type RowData,
-  type SortingState,
-  Subscribe,
-  columnFilteringFeature,
-  columnOrderingFeature,
   functionalUpdate,
-  columnVisibilityFeature,
-  createFilteredRowModel,
-  createPaginatedRowModel,
-  createSortedRowModel,
-  filterFn_includesString,
-  metaHelper,
-  rowPaginationFeature,
-  rowSortingFeature,
-  sortFn_alphanumeric,
-  sortFn_basic,
-  sortFn_text,
-  tableFeatures,
+  type RowData,
+  Subscribe,
   useTable,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
+import { useEffect, useId, useRef } from "react";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { ListColumnSelector } from "@/components/ui/list-column-selector";
-import {
-  useListColumnSelection,
-  useListSorting,
-  type ListColumnOption,
-} from "@/lib/list-columns";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import { RefreshControl } from "@/components/ui/refresh-control";
 import {
   Table,
@@ -48,56 +21,84 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DEFAULT_PAGE_SIZE,
-  PAGE_SIZE_OPTIONS,
-  type PageSize,
-} from "@/lib/pagination";
+import { useListColumnSelection, useListSorting } from "@/lib/list-columns";
+import { compareListCellValues, listSortDirection } from "@/lib/list-layout";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
+import {
+  type DataTableFeatures,
+  type DataTableFilterProps,
+  type DataTableProps,
+  type DataTableState,
+  dataTableFeatures,
+  listColumnDefinitions,
+} from "./data-table-model";
 
-interface DataTableColumnMeta {
-  cellClassName?: string;
-  headerClassName?: string;
-  label?: string;
-}
-
-const dataTableFeatures = tableFeatures({
-  columnOrderingFeature,
-  columnFilteringFeature,
-  columnVisibilityFeature,
-  columnMeta: metaHelper<DataTableColumnMeta>(),
-  rowPaginationFeature,
-  rowSortingFeature,
-  filteredRowModel: createFilteredRowModel(),
-  filterFns: { includesString: filterFn_includesString },
-  paginatedRowModel: createPaginatedRowModel(),
-  sortedRowModel: createSortedRowModel(),
-  sortFns: {
-    alphanumeric: sortFn_alphanumeric,
-    basic: sortFn_basic,
-    text: sortFn_text,
-  },
-});
-
-type DataTableFeatures = typeof dataTableFeatures;
-type DataTableColumnDef<TData extends RowData> = ColumnDef<
-  DataTableFeatures,
-  TData,
-  unknown
+type DataTableInstance<Row extends RowData> = ReturnType<
+  typeof useTable<DataTableFeatures, Row, DataTableState>
 >;
 
-interface DataTableState {
-  columnOrder: string[];
-  columnVisibility: ColumnVisibilityState;
-  columnFilters: ColumnFiltersState;
-  pagination: PaginationState;
-  sorting: SortingState;
+function renderDataTableRow<Row extends RowData>({
+  row,
+  table,
+  getRowProps,
+  onRowClick,
+}: {
+  row: ReturnType<DataTableInstance<Row>["getRowModel"]>["rows"][number];
+  table: DataTableInstance<Row>;
+  getRowProps: DataTableProps<Row>["getRowProps"];
+  onRowClick: DataTableProps<Row>["onRowClick"];
+}) {
+  const rowProps = getRowProps?.(row.original);
+  const { onClick: rowPropsOnClick, ...restRowProps } = rowProps ?? {};
+  function handleRowClick(event: React.MouseEvent<HTMLTableRowElement>) {
+    rowPropsOnClick?.(event);
+    if (!event.defaultPrevented) {
+      onRowClick?.(row.original);
+    }
+  }
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLTableRowElement>) {
+    if (onRowClick && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      onRowClick(row.original);
+    }
+  }
+  return (
+    <TableRow
+      key={row.id}
+      {...restRowProps}
+      className={cn(
+        "border-border",
+        onRowClick && "group cursor-pointer transition-colors hover:bg-muted/50"
+      )}
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
+      role={onRowClick ? "button" : undefined}
+      tabIndex={onRowClick ? 0 : undefined}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell
+          className={cn(cell.column.columnDef.meta?.cellClassName)}
+          key={cell.id}
+        >
+          <table.FlexRender cell={cell} />
+        </TableCell>
+      ))}
+    </TableRow>
+  );
 }
 
-interface DataTableFilterProps {
-  onChange: (value: string) => void;
-  placeholder?: string;
-  value: string;
+function filterText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+function sortedHeaderLabel(sorted: string | false) {
+  if (sorted === "asc") {
+    return "sorted ascending";
+  }
+  if (sorted === "desc") {
+    return "sorted descending";
+  }
+  return "not sorted";
 }
 
 function DataTableFilter({
@@ -115,7 +116,7 @@ function DataTableFilter({
         aria-label={placeholder}
         className="h-8 pl-8 text-sm"
         name="table-filter"
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={onChange}
         placeholder={placeholder}
         value={value}
       />
@@ -123,47 +124,14 @@ function DataTableFilter({
   );
 }
 
-type DataTableRowProps = Pick<
-  React.HTMLAttributes<HTMLTableRowElement>,
-  "onClick" | "onFocus" | "onMouseEnter"
->;
-
-interface DataTableProps<TData extends RowData> {
-  columns: DataTableColumnDef<TData>[];
-  /** Externally owned selection; its picker is rendered in the caller toolbar. */
-  columnSelection?: ReturnType<typeof useListColumnSelection>;
-  data: TData[];
-  emptyResourceName?: string;
-  filterColumn?: string;
-  filterPlaceholder?: string;
-  filterValue?: string;
-  onFilterChange?: (value: string) => void;
-  getRowProps?: (row: TData) => DataTableRowProps;
-  initialSorting?: SortingState;
-  /**
-   * When set, renders a refresh button + last-fetched label on the right of the
-   * toolbar. The quicksearch (if `filterColumn` is set) moves to the left to
-   * balance the row, matching the data grid toolbar.
-   */
-  isRefreshing?: boolean;
-  lastFetchedLabel?: string;
-  onRefresh?: () => Promise<unknown> | undefined;
-  onRowClick?: (row: TData) => void;
-  pageSize?: PageSize | undefined;
-  renderToolbarFilters?: (() => React.ReactNode) | undefined;
-  tableClassName?: string | undefined;
-  tableKey?: string;
-  toolbarFilters?: React.ReactNode;
-}
-
-function SortableHeader<TData extends RowData>({
+function SortableHeader<Row extends RowData>({
   children,
   className,
   column,
 }: {
   children: React.ReactNode;
   className?: string;
-  column: Column<DataTableFeatures, TData, unknown>;
+  column: Column<DataTableFeatures, Row>;
 }) {
   const label = typeof children === "string" ? children : "Column";
 
@@ -171,115 +139,67 @@ function SortableHeader<TData extends RowData>({
     <Subscribe
       selector={(sorting) => {
         const sort = sorting.find((sortState) => sortState.id === column.id);
-        return sort == null ? false : sort.desc ? "desc" : "asc";
+        if (sort === undefined) {
+          return false;
+        }
+        return sort.desc ? "desc" : "asc";
       }}
       source={column.table.atoms.sorting}
     >
       {(sorted) => {
-        const sortStateLabel =
-          sorted === "asc"
-            ? "sorted ascending"
-            : sorted === "desc"
-              ? "sorted descending"
-              : "not sorted";
+        const sortStateLabel = sortedHeaderLabel(sorted);
+        const SortIcon = sorted === "asc" ? ArrowUp : ArrowDown;
+        const icon =
+          sorted === false ? (
+            <ChevronsUpDown
+              aria-hidden="true"
+              className="size-4 text-muted-foreground/75"
+              data-querylane-slot="sort-indicator"
+            />
+          ) : (
+            <SortIcon
+              aria-hidden="true"
+              className="size-4 text-foreground"
+              data-querylane-slot="sort-indicator"
+            />
+          );
 
         return (
-          <button
+          <Button
             aria-label={`${label}, ${sortStateLabel}`}
             className={cn(
               "inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground",
               className
             )}
-            onClick={() => column.toggleSorting()}
+            onClick={() => {
+              column.toggleSorting();
+            }}
             title="Sort column"
             type="button"
+            variant="ghost"
           >
             {children}
-            {sorted === "asc" ? (
-              <ArrowUp
-                aria-hidden="true"
-                className="size-4 text-foreground"
-                data-slot="sort-indicator"
-              />
-            ) : sorted === "desc" ? (
-              <ArrowDown
-                aria-hidden="true"
-                className="size-4 text-foreground"
-                data-slot="sort-indicator"
-              />
-            ) : (
-              <ChevronsUpDown
-                aria-hidden="true"
-                className="size-4 text-muted-foreground/75"
-                data-slot="sort-indicator"
-              />
-            )}
-          </button>
+            {icon}
+          </Button>
         );
       }}
     </Subscribe>
   );
 }
 
-function listColumnDefinitions<TData extends RowData>(
-  columns: readonly DataTableColumnDef<TData>[]
-): ListColumnOption[] {
-  return columns.flatMap((column) => {
-    if ("columns" in column && column.columns) {
-      return listColumnDefinitions(column.columns);
-    }
-    const id =
-      column.id ??
-      ("accessorKey" in column
-        ? String(column.accessorKey).replaceAll(".", "_")
-        : typeof column.header === "string"
-          ? column.header
-          : undefined);
-    return id === undefined
-      ? []
-      : [
-          {
-            id,
-            required: column.enableHiding === false,
-            sortable:
-              column.enableSorting !== false &&
-              ("accessorKey" in column || "accessorFn" in column),
-            label:
-              column.meta?.label ??
-              (typeof column.header === "string"
-                ? column.header
-                : id
-                    .replace(/([a-z])([A-Z])/g, "$1 $2")
-                    .replaceAll("_", " ")
-                    .replace(/^./, (letter) => letter.toUpperCase())),
-          },
-        ];
-  });
-}
-
-function DataTable<TData extends RowData>({
+function useDataTableState<Row extends RowData>({
   columns,
   columnSelection: providedColumnSelection,
   data,
-  emptyResourceName = "results",
   filterColumn,
-  filterPlaceholder = "Filter...",
   filterValue,
   onFilterChange,
-  getRowProps,
   initialSorting,
-  isRefreshing,
-  lastFetchedLabel,
-  onRefresh,
-  onRowClick,
   pageSize = DEFAULT_PAGE_SIZE,
-  renderToolbarFilters,
-  tableClassName,
   tableKey,
-  toolbarFilters,
-}: DataTableProps<TData>) {
-  const fallbackTableKey = useId();
-  const controlled = filterColumn != null && onFilterChange != null;
+}: DataTableProps<Row>) {
+  const fallbackTableId = useId();
+  const controlled = filterColumn !== undefined && onFilterChange !== undefined;
   const controlledFilterValue = controlled ? (filterValue ?? "") : undefined;
 
   const definitions = listColumnDefinitions(columns);
@@ -288,27 +208,35 @@ function DataTable<TData extends RowData>({
   const { visibleIds, columnOrder } = columnSelection;
   const { sorting, setSorting } = useListSorting(
     tableKey,
-    definitions.filter((column) => column.sortable).map((column) => column.id),
+    definitions.flatMap((column) =>
+      column.sortable === true ? [column.id] : []
+    ),
     initialSorting
   );
   const visible = new Set(visibleIds);
   const columnVisibility = Object.fromEntries(
     definitions.map((column) => [column.id, visible.has(column.id)])
   );
-  const table = useTable<DataTableFeatures, TData, DataTableState>(
+  const table = useTable<DataTableFeatures, Row, DataTableState>(
     {
       features: dataTableFeatures,
-      key: tableKey ?? `querylane-data-table-${fallbackTableKey}`,
+      key: tableKey ?? `querylane-data-table-${fallbackTableId}`,
       columns,
       data,
-      defaultColumn: { sortUndefined: "last", sortFn: (left, right, id) => compareListCellValues(left.getValue(id), right.getValue(id)) },
+      defaultColumn: {
+        sortUndefined: "last",
+        sortFn: (left, right, id) =>
+          compareListCellValues(left.getValue(id), right.getValue(id)),
+      },
       enableSortingRemoval: true,
       autoResetPageIndex: false,
       state: { columnVisibility, columnOrder, sorting },
-      onColumnOrderChange: (updater) =>
-        columnSelection.setColumnOrder(functionalUpdate(updater, columnOrder)),
-      onSortingChange: (updater) =>
-        setSorting(functionalUpdate(updater, sorting)),
+      onColumnOrderChange: (updater) => {
+        columnSelection.setColumnOrder(functionalUpdate(updater, columnOrder));
+      },
+      onSortingChange: (updater) => {
+        setSorting(functionalUpdate(updater, sorting));
+      },
       initialState: {
         pagination: { pageIndex: 0, pageSize },
         sorting: initialSorting ?? [],
@@ -327,41 +255,43 @@ function DataTable<TData extends RowData>({
   );
   const sortingKey = JSON.stringify(sorting);
   const filterKey = JSON.stringify(table.state.columnFilters);
-  const resetPage = useEffectEvent(() => {
-    table.setPageIndex(0);
-  });
+  const previousPageInputsRef = useRef({ data, sortingKey, filterKey });
   useEffect(
     function resetPageAfterSortOrFilterChange() {
-      resetPage();
+      const previous = previousPageInputsRef.current;
+      if (
+        previous.data !== data ||
+        previous.sortingKey !== sortingKey ||
+        previous.filterKey !== filterKey
+      ) {
+        table.setPageIndex(0);
+      }
+      previousPageInputsRef.current = { data, sortingKey, filterKey };
     },
-    [data, sortingKey, filterKey]
+    [table, data, sortingKey, filterKey]
   );
   useEffect(
     function syncControlledFilterValue() {
-      if (!controlled || filterColumn == null) {
+      if (!controlled || filterColumn === undefined) {
         return;
       }
 
       const column = table.getColumn(filterColumn);
       const currentFilterValue = column?.getFilterValue();
 
-      if (controlledFilterValue === "") {
-        if (currentFilterValue != null && currentFilterValue !== "") {
-          column?.setFilterValue(undefined);
-        }
-        return;
-      }
-
-      if (currentFilterValue !== controlledFilterValue) {
-        column?.setFilterValue(controlledFilterValue);
+      const nextValue =
+        controlledFilterValue === "" ? undefined : controlledFilterValue;
+      if (currentFilterValue !== nextValue) {
+        column?.setFilterValue(nextValue);
       }
     },
     [controlled, controlledFilterValue, filterColumn, table]
   );
 
-  const columnSelector = tableKey && !providedColumnSelection ? (
-    <ListColumnSelector columns={definitions} {...columnSelection} />
-  ) : null;
+  const columnSelector =
+    Boolean(tableKey) && !providedColumnSelection ? (
+      <ListColumnSelector columns={definitions} {...columnSelection} />
+    ) : null;
 
   const pageCount = Math.max(1, table.getPageCount());
   const totalRows = table.getFilteredRowModel().rows.length;
@@ -376,52 +306,151 @@ function DataTable<TData extends RowData>({
   );
   const start = pageIndex * currentPageSize + 1;
   const end = Math.min((pageIndex + 1) * currentPageSize, totalRows);
+  return {
+    table,
+    columnSelector,
+    controlled,
+    sorting,
+    pageCount,
+    totalRows,
+    pageIndex,
+    currentPageSize,
+    start,
+    end,
+  };
+}
+
+function DataTableControls<Row extends RowData>({
+  props,
+  table,
+  columnSelector,
+  controlled,
+}: {
+  props: DataTableProps<Row>;
+  table: DataTableInstance<Row>;
+  columnSelector: React.ReactNode;
+  controlled: boolean;
+}) {
+  const {
+    filterColumn,
+    filterPlaceholder = "Filter…",
+    isRefreshing,
+    lastFetchedLabel,
+    onRefresh,
+    renderToolbarFilters,
+    toolbarFilters,
+  } = props;
   const quicksearch =
-    filterColumn && !controlled ? (
+    filterColumn !== undefined && filterColumn !== "" && !controlled ? (
       <DataTableFilter
         onChange={(value) =>
           table.getColumn(filterColumn)?.setFilterValue(value)
         }
         placeholder={filterPlaceholder}
-        value={
-          (table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""
-        }
+        value={filterText(table.getColumn(filterColumn)?.getFilterValue())}
       />
     ) : null;
-  const refreshControl =
-    onRefresh != null && lastFetchedLabel != null ? (
-      <RefreshControl
-        className="text-muted-foreground text-xs"
-        isRefreshing={isRefreshing}
-        labelClassName="sm:not-sr-only"
-        lastFetchedLabel={lastFetchedLabel}
-        onRefresh={onRefresh}
-      />
-    ) : null;
+  const showRefresh = onRefresh !== undefined && lastFetchedLabel !== undefined;
+  const refreshControl = showRefresh ? (
+    <RefreshControl
+      className="text-xs text-muted-foreground"
+      isRefreshing={isRefreshing}
+      labelClassName="sm:not-sr-only"
+      lastFetchedLabel={lastFetchedLabel}
+      onRefresh={onRefresh}
+    />
+  ) : null;
   const toolbarFilterContent = renderToolbarFilters
     ? renderToolbarFilters()
     : toolbarFilters;
   const toolbarControls =
-    quicksearch || toolbarFilterContent ? (
+    quicksearch !== null || Boolean(toolbarFilterContent) ? (
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         {quicksearch}
         {toolbarFilterContent}
       </div>
     ) : null;
 
+  const hasToolbar = Boolean(
+    toolbarControls ?? refreshControl ?? columnSelector
+  );
+  return hasToolbar ? (
+    <div className="flex min-h-8 min-w-0 items-start gap-2">
+      {toolbarControls}
+      <div className="ms-auto flex shrink-0 items-center gap-2">
+        {columnSelector}
+        {refreshControl}
+      </div>
+    </div>
+  ) : null;
+}
+
+function DataTable<Row extends RowData>(props: DataTableProps<Row>) {
+  const {
+    emptyResourceName = "results",
+    onRowClick,
+    getRowProps,
+    tableClassName,
+  } = props;
+  const {
+    table,
+    columnSelector,
+    controlled,
+    sorting,
+    pageCount,
+    totalRows,
+    pageIndex,
+    currentPageSize,
+    start,
+    end,
+  } = useDataTableState(props);
+  function renderHeader(
+    header: ReturnType<typeof table.getHeaderGroups>[number]["headers"][number]
+  ) {
+    let content: React.ReactNode = null;
+    if (!header.isPlaceholder) {
+      content =
+        typeof header.column.columnDef.header === "string" &&
+        header.column.getCanSort() ? (
+          <SortableHeader column={header.column}>
+            {header.column.columnDef.header}
+          </SortableHeader>
+        ) : (
+          <table.FlexRender header={header} />
+        );
+    }
+    return (
+      <TableHead
+        aria-label={
+          typeof header.column.columnDef.header === "string"
+            ? header.column.columnDef.header
+            : undefined
+        }
+        aria-sort={listSortDirection(header.column.id, sorting)}
+        className={cn(
+          "text-xs text-muted-foreground",
+          header.column.columnDef.meta?.headerClassName
+        )}
+        key={header.id}
+      >
+        {content}
+      </TableHead>
+    );
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {toolbarControls || refreshControl || columnSelector ? (
-        <div className="flex min-h-8 min-w-0 items-start gap-2">
-          {toolbarControls}
-          <div className="ms-auto flex shrink-0 items-center gap-2">
-            {columnSelector}
-            {refreshControl}
-          </div>
-        </div>
-      ) : null}
+      <DataTableControls
+        columnSelector={columnSelector}
+        controlled={controlled}
+        props={props}
+        table={table}
+      />
 
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div
+        className="overflow-hidden rounded-lg border border-border"
+        data-agent-hidden={true}
+      >
         <Table className={tableClassName}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -429,31 +458,7 @@ function DataTable<TData extends RowData>({
                 className="border-border hover:bg-transparent"
                 key={headerGroup.id}
               >
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    className={cn(
-                      "text-muted-foreground text-xs",
-                      header.column.columnDef.meta?.headerClassName
-                    )}
-                    key={header.id}
-                    aria-label={
-                      typeof header.column.columnDef.header === "string"
-                        ? header.column.columnDef.header
-                        : undefined
-                    }
-                    aria-sort={listSortDirection(header.column.id, sorting)}
-                  >
-                    {header.isPlaceholder ? null : typeof header.column
-                        .columnDef.header === "string" &&
-                      header.column.getCanSort() ? (
-                      <SortableHeader column={header.column}>
-                        {header.column.columnDef.header}
-                      </SortableHeader>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map(renderHeader)}
               </TableRow>
             ))}
           </TableHeader>
@@ -471,58 +476,17 @@ function DataTable<TData extends RowData>({
                 </TableCell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => {
-                const rowProps = getRowProps?.(row.original);
-                const { onClick: rowPropsOnClick, ...restRowProps } =
-                  rowProps ?? {};
-
-                return (
-                  <TableRow
-                    {...restRowProps}
-                    className={cn(
-                      "border-border",
-                      onRowClick &&
-                        "cursor-pointer group transition-colors hover:bg-muted/50"
-                    )}
-                    key={row.id}
-                    onClick={(event) => {
-                      rowPropsOnClick?.(event);
-                      if (!event.defaultPrevented) {
-                        onRowClick?.(row.original);
-                      }
-                    }}
-                    onKeyDown={
-                      onRowClick
-                        ? (event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              onRowClick(row.original);
-                            }
-                          }
-                        : undefined
-                    }
-                    role={onRowClick ? "button" : undefined}
-                    tabIndex={onRowClick ? 0 : undefined}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        className={cn(
-                          cell.column.columnDef.meta?.cellClassName
-                        )}
-                        key={cell.id}
-                      >
-                        {<table.FlexRender cell={cell} />}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })
+              table
+                .getRowModel()
+                .rows.map((row) =>
+                  renderDataTableRow({ row, table, getRowProps, onRowClick })
+                )
             )}
           </TableBody>
         </Table>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-xs">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         {totalRows > 0 ? (
           <span className="shrink-0 tabular-nums">
             Showing {start}&ndash;{end} of {totalRows}
@@ -532,9 +496,15 @@ function DataTable<TData extends RowData>({
           <PaginationFooter
             hasNext={table.getCanNextPage()}
             hasPrev={table.getCanPreviousPage()}
-            onNext={() => table.nextPage()}
-            onPageSizeChange={(nextPageSize) => table.setPageSize(nextPageSize)}
-            onPrev={() => table.previousPage()}
+            onNext={() => {
+              table.nextPage();
+            }}
+            onPageSizeChange={(nextPageSize) => {
+              table.setPageSize(nextPageSize);
+            }}
+            onPrev={() => {
+              table.previousPage();
+            }}
             pageLabel={`Page ${pageIndex + 1} of ${pageCount}`}
             pageSize={currentPageSize}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
@@ -545,5 +515,4 @@ function DataTable<TData extends RowData>({
   );
 }
 
-export { DataTable, DataTableFilter, SortableHeader, listColumnDefinitions };
-export type { DataTableColumnDef, DataTableProps };
+export { DataTable, DataTableFilter, SortableHeader };

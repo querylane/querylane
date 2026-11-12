@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { OnboardingInvalidFieldsScenario } from "@/visual-harness/onboarding-scenarios";
 
 // Pixels for each focus state live in e2e/visual/onboarding.spec.ts.

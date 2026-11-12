@@ -41,8 +41,8 @@ export function InstanceLabelRow({
           data-instance-config-field={configurationField}
           data-label-key-input=""
           disabled={disabled}
-          onChange={(event) => {
-            onChange({ ...label, key: event.target.value });
+          onValueChange={(value) => {
+            onChange({ ...label, key: value });
           }}
           placeholder="Key"
           value={label.key}
@@ -52,8 +52,8 @@ export function InstanceLabelRow({
           aria-invalid={invalid}
           aria-label={`Label value ${index + 1}`}
           disabled={disabled}
-          onChange={(event) => {
-            onChange({ ...label, value: event.target.value });
+          onValueChange={(value) => {
+            onChange({ ...label, value });
           }}
           placeholder="Value"
           value={label.value}

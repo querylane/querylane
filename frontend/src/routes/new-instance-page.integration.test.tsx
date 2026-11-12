@@ -89,13 +89,13 @@ function renderCreateInstancePage({
 }
 
 async function fillAndTestConnection(user: ReturnType<typeof userEvent.setup>) {
-  fireEvent.change(screen.getByLabelText("Display name"), {
+  fireEvent.input(screen.getByLabelText("Display name"), {
     target: { value: "Production" },
   });
-  fireEvent.change(screen.getByLabelText("Host"), {
+  fireEvent.input(screen.getByLabelText("Host"), {
     target: { value: "db.internal" },
   });
-  fireEvent.change(screen.getByLabelText("Password"), {
+  fireEvent.input(screen.getByLabelText("Password"), {
     target: { value: "secret" },
   });
 
@@ -126,23 +126,23 @@ describe("create instance backend field violations", () => {
       createInstance: () => Promise.resolve({}),
       testInstanceConnection: testConnection,
     });
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.input(screen.getByLabelText("Display name"), {
       target: { value: "Staging" },
     });
-    fireEvent.change(screen.getByLabelText("Host"), {
+    fireEvent.input(screen.getByLabelText("Host"), {
       target: { value: "db.example.test" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.input(screen.getByLabelText("Password"), {
       target: { value: "secret" },
     });
     await user.click(
       screen.getByRole("button", { name: "Show advanced options" })
     );
     await user.click(screen.getByRole("button", { name: "Add label" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+    fireEvent.input(screen.getByRole("textbox", { name: "Label key 1" }), {
       target: { value: "invalid key" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "Label value 1" }), {
+    fireEvent.input(screen.getByRole("textbox", { name: "Label value 1" }), {
       target: { value: "x".repeat(256) },
     });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
@@ -212,11 +212,11 @@ describe("create instance backend field violations", () => {
         screen.getByRole("button", { name: "Show advanced options" })
       );
       await user.click(screen.getByRole("button", { name: "Add label" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+      fireEvent.input(screen.getByRole("textbox", { name: "Label key 1" }), {
         target: { value: "env" },
       });
       await user.click(screen.getByRole("button", { name: "Add label" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "Label key 2" }), {
+      fireEvent.input(screen.getByRole("textbox", { name: "Label key 2" }), {
         target: { value: key },
       });
       await user.click(screen.getByRole("button", { name: "Create instance" }));
@@ -298,13 +298,13 @@ describe("create instance backend field violations", () => {
         ),
     });
 
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.input(screen.getByLabelText("Display name"), {
       target: { value: "Production" },
     });
-    fireEvent.change(screen.getByLabelText("Host"), {
+    fireEvent.input(screen.getByLabelText("Host"), {
       target: { value: "db.internal" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.input(screen.getByLabelText("Password"), {
       target: { value: "secret" },
     });
 
@@ -346,13 +346,13 @@ describe("create instance backend field violations", () => {
         ),
     });
 
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.input(screen.getByLabelText("Display name"), {
       target: { value: "Production" },
     });
-    fireEvent.change(screen.getByLabelText("Host"), {
+    fireEvent.input(screen.getByLabelText("Host"), {
       target: { value: "db.internal" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.input(screen.getByLabelText("Password"), {
       target: { value: "secret" },
     });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
@@ -390,23 +390,23 @@ test("valid prototype-like label keys cannot bypass value validation", async () 
     createInstance: () => Promise.resolve({}),
     testInstanceConnection: testConnection,
   });
-  fireEvent.change(screen.getByLabelText("Display name"), {
+  fireEvent.input(screen.getByLabelText("Display name"), {
     target: { value: "Staging" },
   });
-  fireEvent.change(screen.getByLabelText("Host"), {
+  fireEvent.input(screen.getByLabelText("Host"), {
     target: { value: "db.example.test" },
   });
-  fireEvent.change(screen.getByLabelText("Password"), {
+  fireEvent.input(screen.getByLabelText("Password"), {
     target: { value: "secret" },
   });
   await user.click(
     screen.getByRole("button", { name: "Show advanced options" })
   );
   await user.click(screen.getByRole("button", { name: "Add label" }));
-  fireEvent.change(screen.getByRole("textbox", { name: "Label key 1" }), {
+  fireEvent.input(screen.getByRole("textbox", { name: "Label key 1" }), {
     target: { value: "constructor" },
   });
-  fireEvent.change(screen.getByRole("textbox", { name: "Label value 1" }), {
+  fireEvent.input(screen.getByRole("textbox", { name: "Label value 1" }), {
     target: { value: "x".repeat(256) },
   });
   await user.click(screen.getByRole("button", { name: "Test connection" }));

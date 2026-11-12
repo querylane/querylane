@@ -21,15 +21,10 @@ const artifactDirectories = [
   "playwright-report",
   "test-results",
 ];
-const generatedScopes = new Set([
-  "src/components/ui/**",
-  "src/protogen/**",
-  "src/routeTree.gen.ts",
-]);
+const generatedScopes = new Set(["src/protogen/**", "src/routeTree.gen.ts"]);
 const biomeExclusions = new Set([
   ...artifactDirectories.map((directory) => `!!**/${directory}`),
   "!!src/protogen",
-  "!!src/components/ui",
   "!src/routeTree.gen.ts",
   "!!**/bun.lock",
   "!!**/bun.lockb",
@@ -37,7 +32,6 @@ const biomeExclusions = new Set([
 const toolExclusions = new Set([
   ...artifactDirectories.map((directory) => `${directory}/**`),
   "src/protogen/**",
-  "src/components/ui/**",
   "**/*.gen.ts",
   "**/*.gen.tsx",
 ]);
@@ -95,7 +89,7 @@ const compilerProjects = [
       "scripts",
       "public/**/*.js",
     ],
-    excludes: ["opensrc", "src/components/ui"],
+    excludes: ["opensrc"],
     checkJs: true,
   },
   {

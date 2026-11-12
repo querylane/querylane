@@ -79,7 +79,7 @@ const buttonPresentations = cva("", {
         "gap-3 rounded-xl border border-white/10 bg-white/3 px-3.5 py-3 whitespace-normal transition-all duration-150 hover:border-white/18 hover:bg-white/5 data-[selected=true]:border-info-400 data-[selected=true]:bg-info-500/8 data-[selected=true]:ring-1 data-[selected=true]:ring-info-400/20 data-[selected=true]:hover:border-info-400 data-[selected=true]:hover:bg-info-500/8",
       "schema-node":
         "gap-0 rounded-xl border bg-card p-0 font-normal text-foreground shadow-sm hover:bg-card data-[selected=true]:ring-2",
-      "reference-cell": "p-0 font-mono text-xs",
+      "reference-cell": "min-h-6 min-w-6 p-0 font-mono text-xs",
       "access-summary-active":
         "gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/60",
       "sql-tab":

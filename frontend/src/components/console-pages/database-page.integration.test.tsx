@@ -838,10 +838,8 @@ describe("backend database overview", () => {
       within(drawer).getByRole("columnheader", { name: "Relative" })
     ).toBeTruthy();
 
-    await user.click(within(drawer).getByRole("button", { name: "Type" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
-    );
+    await user.click(within(drawer).getByRole("combobox", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
     expect(
       within(drawer).queryByRole("button", {
         name: SELECT_EVENTS_QUERY_BUTTON_RE,
@@ -965,10 +963,8 @@ describe("backend database query insights drawer", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
     await user.click(screen.getByRole("option", { name: "25" }));
-    await user.click(screen.getByRole("button", { name: "Type" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
-    );
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
       screen.getByRole("button", { name: WITH_UPDATE_QUERY_BUTTON_RE })
@@ -1001,10 +997,8 @@ describe("backend database query insights drawer", () => {
     ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Clear all" }));
-    await user.click(screen.getByRole("button", { name: "Type" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Read queries" })
-    );
+    await user.click(screen.getByRole("combobox", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Read queries" }));
 
     expect(
       screen.getByRole("button", { name: TABLE_EVENTS_QUERY_BUTTON_RE })
@@ -1048,7 +1042,7 @@ describe("database query insights resilience", () => {
       name: "Search queries…",
     });
     const filterBar = searchInput.closest(
-      '[data-slot="query-insights-filter-bar"]'
+      '[data-querylane-slot="query-insights-filter-bar"]'
     );
     if (!(filterBar instanceof HTMLElement)) {
       throw new TypeError("Missing query insights filter bar");
@@ -1057,10 +1051,10 @@ describe("database query insights resilience", () => {
     expect(filterBar.className).toContain("justify-start");
     expect(filterBar.firstElementChild?.contains(searchInput)).toBe(true);
     expect(
-      within(filterBar).getByRole("button", { name: "Type" })
+      within(filterBar).getByRole("combobox", { name: "Type" })
     ).toBeTruthy();
     expect(
-      within(filterBar).getByRole("button", { name: "Mean" })
+      within(filterBar).getByRole("combobox", { name: "Mean" })
     ).toBeTruthy();
     expect(
       within(filterBar).queryByRole("combobox", { name: "Query type" })
@@ -1078,10 +1072,8 @@ describe("database query insights resilience", () => {
       screen.queryByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeNull();
 
-    await user.click(within(filterBar).getByRole("button", { name: "Type" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
-    );
+    await user.click(within(filterBar).getByRole("combobox", { name: "Type" }));
+    await user.click(screen.getByRole("option", { name: "Write queries" }));
 
     expect(
       screen.getByRole("button", { name: UPDATE_EVENTS_QUERY_BUTTON_RE })
@@ -1100,10 +1092,8 @@ describe("database query insights resilience", () => {
     expect(
       screen.getByRole("button", { name: SELECT_EVENTS_QUERY_BUTTON_RE })
     ).toBeTruthy();
-    await user.click(within(filterBar).getByRole("button", { name: "Mean" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Mean > 30 ms" })
-    );
+    await user.click(within(filterBar).getByRole("combobox", { name: "Mean" }));
+    await user.click(screen.getByRole("option", { name: "Mean > 30 ms" }));
 
     expect(
       screen.getByRole("button", { name: SLOW_COUNT_QUERY_BUTTON_RE })
