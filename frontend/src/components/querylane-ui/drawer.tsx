@@ -21,7 +21,7 @@ function DrawerContent({
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Backdrop
         className={cn(
-          "bg-background/80 fixed inset-0 z-50 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:transition-none motion-reduce:transition-none",
+          "fixed inset-0 z-50 bg-background/80 transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:transition-none motion-reduce:transition-none",
           styles["backdrop"]
         )}
         data-slot="drawer-overlay"
@@ -32,7 +32,7 @@ function DrawerContent({
       >
         <DrawerPrimitive.Popup
           className={cn(
-            "bg-popover text-popover-foreground fixed inset-y-0 flex h-full w-3/4 translate-x-(--drawer-swipe-movement-x) flex-col shadow-lg sm:max-w-sm",
+            "fixed inset-y-0 flex h-full w-3/4 translate-x-(--drawer-swipe-movement-x) flex-col bg-popover text-popover-foreground shadow-lg sm:max-w-sm",
             "transition-transform duration-200 data-swiping:transition-none motion-reduce:transition-none",
             "data-[swipe-direction=left]:left-0 data-[swipe-direction=left]:border-r data-[swipe-direction=right]:right-0 data-[swipe-direction=right]:border-l",
             "data-[swipe-direction=left]:data-ending-style:-translate-x-full data-[swipe-direction=left]:data-starting-style:-translate-x-full",

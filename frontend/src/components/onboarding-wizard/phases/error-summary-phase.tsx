@@ -107,13 +107,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
 
   if (errorKind === "configuration") {
     return (
-      <div className="border-warning-400/20 bg-warning-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
-        <TriangleExclamationPoint className="text-warning-400 mt-0.5 size-4 shrink-0" />
+      <div className="flex items-start gap-4 rounded-xl border border-warning-400/20 bg-warning-500/6 px-4 py-3">
+        <TriangleExclamationPoint className="mt-0.5 size-4 shrink-0 text-warning-400" />
         <div className="space-y-1">
-          <div className="text-warning-100 text-base font-medium">
+          <div className="text-base font-medium text-warning-100">
             Likely a configuration issue
           </div>
-          <p className="text-warning-100/70 text-sm">
+          <p className="text-sm text-warning-100/70">
             This error usually means the connection details need adjusting.
             Click <strong>Reconfigure</strong> to update your settings.
           </p>
@@ -123,13 +123,13 @@ function SetupErrorHint({ errorKind }: { errorKind: SetupErrorKind }) {
   }
 
   return (
-    <div className="border-info-400/20 bg-info-500/6 flex items-start gap-4 rounded-xl border px-4 py-3">
-      <RefreshCw className="text-info-400 mt-0.5 size-4 shrink-0" />
+    <div className="flex items-start gap-4 rounded-xl border border-info-400/20 bg-info-500/6 px-4 py-3">
+      <RefreshCw className="mt-0.5 size-4 shrink-0 text-info-400" />
       <div className="space-y-1">
-        <div className="text-info-100 text-base font-medium">
+        <div className="text-base font-medium text-info-100">
           May be a transient issue
         </div>
-        <p className="text-info-100/70 text-sm">
+        <p className="text-sm text-info-100/70">
           This could be a temporary problem. Try clicking <strong>Retry</strong>{" "}
           first. If it persists, reconfigure your connection.
         </p>
@@ -260,10 +260,10 @@ export function ErrorSummaryPhase() {
 
         {/* Failed step detail */}
         {isNonEmptyString(failedStepName) ? (
-          <div className="border-negative-400/18 bg-negative-500/6 rounded-xl border px-4 py-3">
+          <div className="rounded-xl border border-negative-400/18 bg-negative-500/6 px-4 py-3">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="bg-negative-500/18 text-negative-200 rounded-full px-3 py-1 text-sm font-medium">
+                <span className="rounded-full bg-negative-500/18 px-3 py-1 text-sm font-medium text-negative-200">
                   Failed step
                 </span>
                 <span className="text-base font-medium text-white">
@@ -272,7 +272,7 @@ export function ErrorSummaryPhase() {
               </div>
               {isNonEmptyString(failedStepError) &&
               errorKind !== "storage_full" ? (
-                <p className="text-negative-200/80 text-sm">
+                <p className="text-sm text-negative-200/80">
                   {failedStepError}
                 </p>
               ) : null}
@@ -288,14 +288,14 @@ export function ErrorSummaryPhase() {
         ) : null}
 
         {errorKind === "storage_full" ? null : (
-          <div className="border-border bg-muted/30 space-y-2 rounded-xl border px-4 py-3">
-            <div className="text-foreground text-sm font-medium">
+          <div className="space-y-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div className="text-sm font-medium text-foreground">
               Configuration file
             </div>
-            <code className="bg-muted text-muted-foreground block rounded-lg px-3 py-2 text-xs break-all">
+            <code className="block rounded-lg bg-muted px-3 py-2 text-xs break-all text-muted-foreground">
               {configFilePath}
             </code>
-            <p className="text-muted-foreground text-sm leading-6">
+            <p className="text-sm leading-6 text-muted-foreground">
               Use <strong>Start over</strong> to choose another storage method
               or <strong>Reconfigure</strong> to update this connection.
             </p>

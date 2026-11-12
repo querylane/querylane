@@ -90,13 +90,13 @@ function RoleHero({
           ) : null}
         </div>
         {isSystem ? (
-          <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" />
             <span>{systemDescription}</span>
           </div>
         ) : null}
         {!isSystem && comment ? (
-          <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <span>{comment}</span>
           </div>
         ) : null}
@@ -126,7 +126,7 @@ function RoleDetailView(props: RoleDetailViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        className="text-muted-foreground hover:text-foreground inline-flex w-fit flex-row items-center gap-1 text-sm leading-none"
+        className="inline-flex w-fit flex-row items-center gap-1 text-sm leading-none text-muted-foreground hover:text-foreground"
         params={{ instanceId }}
         search={{}}
         to="/instances/$instanceId/roles"

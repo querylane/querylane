@@ -44,12 +44,12 @@ function KpiCard({
   return (
     <Card presentation="bordered" size="sm">
       <CardContent className="flex flex-col" presentation="summary">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-xs tracking-wide uppercase">
+        <div className="flex items-center gap-1.5 text-xs tracking-wide text-muted-foreground uppercase">
           {label}
         </div>
         <div className="text-lg font-semibold tabular-nums">{value}</div>
         {isNonEmptyString(sub) ? (
-          <div className="text-muted-foreground text-xs">{sub}</div>
+          <div className="text-xs text-muted-foreground">{sub}</div>
         ) : null}
       </CardContent>
     </Card>
@@ -74,7 +74,7 @@ function capabilityTileClass(cap: Capability): string {
     "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
     cap.on && cap.danger === true && "border-warning-500/30 bg-warning-500/5",
     cap.on && !(cap.danger === true) && "border-border bg-muted/30",
-    !cap.on && "border-border/50 border-dashed"
+    !cap.on && "border-dashed border-border/50"
   );
 }
 
@@ -133,7 +133,7 @@ function CapabilityMarker({ cap }: { cap: Capability }) {
     );
   }
   return (
-    <span className="text-muted-foreground/50 shrink-0 tracking-wide text-(length:--text-micro) uppercase">
+    <span className="shrink-0 tracking-wide text-(length:--text-micro) text-muted-foreground/50 uppercase">
       Off
     </span>
   );
@@ -208,7 +208,7 @@ function AccessItem({
           {related.roleName}
         </ItemTitle>
         {related.options.length > 0 || isNonEmptyString(related.grantor) ? (
-          <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {related.options.map((option) => (
               <Badge key={option.key} variant="secondary">
                 {option.label}
@@ -221,7 +221,7 @@ function AccessItem({
         ) : null}
       </ItemContent>
       <ItemActions>
-        <ChevronRight className="text-muted-foreground size-4" />
+        <ChevronRight className="size-4 text-muted-foreground" />
       </ItemActions>
     </Item>
   );
@@ -269,7 +269,7 @@ function RoleNotFound({ instanceId }: { instanceId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <Link
-        className="text-muted-foreground hover:text-foreground inline-flex w-fit flex-row items-center gap-1 text-sm leading-none"
+        className="inline-flex w-fit flex-row items-center gap-1 text-sm leading-none text-muted-foreground hover:text-foreground"
         params={{ instanceId }}
         search={{}}
         to="/instances/$instanceId/roles"

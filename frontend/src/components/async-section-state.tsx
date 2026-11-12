@@ -23,7 +23,7 @@ function SectionStatusMessage({
     return (
       <output
         aria-live="polite"
-        className="text-muted-foreground mb-3 flex items-center gap-2 text-xs"
+        className="mb-3 flex items-center gap-2 text-xs text-muted-foreground"
       >
         <Spinner className="size-3.5" />
         <span>{message}</span>
@@ -34,9 +34,9 @@ function SectionStatusMessage({
   return (
     <output
       aria-live="polite"
-      className="border-border bg-muted/20 flex min-h-32 items-center justify-center rounded-lg border border-dashed px-4 py-6"
+      className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6"
     >
-      <div className="text-muted-foreground flex items-center gap-3 text-sm">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <Spinner className="size-4" />
         <span>{message}</span>
       </div>

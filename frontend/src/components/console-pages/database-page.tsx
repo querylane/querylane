@@ -98,16 +98,16 @@ function DatabaseOverviewHeader({
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex max-w-full min-w-0 flex-col gap-1.5 [overflow-wrap:anywhere]">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <h1 className="text-foreground min-w-0 font-mono text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] wrap-break-word">
+          <h1 className="min-w-0 font-mono text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] wrap-break-word text-foreground">
             {database.displayName}
           </h1>
           {database.isSystemDatabase ? (
             <Badge variant="secondary">system</Badge>
           ) : null}
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           owned by{" "}
-          <span className="text-foreground/80 font-mono">
+          <span className="font-mono text-foreground/80">
             {database.owner || "—"}
           </span>
           {` · ${database.characterSet || "—"} · ${database.collation || "—"}`}

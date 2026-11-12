@@ -79,7 +79,7 @@ function HistoryRow({
         <span className="line-clamp-2 w-full font-mono text-xs leading-relaxed">
           {summarizeStatement(entry.statement, PREVIEW_LENGTH)}
         </span>
-        <span className="text-muted-foreground flex w-full flex-wrap items-center gap-x-2 text-xs">
+        <span className="flex w-full flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className={cn("font-medium", statusTone(entry.status))}>
             {STATUS_LABEL[entry.status]}
           </span>
@@ -87,7 +87,7 @@ function HistoryRow({
             <span key={part}>{part}</span>
           ))}
           {isNonEmptyString(entry.errorSummary) ? (
-            <span className="text-destructive/80 line-clamp-1 w-full">
+            <span className="line-clamp-1 w-full text-destructive/80">
               {entry.errorSummary}
             </span>
           ) : null}
@@ -120,7 +120,7 @@ function SavedRow({
         <span className="w-full truncate text-sm font-medium">
           {query.name}
         </span>
-        <span className="text-muted-foreground line-clamp-2 w-full font-mono text-xs leading-relaxed">
+        <span className="line-clamp-2 w-full font-mono text-xs leading-relaxed text-muted-foreground">
           {summarizeStatement(query.statement, PREVIEW_LENGTH)}
         </span>
       </Button>
@@ -143,7 +143,7 @@ function SavedRow({
 
 function EmptyListMessage({ children }: { children: string }) {
   return (
-    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
       {children}
     </p>
   );
@@ -302,7 +302,7 @@ function SqlHistorySheet({
             browser.
           </SheetDescription>
         </SheetHeader>
-        <div className="border-border flex items-center gap-2 border-b px-4 py-2">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
           <SheetTabs
             historyCount={history.length}
             onChange={setTab}
@@ -337,7 +337,7 @@ function SqlHistorySheet({
           )}
         </div>
         {tab === "history" && history.length > 0 ? (
-          <div className="border-border border-t px-4 py-2">
+          <div className="border-t border-border px-4 py-2">
             <Button
               onClick={onClearHistory}
               presentation="muted"

@@ -28,7 +28,7 @@ const ROW_NUMBER_COLUMN: Column<GridRow> = {
   minWidth: ROW_NUMBER_COLUMN_WIDTH,
   name: "Row number",
   renderCell: ({ rowIdx }) => (
-    <span className="text-muted-foreground block text-right text-xs tabular-nums">
+    <span className="block text-right text-xs text-muted-foreground tabular-nums">
       {rowIdx + 1}
     </span>
   ),

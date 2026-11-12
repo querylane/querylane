@@ -221,7 +221,7 @@ function TableResourceEmptyState({
             />
             Refresh
           </Button>
-          <span aria-live="polite" className="text-muted-foreground text-xs">
+          <span aria-live="polite" className="text-xs text-muted-foreground">
             {toolbar.lastFetchedLabel}
           </span>
         </div>

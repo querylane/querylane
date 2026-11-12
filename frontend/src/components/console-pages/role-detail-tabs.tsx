@@ -66,7 +66,7 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
           <TabsTrigger value="grants">
             Grants
             {grantsReady && (grantObjects.length > 0 || grantsPartial) ? (
-              <span className="text-muted-foreground text-xs tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {grantObjects.length}
                 {grantsPartial ? " Partial" : ""}
               </span>
@@ -75,7 +75,7 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
           <TabsTrigger value="members">
             Membership
             {belongsTo.length + memberRows.length > 0 ? (
-              <span className="text-muted-foreground text-xs tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {belongsTo.length + memberRows.length}
               </span>
             ) : null}

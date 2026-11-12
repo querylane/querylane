@@ -77,14 +77,14 @@ function AccessSummaryRow({
         {row.status}
       </Badge>
       {jump ? (
-        <ChevronRight className="text-muted-foreground/40 group-hover:text-foreground size-4 shrink-0 transition-colors" />
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
       ) : null}
     </>
   );
 
   const base = cn(
     "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left",
-    row.active ? "border-border bg-muted/30" : "border-border/50 border-dashed"
+    row.active ? "border-border bg-muted/30" : "border-dashed border-border/50"
   );
 
   // Navigable rows are a single full-width click target (Linear/Vercel row
@@ -126,7 +126,7 @@ function ScopeGroup({
   }
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-muted-foreground flex items-center gap-1 px-1 font-medium tracking-wide text-(length:--text-label-sm) uppercase">
+      <div className="flex items-center gap-1 px-1 font-medium tracking-wide text-(length:--text-label-sm) text-muted-foreground uppercase">
         {label}
       </div>
       {rows.map((row) => (
@@ -186,9 +186,9 @@ function AccessSummary({
                 In
                 <Database
                   aria-hidden="true"
-                  className="text-muted-foreground size-3 shrink-0"
+                  className="size-3 shrink-0 text-muted-foreground"
                 />
-                <span className="text-foreground font-mono normal-case">
+                <span className="font-mono text-foreground normal-case">
                   {databaseName}
                 </span>
               </>
@@ -201,7 +201,7 @@ function AccessSummary({
         />
       </div>
       {isNonEmptyString(rlsNote) ? (
-        <p className="text-muted-foreground mt-3 flex items-start gap-1.5 text-xs">
+        <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
           <ShieldOff className="mt-0.5 size-3 shrink-0" />
           <span>{rlsNote}</span>
         </p>

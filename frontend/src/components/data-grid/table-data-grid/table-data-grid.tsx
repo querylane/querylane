@@ -222,7 +222,7 @@ function TableDataGridAlerts({
           retryLabel="Retry"
         />
         {hasStaleRows ? (
-          <p className="text-muted-foreground text-xs" role="status">
+          <p className="text-xs text-muted-foreground" role="status">
             Showing the last loaded rows until retry succeeds.
           </p>
         ) : null}

@@ -60,7 +60,7 @@ function PolicyExpression({ expression }: { expression: string }) {
 
 function PolicyCard({ policy }: { policy: TablePolicy }) {
   return (
-    <article className="bg-card rounded-lg border p-3 shadow-xs">
+    <article className="rounded-lg border bg-card p-3 shadow-xs">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-mono text-sm font-semibold">{policy.policyName}</h2>
         <Badge className="h-[18px]" presentation="identifier" variant="outline">
@@ -73,13 +73,13 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
         >
           {policyModeLabel(policy.mode)}
         </Badge>
-        <span className="text-muted-foreground ml-auto font-mono text-xs">
+        <span className="ml-auto font-mono text-xs text-muted-foreground">
           TO {formatPolicyRoles(policy)}
         </span>
       </div>
       {policy.usingExpression ? (
         <div className="mt-3">
-          <div className="text-muted-foreground font-semibold tracking-wider text-(length:--text-micro) uppercase">
+          <div className="font-semibold tracking-wider text-(length:--text-micro) text-muted-foreground uppercase">
             USING
           </div>
           <PolicyExpression expression={policy.usingExpression} />
@@ -87,7 +87,7 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
       ) : null}
       {policy.checkExpression ? (
         <div className="mt-2">
-          <div className="text-muted-foreground font-semibold tracking-wider text-(length:--text-micro) uppercase">
+          <div className="font-semibold tracking-wider text-(length:--text-micro) text-muted-foreground uppercase">
             WITH CHECK
           </div>
           <PolicyExpression expression={policy.checkExpression} />
@@ -99,33 +99,33 @@ function PolicyCard({ policy }: { policy: TablePolicy }) {
 
 function RlsCombinationGuide() {
   return (
-    <section className="bg-card rounded-lg border p-4 shadow-xs">
+    <section className="rounded-lg border bg-card p-4 shadow-xs">
       <h2 className="text-sm font-semibold">How the server combines these</h2>
-      <ol className="text-muted-foreground mt-3 flex list-none flex-col gap-2 pl-0 text-sm leading-relaxed">
+      <ol className="mt-3 flex list-none flex-col gap-2 pl-0 text-sm leading-relaxed text-muted-foreground">
         <li>
-          <span className="text-foreground font-medium">1 · Grants first.</span>{" "}
+          <span className="font-medium text-foreground">1 · Grants first.</span>{" "}
           A role with no SELECT grant sees nothing; RLS never even runs.
         </li>
         <li>
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             2 · PERMISSIVE policies OR together.
           </span>{" "}
           A row is visible if any one matches.
         </li>
         <li>
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             3 · RESTRICTIVE policies AND on top.
           </span>{" "}
           Every one must also pass.
         </li>
         <li>
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             4 · No matching policy = zero rows.
           </span>{" "}
           RLS is default-deny, not default-allow.
         </li>
         <li>
-          <span className="text-foreground font-medium">
+          <span className="font-medium text-foreground">
             5 · Owner and BYPASSRLS skip it
           </span>{" "}
           unless FORCE ROW LEVEL SECURITY is set.
@@ -165,7 +165,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
   }
 
   return (
-    <section className="bg-card rounded-lg border p-4 shadow-xs">
+    <section className="rounded-lg border bg-card p-4 shadow-xs">
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-sm font-semibold">Preview visibility as</h2>
         <Select onValueChange={handleRoleChange} value={activeRole}>
@@ -185,7 +185,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-sm">running</span>
+        <span className="text-sm text-muted-foreground">running</span>
         <Select
           onValueChange={handleCommandChange}
           value={String(previewCommand)}
@@ -234,7 +234,7 @@ function RlsPreview({ policies }: { policies: TablePolicy[] }) {
         {preview.hasRows ? (
           <>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground font-semibold tracking-wider text-(length:--text-micro) uppercase">
+              <span className="font-semibold tracking-wider text-(length:--text-micro) text-muted-foreground uppercase">
                 Applied
               </span>
               {preview.appliedPolicies.map((policy) => (
@@ -322,10 +322,10 @@ function PoliciesTab({
 
   return (
     <div className="flex flex-col gap-3" data-slot="policies-tab">
-      <div className="bg-card flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xs">
+      <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-xs">
         <span
           aria-hidden="true"
-          className="bg-positive-500 size-2 rounded-full"
+          className="size-2 rounded-full bg-positive-500"
         />
         <p className="text-sm font-medium">
           This table defines row-level security policies; table owners and
@@ -333,7 +333,7 @@ function PoliciesTab({
         </p>
         <span
           aria-live="polite"
-          className="text-muted-foreground ml-auto text-xs"
+          className="ml-auto text-xs text-muted-foreground"
         >
           {toolbar.lastFetchedLabel}
         </span>
@@ -370,7 +370,7 @@ function PoliciesTab({
       ) : null}
       <fieldset
         aria-label="Policies pagination"
-        className="text-muted-foreground m-0 flex min-h-8 min-w-0 flex-wrap items-center justify-end gap-2 border-0 p-0 text-xs"
+        className="m-0 flex min-h-8 min-w-0 flex-wrap items-center justify-end gap-2 border-0 p-0 text-xs text-muted-foreground"
       >
         <span className="text-xs">Rows per page</span>
         <Select

@@ -8,7 +8,7 @@ export function InlineCode({
 }: ComponentProps<typeof BaseInlineCode>) {
   return (
     <BaseInlineCode
-      className={cn("text-foreground [overflow-wrap:anywhere]", className)}
+      className={cn("[overflow-wrap:anywhere] text-foreground", className)}
       {...props}
     />
   );

@@ -33,7 +33,7 @@ async function renderLargeExplorerSidebar() {
 
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background flex h-[760px] w-[320px] overflow-hidden rounded-2xl border">
+      <div className="flex h-[760px] w-[320px] overflow-hidden rounded-2xl border border-border bg-background">
         <ExplorerSidebar
           activeSchema={defaultSchema}
           categoryPagination={{

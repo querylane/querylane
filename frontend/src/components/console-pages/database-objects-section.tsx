@@ -134,7 +134,7 @@ function ExtensionsCard({
       <CardContent className="flex flex-col">
         {isPending ? <CardLoadingRows label="Loading extensions" /> : null}
         {emptyText ? (
-          <p className="text-muted-foreground py-2 text-(length:--text-caption)">
+          <p className="py-2 text-(length:--text-caption) text-muted-foreground">
             {emptyText}
           </p>
         ) : null}
@@ -189,7 +189,7 @@ function ObjectsErrorCard({
         className="flex flex-col items-start"
         presentation="compact-row"
       >
-        <p className="text-muted-foreground text-(length:--text-caption)">
+        <p className="text-(length:--text-caption) text-muted-foreground">
           Failed to load other database objects.
         </p>
         {onRetry ? (
@@ -271,10 +271,10 @@ function DatabaseObjectsPanel({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <h2 className="text-foreground text-sm font-semibold">
+        <h2 className="text-sm font-semibold text-foreground">
           Database objects
         </h2>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           Scoped to this database; roles and tablespaces live at the instance
           level.
         </p>

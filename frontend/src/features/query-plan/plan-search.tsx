@@ -61,7 +61,7 @@ function PlanSearch({
         </ul>
       ) : null}
       {term && matches.length === 0 ? (
-        <p className="text-muted-foreground mt-2 text-xs" role="status">
+        <p className="mt-2 text-xs text-muted-foreground" role="status">
           No matching operators.
         </p>
       ) : null}

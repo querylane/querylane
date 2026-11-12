@@ -141,7 +141,7 @@ function BreadcrumbDropdownList({
     return (
       <output
         aria-live="polite"
-        className="text-muted-foreground flex items-center gap-2 p-3 text-sm"
+        className="flex items-center gap-2 p-3 text-sm text-muted-foreground"
       >
         <Spinner className="size-4" />
         <span>{loadingMessage ?? `Loading ${label.toLowerCase()}…`}</span>
@@ -154,7 +154,7 @@ function BreadcrumbDropdownList({
       {showRefreshingState ? (
         <output
           aria-live="polite"
-          className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-xs"
+          className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground"
         >
           <Spinner className="size-3.5" />
           <span>{`Refreshing ${label.toLowerCase()}…`}</span>
@@ -223,7 +223,7 @@ function BreadcrumbTriggerBody({
       ) : null}
       <ChevronsUpDown
         aria-hidden="true"
-        className="text-muted-foreground size-3 shrink-0"
+        className="size-3 shrink-0 text-muted-foreground"
       />
     </span>
   );
@@ -419,10 +419,10 @@ function InstanceCommandItem({
         </OverflowAwareText>
         {instance.credentialsUnreadable ? (
           <>
-            <span className="text-destructive truncate text-xs">
+            <span className="truncate text-xs text-destructive">
               Credentials need attention
             </span>
-            <span className="text-destructive truncate text-xs underline underline-offset-2">
+            <span className="truncate text-xs text-destructive underline underline-offset-2">
               Review credentials
             </span>
           </>
@@ -458,7 +458,7 @@ function RegisterInstanceCommand({
         value="register new instance loading"
       >
         <Spinner className="size-4" presentation="muted" />
-        <span className="text-muted-foreground text-sm">
+        <span className="text-sm text-muted-foreground">
           Checking instance management
         </span>
       </CommandItem>
@@ -476,8 +476,8 @@ function RegisterInstanceCommand({
             presentation="secondary"
             value="register new instance config managed"
           >
-            <Lock className="text-muted-foreground size-4" />
-            <span className="text-muted-foreground text-sm">
+            <Lock className="size-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
               Register instance
             </span>
           </CommandItem>
@@ -501,8 +501,8 @@ function RegisterInstanceCommand({
       }}
       value="register new instance"
     >
-      <Plus className="text-muted-foreground size-4" />
-      <span className="text-muted-foreground text-sm">Register instance</span>
+      <Plus className="size-4 text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">Register instance</span>
     </CommandItem>
   );
 }
@@ -613,7 +613,7 @@ function DatabaseSelector({
         triggerWidth="database"
         value={selectedDatabase?.name ?? null}
         valuePrefix={
-          <span className="text-muted-foreground shrink-0 text-sm font-medium">
+          <span className="shrink-0 text-sm font-medium text-muted-foreground">
             Database:
           </span>
         }
@@ -654,7 +654,7 @@ function PathSeparator({ className }: { className?: string | undefined }) {
   return (
     <span
       className={cn(
-        "text-muted-foreground/40 flex items-center text-lg font-light select-none",
+        "flex items-center text-lg font-light text-muted-foreground/40 select-none",
         className
       )}
     >
@@ -682,7 +682,7 @@ function RoleBreadcrumbSegment({
   return (
     <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
       <Link
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm px-1 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="rounded-sm px-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         params={{ instanceId }}
         to="/instances/$instanceId/roles"
       >
@@ -718,7 +718,7 @@ function PageBreadcrumb() {
         <PathSeparator className="hidden lg:flex" />
         <span
           aria-current="page"
-          className="text-foreground hidden min-w-0 truncate px-2 py-1 text-sm font-medium lg:block"
+          className="hidden min-w-0 truncate px-2 py-1 text-sm font-medium text-foreground lg:block"
         >
           {tail.label}
         </span>
@@ -771,7 +771,7 @@ function AdminHeaderActions({
           />
         </svg>
         {stars !== null && (
-          <span className="text-muted-foreground text-xs tabular-nums">
+          <span className="text-xs text-muted-foreground tabular-nums">
             {stars}
           </span>
         )}
@@ -798,7 +798,7 @@ export function AdminHeader() {
     ? `https://github.com/${githubRepo}`
     : "https://github.com/querylane/querylane";
   return (
-    <header className="border-border bg-background z-20 flex h-12 shrink-0 items-center gap-1 overflow-hidden border-b px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
+    <header className="z-20 flex h-12 shrink-0 items-center gap-1 overflow-hidden border-b border-border bg-background px-2 sm:gap-2 sm:px-3 lg:gap-3 lg:px-4">
       <SidebarTrigger
         aria-label="Open navigation menu"
         className="shrink-0 lg:hidden"

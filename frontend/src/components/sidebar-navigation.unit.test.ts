@@ -37,7 +37,8 @@ describe("sidebar navigation", () => {
       scopeLevel: "database",
     });
 
-    for (const item of sections.flatMap((section) => section.items)) {
+    const items = sections.flatMap((section) => section.items);
+    for (const item of items) {
       expect(links[item.key], `missing link for ${item.key}`).toBeDefined();
     }
     expect(links["database.sql"]).toMatchObject({

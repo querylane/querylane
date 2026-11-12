@@ -85,7 +85,7 @@ async function renderCreateInstance(
   await render(
     <ScreenshotFrame>
       <div
-        className="border-border bg-background text-foreground w-[1120px] origin-top-left scale-90 rounded-2xl border"
+        className="w-[1120px] origin-top-left scale-90 rounded-2xl border border-border bg-background text-foreground"
         data-create-instance-visual-surface=""
         data-testid="create-instance-visual-surface"
       >

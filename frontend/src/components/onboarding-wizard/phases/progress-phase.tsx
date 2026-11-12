@@ -62,7 +62,7 @@ function WaitingForConfigBody({
         >
           <span className="min-w-0 text-left break-all">{configFilePath}</span>
           {pathCopied ? (
-            <Check className="text-positive-400 size-4 shrink-0" />
+            <Check className="size-4 shrink-0 text-positive-400" />
           ) : (
             <ClipboardCopy className="size-4 shrink-0 text-white/50" />
           )}
@@ -89,7 +89,7 @@ function WaitingForConfigBody({
         </Button>
       </div>
       {isNonEmptyString(watchNotice) ? (
-        <div className="border-warning-400/25 bg-warning-500/8 text-warning-50/90 rounded-xl border px-4 py-3 text-sm">
+        <div className="rounded-xl border border-warning-400/25 bg-warning-500/8 px-4 py-3 text-sm text-warning-50/90">
           {watchNotice}
         </div>
       ) : null}
@@ -98,16 +98,16 @@ function WaitingForConfigBody({
 }
 function SuccessCallout() {
   return (
-    <div className="border-positive-400/32 bg-positive-500/10 rounded-xl border p-4">
+    <div className="rounded-xl border border-positive-400/32 bg-positive-500/10 p-4">
       <div className="flex items-start gap-4">
-        <span className="border-positive-400/35 bg-positive-500/16 text-positive-100 mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border">
+        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-positive-400/35 bg-positive-500/16 text-positive-100">
           <Check aria-hidden="true" className="size-5" />
         </span>
         <div className="min-w-0 space-y-1.5">
-          <div className="text-positive-100 text-base font-medium">
+          <div className="text-base font-medium text-positive-100">
             Ready to go!
           </div>
-          <p className="text-positive-50/90 max-w-4xl text-sm leading-6">
+          <p className="max-w-4xl text-sm leading-6 text-positive-50/90">
             Querylane is now configured and ready to manage your PostgreSQL
             instances. Click finish to start exploring.
           </p>

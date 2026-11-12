@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const refreshControlPresentations = cva("", {
   variants: {
     presentation: {
-      compact: "text-muted-foreground text-xs",
+      compact: "text-xs text-muted-foreground",
     },
   },
 });

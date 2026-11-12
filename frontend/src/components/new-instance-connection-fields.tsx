@@ -43,7 +43,7 @@ function ConnectionStringFeedback({
 }) {
   if (!((error ?? "") || isNonEmptyString(warning))) {
     return (
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-muted-foreground">
         You’ll still pick a display name separately.
       </p>
     );
@@ -51,13 +51,13 @@ function ConnectionStringFeedback({
   return (
     <>
       {isNonEmptyString(error) ? (
-        <p className="text-destructive text-sm" id={errorId} role="alert">
+        <p className="text-sm text-destructive" id={errorId} role="alert">
           {error}
         </p>
       ) : null}
       {isNonEmptyString(warning) ? (
         <p
-          className="text-warning-700 dark:text-warning-300 text-sm"
+          className="text-sm text-warning-700 dark:text-warning-300"
           role="status"
         >
           {warning}
@@ -112,7 +112,7 @@ function CreateInstanceTextField({
         <Input {...sharedProps} type={type} />
       )}
       {isNonEmptyString(error) ? (
-        <p className="text-destructive text-sm" id={`${id}-error`}>
+        <p className="text-sm text-destructive" id={`${id}-error`}>
           {error}
         </p>
       ) : null}
@@ -169,14 +169,14 @@ function CreateInstanceConnectionFields({
   };
   return (
     <div className="space-y-4">
-      <div className="border-border/70 bg-muted/20 space-y-3 rounded-lg border p-4">
+      <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
         <div className="flex items-start gap-3">
-          <div className="border-border/70 bg-background text-muted-foreground mt-0.5 rounded-md border p-2">
+          <div className="mt-0.5 rounded-md border border-border/70 bg-background p-2 text-muted-foreground">
             <Link2 className="size-4" />
           </div>
           <div className="space-y-1">
             <div className="text-sm font-medium">Paste a DSN to prefill</div>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Querylane will fill the host, port, database, username, password,
               and SSL mode from your PostgreSQL connection string.
             </p>
@@ -332,7 +332,7 @@ function CreateInstanceSslModeField({
         </SelectContent>
       </Select>
       {isNonEmptyString(formErrors.sslMode) ? (
-        <p className="text-destructive text-sm" id={`${sslModeId}-error`}>
+        <p className="text-sm text-destructive" id={`${sslModeId}-error`}>
           {formErrors.sslMode}
         </p>
       ) : null}
@@ -383,7 +383,7 @@ function CreateInstanceSslNegotiationField({
       </Select>
       {isNonEmptyString(formErrors.sslNegotiation) ? (
         <p
-          className="text-destructive text-sm"
+          className="text-sm text-destructive"
           id={`${sslNegotiationId}-error`}
         >
           {formErrors.sslNegotiation}

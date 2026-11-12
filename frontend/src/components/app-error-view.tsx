@@ -66,7 +66,7 @@ function CopyErrorDetailsButton({ error }: { error: AppUiError }) {
       </Button>
       <p
         aria-live="polite"
-        className="text-muted-foreground text-xs"
+        className="text-xs text-muted-foreground"
         role="status"
       >
         {COPY_FEEDBACK_MESSAGES[feedback]}
@@ -81,7 +81,7 @@ function ErrorBadge({ label, value }: { label: string; value: string | null }) {
   }
 
   return (
-    <div className="border-border text-muted-foreground rounded-full border px-3 py-1 font-mono text-xs">
+    <div className="rounded-full border border-border px-3 py-1 font-mono text-xs text-muted-foreground">
       {label}: {value}
     </div>
   );
@@ -226,14 +226,14 @@ function AppPageError({
           className="flex flex-col items-center text-center"
           presentation="recovery"
         >
-          <div className="bg-destructive/10 flex size-12 items-center justify-center rounded-full">
-            <TriangleExclamationPoint className="text-destructive size-6" />
+          <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
+            <TriangleExclamationPoint className="size-6 text-destructive" />
           </div>
           <div className="space-y-1.5">
             <h2 className="text-lg font-semibold tracking-tight">
               {error.title}
             </h2>
-            <p className="text-muted-foreground text-sm">{error.summary}</p>
+            <p className="text-sm text-muted-foreground">{error.summary}</p>
             {isNonEmptyString(error.retryGuidance) ? (
               <p className="text-sm">{error.retryGuidance}</p>
             ) : null}
@@ -271,16 +271,16 @@ function AppCompactError({
     <div className={cn("w-full", containerClassName)}>
       <div
         className={cn(
-          "border-destructive/30 bg-destructive/5 rounded-lg border p-3",
+          "rounded-lg border border-destructive/30 bg-destructive/5 p-3",
           className
         )}
         role="alert"
       >
         <div className="flex items-start gap-2.5">
-          <TriangleExclamationPoint className="text-destructive mt-0.5 size-4 shrink-0" />
+          <TriangleExclamationPoint className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="text-sm leading-snug font-medium">{error.title}</p>
-            <p className="text-muted-foreground line-clamp-3 text-xs wrap-break-word">
+            <p className="line-clamp-3 text-xs wrap-break-word text-muted-foreground">
               {error.summary}
             </p>
             {isNonEmptyString(error.retryGuidance) ? (

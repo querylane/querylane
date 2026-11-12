@@ -1,5 +1,6 @@
 {
   "biome": {
+    "root": true,
     "rules": {
       "a11y/useValidAutocomplete": {
         "inputComponents": ["Input"]
@@ -45,8 +46,10 @@
         "peerDependencies": true,
         "optionalDependencies": true
       },
-      "correctness/useImportExtensions": {
-        "forceJsExtensions": false
+      "nursery/noExcessiveSelectorComplexity": {
+        "maxIds": 1,
+        "maxCombinators": 5,
+        "maxCompounds": 6
       },
       "nursery/useConsistentFunctionStyle": {
         "style": "declaration",
@@ -439,19 +442,12 @@
     }
   },
   "entrypoints": {
-    "lint": "bun run quality:rules && ultracite check --error-on-warnings && bun run lint:shadcn && bun run suppressions:check",
-    "lint:fix": "biome format --write . && ultracite fix --error-on-warnings && bun run lint:shadcn && bun run suppressions:check",
-    "lint:biome": "biome check --error-on-warnings .",
-    "lint:oxlint": "oxlint --config oxlint.config.ts --type-aware --deny-warnings --disable-nested-config --report-unused-disable-directives-severity error",
-    "lint:shadcn": "bun run lint:oxlint",
-    "lint:changed": "bun run scripts/lint-changed.ts && bun run lint:shadcn && bun run suppressions:check",
+    "lint": "bun scripts/check-rule-inventory.ts && biome check --error-on-warnings . && oxlint --config oxlint.config.ts --type-aware --deny-warnings --disable-nested-config --report-unused-disable-directives-severity error && bun scripts/check-suppressions.ts",
+    "lint:fix": "biome check --write --error-on-warnings . && oxlint --config oxlint.config.ts --type-aware --deny-warnings --disable-nested-config --report-unused-disable-directives-severity error --fix && bun run lint",
     "doctor": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
-    "doctor:full": "react-doctor . -y --scope full --blocking warning --no-respect-inline-disables --supply-chain --no-score",
-    "doctor:ci": "bun run doctor:full",
     "doctor:dead-code": "react-doctor . -y --scope full --no-lint --blocking warning --no-respect-inline-disables --no-score",
     "quality:gate": "bun run lint && bun run doctor && bun run type:check && bun run build && bun run test:unit && bun run test:integration",
-    "quality:changed": "bun run lint:changed && bun run doctor:changed && bun run type:check && bun run test:unit:changed && bun run test:integration:changed && bun run test:browser:changed",
-    "quality:rules": "bun run scripts/check-rule-inventory.ts",
+    "quality:changed": "bun run lint && bun run doctor:changed && bun run type:check && bun run test:unit:changed && bun run test:integration:changed && bun run test:browser:changed",
     "type:check": "bun run type:check:ui && tsrs -p tsconfig.node.json --pretty false && tsrs -p tsconfig.browser-js.json --pretty false && tsrs -p tsconfig.authored-declarations.json --pretty false && tsrs -b tsconfig.declarations.json --pretty false && tsrs -p tsconfig.json --incremental false --pretty false && bun run type:check:canary",
     "type:check:ui": "tsrs -p tsconfig.ui.json --pretty false",
     "type:check:canary": "tsc -p tsconfig.ui.json --outDir node_modules/.tmp/tsconfig.ui-canary --pretty false && tsc -p tsconfig.node.json --pretty false && tsc -p tsconfig.browser-js.json --pretty false && tsc -p tsconfig.authored-declarations.json --pretty false && tsc -b tsconfig.declarations.json --pretty false && tsc -p tsconfig.json --incremental false --pretty false",

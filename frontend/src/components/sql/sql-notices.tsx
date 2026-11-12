@@ -50,7 +50,7 @@ export function SqlNotices({
       <AlertDescription>
         <ul
           aria-label={title}
-          className="text-foreground/85 mt-2 flex flex-col gap-1 text-left font-mono text-xs"
+          className="mt-2 flex flex-col gap-1 text-left font-mono text-xs text-foreground/85"
         >
           {visibleNotices.map((notice) => (
             <li key={notice.id}>{notice.text}</li>

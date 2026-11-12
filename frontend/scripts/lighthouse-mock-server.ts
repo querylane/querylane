@@ -528,7 +528,8 @@ function primeStaticResponseCache(distDir = DEFAULT_DIST_DIR) {
     return;
   }
 
-  for (const entry of readdirSync(distDir, { withFileTypes: true })) {
+  const entries = readdirSync(distDir, { withFileTypes: true });
+  for (const entry of entries) {
     const entryPath = join(distDir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === "lighthouse") {

@@ -47,7 +47,7 @@ function getStepStateLabel(state: StepState): string {
 function StepStateIcon({ state }: { state: StepState }) {
   if (state === StepState.SUCCEEDED) {
     return (
-      <span className="border-positive-400/45 bg-positive-500/14 text-positive-300 flex size-8 items-center justify-center rounded-full border">
+      <span className="flex size-8 items-center justify-center rounded-full border border-positive-400/45 bg-positive-500/14 text-positive-300">
         <Check aria-hidden="true" className="size-4" />
       </span>
     );
@@ -64,7 +64,7 @@ function StepStateIcon({ state }: { state: StepState }) {
   }
   if (state === StepState.FAILED) {
     return (
-      <span className="border-negative-400/40 bg-negative-500/12 text-negative-200 flex size-8 items-center justify-center rounded-full border">
+      <span className="flex size-8 items-center justify-center rounded-full border border-negative-400/40 bg-negative-500/12 text-negative-200">
         <X aria-hidden="true" className="size-4" />
       </span>
     );
@@ -137,7 +137,7 @@ function ProgressStepItem({
             )}
           />
         )}
-        <div className="bg-background relative z-10 rounded-full p-1">
+        <div className="relative z-10 rounded-full bg-background p-1">
           <StepStateIcon state={event.state} />
         </div>
       </div>

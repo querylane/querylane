@@ -354,7 +354,8 @@ function presentActivitySessionRows(
 ): ActivitySessionRow[] {
   const normalizedSearch = filters.search.trim().toLowerCase();
   const rows: ActivitySessionRow[] = [];
-  for (const rawSession of activity?.sessions ?? []) {
+  const sessions = activity?.sessions ?? [];
+  for (const rawSession of sessions) {
     const session = presentActivitySessionRow(rawSession);
     const matchesSearch =
       normalizedSearch.length === 0 ||

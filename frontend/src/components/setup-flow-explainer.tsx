@@ -141,7 +141,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "tracking-display text-xs uppercase",
+            "text-xs tracking-display uppercase",
             classes.activeKicker
           )}
         >
@@ -163,7 +163,7 @@ export function SetupFlowExplainer({
       >
         <div
           className={cn(
-            "tracking-display text-xs uppercase",
+            "text-xs tracking-display uppercase",
             classes.inactiveKicker
           )}
         >

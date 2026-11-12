@@ -42,7 +42,7 @@ export function DataValueDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-300 rounded-md border px-3 py-2 text-xs">
+          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>

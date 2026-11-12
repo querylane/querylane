@@ -164,7 +164,7 @@ rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () =>
         }) => ReactNode;
       }) => {
         const grid = (
-          <div className="border-border bg-muted/20 text-muted-foreground rounded-lg border p-4 text-sm">
+          <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
             Data grid visual covered separately.
           </div>
         );
@@ -259,7 +259,7 @@ function Surface({
       <div
         className={cn(
           width,
-          "border-border bg-background text-foreground rounded-2xl border p-8"
+          "rounded-2xl border border-border bg-background p-8 text-foreground"
         )}
       >
         {children}
@@ -292,7 +292,7 @@ function ScaledSurface({
             scaleClassName
           )}
         >
-          <div className="border-border bg-background text-foreground rounded-2xl border p-8">
+          <div className="rounded-2xl border border-border bg-background p-8 text-foreground">
             {children}
           </div>
         </div>
@@ -543,7 +543,7 @@ test("data explorer schema map shows relationships without a floating help overl
   const onSelectTable = rs.fn();
   const requests = await renderMap(
     <ScreenshotFrame>
-      <div className="bg-background text-foreground flex h-[1320px] w-[1132px]">
+      <div className="flex h-[1320px] w-[1132px] bg-background text-foreground">
         <ShippingMap onSelectTable={onSelectTable} />
       </div>
     </ScreenshotFrame>
@@ -665,7 +665,7 @@ test("data explorer schema map selection does not move nodes", async () => {
 test("data explorer schema map uses a compact schema filter at narrow widths", async () => {
   await renderMap(
     <ScreenshotFrame>
-      <div className="bg-background text-foreground flex h-[900px] w-[680px]">
+      <div className="flex h-[900px] w-[680px] bg-background text-foreground">
         <ShippingMap />
       </div>
     </ScreenshotFrame>
@@ -1040,7 +1040,7 @@ test("data explorer table tabs stay visible when column metadata overflows", asy
   const customers = customersSchema();
   await renderWithCatalog(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground flex h-[320px] w-[1100px] flex-col overflow-hidden rounded-2xl border p-8">
+      <div className="flex h-[320px] w-[1100px] flex-col overflow-hidden rounded-2xl border border-border bg-background p-8 text-foreground">
         <TableSurface schema={customers} tab="data" tableName="customers" />
       </div>
     </ScreenshotFrame>,

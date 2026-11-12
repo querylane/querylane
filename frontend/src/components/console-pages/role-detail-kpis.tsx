@@ -14,7 +14,7 @@ function PartialKpiValue({
     <span className="flex items-baseline gap-2">
       {value}
       {partial ? (
-        <span className="text-muted-foreground text-xs font-normal">
+        <span className="text-xs font-normal text-muted-foreground">
           Partial
         </span>
       ) : null}

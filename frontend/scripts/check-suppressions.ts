@@ -153,7 +153,8 @@ function listTextFiles(root: string) {
     walk(path);
   }
   function walk(directory: string) {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entries = readdirSync(directory, { withFileTypes: true });
+    for (const entry of entries) {
       visit(entry, directory);
     }
   }

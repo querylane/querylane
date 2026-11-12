@@ -53,14 +53,14 @@ function BuiltinPowersCard({
   return (
     <Card presentation="bordered-flush">
       <div className="flex items-start gap-3.5 px-6 pt-6 pb-4">
-        <span className="border-positive-500/25 bg-positive-500/15 text-positive-600 dark:text-positive-400 flex size-9 shrink-0 items-center justify-center rounded-xl border">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-positive-500/25 bg-positive-500/15 text-positive-600 dark:text-positive-400">
           <ShieldCheck className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold tracking-tight text-(length:--text-body)">
             What members can do
           </h3>
-          <p className="text-muted-foreground mt-1 leading-relaxed text-(length:--text-caption)">
+          <p className="mt-1 leading-relaxed text-(length:--text-caption) text-muted-foreground">
             Powers this role grants automatically: the same everywhere in the
             cluster.
           </p>
@@ -68,13 +68,13 @@ function BuiltinPowersCard({
       </div>
 
       <div className="flex items-center gap-2.5 px-6 pb-3">
-        <span className="text-muted-foreground/70 flex items-center gap-1.5 font-medium tracking-wider text-(length:--text-label-sm) uppercase">
-          <Globe className="text-muted-foreground size-3" />
+        <span className="flex items-center gap-1.5 font-medium tracking-wider text-(length:--text-label-sm) text-muted-foreground/70 uppercase">
+          <Globe className="size-3 text-muted-foreground" />
           Cluster-wide
         </span>
-        <span className="from-border h-px flex-1 bg-linear-to-r to-transparent" />
+        <span className="h-px flex-1 bg-linear-to-r from-border to-transparent" />
         {builtinCapabilities.length > 0 ? (
-          <span className="text-muted-foreground/70 text-xs tabular-nums">
+          <span className="text-xs text-muted-foreground/70 tabular-nums">
             {builtinCapabilities.length}{" "}
             {builtinCapabilities.length === 1 ? "capability" : "capabilities"}
           </span>
@@ -85,14 +85,14 @@ function BuiltinPowersCard({
         <div className="flex flex-col gap-2 px-6">
           {builtinCapabilities.map((line) => (
             <div
-              className="border-border bg-muted/30 flex items-center gap-3 rounded-xl border px-3.5 py-3"
+              className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-3.5 py-3"
               key={line}
             >
-              <span className="border-border bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg border">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
                 <Zap className="size-4" />
               </span>
               <span className="min-w-0 flex-1 text-sm font-medium">{line}</span>
-              <span className="border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-400 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-warning-500/30 bg-warning-500/10 px-2 py-1 text-xs font-medium text-warning-700 dark:text-warning-400">
                 <Lock className="size-3" />
                 Can&apos;t revoke
               </span>
@@ -100,7 +100,7 @@ function BuiltinPowersCard({
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground px-6 text-sm">
+        <p className="px-6 text-sm text-muted-foreground">
           Grants implicit privileges to its members. This role isn&apos;t in our
           catalogue, so the exact set isn&apos;t listed here; check the
           PostgreSQL documentation for your server version.
@@ -109,18 +109,18 @@ function BuiltinPowersCard({
 
       {parents.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2 px-6">
-          <span className="text-muted-foreground/70 flex items-center gap-1.5 font-medium tracking-wider text-(length:--text-label-sm) uppercase">
-            <Network className="text-muted-foreground size-3" />
+          <span className="flex items-center gap-1.5 font-medium tracking-wider text-(length:--text-label-sm) text-muted-foreground/70 uppercase">
+            <Network className="size-3 text-muted-foreground" />
             Also inherits via membership
           </span>
           {parents.map((parent) => (
             <Link
-              className="border-border bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-3.5 py-3 transition-colors hover:bg-muted/50"
               key={parent.roleId}
               params={{ instanceId, roleId: parent.roleId }}
               to="/instances/$instanceId/roles/$roleId"
             >
-              <span className="border-border bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg border">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
                 <ShieldCheck className="size-4" />
               </span>
               <span className="min-w-0 flex-1">
@@ -128,15 +128,15 @@ function BuiltinPowersCard({
                   {parent.roleName}
                 </span>
                 {isNonEmptyString(parent.summary) ? (
-                  <span className="text-muted-foreground block truncate text-xs">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {parent.summary}
                   </span>
                 ) : null}
               </span>
-              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </Link>
           ))}
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             Real <span className="font-mono">pg_auth_members</span> grants:
             members of this role transitively receive their powers too.
           </p>
@@ -144,19 +144,19 @@ function BuiltinPowersCard({
       ) : null}
 
       <div className="px-6 pt-4 pb-6">
-        <div className="border-border bg-muted/20 flex gap-3 rounded-xl border p-3.5">
-          <Info className="text-muted-foreground/60 mt-0.5 size-4 shrink-0" />
+        <div className="flex gap-3 rounded-xl border border-border bg-muted/20 p-3.5">
+          <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground/60" />
           <div className="min-w-0">
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              <span className="text-foreground font-medium">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">
                 Built-in privilege.
               </span>{" "}
               Enforced by PostgreSQL&apos;s{" "}
-              <span className="bg-muted text-foreground rounded px-1 py-0.5 font-mono text-xs">
+              <span className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">
                 has_*_privilege()
               </span>{" "}
               checks, not{" "}
-              <span className="bg-muted text-foreground rounded px-1 py-0.5 font-mono text-xs">
+              <span className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">
                 GRANT
               </span>{" "}
               rows, so there&apos;s nothing to inspect or revoke. Membership is
@@ -164,12 +164,12 @@ function BuiltinPowersCard({
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {builtinInfo ? (
-                <span className="border-border bg-muted/40 text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs">
-                  <span className="bg-permission-500 size-1.5 rounded-full" />
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
+                  <span className="size-1.5 rounded-full bg-permission-500" />
                   {builtinInfo.since}+
                 </span>
               ) : null}
-              <span className="border-border bg-muted/40 text-muted-foreground rounded-full border px-2 py-1 text-xs">
+              <span className="rounded-full border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
                 Exact set varies by server version
               </span>
             </div>
@@ -193,7 +193,7 @@ function BuiltinMembersCard({
   let body: React.ReactNode;
   if (isDatabaseOwner) {
     body = (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         Membership is implicit: whoever owns the current database is treated as
         a member, with no row in{" "}
         <span className="font-mono">pg_auth_members</span>. There is nothing to
@@ -260,7 +260,7 @@ function BuiltinExtraGrantsCard({
 }) {
   let body: React.ReactNode;
   if (isPending) {
-    body = <p className="text-muted-foreground text-sm">Loading grants…</p>;
+    body = <p className="text-sm text-muted-foreground">Loading grants…</p>;
   } else if (databases.length === 0) {
     body = (
       <EmptyState
@@ -271,14 +271,14 @@ function BuiltinExtraGrantsCard({
     );
   } else if (Boolean(error)) {
     body = (
-      <p className="text-destructive text-sm">
+      <p className="text-sm text-destructive">
         Could not load grants for{" "}
         <span className="font-mono">{databaseName}</span>.
       </p>
     );
   } else if (objects.length === 0) {
     body = (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         Nothing has been granted directly to{" "}
         <span className="font-mono">{roleName}</span> in{" "}
         <span className="font-mono">{databaseName}</span>. Its access here comes

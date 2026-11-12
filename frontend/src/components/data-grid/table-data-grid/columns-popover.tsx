@@ -114,11 +114,11 @@ function ColumnsPopover({
           </Button>
         </div>
         {onFetchVisibleColumnsChange ? (
-          <div className="bg-muted/30 flex items-start justify-between gap-3 rounded-md border p-2.5">
+          <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/30 p-2.5">
             <div className="min-w-0">
               <p className="text-xs font-medium">Fetch visible columns only</p>
               <p
-                className="text-muted-foreground mt-0.5 text-xs"
+                className="mt-0.5 text-xs text-muted-foreground"
                 id={fetchVisibleDescriptionId}
               >
                 Excludes hidden columns from row payloads while keeping them

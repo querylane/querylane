@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const commandEmptyPresentations = cva("", {
   variants: {
     presentation: {
-      compact: "text-muted-foreground py-4 text-sm",
+      compact: "py-4 text-sm text-muted-foreground",
       flush: "p-0",
     },
   },

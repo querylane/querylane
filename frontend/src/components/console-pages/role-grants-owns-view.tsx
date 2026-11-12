@@ -74,7 +74,7 @@ function OwnershipPill({ name, tone }: { name: string; tone: PrivTone }) {
   return (
     <span
       className={cn(
-        "tracking-section inline-flex h-[21px] items-center rounded border px-2 font-mono text-xs font-medium",
+        "inline-flex h-[21px] items-center rounded border px-2 font-mono text-xs font-medium tracking-section",
         PRIV_TONE_CLASS[tone]
       )}
     >
@@ -102,8 +102,8 @@ function ImplicitTag() {
       </PopoverTrigger>
       <PopoverContent align="start" className="w-96" presentation="ownership">
         <div className="flex items-center gap-2">
-          <Crown className="text-warning-500 dark:text-warning-400 size-3.5" />
-          <span className="text-foreground font-semibold text-(length:--text-label-lg)">
+          <Crown className="size-3.5 text-warning-500 dark:text-warning-400" />
+          <span className="font-semibold text-(length:--text-label-lg) text-foreground">
             What ownership grants
           </span>
         </div>
@@ -116,14 +116,14 @@ function ImplicitTag() {
             />
           ))}
         </div>
-        <div className="text-muted-foreground flex items-start gap-1.5 text-xs leading-relaxed">
+        <div className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
           <Info className="mt-0.5 size-3 shrink-0" />
           <span>
             Enforced by{" "}
-            <span className="text-foreground/80 font-mono">relowner</span> /{" "}
-            <span className="text-foreground/80 font-mono">nspowner</span>, not
+            <span className="font-mono text-foreground/80">relowner</span> /{" "}
+            <span className="font-mono text-foreground/80">nspowner</span>, not
             stored in{" "}
-            <span className="text-foreground/80 font-mono">
+            <span className="font-mono text-foreground/80">
               pg_class.relacl
             </span>
             . An owner can give privileges away, take them back, and destroy the
@@ -145,15 +145,15 @@ function FutureOwnedNote({
   schemas: string[];
 }) {
   return (
-    <div className="border-permission-500/20 border-l-permission-500/55 bg-permission-500/4 text-muted-foreground flex items-start gap-2 rounded-sm border border-l px-3 py-2 text-xs leading-relaxed">
-      <Plus className="text-permission-600 dark:text-permission-300 mt-0.5 size-3 shrink-0" />
+    <div className="flex items-start gap-2 rounded-sm border border-l border-permission-500/20 border-l-permission-500/55 bg-permission-500/4 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+      <Plus className="mt-0.5 size-3 shrink-0 text-permission-600 dark:text-permission-300" />
       <span>
         Future-owned:{" "}
-        <span className="text-foreground/80 font-mono">{roleName}</span> can{" "}
-        <span className="text-foreground/80 font-mono">CREATE</span> in{" "}
+        <span className="font-mono text-foreground/80">{roleName}</span> can{" "}
+        <span className="font-mono text-foreground/80">CREATE</span> in{" "}
         {schemas.map((schema, index) => (
           <span key={schema}>
-            <span className="text-foreground/80 font-mono">{schema}</span>
+            <span className="font-mono text-foreground/80">{schema}</span>
             {index < schemas.length - 1 ? ", " : ""}
           </span>
         ))}
@@ -175,7 +175,7 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
     object.objectType !== GrantObjectType.DATABASE;
   return (
     <span className="flex items-center gap-2">
-      <meta.icon className="text-muted-foreground size-3.5 shrink-0" />
+      <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="font-mono text-(length:--text-label-lg)">
         {showSchema ? (
           <span className="text-muted-foreground">{object.schemaName}.</span>
@@ -263,7 +263,7 @@ function OwnedObjectsTable({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5 px-0.5">
-        <span className="text-foreground text-sm font-semibold">
+        <span className="text-sm font-semibold text-foreground">
           Owned objects
         </span>
         <CountPill partial={partial} value={objects.length} />
@@ -314,26 +314,26 @@ DROP OWNED BY ${quoted};`;
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5 px-0.5">
-        <span className="text-foreground text-sm font-semibold">
+        <span className="text-sm font-semibold text-foreground">
           Before dropping this role
         </span>
-        <span className="text-muted-foreground ml-auto text-xs">
+        <span className="ml-auto text-xs text-muted-foreground">
           {partial
             ? "Available owned objects would block "
             : `${count.toLocaleString()} object${count === 1 ? "" : "s"} would block `}
           <span className="font-mono">DROP ROLE</span>
         </span>
       </div>
-      <div className="border-negative-500/25 bg-negative-500/4 flex flex-col gap-3 rounded-md border p-3.5">
-        <p className="text-foreground/80 leading-relaxed text-(length:--text-label-lg)">
+      <div className="flex flex-col gap-3 rounded-md border border-negative-500/25 bg-negative-500/4 p-3.5">
+        <p className="leading-relaxed text-(length:--text-label-lg) text-foreground/80">
           Postgres refuses <span className="font-mono">DROP ROLE {quoted}</span>{" "}
           while it owns anything. Reassign ownership to another role, then drop
           the leftovers.
         </p>
         <SqlCodeBlock sql={sql} />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           Or transfer ownership object-by-object:{" "}
-          <span className="text-foreground/75 font-mono">
+          <span className="font-mono text-foreground/75">
             {"ALTER … OWNER TO <new_owner>;"}
           </span>
         </p>
@@ -366,9 +366,9 @@ function OwnsDescription({
   if (isEmpty) {
     return (
       <>
-        <span className="text-foreground/80 font-mono">{roleName}</span>{" "}
+        <span className="font-mono text-foreground/80">{roleName}</span>{" "}
         doesn&apos;t own any objects in{" "}
-        <span className="text-foreground/80 font-mono">{databaseName}</span>{" "}
+        <span className="font-mono text-foreground/80">{databaseName}</span>{" "}
         today. Ownership still matters: anything this role creates becomes owned
         by it.
       </>
@@ -376,7 +376,7 @@ function OwnsDescription({
   }
   return (
     <>
-      <span className="text-foreground/80 font-mono">{roleName}</span> created
+      <span className="font-mono text-foreground/80">{roleName}</span> created
       or was assigned ownership of these objects. As owner, it implicitly holds
       every privilege on each, none of which appears in the direct grants.
     </>
@@ -429,7 +429,7 @@ function OwnedObjectsContent({
       ) : (
         <>
           No owned objects in{" "}
-          <span className="text-foreground/80 font-mono">{databaseName}</span>.
+          <span className="font-mono text-foreground/80">{databaseName}</span>.
         </>
       )}
     </GrantsEmptyState>
@@ -471,7 +471,7 @@ export function OwnsGrantsView({
       >
         <ImplicitTag />
       </ContentHead>
-      <p className="text-muted-foreground -mt-1 max-w-[680px] pb-5 text-sm leading-relaxed">
+      <p className="-mt-1 max-w-[680px] pb-5 text-sm leading-relaxed text-muted-foreground">
         <OwnsDescription
           databaseName={databaseName}
           isEmpty={isEmpty}

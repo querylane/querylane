@@ -240,7 +240,7 @@ function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
     <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
       {keys.map((key) => (
         <kbd
-          className="bg-muted text-muted-foreground flex min-w-6 items-center justify-center rounded-md border px-1.5 py-1 font-mono text-(length:--text-label-sm) shadow-xs"
+          className="flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-(length:--text-label-sm) text-muted-foreground shadow-xs"
           key={key}
         >
           {key}
@@ -285,7 +285,7 @@ function KeyboardShortcutHelpSheet({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {orderedGroups.map((group) => (
             <section className="not-last:mb-6" key={group}>
-              <h2 className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+              <h2 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {group}
               </h2>
               <ul className="divide-y rounded-lg border">

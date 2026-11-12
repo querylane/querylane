@@ -456,7 +456,8 @@ function addDefaultPrivilegeEdges({
   objectsById: Map<string, RolesAccessMapObjectNode>;
   roleNodeIds: Set<string>;
 }) {
-  for (const defaultPrivilege of access.defaultPrivileges ?? []) {
+  const defaultPrivileges = access.defaultPrivileges ?? [];
+  for (const defaultPrivilege of defaultPrivileges) {
     const creatorRoleId =
       parseResourceLeafId(defaultPrivilege.creatorRole) ||
       defaultPrivilege.creatorRoleName;

@@ -49,6 +49,35 @@ function lintBiome(file: string) {
   );
 }
 
+test("default imports require a default export", () => {
+  const directory = mkdtempSync(join(root, "scripts/quality-probe-"));
+  const file = join(directory, "consumer.ts");
+  const lint = () => lintBiome(file);
+  try {
+    writeFileSync(
+      join(directory, "source.ts"),
+      'export function read() { return "ready"; }\n'
+    );
+    writeFileSync(
+      file,
+      'import read from "./source"; export const value = read();\n'
+    );
+    const invalid = lint();
+    expect(invalid.status).toBe(1);
+    expect(invalid.stdout + invalid.stderr).toContain(
+      "noUnresolvedDefaultImport"
+    );
+    writeFileSync(
+      file,
+      'import { read } from "./source"; export const value = read();\n'
+    );
+    const valid = lint();
+    expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test("rejects oversized authored files instead of passing a skipped scan", () => {
   const directory = mkdtempSync(join(root, "scripts/quality-probe-"));
   const file = join(directory, "oversized.ts");
@@ -73,6 +102,131 @@ test("rejects oversized authored files instead of passing a skipped scan", () =>
 });
 
 test.each([
+  {
+    name: "named iterable selection",
+    rule: "noUnreadableForOfExpression",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function count(values: readonly string[] | undefined) { let total = 0; for (const value of values ?? []) { total += value.length; } return total; }\n",
+    valid:
+      "export function count(values: readonly string[] | undefined) { const items = values ?? []; let total = 0; for (const value of items) { total += value.length; } return total; }\n",
+  },
+  {
+    name: "synchronous promise finalizers",
+    rule: "noAsyncPromiseFinally",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function finish(promise: Promise<void>, cleanup: () => Promise<void>) { return promise.finally(async () => { await cleanup(); }); }\n",
+    valid:
+      "export function finish(promise: Promise<void>, cleanup: () => void) { return promise.finally(cleanup); }\n",
+  },
+  {
+    name: "unique type constituents",
+    rule: "noDuplicateTypeConstituents",
+    suffix: "unit.test.ts",
+    invalid: "export type Value = string | number | string;\n",
+    valid: "export type Value = string | number;\n",
+  },
+  {
+    name: "bounded selector complexity",
+    rule: "noExcessiveSelectorComplexity",
+    suffix: "css",
+    invalid: "#main #sidebar { color: inherit; }\n",
+    valid: "#main .sidebar { color: inherit; }\n",
+  },
+  {
+    name: "body-compatible fetch methods",
+    rule: "noInvalidFetchOptions",
+    suffix: "unit.test.ts",
+    invalid:
+      'export function send() { return fetch("/", { method: "GET", body: "payload" }); }\n',
+    valid:
+      'export function send() { return fetch("/", { method: "POST", body: "payload" }); }\n',
+  },
+  {
+    name: "unambiguous array construction",
+    rule: "noNewArray",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function allocate(length: number) { return new Array(length); }\n",
+    valid:
+      "export function allocate(length: number) { return Array.from({ length }); }\n",
+  },
+  {
+    name: "effective type constituents",
+    rule: "noRedundantTypeConstituents",
+    suffix: "unit.test.ts",
+    invalid: 'export type Value = string | "ready";\n',
+    valid: 'export type Value = "ready" | "waiting";\n',
+  },
+  {
+    name: "direct object spreads",
+    rule: "noUselessFallbackInSpread",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function copy(value: { name: string } | undefined) { return { ...(value ?? {}) }; }\n",
+    valid:
+      "export function copy(value: { name: string } | undefined) { return { ...value }; }\n",
+  },
+  {
+    name: "effective iterable spreads",
+    rule: "noUselessSpread",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function unique(values: readonly string[]) { return new Set([...values]); }\n",
+    valid:
+      "export function unique(values: readonly string[]) { return new Set(values); }\n",
+  },
+  {
+    name: "descriptive caught errors",
+    rule: "useCatchErrorName",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function recover(promise: Promise<string>) { return promise.catch((err: unknown) => String(err)); }\n",
+    valid:
+      "export function recover(promise: Promise<string>) { return promise.catch((error: unknown) => String(error)); }\n",
+  },
+  {
+    name: "numeric font weights",
+    rule: "useConsistentFontWeightNotation",
+    suffix: "css",
+    invalid: "a { font-weight: bold; }\n",
+    valid: "a { font-weight: 700; }\n",
+  },
+  {
+    name: "consistent tuple labels",
+    rule: "useConsistentTupleLabels",
+    suffix: "unit.test.ts",
+    invalid: "export type Point = [x: number, number];\n",
+    valid: "export type Point = [x: number, y: number];\n",
+  },
+  {
+    name: "global match-all patterns",
+    rule: "useGlobalRegexInMatchAll",
+    suffix: "unit.test.ts",
+    invalid:
+      "const pattern = /item/u; export function matches(value: string) { return value.matchAll(pattern); }\n",
+    valid:
+      "const pattern = /item/gu; export function matches(value: string) { return value.matchAll(pattern); }\n",
+  },
+  {
+    name: "global replace-all patterns",
+    rule: "useGlobalRegexInReplaceAll",
+    suffix: "unit.test.ts",
+    invalid:
+      'const pattern = /item/u; export function replace(value: string) { return value.replaceAll(pattern, "value"); }\n',
+    valid:
+      'const pattern = /item/gu; export function replace(value: string) { return value.replaceAll(pattern, "value"); }\n',
+  },
+  {
+    name: "single-character comparisons",
+    rule: "useValidCharacterComparison",
+    suffix: "unit.test.ts",
+    invalid:
+      'export function starts(value: string) { return value.charAt(0) === "ab"; }\n',
+    valid:
+      'export function starts(value: string) { return value.startsWith("a"); }\n',
+  },
   {
     name: "browser runtime globals",
     rule: "noRestrictedGlobals",
@@ -541,6 +695,34 @@ test.each([
     rule: null,
     source:
       "function Child() { return <div />; }\nexport function Parent() { return <Child />; }\n",
+  },
+  {
+    name: "explicit known cases with an unknown-value fallback",
+    suffix: "ts",
+    rule: null,
+    source:
+      'export function label(value: "ready" | "missing") { switch (value) { case "ready": return "Ready"; case "missing": default: return "Unknown"; } }\n',
+  },
+  {
+    name: "native disabled form contracts",
+    suffix: "tsx",
+    rule: null,
+    source:
+      "export const field = <fieldset disabled={true}><legend>Pending</legend></fieldset>;\n",
+  },
+  {
+    name: "component callback boolean vocabulary",
+    suffix: "ts",
+    rule: null,
+    source:
+      "export function isDisabled(disabled: boolean) { return disabled; }\n",
+  },
+  {
+    name: "independent async lifecycle writes",
+    suffix: "ts",
+    rule: null,
+    source:
+      'const resource: { current: string | null } = { current: "ready" }; export async function clearResource(work: () => Promise<void>) { if (resource.current) { await work(); } resource.current = null; }\n',
   },
   {
     name: "explicit nullable platform contracts",

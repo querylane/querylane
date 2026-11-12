@@ -18,7 +18,7 @@ function HeaderStat({
           {value}
         </span>
       )}
-      <span className="text-muted-foreground tracking-wider text-(length:--text-micro) uppercase">
+      <span className="tracking-wider text-(length:--text-micro) text-muted-foreground uppercase">
         {label}
       </span>
     </div>

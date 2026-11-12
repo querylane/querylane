@@ -161,11 +161,11 @@ function MapNode({
       type="button"
       variant="ghost"
     >
-      <span className="text-muted-foreground flex items-center justify-between gap-2 px-3 pt-3 text-xs">
+      <span className="flex items-center justify-between gap-2 px-3 pt-3 text-xs text-muted-foreground">
         <span>{caption}</span>
         {findings.length > 0 ? (
           <span
-            className="bg-chart-4 size-1.5 rounded-full"
+            className="size-1.5 rounded-full bg-chart-4"
             title={findings.map((finding) => finding.label).join("; ")}
           />
         ) : null}
@@ -185,11 +185,11 @@ function MapNode({
         >
           {metricLabel(node, metric)}
         </span>
-        <span className="text-muted-foreground text-xs">{annotation}</span>
+        <span className="text-xs text-muted-foreground">{annotation}</span>
       </span>
       <span
         aria-hidden="true"
-        className="bg-muted h-1 w-full overflow-hidden rounded-b-lg"
+        className="h-1 w-full overflow-hidden rounded-b-lg bg-muted"
       >
         <span
           className={cn(
@@ -257,7 +257,7 @@ function PlanMap({
     ...nodes.map((node) => planMetricValue(node, metric) ?? 0)
   );
   return (
-    <div className="bg-muted/15 relative flex min-h-64 min-w-0 flex-1 flex-col">
+    <div className="relative flex min-h-64 min-w-0 flex-1 flex-col bg-muted/15">
       <section
         aria-label="Plan map"
         className="min-h-56 flex-1 overflow-auto [background-image:radial-gradient(var(--border)_1px,transparent_1px)] [background-size:20px_20px]"
@@ -315,9 +315,9 @@ function PlanMap({
           </div>
         </div>
       </section>
-      <div className="bg-background text-muted-foreground flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-background px-3 py-2 text-xs text-muted-foreground">
         <span>
-          Inputs → output <span className="text-border mx-2">/</span> Structure,
+          Inputs → output <span className="mx-2 text-border">/</span> Structure,
           not a timeline
         </span>
         <div className="flex items-center gap-1">

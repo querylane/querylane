@@ -81,7 +81,7 @@ function DefinitionSideCard({
     <Card className="min-w-0" presentation="flush" size="sm">
       <CardHeader presentation="definition">
         <h2 className="flex items-center gap-2 text-sm font-medium">
-          <Icon aria-hidden="true" className="text-muted-foreground size-4" />
+          <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
           {title}
         </h2>
         {Boolean(action) ? <CardAction>{action}</CardAction> : null}
@@ -116,7 +116,7 @@ function ReferencedTablesCard({ references }: { references: string[] }) {
         }
       >
         <h2 className="flex items-center gap-2 text-sm font-medium">
-          <Layers aria-hidden="true" className="text-muted-foreground size-4" />
+          <Layers aria-hidden="true" className="size-4 text-muted-foreground" />
           Referenced tables
         </h2>
         <CardDescription>
@@ -170,8 +170,8 @@ function DefinitionCommandStep({
 }) {
   return (
     <div className="max-w-full min-w-0 overflow-hidden rounded-lg border">
-      <div className="bg-muted/60 flex items-center gap-2 border-b px-3 py-2">
-        <span className="bg-muted-foreground/20 flex size-5 items-center justify-center rounded-full font-mono text-xs">
+      <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
+        <span className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/20 font-mono text-xs">
           {number}
         </span>
         <h3 className="text-xs font-medium">{title}</h3>
@@ -183,7 +183,7 @@ function DefinitionCommandStep({
       </div>
       <section
         aria-label={`${title} command`}
-        className="focus-visible:ring-ring max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-inset"
+        className="max-w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       >
         <pre className="min-h-14 w-max min-w-full bg-transparent p-3 font-mono text-xs leading-relaxed whitespace-pre">
           <BashSyntaxHighlight code={command} />
@@ -266,7 +266,7 @@ function ReproduceLocallyCard({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="bg-background flex min-h-8 items-center rounded-lg border px-3 py-1.5 text-sm">
+        <div className="flex min-h-8 items-center rounded-lg border bg-background px-3 py-1.5 text-sm">
           <span>Template: pg_dump, schema only (SQL)</span>
         </div>
         <DefinitionCommandStep
@@ -447,12 +447,12 @@ function DefinitionTab({
           tab="definition"
         />
       ) : null}
-      <div className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center gap-2 text-sm">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <span>Schema document</span>
         <span aria-hidden="true">·</span>
         <span>
           generated live from{" "}
-          <code className="bg-muted text-foreground rounded px-1 py-0.5">
+          <code className="rounded bg-muted px-1 py-0.5 text-foreground">
             pg_catalog
           </code>
         </span>
@@ -488,7 +488,7 @@ function DefinitionTab({
         schemaName={schemaName}
         tableName={tableName}
       />
-      <p className="text-muted-foreground px-1 text-xs leading-relaxed">
+      <p className="px-1 text-xs leading-relaxed text-muted-foreground">
         Definition is generated from pg_catalog on each visit; Querylane never
         stores or mutates schema.
       </p>

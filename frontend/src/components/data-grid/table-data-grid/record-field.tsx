@@ -143,7 +143,7 @@ function RecordField({
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-foreground min-w-0 font-mono text-xs font-medium break-all">
+        <span className="min-w-0 font-mono text-xs font-medium break-all text-foreground">
           {column.columnName}
         </span>
         {isPrimaryKey ? (
@@ -157,22 +157,22 @@ function RecordField({
             </span>
           </span>
         ) : null}
-        <span className="text-muted-foreground font-mono tracking-wide text-(length:--text-micro) uppercase">
+        <span className="font-mono tracking-wide text-(length:--text-micro) text-muted-foreground uppercase">
           {column.rawType}
         </span>
         {column.isNullable ? (
-          <span className="text-muted-foreground tracking-wide text-(length:--text-micro) uppercase">
+          <span className="tracking-wide text-(length:--text-micro) text-muted-foreground uppercase">
             nullable
           </span>
         ) : (
-          <span className="text-muted-foreground tracking-wide text-(length:--text-micro) uppercase">
+          <span className="tracking-wide text-(length:--text-micro) text-muted-foreground uppercase">
             not null
           </span>
         )}
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_2rem] items-start gap-1">
         <div
-          className="bg-muted/30 flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border px-2.5 py-1"
+          className="flex min-h-8 min-w-0 items-center overflow-hidden rounded-md border bg-muted/30 px-2.5 py-1"
           data-slot="record-field-value"
         >
           <RecordFieldValue formatted={formatted} />
@@ -222,7 +222,7 @@ function RecordField({
         </div>
       </div>
       {fullValueMutation.isError ? (
-        <p className="text-destructive-foreground/80 text-xs">
+        <p className="text-xs text-destructive-foreground/80">
           Failed to load full value
         </p>
       ) : null}
@@ -231,7 +231,7 @@ function RecordField({
 }
 function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
   if (formatted.kind === "text" && formatted.display === "") {
-    return <span className="text-muted-foreground text-xs">Empty string</span>;
+    return <span className="text-xs text-muted-foreground">Empty string</span>;
   }
   if (formatted.isNull) {
     return (
@@ -245,12 +245,12 @@ function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
           {formatted.display === "true" ? (
             <Check
               aria-hidden={true}
-              className="text-positive-500 dark:text-positive-400 size-3"
+              className="size-3 text-positive-500 dark:text-positive-400"
             />
           ) : (
             <Minus
               aria-hidden={true}
-              className="text-muted-foreground size-3"
+              className="size-3 text-muted-foreground"
             />
           )}
           {formatted.display}
@@ -277,7 +277,7 @@ function RecordFieldValue({ formatted }: { formatted: FormattedCell }) {
       return <JsonValue raw={formatted.display} />;
     case "bytes":
       return (
-        <span className="text-muted-foreground font-mono text-xs">
+        <span className="font-mono text-xs text-muted-foreground">
           {formatted.display}
         </span>
       );
@@ -304,7 +304,7 @@ function ArrayValue({ raw }: { raw: string }) {
       <pre
         className={cn(
           "max-h-96 w-full overflow-auto break-all whitespace-pre-wrap",
-          "text-reference-700 dark:text-reference-300 font-mono text-xs"
+          "font-mono text-xs text-reference-700 dark:text-reference-300"
         )}
       >
         {raw}
@@ -316,28 +316,28 @@ function ArrayValue({ raw }: { raw: string }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
       <div className="flex items-center gap-2">
-        <span className="border-reference-500/25 bg-reference-500/10 text-reference-700 dark:text-reference-300 rounded-full border px-1.5 py-0.5 text-xs leading-none font-medium">
+        <span className="rounded-full border border-reference-500/25 bg-reference-500/10 px-1.5 py-0.5 text-xs leading-none font-medium text-reference-700 dark:text-reference-300">
           {count.toLocaleString()} {count === 1 ? "item" : "items"}
         </span>
       </div>
       {count === 0 ? (
-        <span className="text-muted-foreground text-xs">Empty array</span>
+        <span className="text-xs text-muted-foreground">Empty array</span>
       ) : (
-        <ol className="bg-background/60 max-h-96 w-full overflow-auto rounded-md border">
+        <ol className="max-h-96 w-full overflow-auto rounded-md border bg-background/60">
           {keyedItems.map(({ item, key, position }) => (
             <li
               className="grid grid-cols-[3rem_minmax(0,1fr)] gap-2 border-b px-2.5 py-2 last:border-b-0"
               key={key}
             >
-              <span className="text-muted-foreground font-mono text-xs tabular-nums">
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
                 {position}
               </span>
               {item.isNull ? (
-                <span className="text-muted-foreground text-xs italic">
+                <span className="text-xs text-muted-foreground italic">
                   SQL NULL
                 </span>
               ) : (
-                <code className="text-reference-700 dark:text-reference-300 font-mono text-xs break-all">
+                <code className="font-mono text-xs break-all text-reference-700 dark:text-reference-300">
                   {item.display}
                 </code>
               )}
@@ -362,7 +362,7 @@ function JsonValue({ raw }: { raw: string }) {
     <pre
       className={cn(
         "max-h-96 w-full overflow-auto break-all whitespace-pre-wrap",
-        "text-permission-600 font-mono text-xs",
+        "font-mono text-xs text-permission-600",
         "dark:text-permission-400"
       )}
     >

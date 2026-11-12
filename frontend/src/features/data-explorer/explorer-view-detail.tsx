@@ -180,7 +180,7 @@ function DefinitionCard({ definition }: { definition: string }) {
         {definition ? (
           <SqlCodeBlock sql={definition} />
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Full SQL definition was not returned for this view.
           </p>
         )}
@@ -217,7 +217,7 @@ function ViewNoticeCheck({ view, viewName }: { view: View; viewName: string }) {
   }
 
   return (
-    <div className="bg-card space-y-3 rounded-xl border p-4 text-sm">
+    <div className="space-y-3 rounded-xl border bg-card p-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium">Database notices</p>
@@ -681,7 +681,7 @@ function MaterializedRefreshControl({
           {refreshing ? (
             <div
               aria-label="Materialized view refresh in progress"
-              className="bg-muted/30 flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm"
               role="status"
             >
               <Spinner />
@@ -901,7 +901,7 @@ function MaterializedViewTabs({
         ))}
       </ObjectDetailTabsBar>
       {view.comment ? (
-        <p className="bg-muted/20 text-muted-foreground shrink-0 border-b px-4 py-2 text-xs sm:px-5">
+        <p className="shrink-0 border-b bg-muted/20 px-4 py-2 text-xs text-muted-foreground sm:px-5">
           {view.comment}
         </p>
       ) : null}

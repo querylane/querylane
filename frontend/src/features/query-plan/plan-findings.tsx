@@ -57,7 +57,7 @@ function PlanFindings({
           >
             <span className="min-w-0">
               <span className="block text-xs font-medium">{label}</span>
-              <span className="text-muted-foreground block max-w-64 truncate text-xs">
+              <span className="block max-w-64 truncate text-xs text-muted-foreground">
                 {planNodeTitle(node)}
               </span>
             </span>

@@ -198,7 +198,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       accessorFn: (row) => row.owner,
       cell: ({ row }) =>
         row.original.owner ? (
-          <span className="text-muted-foreground font-mono text-xs">
+          <span className="font-mono text-xs text-muted-foreground">
             {row.original.owner}
           </span>
         ) : (
@@ -214,7 +214,7 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       accessorFn: (row) => row.comment,
       cell: ({ row }) =>
         row.original.comment ? (
-          <span className="text-muted-foreground block truncate text-xs">
+          <span className="block truncate text-xs text-muted-foreground">
             {row.original.comment}
           </span>
         ) : (
@@ -362,7 +362,7 @@ function SchemaObjectsLoading() {
   return (
     <div
       aria-label="Loading objects"
-      className="border-border flex flex-col gap-2 rounded-lg border p-3"
+      className="flex flex-col gap-2 rounded-lg border border-border p-3"
       role="status"
     >
       <span className="sr-only">Loading objects</span>
@@ -419,7 +419,7 @@ function SchemaDetailNotices({
         <CatalogSyncNotice notice={tablesSyncNotice} surface="detail" />
       ) : null}
       {hasObjectsError ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-(length:--text-caption)">
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-(length:--text-caption) text-destructive">
           Failed to load some objects in this schema. Refresh the page to try
           again.
         </div>

@@ -48,7 +48,7 @@ rs.mock("@/components/data-grid/table-data-grid/table-data-grid", () => {
     }) => {
       const grid = (
         <div
-          className="border-border bg-muted/20 h-64 w-full rounded-lg border"
+          className="h-64 w-full rounded-lg border border-border bg-muted/20"
           data-testid="mock-table-data-grid"
         />
       );
@@ -137,7 +137,7 @@ function renderExplorerPage({
       <ScreenshotFrame>
         <div
           className={cn(
-            "border-border bg-background text-foreground h-[720px] overflow-hidden rounded-2xl border",
+            "h-[720px] overflow-hidden rounded-2xl border border-border bg-background text-foreground",
             width
           )}
           data-testid="explorer-shell"

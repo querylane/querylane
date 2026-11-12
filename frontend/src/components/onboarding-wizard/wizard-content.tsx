@@ -81,9 +81,9 @@ function SelectionRail() {
     <RailSurface>
       <div className="relative flex w-full max-w-[320px] flex-col items-center gap-5">
         <div className="relative h-[220px] w-full">
-          <div className="rounded-card absolute top-0 left-6 h-20 w-[76%] border border-white/14 bg-white/8 backdrop-blur-md" />
+          <div className="absolute top-0 left-6 h-20 w-[76%] rounded-card border border-white/14 bg-white/8 backdrop-blur-md" />
           <div className="absolute top-16 left-0 h-32 w-full rounded-3xl border border-white/14 bg-white/8 p-5 backdrop-blur-md">
-            <div className="bg-onboarding-accent mb-4 h-3.5 w-28 rounded-full" />
+            <div className="mb-4 h-3.5 w-28 rounded-full bg-onboarding-accent" />
             <div className="grid grid-cols-3 gap-4">
               {PLACEHOLDER_CARD_IDS.map((cardId) => (
                 <div
@@ -93,9 +93,9 @@ function SelectionRail() {
               ))}
             </div>
           </div>
-          <div className="rounded-card absolute bottom-0 left-0 h-20 w-full border border-white/14 bg-white/8 px-4 py-3 backdrop-blur-md">
+          <div className="absolute bottom-0 left-0 h-20 w-full rounded-card border border-white/14 bg-white/8 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center gap-3.5">
-              <div className="rounded-panel-sm bg-onboarding-primary-hover size-10" />
+              <div className="size-10 rounded-panel-sm bg-onboarding-primary-hover" />
               <div className="flex-1 space-y-2">
                 <div className="h-3.5 w-2/3 rounded-full bg-white/18" />
                 <div className="h-2.5 w-1/2 rounded-full bg-white/12" />
@@ -117,9 +117,9 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
         )}
         data-testid="onboarding-config-rail"
       >
-        <div className="rounded-dialog-sm mx-auto w-[82%] border border-white/14 bg-white/8 px-5 py-4 backdrop-blur-md">
+        <div className="mx-auto w-[82%] rounded-dialog-sm border border-white/14 bg-white/8 px-5 py-4 backdrop-blur-md">
           <div className="mb-3 flex items-center gap-2.5 text-white/56">
-            <Sparkles className="text-info-300 size-4" />
+            <Sparkles className="size-4 text-info-300" />
             <span className="font-mono text-xs">config.yaml</span>
           </div>
           <div className="space-y-2 font-mono text-xs leading-5">
@@ -142,9 +142,9 @@ function ConfigRail({ compact = false }: { compact?: boolean }) {
             </div>
           </div>
         </div>
-        <div className="rounded-dialog-sm mx-auto w-[88%] border border-white/14 bg-white/8 p-4 backdrop-blur-md">
+        <div className="mx-auto w-[88%] rounded-dialog-sm border border-white/14 bg-white/8 p-4 backdrop-blur-md">
           <div className="flex items-center gap-3.5">
-            <div className="bg-positive-500/16 text-positive-200 flex size-9 items-center justify-center rounded-xl">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-positive-500/16 text-positive-200">
               <Workflow className="size-4.5" />
             </div>
             <div className="space-y-0.5">
@@ -183,10 +183,10 @@ function ProgressRail({ success = false }: { success?: boolean }) {
   return (
     <RailSurface>
       <div className="w-full max-w-[320px] space-y-5">
-        <div className="rounded-card mx-auto flex h-24 w-[82%] items-center justify-center border border-white/14 bg-white/8 backdrop-blur-md">
+        <div className="mx-auto flex h-24 w-[82%] items-center justify-center rounded-card border border-white/14 bg-white/8 backdrop-blur-md">
           <div
             className={cn(
-              "rounded-card-sm flex size-14 items-center justify-center",
+              "flex size-14 items-center justify-center rounded-card-sm",
               success
                 ? "bg-positive-500/18 text-positive-200"
                 : "bg-onboarding-primary text-info-300"
@@ -362,11 +362,11 @@ function OnboardingStageContent({
   return (
     <>
       {showPreviousErrorBanner ? (
-        <div className="border-warning-400/18 bg-warning-500/8 rounded-2xl border px-4 py-3">
-          <div className="text-warning-50 text-base font-medium">
+        <div className="rounded-2xl border border-warning-400/18 bg-warning-500/8 px-4 py-3">
+          <div className="text-base font-medium text-warning-50">
             Previous setup attempt failed
           </div>
-          <p className="text-warning-50/78 mt-1.5 text-sm leading-6">
+          <p className="mt-1.5 text-sm leading-6 text-warning-50/78">
             {wizardStateError}
           </p>
         </div>
@@ -410,7 +410,7 @@ export function OnboardingWizardContent() {
   return (
     <div className="dark w-full">
       <div
-        className="bg-onboarding-backdrop relative min-h-dvh overflow-hidden px-4 py-6 sm:px-6 sm:py-8"
+        className="relative min-h-dvh overflow-hidden bg-onboarding-backdrop px-4 py-6 sm:px-6 sm:py-8"
         data-onboarding-shell=""
       >
         <div
@@ -434,11 +434,11 @@ export function OnboardingWizardContent() {
           >
             <CardContent presentation="flush">
               <div className="grid grid-cols-1 lg:min-h-[460px] lg:grid-cols-[minmax(0,1.2fr)_minmax(250px,0.8fr)]">
-                <section className="bg-onboarding-card flex flex-col p-5 sm:p-6 lg:p-7">
+                <section className="flex flex-col bg-onboarding-card p-5 sm:p-6 lg:p-7">
                   <div className="mx-auto flex size-full max-w-4xl flex-1 flex-col">
                     <div className="mb-5 flex items-center justify-between gap-4 text-white/62">
                       <Logo className="text-white" size={22} />
-                      <div className="tracking-display rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs font-medium text-white/62">
+                      <div className="rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs font-medium tracking-display text-white/62">
                         {getStepCounter(phase)}
                       </div>
                     </div>
@@ -448,7 +448,7 @@ export function OnboardingWizardContent() {
                   </div>
                 </section>
                 <aside
-                  className="bg-onboarding-grid relative hidden border-white/10 lg:block lg:border-l"
+                  className="relative hidden border-white/10 bg-onboarding-grid lg:block lg:border-l"
                   data-onboarding-rail=""
                 >
                   <div

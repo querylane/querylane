@@ -301,7 +301,7 @@ function CategoryInfiniteScrollSentinel({
 
   return (
     <div
-      className="text-muted-foreground flex h-[34px] items-center px-3 text-xs"
+      className="flex h-[34px] items-center px-3 text-xs text-muted-foreground"
       ref={ref}
     >
       {isFetchingNextPage ? "Loading more…" : "Scroll for more"}
@@ -750,7 +750,7 @@ function NestedTreeRow({
   return (
     <div
       className={cn(
-        "border-border ml-4 h-full border-l",
+        "ml-4 h-full border-l border-border",
         // Resource rows sit one level deeper than their Kind header so the
         // tree reads as objects nested under the group, not siblings of it.
         indented === true ? "pl-5" : "pl-1"
@@ -788,7 +788,7 @@ function SchemaTreeButton({
     >
       <ChevronRight
         className={cn(
-          "text-muted-foreground size-3.5 shrink-0 transition-transform",
+          "size-3.5 shrink-0 text-muted-foreground transition-transform",
           isExpanded && "rotate-90"
         )}
       />
@@ -821,7 +821,7 @@ const SCHEMA_SKELETON_ROWS = [
 function SchemaLoadingRows() {
   return (
     <div
-      className="fade-in animation-duration-200 animate-in space-y-1 py-1 motion-reduce:animate-none"
+      className="animate-in space-y-1 py-1 animation-duration-200 fade-in motion-reduce:animate-none"
       data-testid="schema-list-loading"
       role="status"
     >
@@ -845,7 +845,7 @@ function NestedLoadingRows() {
   // useCalmLoadingPhase; this only softens the skeleton's entrance.
   return (
     <div
-      className="fade-in animation-duration-200 animate-in space-y-1 py-1 motion-reduce:animate-none"
+      className="animate-in space-y-1 py-1 animation-duration-200 fade-in motion-reduce:animate-none"
       data-testid="resource-list-loading"
     >
       {["first", "second", "third"].map((rowId) => (
@@ -888,7 +888,7 @@ function ResourceListItem({
     case "empty":
       return (
         <NestedTreeRow>
-          <p className="text-muted-foreground px-3 py-1 text-xs">No objects</p>
+          <p className="px-3 py-1 text-xs text-muted-foreground">No objects</p>
         </NestedTreeRow>
       );
     case "category":
@@ -989,7 +989,7 @@ function SchemaEmptyPanel({
   }
 
   return (
-    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
       {schemaEmptyMessage({ schemaSelectionError, schemasLoading })}
     </p>
   );
@@ -1017,8 +1017,8 @@ function SidebarResourceError({
     return null;
   }
   return (
-    <div className="border-destructive/30 bg-destructive/5 mx-2 mb-2 flex flex-col gap-2 rounded-md border p-2.5 text-sm">
-      <div className="text-destructive flex items-start gap-2">
+    <div className="mx-2 mb-2 flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm">
+      <div className="flex items-start gap-2 text-destructive">
         <TriangleExclamationPoint
           aria-hidden="true"
           className="mt-0.5 size-4 shrink-0"
@@ -1113,7 +1113,7 @@ function ExplorerSidebar({
     >
       <div className="flex flex-col gap-1.5 px-2 pt-2 pb-1.5 @max-[14rem]/object-browser:px-2">
         <div className="relative">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="h-7"
             onChange={(event) => {

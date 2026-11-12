@@ -43,6 +43,21 @@ function addAuthoredDeclaration(root: string, extension?: string): void {
 
 test.each([
   {
+    config: "biome.jsonc",
+    original: '"root": true',
+    replacement: '"root": false',
+    rule: "inactive nested project scanner",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"includes": ["**/*.{js,jsx,mjs,cjs}"]',
+    replacement: '"includes": ["**/*.mjs"]',
+    rule: "narrowed JavaScript import validation",
+    message:
+      "Reviewed rule scope is not enforced: correctness/noUnresolvedImports",
+  },
+  {
     config: "oxlint.config.ts",
     original: "const MAX_BLOCK_DEPTH = 4;",
     replacement: "const MAX_BLOCK_DEPTH = 99;",
@@ -58,8 +73,8 @@ test.each([
   },
   {
     config: "package.json",
-    original: '"lint:oxlint": "oxlint ',
-    replacement: '"lint:oxlint": "echo ',
+    original: '"lint": "bun scripts/check-rule-inventory.ts && biome ',
+    replacement: '"lint": "bun scripts/check-rule-inventory.ts && echo ',
     rule: "successful no-op lint entrypoint",
     message: "Reviewed quality options changed",
   },

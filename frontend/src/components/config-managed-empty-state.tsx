@@ -41,7 +41,7 @@ export function ConfigManagedEmptyState({
     <EmptyState
       action={
         <div className="flex flex-col items-center gap-3">
-          <code className="bg-muted text-muted-foreground rounded-md px-2.5 py-1 font-mono text-xs">
+          <code className="rounded-md bg-muted px-2.5 py-1 font-mono text-xs text-muted-foreground">
             {configFilePath}
           </code>
           <Button
@@ -65,12 +65,12 @@ export function ConfigManagedEmptyState({
             Copy YAML snippet
           </Button>
           {copyState === "copied" ? (
-            <span className="text-muted-foreground text-xs">
+            <span className="text-xs text-muted-foreground">
               Copied YAML snippet.
             </span>
           ) : null}
           {copyState === "error" ? (
-            <span className="text-destructive text-xs" role="alert">
+            <span className="text-xs text-destructive" role="alert">
               Could not copy YAML snippet.
             </span>
           ) : null}
@@ -84,7 +84,7 @@ export function ConfigManagedEmptyState({
 
   if (variant === "fullscreen") {
     return (
-      <div className="bg-background flex min-h-dvh items-center justify-center p-6">
+      <div className="flex min-h-dvh items-center justify-center bg-background p-6">
         <div className="w-full max-w-lg">{emptyState}</div>
       </div>
     );

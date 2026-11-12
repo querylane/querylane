@@ -178,7 +178,8 @@ function explorerSurfaceServices(catalog: ExplorerSurfaceCatalog) {
     for (const fixture of schema.tables) {
       tables.set(fixture.table.name, fixture);
     }
-    for (const fixture of schema.views ?? []) {
+    const viewFixtures = schema.views ?? [];
+    for (const fixture of viewFixtures) {
       views.set(fixture.view.name, fixture);
     }
   }

@@ -175,11 +175,11 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center" presentation="canvas">
-        <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-4" />
         </div>
         <div>
-          <p className="text-muted-foreground text-xs tracking-wider uppercase">
+          <p className="text-xs tracking-wider text-muted-foreground uppercase">
             {label}
           </p>
           <p className="text-lg font-semibold tabular-nums">{value}</p>
@@ -315,7 +315,7 @@ function DatabaseMapCanvasActions({
         Switch to {direction === "LR" ? "vertical" : "horizontal"}
       </Button>
       <div
-        className="bg-muted/40 inline-flex items-center gap-0.5 rounded-md p-0.5"
+        className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
         data-slot="button-group"
       >
         <Button
@@ -346,7 +346,7 @@ function DatabaseMapCanvasActions({
               {hiddenNodeKindCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="bg-muted text-muted-foreground rounded-full px-1.5 font-mono text-(length:--text-micro)"
+                  className="rounded-full bg-muted px-1.5 font-mono text-(length:--text-micro) text-muted-foreground"
                 >
                   {hiddenNodeKindCount}
                 </span>
@@ -682,7 +682,7 @@ function DatabaseStructureMap({
           <h1 className="text-2xl font-semibold tracking-tight">
             Database map
           </h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {isNonEmptyString(focusedResourceLabel)
               ? `Focused on ${focusedResourceLabel}. Load the full map to see every schema object for ${databaseLabel}.`
               : `Visualizes schemas, tables, columns, keys, indexes, triggers, policies, and foreign key relationships for ${databaseLabel}.`}

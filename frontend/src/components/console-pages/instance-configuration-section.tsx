@@ -611,7 +611,7 @@ function InstanceConfigurationNotice({
       {formNotice.variant === "error" ? (
         <CircleExclamationPoint className="size-4" />
       ) : (
-        <CircleCheck className="text-positive-600 size-4" />
+        <CircleCheck className="size-4 text-positive-600" />
       )}
       <AlertTitle>
         {formNotice.variant === "error" ? "Could not save" : "Saved"}

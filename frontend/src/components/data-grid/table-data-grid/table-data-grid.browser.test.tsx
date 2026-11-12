@@ -218,7 +218,7 @@ async function renderLongRecordDrawer() {
     // client even though it never fires here.
     <HarnessProviders>
       <ScreenshotFrame>
-        <div className="border-border bg-background text-foreground w-[980px] rounded-2xl border p-6">
+        <div className="w-[980px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <RecordDetailDrawer
             columns={columns}
             hasNext={true}
@@ -247,7 +247,7 @@ async function renderLongRecordDrawer() {
 async function renderSortableToolbar() {
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground w-[900px] rounded-2xl border p-6">
+      <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
           {...columnLayoutProps(sortableColumns)}
           {...toolbarHandlers()}
@@ -1080,7 +1080,7 @@ test("data value expansion keeps one visible dialog layer", async () => {
 test("toolbar shows active sort summary beside the maximize action", async () => {
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground w-[1040px] rounded-2xl border p-6">
+      <div className="w-[1040px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
           {...columnLayoutProps(resultColumns)}
           {...toolbarHandlers()}
@@ -1304,7 +1304,7 @@ test("page size select shows every option when the footer is near the viewport e
 
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground flex h-[900px] w-[620px] items-end rounded-2xl border p-6">
+      <div className="flex h-[900px] w-[620px] items-end rounded-2xl border border-border bg-background p-6 text-foreground">
         <PaginationFooter
           hasNext={true}
           hasPrev={true}
@@ -1418,7 +1418,7 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
   await render(
     <ScreenshotFrame>
       <div className="pl-80">
-        <div className="border-border bg-background text-foreground w-[560px] rounded-2xl border p-6">
+        <div className="w-[560px] rounded-2xl border border-border bg-background p-6 text-foreground">
           <DataGridToolbar
             {...columnLayoutProps(sortableColumns)}
             {...toolbarHandlers()}
@@ -1452,7 +1452,7 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
 test("grid status bar exposes actionable warning labels as visible UI", async () => {
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground w-[760px] rounded-2xl border p-6">
+      <div className="w-[760px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <GridStatusBar
           items={[
             {
@@ -1475,9 +1475,9 @@ test("grid status bar exposes actionable warning labels as visible UI", async ()
 test("data grid refresh treatment is centered and readable", async () => {
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground w-[720px] rounded-2xl border p-6">
+      <div className="w-[720px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <GridSurface busy={true} loading={true}>
-          <div className="bg-muted/30 text-muted-foreground flex min-h-[400px] items-center justify-center rounded-xl border text-sm">
+          <div className="flex min-h-[400px] items-center justify-center rounded-xl border bg-muted/30 text-sm text-muted-foreground">
             Existing rows stay visible behind the refresh treatment.
           </div>
         </GridSurface>
@@ -1592,9 +1592,9 @@ test("data grid values remain selectable while headers stay non-selectable", asy
 test("narrow column headers keep the options menu visible", async () => {
   await render(
     <ScreenshotFrame>
-      <div className="border-border bg-background text-foreground rounded-2xl border p-6">
+      <div className="rounded-2xl border border-border bg-background p-6 text-foreground">
         <div
-          className="border-border h-9 w-[104px] overflow-hidden rounded-md border"
+          className="h-9 w-[104px] overflow-hidden rounded-md border border-border"
           data-testid="narrow-column-header"
         >
           <ColumnHeader

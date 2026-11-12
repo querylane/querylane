@@ -78,7 +78,7 @@ function ReferencedTableTarget({
   }
   return (
     <Link
-      className="text-info-700 focus-visible:ring-ring dark:text-info-300 inline-flex h-[18px] items-center rounded-sm font-mono text-xs focus-visible:ring-2"
+      className="inline-flex h-[18px] items-center rounded-sm font-mono text-xs text-info-700 focus-visible:ring-2 focus-visible:ring-ring dark:text-info-300"
       params={{ databaseId, instanceId }}
       search={{
         category: "tables",
@@ -158,7 +158,7 @@ function buildConstraintInventoryColumns({
       accessorFn: (row) => row.constraintName,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="text-foreground truncate font-mono text-xs font-semibold">
+          <span className="truncate font-mono text-xs font-semibold text-foreground">
             {row.original.constraintName || "—"}
           </span>
           {hasNotValidDefinition(row.original) ? (

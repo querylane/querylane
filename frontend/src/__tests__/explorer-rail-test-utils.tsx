@@ -6,7 +6,7 @@ function ExplorerRailSlot() {
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return (
     <div
-      className="border-border bg-sidebar flex h-full w-64 shrink-0 flex-col border-r"
+      className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-sidebar"
       data-testid="explorer-rail-slot"
       ref={registerSlotTarget}
     />

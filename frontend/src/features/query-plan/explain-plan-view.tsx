@@ -100,7 +100,7 @@ function MetricBar({
     <div className="flex items-center justify-end gap-3 font-mono text-xs tabular-nums">
       <span
         aria-hidden="true"
-        className="bg-muted h-2 w-20 overflow-hidden rounded-sm"
+        className="h-2 w-20 overflow-hidden rounded-sm bg-muted"
       >
         <span
           className={cn(
@@ -144,7 +144,7 @@ function TopologyRail({
   return (
     <svg
       aria-hidden="true"
-      className="text-border shrink-0 overflow-visible"
+      className="shrink-0 overflow-visible text-border"
       height={ROW_HEIGHT}
       width={(depth + 1) * LANE_WIDTH}
     >
@@ -197,7 +197,7 @@ function PlanRows(props: PlanRowsProps) {
     <>
       <tr
         className={cn(
-          "hover:bg-muted/30 border-b",
+          "border-b hover:bg-muted/30",
           node.id === selectedId && "bg-muted/70"
         )}
         data-plan-node={node.id}
@@ -242,7 +242,7 @@ function PlanRows(props: PlanRowsProps) {
                 <span className="text-xs font-medium">{node.nodeType}</span>
                 {isNonEmptyString(node.relationName) ? (
                   <span
-                    className="text-muted-foreground max-w-64 truncate font-mono text-xs"
+                    className="max-w-64 truncate font-mono text-xs text-muted-foreground"
                     title={title}
                   >
                     {node.relationName}
@@ -255,7 +255,7 @@ function PlanRows(props: PlanRowsProps) {
         {[node.actualRows, node.planRows, node.actualLoops].map(
           (value, index) => (
             <td
-              className="text-muted-foreground p-2 text-right font-mono text-xs tabular-nums"
+              className="p-2 text-right font-mono text-xs text-muted-foreground tabular-nums"
               key={index.toString()}
             >
               {value === undefined ? "—" : formatCount(value)}
@@ -313,7 +313,7 @@ function PlanMetricControls({
   }
   const active = METRICS.find((item) => item.value === metric);
   return (
-    <div className="bg-muted/20 flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <Select
           items={METRICS}
@@ -350,7 +350,7 @@ function PlanMetricControls({
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-xs">{active?.hint}</span>
+        <span className="text-xs text-muted-foreground">{active?.hint}</span>
       </div>
       {hotspot ? (
         <Button
@@ -497,7 +497,7 @@ function PlanExplorer({
           </TabsTrigger>
         </TabsList>
         {focused ? (
-          <span className="text-muted-foreground mr-8 text-xs">
+          <span className="mr-8 text-xs text-muted-foreground">
             Plan analysis
           </span>
         ) : (
@@ -664,7 +664,7 @@ function PlanVisualization({
         aria-label="Execution plan"
         className="w-full min-w-2xl border-collapse text-xs"
       >
-        <thead className="bg-background sticky top-0 z-10">
+        <thead className="sticky top-0 z-10 bg-background">
           <tr className="border-b text-left">
             {["Operation", "Rows / loop", "Est. rows", "Loops", heading].map(
               (label, index) => (
@@ -711,7 +711,7 @@ function ExplainPlanView({
           <TabsTrigger value="raw">JSON</TabsTrigger>
         </TabsList>
         <TabsContent className="min-h-0 flex-1 overflow-auto" value="raw">
-          <p className="text-muted-foreground px-4 pt-3 text-xs">
+          <p className="px-4 pt-3 text-xs text-muted-foreground">
             Unrecognized plan. Raw output preserved.
           </p>
           <pre className="px-4 py-3 font-mono text-xs leading-relaxed">

@@ -75,9 +75,9 @@ function getTestButtonIcon(status: ConnectionTestStatus) {
         <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
       );
     case "success":
-      return <Check className="text-positive-400 size-4" />;
+      return <Check className="size-4 text-positive-400" />;
     case "error":
-      return <X className="text-negative-400 size-4" />;
+      return <X className="size-4 text-negative-400" />;
     case "idle":
     default:
       return <Unplug className="size-4" />;
@@ -151,9 +151,9 @@ function ConnectionTestResult({
 }) {
   if (status === "success" && isCurrentConfigVerified) {
     return (
-      <div className="border-positive-400/25 bg-positive-500/8 text-positive-100/92 rounded-xl border px-4 py-3 text-sm">
+      <div className="rounded-xl border border-positive-400/25 bg-positive-500/8 px-4 py-3 text-sm text-positive-100/92">
         <div className="flex items-center gap-3">
-          <Check className="text-positive-400 size-4 shrink-0" />
+          <Check className="size-4 shrink-0 text-positive-400" />
           Connection successful. Ready to continue.
         </div>
       </div>
@@ -167,14 +167,14 @@ function ConnectionTestResult({
   ) {
     return (
       <div
-        className="border-negative-400/20 bg-negative-500/8 text-negative-100/92 rounded-xl border px-4 py-3 text-sm"
+        className="rounded-xl border border-negative-400/20 bg-negative-500/8 px-4 py-3 text-sm text-negative-100/92"
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <X className="text-negative-400 mt-0.5 size-4 shrink-0" />
+          <X className="mt-0.5 size-4 shrink-0 text-negative-400" />
           <div className="space-y-1">
             <div className="font-medium">Connection failed</div>
-            <div className="text-negative-200/78 text-sm">{errorMessage}</div>
+            <div className="text-sm text-negative-200/78">{errorMessage}</div>
           </div>
         </div>
       </div>
@@ -357,7 +357,7 @@ function ConnectionStringPasteForm({
         </div>
         {isNonEmptyString(connectionStringError) ? (
           <p
-            className="text-negative-300/90 text-sm"
+            className="text-sm text-negative-300/90"
             id={connectionStringErrorId}
             role="alert"
           >
@@ -715,7 +715,7 @@ export function UiConfiguredPhase() {
 
         {isNonEmptyString(connectionStringFeedback.warning) ? (
           <p
-            className="border-warning-300/20 bg-warning-300/7 text-warning-100/90 rounded-xl border px-4 py-3 text-sm"
+            className="rounded-xl border border-warning-300/20 bg-warning-300/7 px-4 py-3 text-sm text-warning-100/90"
             role="status"
           >
             {connectionStringFeedback.warning}

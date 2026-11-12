@@ -228,7 +228,7 @@ function FilterRow({
   function renderValueEditor() {
     if (operatorMeta.valueCount === 0) {
       return (
-        <div className="text-muted-foreground col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-xs @lg/filter-popover:col-start-auto">
+        <div className="col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-xs text-muted-foreground @lg/filter-popover:col-start-auto">
           No value needed
         </div>
       );
@@ -313,7 +313,7 @@ function FilterRow({
                   >
                     {candidate.columnName}
                   </span>
-                  <span className="text-muted-foreground max-w-[45%] shrink-0 truncate font-mono text-xs uppercase">
+                  <span className="max-w-[45%] shrink-0 truncate font-mono text-xs text-muted-foreground uppercase">
                     {candidate.rawType}
                   </span>
                 </span>
@@ -375,7 +375,7 @@ function FilterRow({
         </Button>
       </div>
       {isNonEmptyString(invalidMessage) ? (
-        <p className="text-destructive pl-1 text-xs" id={messageId}>
+        <p className="pl-1 text-xs text-destructive" id={messageId}>
           {invalidMessage}
         </p>
       ) : null}
