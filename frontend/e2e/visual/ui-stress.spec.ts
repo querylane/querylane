@@ -57,7 +57,41 @@ test("SSL descriptions fit a phone", async ({ page }) => {
       )
     )
     .toBe(true);
-  await expect(listbox).toHaveScreenshot("ssl-phone.png");
+  await expect
+    .poll(() =>
+      listbox.evaluate((element) => {
+        const content = element.closest<HTMLElement>(
+          '[data-querylane-slot="select-content"]'
+        );
+        return (
+          content?.hasAttribute("data-open") === true &&
+          content
+            .getAnimations({ subtree: true })
+            .every((animation) => animation.playState !== "running")
+        );
+      })
+    )
+    .toBe(true);
+  // Normalize the capture rectangle, not SDK placement: outward rounding of
+  // a fractional native popup otherwise alternates between 310px and 311px.
+  const capture = await listbox.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      fitsViewport:
+        rect.left >= 0 &&
+        rect.top >= 0 &&
+        rect.right <= globalThis.innerWidth &&
+        rect.bottom <= globalThis.innerHeight,
+      clip: {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+    };
+  });
+  expect(capture.fitsViewport).toBe(true);
+  await expect(page).toHaveScreenshot("ssl-phone.png", { clip: capture.clip });
 });
 
 test("role summary and keyboard-selected definition fit a phone", async ({
