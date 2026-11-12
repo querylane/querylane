@@ -41,28 +41,28 @@ function ColumnHeader({
         {isFrozen ? (
           <Lock
             aria-label="Frozen column"
-            className="text-reference-500 dark:text-reference-400 size-3 shrink-0"
+            className="size-3 shrink-0 text-reference-500 dark:text-reference-400"
           />
         ) : null}
         {isPrimaryKey ? (
           <KeyRound
             aria-label="Primary key"
-            className="text-warning-500 size-3 shrink-0"
+            className="size-3 shrink-0 text-warning-500"
           />
         ) : null}
         <span
           className={cn(
-            "text-foreground min-w-[2ch] truncate text-xs font-medium",
+            "min-w-[2ch] truncate text-xs font-medium text-foreground",
             column.isNullable ? "" : "font-semibold"
           )}
         >
           {column.columnName}
         </span>
-        <span className="text-muted-foreground min-w-0 truncate font-mono tracking-wide text-(length:--text-micro) uppercase">
+        <span className="min-w-0 truncate font-mono tracking-wide text-(length:--text-micro) text-muted-foreground uppercase">
           {column.rawType}
         </span>
         {sortDirection ? (
-          <span className="text-foreground/70 inline-flex shrink-0 items-center gap-0.5">
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-foreground/70">
             {sortDirection === "ASC" ? (
               <ArrowUp aria-label="Sorted ascending" className="size-3" />
             ) : (

@@ -168,9 +168,9 @@ function NavigationTargetGroup({
           }}
           value={target.label}
         >
-          <ChevronRight className="text-muted-foreground size-3.5" />
+          <ChevronRight className="size-3.5 text-muted-foreground" />
           <span className="text-(length:--text-caption)">{target.label}</span>
-          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+          <span className="ml-auto text-(length:--text-label-md) text-muted-foreground">
             {target.summary}
           </span>
         </CommandItem>
@@ -211,11 +211,11 @@ function DatabaseObjectGroup({
             }}
             value={label}
           >
-            <ChevronRight className="text-muted-foreground size-3.5" />
+            <ChevronRight className="size-3.5 text-muted-foreground" />
             <span className="font-mono text-(length:--text-caption)">
               {label}
             </span>
-            <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+            <span className="ml-auto text-(length:--text-label-md) text-muted-foreground">
               {databaseObjectRowCount(object)}
             </span>
           </CommandItem>
@@ -246,11 +246,11 @@ function RoleCommandGroup({
           }}
           value={role.roleName}
         >
-          <ChevronRight className="text-muted-foreground size-3.5" />
+          <ChevronRight className="size-3.5 text-muted-foreground" />
           <span className="font-mono text-(length:--text-caption)">
             {role.roleName}
           </span>
-          <span className="text-muted-foreground ml-auto text-(length:--text-label-md)">
+          <span className="ml-auto text-(length:--text-label-md) text-muted-foreground">
             {ROLE_KIND_LABEL[deriveRoleKind(role)].toLowerCase()}
           </span>
         </CommandItem>
@@ -272,13 +272,13 @@ function PaletteQueryStatus({
 }) {
   if (isPending) {
     return (
-      <output className="text-muted-foreground block px-4 py-3 text-xs">
+      <output className="block px-4 py-3 text-xs text-muted-foreground">
         {loadingMessage}
       </output>
     );
   }
   if (Boolean(error)) {
-    return <p className="text-destructive px-4 py-3 text-xs">{errorMessage}</p>;
+    return <p className="px-4 py-3 text-xs text-destructive">{errorMessage}</p>;
   }
   return null;
 }
@@ -428,7 +428,7 @@ function AdminCommandPaletteContent({
 
   return (
     <Command
-      className="[&_[data-slot=input-group]]:border-border! rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
+      className="rounded-xl! p-0 [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=input-group-addon]]:pl-4! [&_[data-slot=input-group]]:h-[52px]! [&_[data-slot=input-group]]:rounded-none! [&_[data-slot=input-group]]:border-0! [&_[data-slot=input-group]]:border-b! [&_[data-slot=input-group]]:border-border! [&_[data-slot=input-group]]:bg-transparent! [&_[data-slot=input-group]]:shadow-none!"
       label="Search tables, screens, roles, or saved queries"
       shouldFilter={false}
     >
@@ -440,7 +440,7 @@ function AdminCommandPaletteContent({
           placeholder="Jump to a table, screen, role, or saved query…"
           value={query}
         />
-        <kbd className="bg-muted text-muted-foreground pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md px-2 py-1 font-mono text-xs">
+        <kbd className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
           esc
         </kbd>
       </div>
@@ -492,7 +492,7 @@ function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
     <CommandPaletteContext.Provider value={controller}>
       {children}
       <CommandDialog
-        className="border-border top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border p-0 shadow-lg sm:max-w-[600px]"
+        className="top-[14%] w-[600px] max-w-[calc(100%-2.5rem)] gap-0 rounded-xl! border border-border p-0 shadow-lg sm:max-w-[600px]"
         description="Search tables, screens, and roles in the current Querylane scope."
         onOpenChange={setOpen}
         open={open}

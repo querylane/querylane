@@ -107,7 +107,7 @@ export function ManualYamlPhase() {
           <div className="text-base font-medium text-white/84">
             Default path
           </div>
-          <div className="bg-onboarding-preview mt-3 flex items-center gap-3 rounded-xl border border-white/8 px-4 py-3">
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-onboarding-preview px-4 py-3">
             <span className="min-w-0 flex-1 font-mono text-xs break-all text-white/92">
               {configFilePath}
             </span>
@@ -170,7 +170,7 @@ export function ManualYamlPhase() {
           </pre>
         </div>
 
-        <div className="border-onboarding-accent/24 bg-onboarding-detail rounded-xl border px-4 py-3 text-sm leading-6 text-white/70">
+        <div className="rounded-xl border border-onboarding-accent/24 bg-onboarding-detail px-4 py-3 text-sm leading-6 text-white/70">
           Querylane will begin watching the configured path on step 3. Once the
           file is saved, it will validate the contents and continue setup
           automatically.

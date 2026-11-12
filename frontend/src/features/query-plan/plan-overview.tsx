@@ -37,7 +37,7 @@ function PlanOverview({
   const total = ranked.reduce((sum, node) => sum + (node.exclusiveMs ?? 0), 0);
   const [hotspot] = ranked;
   return (
-    <div className="bg-card border-b px-4 py-3 @3xl:px-5">
+    <div className="border-b bg-card px-4 py-3 @3xl:px-5">
       <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
         <SummaryNumbers count={nodes.length} plan={plan} />
         {hotspot && total > 0 ? (
@@ -52,14 +52,14 @@ function PlanOverview({
             variant="ghost"
           >
             <span className="min-w-0 text-left">
-              <span className="text-muted-foreground block text-xs">
+              <span className="block text-xs text-muted-foreground">
                 Largest available self work ≈
               </span>
               <span className="mt-1 flex items-center gap-2 text-xs">
                 <span className="truncate">
                   {hotspot.relationName ?? hotspot.nodeType}
                 </span>
-                <span className="text-warning-700 dark:text-warning-400 font-mono tabular-nums">
+                <span className="font-mono text-warning-700 tabular-nums dark:text-warning-400">
                   {Math.round(((hotspot.exclusiveMs ?? 0) / total) * PERCENT)}%
                 </span>
                 <span aria-hidden="true">↗</span>
@@ -67,7 +67,7 @@ function PlanOverview({
             </span>
           </Button>
         ) : (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             {plan.root.parallel === true
               ? "Parallel work · self time unavailable"
               : "No self-work profile"}
@@ -100,7 +100,7 @@ function PlanOverview({
                       "h-full w-(--plan-share) shrink",
                       node.id === hotspot?.id ? "bg-chart-4" : "bg-chart-2/55",
                       node.id === selectedId &&
-                        "ring-foreground ring-1 ring-inset"
+                        "ring-1 ring-foreground ring-inset"
                     )}
                     key={node.id}
                     style={{
@@ -139,7 +139,7 @@ function PlanOverview({
                     value={node.id}
                   >
                     {planNodeTitle(node)}
-                    <span className="text-muted-foreground ml-auto pl-4 font-mono text-xs">
+                    <span className="ml-auto pl-4 font-mono text-xs text-muted-foreground">
                       {formatPlanMs(node.exclusiveMs ?? 0)}
                     </span>
                   </DropdownMenuRadioItem>
@@ -160,7 +160,7 @@ function SummaryNumbers({ plan, count }: { plan: ExplainPlan; count: number }) {
   return (
     <div className="flex items-center gap-6">
       <div>
-        <p className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
+        <p className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
           {plan.executionTimeMs === undefined
             ? "Estimated cost"
             : "Execution time"}
@@ -174,11 +174,11 @@ function SummaryNumbers({ plan, count }: { plan: ExplainPlan; count: number }) {
       <div className="border-l pl-6 text-xs">
         <p className="font-medium tabular-nums">
           {rows === undefined ? "—" : formatCount(rows)}{" "}
-          <span className="text-muted-foreground font-normal">
+          <span className="font-normal text-muted-foreground">
             rows {plan.root.actualRows === undefined ? "estimated" : "returned"}
           </span>
         </p>
-        <p className="text-muted-foreground mt-2">
+        <p className="mt-2 text-muted-foreground">
           {count} operations
           {plan.planningTimeMs === undefined
             ? ""

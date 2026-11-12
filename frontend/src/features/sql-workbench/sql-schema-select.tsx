@@ -208,7 +208,7 @@ function SqlSchemaSelect({
               value={value}
             />
             {hasMore ? (
-              <p className="text-muted-foreground px-3 py-2 text-xs">
+              <p className="px-3 py-2 text-xs text-muted-foreground">
                 Showing the first {SCHEMA_RESULT_LIMIT}. Type to search all
                 schemas.
               </p>

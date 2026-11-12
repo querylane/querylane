@@ -103,12 +103,13 @@ async function executeRows({
   const rows: QueryRow[] = [];
   let columns: string[] = [];
 
-  for await (const response of client.executeQuery({
+  const responses = client.executeQuery({
     batchSize: EXECUTE_BATCH_SIZE,
     parent,
     rowLimit,
     statement,
-  })) {
+  });
+  for await (const response of responses) {
     const { result } = response;
     if (result.case === undefined) {
       continue;

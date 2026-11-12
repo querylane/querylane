@@ -71,9 +71,9 @@ function ResultsPlaceholder({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center">
-      <Icon aria-hidden="true" className="text-muted-foreground/60 size-6" />
+      <Icon aria-hidden="true" className="size-6 text-muted-foreground/60" />
       <p className="text-sm font-medium">{title}</p>
-      <p className="text-muted-foreground max-w-md text-sm">{description}</p>
+      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -91,7 +91,7 @@ function elapsedMs(execution: SqlExecution): number {
 
 function RunningStatus({ execution }: { execution: SqlExecution }) {
   return (
-    <span className="text-muted-foreground flex items-center gap-2">
+    <span className="flex items-center gap-2 text-muted-foreground">
       <LoaderCircle
         aria-hidden="true"
         className="size-3.5 motion-safe:animate-spin"
@@ -123,7 +123,7 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
         {formatDurationMs(elapsedMs(execution))}
       </span>
       {execution.stats?.truncated === true ? (
-        <span className="text-chart-4 flex items-center gap-1">
+        <span className="flex items-center gap-1 text-chart-4">
           <TriangleExclamationPoint aria-hidden="true" className="size-3.5" />
           Stopped at the {formatCount(execution.rowLimit)} row limit
         </span>
@@ -134,7 +134,7 @@ function SuccessStatus({ execution }: { execution: SqlExecution }) {
 
 function CancelledStatus({ execution }: { execution: SqlExecution }) {
   return (
-    <span className="text-muted-foreground flex items-center gap-1.5">
+    <span className="flex items-center gap-1.5 text-muted-foreground">
       <Ban aria-hidden="true" className="size-3.5" />
       Cancelled after {formatDurationMs(elapsedMs(execution))}
       {execution.rows.length > 0
@@ -154,7 +154,7 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
       return <CancelledStatus execution={execution} />;
     case "error":
       return (
-        <span className="text-destructive flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 text-destructive">
           <TriangleExclamationPoint aria-hidden="true" className="size-3.5" />
           {execution.error?.title ?? "Query failed"}
         </span>
@@ -240,15 +240,15 @@ function CommandResult({ execution }: { execution: SqlExecution }) {
       className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center"
       data-slot="sql-command-result"
     >
-      <CircleCheck aria-hidden="true" className="text-success size-6" />
+      <CircleCheck aria-hidden="true" className="size-6 text-success" />
       {isNonEmptyString(outcome.tag) ? (
-        <code className="bg-muted rounded-md px-2 py-0.5 font-mono text-sm font-medium">
+        <code className="rounded-md bg-muted px-2 py-0.5 font-mono text-sm font-medium">
           {outcome.tag}
         </code>
       ) : (
         <p className="text-sm font-medium">{outcome.title}</p>
       )}
-      <p className="text-muted-foreground max-w-md text-sm">
+      <p className="max-w-md text-sm text-muted-foreground">
         {outcome.description}
       </p>
     </div>
@@ -378,7 +378,7 @@ function MessagesBody({
     <ol className="flex-1 overflow-auto px-4 py-3 font-mono text-xs leading-relaxed">
       {notices.map((notice) => (
         <li
-          className="border-border border-b py-1.5 last:border-b-0"
+          className="border-b border-border py-1.5 last:border-b-0"
           key={notice.key}
         >
           {notice.text}
@@ -450,7 +450,7 @@ function CountPill({ count }: { count: number }) {
     return null;
   }
   return (
-    <span className="bg-muted rounded-full px-1.5 font-mono text-xs tabular-nums">
+    <span className="rounded-full bg-muted px-1.5 font-mono text-xs tabular-nums">
       {count}
     </span>
   );
@@ -472,7 +472,7 @@ function ResultsToolbar({
   onTabChange: (tab: ResultsTab) => void;
 }) {
   return (
-    <div className="border-border flex min-h-10 flex-wrap items-center justify-between gap-2 border-b px-2">
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-b border-border px-2">
       <Tabs
         onValueChange={(value) => {
           onTabChange(parseResultsTab(value));
@@ -546,7 +546,7 @@ function SqlResultsPane({
       // h-full: the resizable panel's content box is a plain block, so without
       // an explicit height this section grows to the grid's full row height.
       // That defeats virtualization and scrolls the tab strip and header away.
-      className="bg-background flex h-full min-h-0 flex-1 flex-col"
+      className="flex h-full min-h-0 flex-1 flex-col bg-background"
     >
       <ResultsToolbar
         activeTab={activeTab}

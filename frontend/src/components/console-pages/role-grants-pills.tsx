@@ -102,7 +102,7 @@ export function HeldPillStrip({
   const ordered = columns.filter((name) => held.has(name));
   if (ordered.length === 0) {
     return (
-      <span className="text-muted-foreground/50 font-mono text-xs italic">
+      <span className="font-mono text-xs text-muted-foreground/50 italic">
         no privileges
       </span>
     );
@@ -155,7 +155,7 @@ export function CountPill({
   value: number;
 }) {
   return (
-    <span className="border-border bg-secondary text-muted-foreground tracking-label inline-flex h-[18px] items-center gap-1 rounded-full border px-1.75 font-mono text-xs font-medium">
+    <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-border bg-secondary px-1.75 font-mono text-xs font-medium tracking-label text-muted-foreground">
       {value.toLocaleString()}
       {isNonEmptyString(unit) ? (
         <span className="font-normal">
@@ -206,7 +206,7 @@ export function ContentHead({
   return (
     <div className="flex flex-col gap-1.5 pb-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
-        <Icon className={cn("text-muted-foreground size-4", iconClassName)} />
+        <Icon className={cn("size-4 text-muted-foreground", iconClassName)} />
         <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
         {children}
         {count === undefined ? null : (

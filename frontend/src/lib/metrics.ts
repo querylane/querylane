@@ -116,7 +116,8 @@ function finiteSampleStats(response: QueryMetricsResponse | undefined): {
   let firstMs: number | null = null;
   let maxFinitePoints = 0;
 
-  for (const series of response?.series ?? []) {
+  const metricSeries = response?.series ?? [];
+  for (const series of metricSeries) {
     const seriesStats = finiteSeriesStats(series);
     if (seriesStats.firstMs !== null) {
       firstMs =
@@ -345,7 +346,8 @@ export function seriesByMetric(
   response: QueryMetricsResponse | undefined
 ): Map<MetricId, MetricSeries> {
   const byMetric = new Map<MetricId, MetricSeries>();
-  for (const series of response?.series ?? []) {
+  const metricSeries = response?.series ?? [];
+  for (const series of metricSeries) {
     byMetric.set(series.metric, series);
   }
 

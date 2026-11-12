@@ -138,14 +138,14 @@ function NameCell({ role }: { role: Role }) {
           <RoleKindBadge role={role} />
         </div>
         {isNonEmptyString(subtitle) ? (
-          <div className="text-muted-foreground truncate text-xs">
+          <div className="truncate text-xs text-muted-foreground">
             <span className="truncate">{subtitle}</span>
           </div>
         ) : null}
       </div>
       <ChevronRight
         aria-hidden="true"
-        className="text-muted-foreground/0 group-hover:text-muted-foreground ml-auto size-4 transition-colors"
+        className="ml-auto size-4 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
       />
     </div>
   );
@@ -155,14 +155,14 @@ function LoginCell({ role }: { role: Role }) {
   if (role.attributes?.canLogin === true) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="bg-positive-500 size-1.5 rounded-full" />
+        <span className="size-1.5 rounded-full bg-positive-500" />
         Yes
       </span>
     );
   }
   return (
-    <span className="text-muted-foreground inline-flex items-center gap-1.5">
-      <span className="bg-muted-foreground/35 size-1.5 rounded-full" />
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground/35" />
       <span>No</span>
     </span>
   );
@@ -285,13 +285,13 @@ function RolesDetailsContent({
   let body: ReactNode;
   if (isPending) {
     body = (
-      <p className="text-muted-foreground text-sm" role="status">
+      <p className="text-sm text-muted-foreground" role="status">
         Loading matching roles…
       </p>
     );
   } else if (Boolean(error)) {
     body = (
-      <p className="text-destructive text-sm" role="alert">
+      <p className="text-sm text-destructive" role="alert">
         Could not load matching roles.
       </p>
     );
@@ -318,7 +318,7 @@ function RolesDetailsContent({
     <div className="flex flex-col gap-4">
       {body}
       {partial ? (
-        <p className="text-muted-foreground text-xs" role="status">
+        <p className="text-xs text-muted-foreground" role="status">
           Showing the first 5,000 matching roles. Refine your search to narrow
           the results.
         </p>
@@ -531,12 +531,12 @@ export function InstanceRolesPage({
   const rolesMapContent = (
     <div className="grid gap-3">
       {accessMapResourcesQuery.isPending ? (
-        <p className="text-muted-foreground text-sm" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Loading role object access.
         </p>
       ) : null}
       {accessMapResourcesQuery.error ? (
-        <p className="text-destructive text-sm" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           Object access failed to load: {accessMapResourcesQuery.error.message}
         </p>
       ) : null}

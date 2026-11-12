@@ -7,38 +7,38 @@ const buttonPresentations = cva("", {
   variants: {
     presentation: {
       "plan-map-node":
-        "border-border bg-card hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-chart-4/15 h-auto flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg border p-0 text-left font-normal whitespace-normal shadow-sm aria-pressed:ring-2",
+        "h-auto flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg border border-border bg-card p-0 text-left font-normal whitespace-normal shadow-sm hover:bg-accent aria-pressed:border-chart-4 aria-pressed:ring-2 aria-pressed:ring-chart-4/15",
       "plan-work":
         "h-6 w-full justify-start gap-2 rounded-sm p-0 hover:bg-transparent",
       warning: "text-warning-600 hover:text-warning-700",
       quiet: "text-muted-foreground hover:text-foreground",
       "sidebar-action":
-        "border-border bg-background text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground gap-2 px-2.5 font-normal shadow-none",
+        "gap-2 border-border bg-background px-2.5 font-normal text-muted-foreground shadow-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       "compact-group": "gap-2 rounded-sm px-1.5 py-1",
-      clear: "text-muted-foreground hover:text-foreground p-0",
+      clear: "p-0 text-muted-foreground hover:text-foreground",
       micro: "px-1.5 text-xs",
       "tree-disclosure":
-        "text-muted-foreground hover:text-foreground aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground gap-2 px-2 py-0 font-normal hover:bg-transparent aria-expanded:bg-transparent dark:hover:bg-transparent",
+        "gap-2 px-2 py-0 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground dark:hover:bg-transparent",
       unpadded: "p-0",
       muted: "text-muted-foreground",
       "icon-label": "gap-2",
       segmented: "rounded-none border-0",
       "grant-group":
-        "hover:bg-foreground/3 gap-2 rounded-sm px-1.5 py-1 font-normal",
-      "grant-count": "text-muted-foreground px-2 text-xs font-normal",
+        "gap-2 rounded-sm px-1.5 py-1 font-normal hover:bg-foreground/3",
+      "grant-count": "px-2 text-xs font-normal text-muted-foreground",
       "grant-entity":
-        "hover:bg-foreground/3 gap-3 rounded-sm px-1 py-1.5 font-normal",
+        "gap-3 rounded-sm px-1 py-1.5 font-normal hover:bg-foreground/3",
       "grant-more":
-        "text-muted-foreground hover:text-foreground px-1.5 pt-1.5 pb-1 text-xs font-normal underline-offset-2 hover:underline",
+        "px-1.5 pt-1.5 pb-1 text-xs font-normal text-muted-foreground underline-offset-2 hover:text-foreground hover:underline",
       "grant-object":
-        "hover:bg-foreground/2 gap-2.5 rounded-none px-1 py-2.5 font-normal",
+        "gap-2.5 rounded-none px-1 py-2.5 font-normal hover:bg-foreground/2",
       "grant-overview":
-        "border-border hover:bg-foreground/3 gap-3.5 rounded-none border-0 px-4 py-3.5 font-normal not-first:border-t",
+        "gap-3.5 rounded-none border-0 border-border px-4 py-3.5 font-normal not-first:border-t hover:bg-foreground/3",
       "onboarding-primary":
-        "text-onboarding-ink rounded-lg bg-white px-4 text-sm font-medium hover:bg-white/90",
+        "rounded-lg bg-white px-4 text-sm font-medium text-onboarding-ink hover:bg-white/90",
       "onboarding-secondary":
         "rounded-lg border-white/10 px-4 text-sm text-white/78 hover:bg-white/4 hover:text-white",
-      "preview-toolbar": "text-muted-foreground px-1.5",
+      "preview-toolbar": "px-1.5 text-muted-foreground",
       recovery: "px-2 py-1 text-xs",
       compact: "px-2 text-xs",
       "onboarding-command":
@@ -48,7 +48,7 @@ const buttonPresentations = cva("", {
       "onboarding-cancel":
         "rounded-lg border-white/10 px-4 text-sm text-white/68 hover:bg-white/4 hover:text-white disabled:text-white/25",
       "onboarding-finish":
-        "text-onboarding-ink rounded-lg bg-white px-4 text-sm font-medium hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38",
+        "rounded-lg bg-white px-4 text-sm font-medium text-onboarding-ink hover:bg-white/90 disabled:bg-white/18 disabled:text-white/38",
       devtools: "opacity-60 hover:opacity-100",
       "expand-cell": "rdg-expand-button text-muted-foreground",
       "onboarding-back":
@@ -60,30 +60,30 @@ const buttonPresentations = cva("", {
       reference:
         "rounded-none p-0 font-medium text-inherit underline decoration-dotted underline-offset-2",
       ownership:
-        "border-warning-500/30 text-warning-600 hover:bg-warning-500/10 dark:text-warning-400 gap-1 rounded-full px-2 text-xs font-normal lowercase",
+        "gap-1 rounded-full border-warning-500/30 px-2 text-xs font-normal text-warning-600 lowercase hover:bg-warning-500/10 dark:text-warning-400",
       "filter-rule": "px-0 font-mono text-xs",
       extension: "p-0 font-mono text-sm font-medium hover:bg-transparent",
       "preview-mode": "px-1.5 font-medium tracking-wide uppercase",
-      privilege: "tracking-section rounded-full px-2 font-mono text-xs",
+      privilege: "rounded-full px-2 font-mono text-xs tracking-section",
       "privilege-count":
-        "text-muted-foreground gap-1 px-1.5 text-xs font-normal",
+        "gap-1 px-1.5 text-xs font-normal text-muted-foreground",
       query: "p-0 font-normal hover:bg-transparent",
       "overview-tab": "gap-1.5 rounded-none px-6 py-3 font-normal",
       "resource-row":
-        "hover:bg-accent/60 data-[selected=true]:bg-accent data-[selected=true]:hover:bg-accent gap-2 px-2 py-0 font-normal text-(length:--text-caption) @max-[14rem]/object-browser:gap-1.5",
+        "gap-2 px-2 py-0 font-normal text-(length:--text-caption) hover:bg-accent/60 data-[selected=true]:bg-accent data-[selected=true]:hover:bg-accent @max-[14rem]/object-browser:gap-1.5",
       "tree-row":
-        "text-muted-foreground data-[active=true]:text-foreground gap-2 px-2 py-0 font-normal",
+        "gap-2 px-2 py-0 font-normal text-muted-foreground data-[active=true]:text-foreground",
       "access-node":
-        "bg-background hover:bg-accent data-[selected=true]:border-primary data-[selected=true]:ring-primary/30 rounded-lg border px-3 shadow-xs data-[dimmed=true]:opacity-30 data-[selected=true]:ring-2",
+        "rounded-lg border bg-background px-3 shadow-xs hover:bg-accent data-[dimmed=true]:opacity-30 data-[selected=true]:border-primary data-[selected=true]:ring-2 data-[selected=true]:ring-primary/30",
       "onboarding-method":
-        "data-[selected=true]:border-info-400 data-[selected=true]:bg-info-500/8 data-[selected=true]:ring-info-400/20 data-[selected=true]:hover:border-info-400 data-[selected=true]:hover:bg-info-500/8 gap-3 rounded-xl border border-white/10 bg-white/3 px-3.5 py-3 whitespace-normal transition-all duration-150 hover:border-white/18 hover:bg-white/5 data-[selected=true]:ring-1",
+        "gap-3 rounded-xl border border-white/10 bg-white/3 px-3.5 py-3 whitespace-normal transition-all duration-150 hover:border-white/18 hover:bg-white/5 data-[selected=true]:border-info-400 data-[selected=true]:bg-info-500/8 data-[selected=true]:ring-1 data-[selected=true]:ring-info-400/20 data-[selected=true]:hover:border-info-400 data-[selected=true]:hover:bg-info-500/8",
       "schema-node":
-        "bg-card text-foreground hover:bg-card gap-0 rounded-xl border p-0 font-normal shadow-sm data-[selected=true]:ring-2",
+        "gap-0 rounded-xl border bg-card p-0 font-normal text-foreground shadow-sm hover:bg-card data-[selected=true]:ring-2",
       "reference-cell": "p-0 font-mono text-xs",
       "access-summary-active":
-        "border-border bg-muted/30 hover:bg-muted/60 gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+        "gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/60",
       "sql-tab":
-        "text-muted-foreground hover:text-foreground aria-selected:text-foreground gap-1.5 rounded-none py-1.5 pr-1 pl-3 text-xs hover:bg-transparent focus-visible:ring-inset aria-selected:font-medium",
+        "gap-1.5 rounded-none py-1.5 pr-1 pl-3 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-inset aria-selected:font-medium aria-selected:text-foreground",
       "sql-tab-close":
         "text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 group-data-[active=true]:opacity-100",
       "sql-list-row": "gap-1 rounded-md px-3 py-2",
@@ -93,11 +93,11 @@ const buttonPresentations = cva("", {
       // join the page shows through as a white line. Drop that edge.
       "group-lead": "border-r-0",
       "sql-relation-row":
-        "hover:bg-accent/60 gap-2 px-1.5 py-0 font-normal text-(length:--text-caption)",
+        "gap-2 px-1.5 py-0 font-normal text-(length:--text-caption) hover:bg-accent/60",
       "sql-row-delete":
         "text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
       "access-summary-inactive":
-        "border-border/50 hover:bg-muted/60 gap-3 rounded-lg border border-dashed px-3 py-2.5 transition-colors",
+        "gap-3 rounded-lg border border-dashed border-border/50 px-3 py-2.5 transition-colors hover:bg-muted/60",
     },
     graphTone: {
       "chart-1": "data-[selected=true]:ring-chart-1/25",

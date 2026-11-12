@@ -160,7 +160,8 @@ function configParameterStatements(
   name: string
 ): string[] {
   const statements: string[] = [];
-  for (const parameter of attributes?.configParameters ?? []) {
+  const parameters = attributes?.configParameters ?? [];
+  for (const parameter of parameters) {
     const separator = parameter.indexOf("=");
     if (separator === -1) {
       continue;

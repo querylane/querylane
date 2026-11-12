@@ -47,7 +47,7 @@ function ObjectDetailHeader({
             {title}
           </h1>
           {Boolean(subtitle) ? (
-            <p className="text-muted-foreground truncate font-mono text-xs">
+            <p className="truncate font-mono text-xs text-muted-foreground">
               {subtitle}
             </p>
           ) : null}

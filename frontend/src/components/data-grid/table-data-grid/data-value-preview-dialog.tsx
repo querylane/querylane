@@ -35,9 +35,9 @@ function DataValuePreviewDialog({
     >
       <pre
         className={cn(
-          "bg-muted/30 min-h-0 flex-1 overflow-auto rounded-md border p-3 font-mono text-xs",
+          "min-h-0 flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs",
           format === "JSON"
-            ? "text-permission-600 dark:text-permission-400 whitespace-pre"
+            ? "whitespace-pre text-permission-600 dark:text-permission-400"
             : "wrap-break-word whitespace-pre-wrap"
         )}
       >

@@ -52,11 +52,7 @@ function lintBiome(file: string) {
 test("default imports require a default export", () => {
   const directory = mkdtempSync(join(root, "scripts/quality-probe-"));
   const file = join(directory, "consumer.ts");
-  const lint = () =>
-    spawnSync("bun", ["run", "lint:imports", file], {
-      cwd: root,
-      encoding: "utf8",
-    });
+  const lint = () => lintBiome(file);
   try {
     writeFileSync(
       join(directory, "source.ts"),
@@ -106,6 +102,15 @@ test("rejects oversized authored files instead of passing a skipped scan", () =>
 });
 
 test.each([
+  {
+    name: "named iterable selection",
+    rule: "noUnreadableForOfExpression",
+    suffix: "unit.test.ts",
+    invalid:
+      "export function count(values: readonly string[] | undefined) { let total = 0; for (const value of values ?? []) { total += value.length; } return total; }\n",
+    valid:
+      "export function count(values: readonly string[] | undefined) { const items = values ?? []; let total = 0; for (const value of items) { total += value.length; } return total; }\n",
+  },
   {
     name: "synchronous promise finalizers",
     rule: "noAsyncPromiseFinally",
@@ -220,7 +225,7 @@ test.each([
     invalid:
       'export function starts(value: string) { return value.charAt(0) === "ab"; }\n',
     valid:
-      'export function starts(value: string) { return value.charAt(0) === "a"; }\n',
+      'export function starts(value: string) { return value.startsWith("a"); }\n',
   },
   {
     name: "browser runtime globals",
@@ -690,6 +695,13 @@ test.each([
     rule: null,
     source:
       "function Child() { return <div />; }\nexport function Parent() { return <Child />; }\n",
+  },
+  {
+    name: "explicit known cases with an unknown-value fallback",
+    suffix: "ts",
+    rule: null,
+    source:
+      'export function label(value: "ready" | "missing") { switch (value) { case "ready": return "Ready"; case "missing": default: return "Unknown"; } }\n',
   },
   {
     name: "native disabled form contracts",

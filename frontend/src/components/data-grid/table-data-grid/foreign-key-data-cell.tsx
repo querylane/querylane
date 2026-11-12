@@ -90,7 +90,7 @@ function ForeignKeyReferenceQueryState({
         role="status"
       >
         <p className="font-medium">Waiting for connection</p>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           The referenced row will load when the connection returns.
         </p>
       </div>
@@ -158,7 +158,7 @@ function ForeignKeyReferenceQueryState({
     );
   }
   return (
-    <p className="text-muted-foreground py-6 text-center text-sm" role="status">
+    <p className="py-6 text-center text-sm text-muted-foreground" role="status">
       Referenced row not found.
     </p>
   );
@@ -200,7 +200,7 @@ function ForeignKeyReferenceContent({
           ) : (
             <>
               Referenced by {preview.sourceColumn} ={" "}
-              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs break-all">
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs break-all">
                 {preview.displayValue}
               </code>
               .

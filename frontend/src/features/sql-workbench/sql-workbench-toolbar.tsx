@@ -51,7 +51,7 @@ function ShortcutHint({ keys }: { keys: string[] }) {
   return (
     <span className="ml-1 hidden items-center gap-0.5 font-mono text-xs opacity-70 sm:inline-flex">
       {keys.map((key) => (
-        <kbd className="border-border/60 rounded border px-1" key={key}>
+        <kbd className="rounded border border-border/60 px-1" key={key}>
           {key}
         </kbd>
       ))}
@@ -265,7 +265,7 @@ function SqlWorkbenchToolbar({
   statementCount: number;
 }) {
   return (
-    <div className="border-border bg-background flex min-h-11 flex-wrap items-center gap-1 border-b p-2">
+    <div className="flex min-h-11 flex-wrap items-center gap-1 border-b border-border bg-background p-2">
       <RunControl
         canRun={canRun}
         isRunning={isRunning}
@@ -326,7 +326,7 @@ function SqlWorkbenchToolbar({
             render={
               <span
                 aria-label="Read-only"
-                className="text-muted-foreground inline-flex size-8 cursor-help items-center justify-center"
+                className="inline-flex size-8 cursor-help items-center justify-center text-muted-foreground"
                 role="img"
               >
                 <Lock aria-hidden="true" className="size-3.5" />

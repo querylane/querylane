@@ -27,7 +27,7 @@ function ignoreRetry() {
 
 function ConsoleSurface({ children }: { children: ReactNode }) {
   return (
-    <div className="border-border bg-background text-foreground w-[1100px] rounded-2xl border p-8">
+    <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
       {children}
     </div>
   );

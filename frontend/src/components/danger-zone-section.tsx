@@ -28,11 +28,11 @@ function DangerZoneSection({
     <Card data-testid={testId} presentation="danger">
       <CardHeader presentation="compact-row">
         <div className="space-y-1">
-          <h2 className="text-destructive text-base font-medium">
+          <h2 className="text-base font-medium text-destructive">
             Danger zone
           </h2>
           {Boolean(description) ? (
-            <p className="text-muted-foreground max-w-3xl text-sm">
+            <p className="max-w-3xl text-sm text-muted-foreground">
               {description}
             </p>
           ) : null}
@@ -43,12 +43,12 @@ function DangerZoneSection({
           const disabledReason = action.disabledReason ?? null;
           return (
             <div
-              className="border-destructive/20 bg-background/80 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-background/80 p-4 sm:flex-row sm:items-center sm:justify-between"
               key={action.actionLabel}
             >
               <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
                 <p className="text-sm font-medium">{action.title}</p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   {action.description}
                 </p>
               </div>

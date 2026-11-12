@@ -117,7 +117,7 @@ function SortPopover({
         className="w-full"
         size="sm"
       >
-        <Plus className="text-muted-foreground size-3.5" />
+        <Plus className="size-3.5 text-muted-foreground" />
         <SelectValue placeholder="Add sort column" />
       </SelectTrigger>
       <SelectContent>
@@ -187,7 +187,7 @@ function SortPopover({
           // Capped at the popover's min content width (min-w-64 minus p-2) so
           // the sentence wraps instead of stretching the empty popover wider
           // than it renders once sort rows exist.
-          <p className="text-muted-foreground max-w-60 px-1 text-xs">
+          <p className="max-w-60 px-1 text-xs text-muted-foreground">
             No sort applied. Add a column or click a header in the grid.
           </p>
         ) : (
@@ -322,7 +322,7 @@ function SortRow({
       >
         <GripVertical
           aria-hidden={true}
-          className="text-muted-foreground/60 group-hover/sort-row:text-foreground size-3.5 shrink-0"
+          className="size-3.5 shrink-0 text-muted-foreground/60 group-hover/sort-row:text-foreground"
         />
       </Button>
       <Select onValueChange={swapColumn} value={sort.columnKey}>

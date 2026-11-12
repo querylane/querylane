@@ -72,7 +72,7 @@ function FullscreenMessage({
       <div className="max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-semibold">{title}</h1>
         {isNonEmptyString(description) ? (
-          <p className="text-muted-foreground text-sm">{description}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         ) : null}
         {action}
       </div>

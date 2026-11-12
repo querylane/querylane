@@ -285,7 +285,7 @@ function resolveActivePage({
 function AboutMetadataRow({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="font-mono text-xs">
         <OverflowTooltip className="block" presentation="truncated">
           {value}
@@ -433,7 +433,7 @@ function ExplorerRailContent({
   const registerSlotTarget = useExplorerSidebarSlotRegistration();
   return (
     <>
-      <div className="border-sidebar-border flex flex-col gap-2 border-b p-2">
+      <div className="flex flex-col gap-2 border-b border-sidebar-border p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -535,7 +535,7 @@ function SidebarDatabaseSelector() {
       >
         <HardDrive
           aria-hidden="true"
-          className="text-muted-foreground size-4 shrink-0"
+          className="size-4 shrink-0 text-muted-foreground"
         />
         <span
           className={cn(
@@ -547,7 +547,7 @@ function SidebarDatabaseSelector() {
         </span>
         <ChevronsUpDown
           aria-hidden="true"
-          className="text-muted-foreground size-3.5 shrink-0"
+          className="size-3.5 shrink-0 text-muted-foreground"
         />
       </ComboboxTrigger>
       <ComboboxContent>
@@ -559,7 +559,7 @@ function SidebarDatabaseSelector() {
           <AppInlineError className="m-2" error={databaseError} />
         ) : null}
         {queryStates.databases.isPending ? (
-          <output className="text-muted-foreground block p-3 text-sm">
+          <output className="block p-3 text-sm text-muted-foreground">
             Loading databases…
           </output>
         ) : null}
@@ -573,14 +573,14 @@ function SidebarDatabaseSelector() {
             <ComboboxItem key={database.id} value={database.id}>
               <HardDrive
                 aria-hidden="true"
-                className="text-muted-foreground size-4 shrink-0"
+                className="size-4 shrink-0 text-muted-foreground"
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="min-w-0 truncate text-sm">
                   {database.name}
                 </span>
                 {database.owner ? (
-                  <span className="text-muted-foreground min-w-0 truncate text-xs">
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
                     owner {database.owner}
                   </span>
                 ) : null}
@@ -607,7 +607,7 @@ function SidebarNavigationContent({
     <SidebarContent>
       {sections.length === 0 && (
         <div className="flex flex-1 items-center justify-center px-4 group-data-[collapsible=icon]:hidden">
-          <p className="text-muted-foreground text-center text-sm leading-relaxed">
+          <p className="text-center text-sm leading-relaxed text-muted-foreground">
             Select an instance to get started
           </p>
         </div>
@@ -649,7 +649,7 @@ function SidebarNavigationContent({
 
       {isNonEmptyString(nextStepHint) && sections.length > 0 && (
         <div className="px-5 py-3 group-data-[collapsible=icon]:hidden">
-          <p className="text-muted-foreground/70 text-xs leading-relaxed">
+          <p className="text-xs leading-relaxed text-muted-foreground/70">
             {nextStepHint}
           </p>
         </div>
@@ -673,10 +673,10 @@ function SidebarSearchButton() {
         Search or jump to…
       </span>
       <span aria-hidden="true" className="ml-auto flex gap-0.5">
-        <kbd className="bg-muted flex size-5 items-center justify-center rounded font-mono text-(length:--text-micro)">
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-(length:--text-micro)">
           ⌘
         </kbd>
-        <kbd className="bg-muted flex size-5 items-center justify-center rounded font-mono text-(length:--text-micro)">
+        <kbd className="flex size-5 items-center justify-center rounded bg-muted font-mono text-(length:--text-micro)">
           K
         </kbd>
       </span>

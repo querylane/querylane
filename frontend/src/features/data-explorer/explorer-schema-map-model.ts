@@ -235,7 +235,8 @@ function tableInfo(
 ) {
   const qualified = tableSafeQualifiedName(table.name);
   const foreignKeyColumns = new Set<string>();
-  for (const constraint of constraintsByTable[table.name] ?? []) {
+  const constraints = constraintsByTable[table.name] ?? [];
+  for (const constraint of constraints) {
     if (constraint.type === ConstraintType.FOREIGN_KEY) {
       for (const columnName of constraint.columnNames) {
         foreignKeyColumns.add(columnName);
@@ -684,7 +685,8 @@ function tableDepths(
     }
     visiting.add(tableId);
     let depth = 0;
-    for (const constraint of constraintsByTable[tableId] ?? []) {
+    const constraints = constraintsByTable[tableId] ?? [];
+    for (const constraint of constraints) {
       if (referencesKnownTable(constraint, tableIds)) {
         depth = Math.max(depth, depthFor(constraint.referencedTable) + 1);
       }

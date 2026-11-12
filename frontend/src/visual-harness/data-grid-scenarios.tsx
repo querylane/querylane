@@ -71,11 +71,11 @@ function toolbarProps(
 
 function DataExplorerControlsScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[1120px] rounded-2xl border p-6">
-      <section className="border-border bg-card rounded-xl border p-4">
+    <div className="w-[1120px] rounded-2xl border border-border bg-background p-6 text-foreground">
+      <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-3">
           <h1 className="text-xl font-semibold">Data explorer controls</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Selection, sorting, refresh, row counts, and pagination must stay
             compact while the data area scales.
           </p>
@@ -91,7 +91,7 @@ function DataExplorerControlsScenario() {
             ],
           })}
         />
-        <div className="border-border bg-muted/20 mt-4 rounded-lg border p-3">
+        <div className="mt-4 rounded-lg border border-border bg-muted/20 p-3">
           <PaginationFooter
             hasNext={true}
             hasPrev={true}
@@ -134,11 +134,11 @@ function RecordDetailDrawerScenario() {
 
 function DataGridFilteredToolbarScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[900px] rounded-2xl border p-6">
-      <section className="border-border bg-card rounded-xl border p-4">
+    <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
+      <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-3">
           <h1 className="text-xl font-semibold">Filtered data explorer</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Active server-side filters stay visible beside sort and refresh
             controls.
           </p>
@@ -157,7 +157,7 @@ function DataGridFilteredToolbarScenario() {
 
 function DataGridEmptyFilterToolbarScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[900px] rounded-2xl border p-6">
+    <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
       <DataGridToolbar
         {...toolbarProps(CUSTOMER_COLUMNS, {
           filterTitle: "Filter shipping.carriers",
@@ -169,7 +169,7 @@ function DataGridEmptyFilterToolbarScenario() {
 
 function DataGridAdvancedFilterToolbarScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[900px] rounded-2xl border p-6">
+    <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
       <DataGridToolbar
         {...toolbarProps(CUSTOMER_COLUMNS, {
           filterRules: NEGATED_REGEX_FILTER_RULES,
@@ -181,7 +181,7 @@ function DataGridAdvancedFilterToolbarScenario() {
 
 function DataGridColumnProjectionToolbarScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[900px] rounded-2xl border p-6">
+    <div className="w-[900px] rounded-2xl border border-border bg-background p-6 text-foreground">
       <DataGridToolbar
         {...toolbarProps(CUSTOMER_COLUMNS, {
           fetchVisibleColumns: true,
@@ -196,7 +196,7 @@ function DataGridColumnProjectionToolbarScenario() {
 function DataGridOffsetFilterToolbarScenario() {
   return (
     <div className="pl-80">
-      <div className="border-border bg-background text-foreground w-[420px] rounded-2xl border p-6">
+      <div className="w-[420px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <DataGridToolbar
           {...toolbarProps(CUSTOMER_COLUMNS, {
             filterRules: ENTERPRISE_FILTER_RULES.slice(0, 1),
@@ -210,21 +210,21 @@ function DataGridOffsetFilterToolbarScenario() {
 function DataValueDialogGuardScenario() {
   return (
     <DataValueDialogProvider>
-      <section className="border-border bg-background text-foreground w-[920px] rounded-2xl border p-6">
+      <section className="w-[920px] rounded-2xl border border-border bg-background p-6 text-foreground">
         <h1 className="mb-1 text-lg font-semibold">Data value dialog guard</h1>
-        <p className="text-muted-foreground mb-4 text-sm">
+        <p className="mb-4 text-sm text-muted-foreground">
           Expanding a second value keeps the current dialog as the only active
           layer.
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card min-w-0 rounded-lg border p-3">
+          <div className="min-w-0 rounded-lg border bg-card p-3">
             <p className="mb-2 text-sm font-medium">metadata</p>
             <DataCell
               cell={DIALOG_GUARD_METADATA_CELL}
               column={DIALOG_GUARD_METADATA_COLUMN}
             />
           </div>
-          <div className="bg-card min-w-0 rounded-lg border p-3">
+          <div className="min-w-0 rounded-lg border bg-card p-3">
             <p className="mb-2 text-sm font-medium">tags</p>
             <DataCell
               cell={DIALOG_GUARD_TAGS_CELL}
@@ -239,29 +239,29 @@ function DataValueDialogGuardScenario() {
 
 function DataCellGalleryScenario() {
   return (
-    <div className="border-border bg-background text-foreground w-[1100px] rounded-2xl border p-8">
+    <div className="w-[1100px] rounded-2xl border border-border bg-background p-8 text-foreground">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Data cell rendering</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-1 text-sm text-muted-foreground">
             Typed PostgreSQL values should stay aligned, scannable, and visibly
             distinct.
           </p>
         </div>
-        <div className="border-border overflow-hidden rounded-xl border">
-          <div className="border-border bg-muted/30 text-muted-foreground grid grid-cols-[180px_minmax(0,1fr)] border-b px-4 py-3 text-xs font-medium tracking-wide uppercase">
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border bg-muted/30 px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
             <div>Type</div>
             <div>Rendered value</div>
           </div>
           {CELL_GALLERY_EXAMPLES.map((example) => (
             <div
-              className="border-border grid grid-cols-[180px_minmax(0,1fr)] items-center border-b px-4 py-3 last:border-b-0"
+              className="grid grid-cols-[180px_minmax(0,1fr)] items-center border-b border-border px-4 py-3 last:border-b-0"
               key={example.column.columnName}
             >
-              <div className="text-muted-foreground text-sm">
+              <div className="text-sm text-muted-foreground">
                 {example.column.columnName}
               </div>
-              <div className="bg-card flex min-w-0 items-center rounded-md px-3 py-2 text-left text-sm">
+              <div className="flex min-w-0 items-center rounded-md bg-card px-3 py-2 text-left text-sm">
                 <DataCell
                   cell={example.cell}
                   column={example.column}
@@ -271,7 +271,7 @@ function DataCellGalleryScenario() {
             </div>
           ))}
         </div>
-        <div className="border-border bg-card flex gap-4 rounded-xl border p-4 text-sm">
+        <div className="flex gap-4 rounded-xl border border-border bg-card p-4 text-sm">
           <StatusIndicator status="connected" />
           <StatusIndicator status="disconnected" />
           <StatusIndicator status="error" />
@@ -319,10 +319,10 @@ function DataTableSurface({
     initialSorting === undefined ? {} : { initialSorting };
 
   return (
-    <div className="border-border bg-background text-foreground w-[760px] rounded-xl border p-5">
+    <div className="w-[760px] rounded-xl border border-border bg-background p-5 text-foreground">
       <div className="mb-4">
         <h2 className="text-base font-semibold">Database instances</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Visual fixture for metadata table sorting, filtering, and pagination.
         </p>
       </div>
@@ -364,7 +364,7 @@ function DataTableActiveFilterToolbarScenario() {
 
   return (
     <div
-      className="border-border bg-card w-[760px] rounded-lg border p-4"
+      className="w-[760px] rounded-lg border border-border bg-card p-4"
       data-testid="filter-toolbar-visual"
     >
       <DataTableFilterToolbar

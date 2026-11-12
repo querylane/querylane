@@ -9,7 +9,7 @@ const statusBadgeVariants = cva(
     variants: {
       variant: {
         success:
-          "bg-positive-500/15 text-positive-700 dark:text-positive-300 border-transparent",
+          "border-transparent bg-positive-500/15 text-positive-700 dark:text-positive-300",
         warning:
           "border-warning-500/40 bg-warning-500/15 text-warning-700 dark:text-warning-300",
       },

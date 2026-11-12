@@ -33,16 +33,16 @@ function SidebarFallback({ isExplorerRoute }: { isExplorerRoute: boolean }) {
   if (isExplorerRoute) {
     return (
       <aside
-        className="bg-sidebar hidden w-(--sidebar-width) shrink-0 flex-col gap-1.5 border-r px-2 pt-2 lg:flex"
+        className="hidden w-(--sidebar-width) shrink-0 flex-col gap-1.5 border-r bg-sidebar px-2 pt-2 lg:flex"
         role="status"
       >
-        <div className="bg-sidebar-accent h-8 rounded" />
-        <div className="bg-sidebar-accent h-7 rounded" />
+        <div className="h-8 rounded bg-sidebar-accent" />
+        <div className="h-7 rounded bg-sidebar-accent" />
         <div className="mt-1 space-y-1.5 px-1">
-          <div className="bg-sidebar-accent h-7 w-2/3 rounded" />
-          <div className="bg-sidebar-accent h-7 w-1/2 rounded" />
-          <div className="bg-sidebar-accent h-7 w-3/5 rounded" />
-          <div className="bg-sidebar-accent h-7 w-2/5 rounded" />
+          <div className="h-7 w-2/3 rounded bg-sidebar-accent" />
+          <div className="h-7 w-1/2 rounded bg-sidebar-accent" />
+          <div className="h-7 w-3/5 rounded bg-sidebar-accent" />
+          <div className="h-7 w-2/5 rounded bg-sidebar-accent" />
         </div>
         <span className="sr-only">Loading object browser</span>
       </aside>
@@ -50,14 +50,14 @@ function SidebarFallback({ isExplorerRoute }: { isExplorerRoute: boolean }) {
   }
   return (
     <aside
-      className="bg-sidebar hidden w-(--sidebar-width) shrink-0 border-r p-3 lg:flex lg:flex-col"
+      className="hidden w-(--sidebar-width) shrink-0 border-r bg-sidebar p-3 lg:flex lg:flex-col"
       role="status"
     >
-      <div className="bg-sidebar-accent mb-4 h-8 rounded" />
+      <div className="mb-4 h-8 rounded bg-sidebar-accent" />
       <div className="space-y-2">
-        <div className="bg-sidebar-accent h-7 rounded" />
-        <div className="bg-sidebar-accent h-7 rounded" />
-        <div className="bg-sidebar-accent h-7 rounded" />
+        <div className="h-7 rounded bg-sidebar-accent" />
+        <div className="h-7 rounded bg-sidebar-accent" />
+        <div className="h-7 rounded bg-sidebar-accent" />
       </div>
       <span className="sr-only">Loading navigation</span>
     </aside>
@@ -141,7 +141,7 @@ export function DatabaseLayout({
                 <AdminHeader />
                 <RouteProgressBar />
                 {showDegradedBanner ? (
-                  <div className="border-destructive/30 bg-destructive/10 text-destructive flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
                     <output>
                       Meta database unavailable. Querylane is running in
                       degraded mode.

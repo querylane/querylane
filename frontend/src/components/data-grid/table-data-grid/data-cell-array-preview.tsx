@@ -34,7 +34,7 @@ type KeyedArrayItem = ReturnType<typeof keyPostgresArrayItems>[number];
 function ArrayItemRow({ entry }: { entry: KeyedArrayItem }) {
   return (
     <li className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
-      <span className="text-muted-foreground font-mono text-xs tabular-nums">
+      <span className="font-mono text-xs text-muted-foreground tabular-nums">
         {entry.position}
       </span>
       {entry.item.isNull ? (
@@ -59,20 +59,20 @@ function ArrayItemsContent({
 }) {
   if (!parsed.ok) {
     return (
-      <pre className="bg-muted/30 min-h-0 flex-1 overflow-auto rounded-md border p-3 font-mono text-xs break-all whitespace-pre-wrap">
+      <pre className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs break-all whitespace-pre-wrap">
         {raw}
       </pre>
     );
   }
   if (parsed.items.length === 0) {
     return (
-      <div className="bg-muted/20 min-h-0 flex-1 overflow-auto rounded-md border">
-        <div className="text-muted-foreground p-4 text-sm">Empty array</div>
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
+        <div className="p-4 text-sm text-muted-foreground">Empty array</div>
       </div>
     );
   }
   return (
-    <div className="bg-muted/20 min-h-0 flex-1 overflow-auto rounded-md border">
+    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20">
       <ol className="divide-y">
         {keyedItems.map((entry) => (
           <ArrayItemRow entry={entry} key={entry.key} />
@@ -113,7 +113,7 @@ function ArrayPreviewDialog({
           </DialogDescription>
         </DialogHeader>
         {isTruncated ? (
-          <p className="border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-300 rounded-md border px-3 py-2 text-xs">
+          <p className="rounded-md border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">
             This cell preview is truncated. Open the row detail drawer to load
             the full value.
           </p>
@@ -161,13 +161,13 @@ function ArrayPreview({
         data-testid={`${columnName}-array-preview`}
         title={title}
       >
-        <span className="border-reference-500/25 bg-reference-500/10 text-reference-700 dark:text-reference-300 shrink-0 rounded-full border px-1.5 py-0.5 text-xs leading-none font-medium">
+        <span className="shrink-0 rounded-full border border-reference-500/25 bg-reference-500/10 px-1.5 py-0.5 text-xs leading-none font-medium text-reference-700 dark:text-reference-300">
           {summary}
         </span>
         {firstItems.map(({ item, key }) => (
           <code
             className={cn(
-              "bg-muted/40 max-w-24 truncate rounded border px-1.5 py-0.5 font-mono text-(length:--text-micro)",
+              "max-w-24 truncate rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-(length:--text-micro)",
               item.isNull
                 ? "text-muted-foreground italic"
                 : "text-foreground/80"

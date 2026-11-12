@@ -29,7 +29,7 @@ function SelectItemDescription({
   return (
     <span
       className={cn(
-        "text-muted-foreground block text-xs leading-snug",
+        "block text-xs leading-snug text-muted-foreground",
         className
       )}
       data-slot="select-item-description"

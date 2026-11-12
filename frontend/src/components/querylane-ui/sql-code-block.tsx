@@ -9,7 +9,7 @@ const sqlCodeBlockPresentations = cva("", {
   variants: {
     presentation: {
       definition:
-        "bg-muted/30 rounded-none rounded-b-xl border-0 p-4 pr-10 text-(length:--text-xs)",
+        "rounded-none rounded-b-xl border-0 bg-muted/30 p-4 pr-10 text-(length:--text-xs)",
       compact: "text-xs",
     },
   },
@@ -19,9 +19,9 @@ const sqlCodeBlockVariants = cva("max-w-full min-w-0 font-mono", {
   variants: {
     variant: {
       block:
-        "bg-muted/40 text-foreground rounded-md border p-3 text-xs leading-relaxed",
+        "rounded-md border bg-muted/40 p-3 text-xs leading-relaxed text-foreground",
       compact:
-        "bg-muted/55 text-foreground overflow-x-auto rounded-md border-0 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap",
+        "overflow-x-auto rounded-md border-0 bg-muted/55 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap text-foreground",
       // Keep line height after font size: cn() resolves conflicts in order.
       inline: ["truncate text-(length:--text-xs)", "leading-normal"],
     },
@@ -126,7 +126,7 @@ export function SqlCodeBlock({
     <div className={cn("relative max-w-full min-w-0", inline && "w-full")}>
       <pre
         className={cn(
-          "focus-visible:outline-primary focus-visible:outline-2 focus-visible:-outline-offset-2",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
           sqlCodeBlockVariants({ variant, wrap, copyable }),
           sqlCodeBlockPresentations({ presentation }),
           className

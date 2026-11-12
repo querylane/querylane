@@ -139,12 +139,12 @@ function SectionHead({
 }) {
   return (
     <div className="flex items-baseline gap-2.5 px-0.5">
-      <span className="text-foreground text-sm font-semibold">{title}</span>
+      <span className="text-sm font-semibold text-foreground">{title}</span>
       {count === undefined ? null : (
         <CountPill partial={partial} value={count} />
       )}
       {isNonEmptyString(hint) ? (
-        <span className="text-muted-foreground ml-auto text-xs">{hint}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{hint}</span>
       ) : null}
     </div>
   );
@@ -161,10 +161,10 @@ function TotalBadge({
 }) {
   return (
     <span className="flex flex-col items-end whitespace-nowrap">
-      <span className="text-foreground font-mono leading-tight font-medium tracking-tight text-(length:--text-body)">
+      <span className="font-mono leading-tight font-medium tracking-tight text-(length:--text-body) text-foreground">
         {value.toLocaleString()}
       </span>
-      <span className="text-muted-foreground flex items-center gap-1 text-xs">
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
         <span>
           {unit}
           {value === 1 ? "" : "s"}
@@ -191,7 +191,7 @@ function DrillRow({
       variant="ghost"
     >
       {children}
-      <ChevronRight className="text-muted-foreground group-hover:text-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
     </Button>
   );
 }
@@ -220,12 +220,12 @@ function SchemaListRow({
         onNavigate({ kind: "schema", schema: targetSchema });
       }}
     >
-      <Icon className="text-muted-foreground size-4 shrink-0" />
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="text-foreground truncate font-mono font-medium text-(length:--text-caption-lg)">
+        <span className="truncate font-mono font-medium text-(length:--text-caption-lg) text-foreground">
           {name}
         </span>
-        <span className="text-muted-foreground truncate text-xs">
+        <span className="truncate text-xs text-muted-foreground">
           {partial
             ? "Available direct grant results"
             : schemaBreakdownLabel(group)}
@@ -266,7 +266,7 @@ function ReachRow({
     detail = "Loading…";
   }
   let total: ReactNode = (
-    <span className="text-muted-foreground/50 font-mono text-sm">
+    <span className="font-mono text-sm text-muted-foreground/50">
       {EM_DASH}
     </span>
   );
@@ -279,7 +279,7 @@ function ReachRow({
     <DrillRow onClick={onClick}>
       <Icon className={cn("size-4 shrink-0", iconClassName)} />
       <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-        <span className="text-foreground truncate font-sans font-medium text-(length:--text-caption-lg)">
+        <span className="truncate font-sans font-medium text-(length:--text-caption-lg) text-foreground">
           {name}
         </span>
         <span
@@ -315,7 +315,7 @@ function DirectGrantSchemaScope({
     <>
       {" "}
       across{" "}
-      <strong className="text-foreground font-medium">
+      <strong className="font-medium text-foreground">
         {schemaCount.toLocaleString()}
       </strong>{" "}
       schema{schemaCount === 1 ? "" : "s"}
@@ -339,7 +339,7 @@ function DirectGrantsLede({
   }
   return (
     <>
-      <strong className="text-foreground font-medium">
+      <strong className="font-medium text-foreground">
         {totalDirect.toLocaleString()}
       </strong>{" "}
       {grantsPartial ? "available direct grant" : "direct grant"}
@@ -349,7 +349,7 @@ function DirectGrantsLede({
         schemaCount={schemaCount}
       />
       {grantsPartial ? (
-        <span className="text-foreground font-medium"> · Partial</span>
+        <span className="font-medium text-foreground"> · Partial</span>
       ) : null}
       .
     </>
@@ -370,7 +370,7 @@ function OverviewLede({
   totalDirect: number;
 }) {
   return (
-    <p className="text-muted-foreground text-sm leading-relaxed">
+    <p className="text-sm leading-relaxed text-muted-foreground">
       <DirectGrantsLede
         grantsPartial={grantsPartial}
         schemaCount={schemaCount}
@@ -380,7 +380,7 @@ function OverviewLede({
         <>
           {" "}
           Reachable via{" "}
-          <strong className="text-foreground font-medium">
+          <strong className="font-medium text-foreground">
             {indirectPaths}
           </strong>{" "}
           indirect path{indirectPaths === 1 ? "" : "s"}.
@@ -419,7 +419,7 @@ function DirectGrantsSection({
           partial={grantsPartial}
           title="Direct grants"
         />
-        <div className="border-border overflow-hidden rounded-md border">
+        <div className="overflow-hidden rounded-md border border-border">
           {schemaIndex.map((group) => (
             <SchemaListRow
               databaseName={databaseName}
@@ -446,8 +446,8 @@ function DirectGrantsSection({
       ) : (
         <>
           This role has no explicit{" "}
-          <span className="text-foreground/80 font-mono">GRANT</span>s on{" "}
-          <span className="text-foreground/80 font-mono">{databaseName}</span>.
+          <span className="font-mono text-foreground/80">GRANT</span>s on{" "}
+          <span className="font-mono text-foreground/80">{databaseName}</span>.
           {indirectPaths > 0
             ? " It may still be reachable via the indirect paths below."
             : ""}
@@ -506,7 +506,7 @@ function GrantsOverview({
           hint="implicit & inherited paths"
           title="Also reachable via"
         />
-        <div className="border-border overflow-hidden rounded-md border">
+        <div className="overflow-hidden rounded-md border border-border">
           <ReachRow
             count={ownedObjects.length}
             desc={

@@ -18,8 +18,8 @@ const DatabaseQueryInsightsContent = lazy(() =>
 function QueryInsightsDrawerFallback() {
   return (
     <div className="grid gap-4">
-      <div className="bg-card h-80 rounded-xl border" />
-      <div className="bg-card h-48 rounded-xl border" />
+      <div className="h-80 rounded-xl border bg-card" />
+      <div className="h-48 rounded-xl border bg-card" />
       <span className="sr-only">Loading query insights</span>
     </div>
   );

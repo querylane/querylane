@@ -77,7 +77,7 @@ function FormatDropdown({
           <Button disabled={disabled} size="sm" type="button" variant="outline">
             {icon}
             {label}
-            <ChevronDown className="text-muted-foreground size-3" />
+            <ChevronDown className="size-3 text-muted-foreground" />
           </Button>
         }
       />

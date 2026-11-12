@@ -46,7 +46,7 @@ function BrandedLoadingState({
         <div className="space-y-1">
           <h1 className={TITLE_CLASS_BY_VARIANT[variant]}>{title}</h1>
           {isNonEmptyString(description) ? (
-            <p className="text-muted-foreground text-sm">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
       </div>

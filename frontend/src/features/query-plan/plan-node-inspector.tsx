@@ -69,13 +69,13 @@ function PlanNodeInspector({
   return (
     <aside
       aria-label="Plan node details"
-      className="bg-card shrink-0 border-t @4xl:w-80 @4xl:overflow-auto @4xl:border-t-0 @4xl:border-l"
+      className="shrink-0 border-t bg-card @4xl:w-80 @4xl:overflow-auto @4xl:border-t-0 @4xl:border-l"
     >
       <div className="border-b p-5">
-        <p className="text-muted-foreground mb-2 flex items-center gap-2 text-xs">
+        <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span
             aria-hidden="true"
-            className="bg-chart-4 size-1.5 rounded-full"
+            className="size-1.5 rounded-full bg-chart-4"
           />
           Selected operation
         </p>
@@ -88,13 +88,13 @@ function PlanNodeInspector({
           </p>
         ) : null}
         {isNonEmptyString(node.indexName) ? (
-          <p className="text-muted-foreground mt-1 font-mono text-xs break-all">
+          <p className="mt-1 font-mono text-xs break-all text-muted-foreground">
             {node.indexName}
           </p>
         ) : null}
         <div className="mt-5 flex items-end justify-between">
           <div>
-            <p className="text-muted-foreground mb-1 text-xs">Self time ≈</p>
+            <p className="mb-1 text-xs text-muted-foreground">Self time ≈</p>
             <p className="font-mono text-2xl tracking-tight tabular-nums">
               {node.exclusiveMs === undefined
                 ? "—"
@@ -102,12 +102,12 @@ function PlanNodeInspector({
             </p>
           </div>
           {node.actualLoops === 0 ? (
-            <p className="text-muted-foreground text-xs">Not executed</p>
+            <p className="text-xs text-muted-foreground">Not executed</p>
           ) : null}
         </div>
         {DESCRIPTIONS[node.nodeType] !== undefined &&
         DESCRIPTIONS[node.nodeType] !== "" ? (
-          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             {DESCRIPTIONS[node.nodeType]}
           </p>
         ) : null}
@@ -116,9 +116,9 @@ function PlanNodeInspector({
       {insights.length > 0 ? (
         <div className="space-y-3 border-b p-5">
           {insights.map((insight) => (
-            <div className="border-chart-4 border-l-2 pl-3" key={insight.label}>
+            <div className="border-l-2 border-chart-4 pl-3" key={insight.label}>
               <p className="text-xs font-medium">{insight.label}</p>
-              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {insight.detail}
               </p>
             </div>
@@ -130,7 +130,7 @@ function PlanNodeInspector({
           {predicates.map((detail) => (
             <div key={detail.label}>
               <dt className="mb-2 font-medium">{detail.label}</dt>
-              <dd className="bg-muted/60 rounded-md p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
+              <dd className="rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
                 {detail.value}
               </dd>
             </div>
@@ -148,7 +148,7 @@ function PlanNodeInspector({
         ))}
       </dl>
       {parallel ? (
-        <p className="text-muted-foreground border-b px-5 py-3 text-xs">
+        <p className="border-b px-5 py-3 text-xs text-muted-foreground">
           Parallel or async plan. Self time is unavailable; total time includes
           overlapping work.
         </p>
@@ -168,7 +168,7 @@ function PlanNodeInspector({
       <dl className="space-y-3 p-5 text-xs">
         {otherDetails.map((detail) => (
           <div key={detail.label}>
-            <dt className="text-muted-foreground mb-1">{detail.label}</dt>
+            <dt className="mb-1 text-muted-foreground">{detail.label}</dt>
             <dd className="font-mono text-xs [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
               {detail.value}
             </dd>
@@ -204,7 +204,7 @@ function RowComparison({ node }: { node: PlanNode }) {
               </div>
               <div
                 aria-hidden="true"
-                className="bg-muted h-1 overflow-hidden rounded-full"
+                className="h-1 overflow-hidden rounded-full bg-muted"
               >
                 <div
                   className={cn(

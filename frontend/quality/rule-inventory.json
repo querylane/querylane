@@ -446,7 +446,7 @@
     {
       "rule": "complexity/noUselessSwitchCase",
       "decision": "inapplicable",
-      "reason": "Explicit fallback cases preserve exhaustive checks and unknown protobuf enum compatibility.",
+      "reason": "Typed switch-exhaustiveness-check requires explicit known enum/union cases even when they share a default fallback for unknown values. Biome removes those required labels and causes known-member exhaustiveness failures.",
       "docs": "https://biomejs.dev/linter/rules/no-useless-switch-case/"
     },
     {
@@ -919,9 +919,10 @@
     },
     {
       "rule": "correctness/noUnresolvedImports",
-      "decision": "error",
-      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-unresolved-imports/"
+      "decision": "scoped-error",
+      "reason": "TypeScript checks TS import/export contracts; Biome misreads declaration-file re-exports such as playwright/test. Retain Biome import validation for authored JavaScript.",
+      "docs": "https://biomejs.dev/linter/rules/no-unresolved-imports/",
+      "scope": ["**/*.{js,jsx,mjs,cjs}"]
     },
     {
       "rule": "correctness/noUnsafeFinally",
@@ -1063,8 +1064,8 @@
     },
     {
       "rule": "correctness/useImportExtensions",
-      "decision": "error",
-      "reason": "Enforce this correctness contract at error severity; framework-specific syntax is checked when present.",
+      "decision": "inapplicable",
+      "reason": "Rsbuild and TypeScript Bundler resolution support extensionless source imports. Adding runtime extensions is not required by this application contract.",
       "docs": "https://biomejs.dev/linter/rules/use-import-extensions/"
     },
     {
@@ -1280,7 +1281,7 @@
     {
       "rule": "nursery/noBaseToString",
       "decision": "delegated",
-      "reason": "Biome 2.6.5 misclassifies the narrowed clipboard text string as an object. Type-aware Oxlint owns stringification checks with the compiler graph.",
+      "reason": "Biome 2.6.7 still misclassifies narrowed clipboard text as an object. Typed Oxlint owns stringification checks with the compiler graph.",
       "docs": "https://biomejs.dev/linter/rules/no-base-to-string/",
       "owner": {
         "tool": "oxlint",
@@ -1367,8 +1368,8 @@
     },
     {
       "rule": "nursery/noMisleadingReturnType",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "decision": "inapplicable",
+      "reason": "Declared public return contracts can deliberately be wider than one implementation, including ReactNode and optional adapter results. Narrowing those contracts is not a correctness fix.",
       "docs": "https://biomejs.dev/linter/rules/no-misleading-return-type/"
     },
     {
@@ -1379,9 +1380,13 @@
     },
     {
       "rule": "nursery/noMisusedPromises",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-misused-promises/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint distinguishes intentionally truth-tested nullable Promise refs from async values used as conditions.",
+      "docs": "https://biomejs.dev/linter/rules/no-misused-promises/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-misused-promises"
+      }
     },
     {
       "rule": "nursery/noNegationInEqualityCheck",
@@ -1557,14 +1562,18 @@
     },
     {
       "rule": "nursery/noUndeclaredClasses",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-undeclared-classes/"
+      "decision": "delegated",
+      "reason": "The import-aware shadcn utility validator understands Tailwind; this CSS-declaration check reports valid bg-background, text-foreground, and p-6 utilities.",
+      "docs": "https://biomejs.dev/linter/rules/no-undeclared-classes/",
+      "owner": {
+        "tool": "shadcn",
+        "rule": "shadcn/no-unknown-classes"
+      }
     },
     {
       "rule": "nursery/noUndeclaredCustomProperties",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "decision": "inapplicable",
+      "reason": "Animation and syntax-highlight CSS variables are supplied at runtime through typed style props, not necessarily declared in a stylesheet.",
       "docs": "https://biomejs.dev/linter/rules/no-undeclared-custom-properties/"
     },
     {
@@ -1587,9 +1596,13 @@
     },
     {
       "rule": "nursery/noUnsafeTypeAssertion",
-      "decision": "inapplicable",
-      "reason": "Type-aware Oxc unsafe assertion/assignment/call rules own this with the actual compiler graph.",
-      "docs": "https://biomejs.dev/linter/rules/no-unsafe-type-assertion/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint enforces assertion safety using the same compiler graph as the rest of the unsafe-flow checks.",
+      "docs": "https://biomejs.dev/linter/rules/no-unsafe-type-assertion/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-unsafe-type-assertion"
+      }
     },
     {
       "rule": "nursery/noUnsafeUnaryMinus",
@@ -1599,8 +1612,8 @@
     },
     {
       "rule": "nursery/noUnusedClasses",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
+      "decision": "inapplicable",
+      "reason": "CSS modules, SVG styles, Tailwind-generated utilities, and runtime class composition have consumers this stylesheet graph does not recognize.",
       "docs": "https://biomejs.dev/linter/rules/no-unused-classes/"
     },
     {
@@ -1623,9 +1636,13 @@
     },
     {
       "rule": "nursery/noUselessTypeConversion",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/no-useless-type-conversion/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint handles imported and narrowed value types without Biome inference false positives on RPC numeric values.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-type-conversion/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-unnecessary-type-conversion"
+      }
     },
     {
       "rule": "nursery/noVueBooleanDefault",
@@ -1701,9 +1718,13 @@
     },
     {
       "rule": "nursery/useAwaitThenable",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-await-thenable/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint recognizes imported async methods and React test helpers that Biome reports as non-Promises.",
+      "docs": "https://biomejs.dev/linter/rules/use-await-thenable/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/await-thenable"
+      }
     },
     {
       "rule": "nursery/useBetterDomTraversing",
@@ -1797,9 +1818,13 @@
     },
     {
       "rule": "nursery/useIncludes",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-includes/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint checks includes compatibility so narrow literal arrays do not require casts or type widening when searching with a wider enum/string.",
+      "docs": "https://biomejs.dev/linter/rules/use-includes/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/prefer-includes"
+      }
     },
     {
       "rule": "nursery/useLayeredStyles",
@@ -1845,9 +1870,13 @@
     },
     {
       "rule": "nursery/useNullishCoalescing",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-nullish-coalescing/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint preserves meaningful false, zero, and empty-string fallbacks; Biome suggests changing refreshing || loading to different boolean semantics.",
+      "docs": "https://biomejs.dev/linter/rules/use-nullish-coalescing/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/prefer-nullish-coalescing"
+      }
     },
     {
       "rule": "nursery/usePromiseRejectErrors",
@@ -1893,9 +1922,13 @@
     },
     {
       "rule": "nursery/useStrictBooleanExpressions",
-      "decision": "error",
-      "reason": "Enforce this nursery contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-strict-boolean-expressions/"
+      "decision": "delegated",
+      "reason": "Use the TypeScript compiler graph for nullable and imported values instead of Biome inference that reports unrestricted values in typed RPC fixtures.",
+      "docs": "https://biomejs.dev/linter/rules/use-strict-boolean-expressions/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/strict-boolean-expressions"
+      }
     },
     {
       "rule": "nursery/useStringStartsEndsWith",
@@ -3250,7 +3283,7 @@
     {
       "rule": "suspicious/noLeakedRender",
       "decision": "inapplicable",
-      "reason": "Biome 2.5.15 falsely rejects safe string-valued ternaries. Strict boolean expressions still reject unsafe && conditions.",
+      "reason": "Biome 2.6.7 reports safe string-valued ternary children in SelectValue and button labels. Typed strict-boolean checks still reject unsafe render conditions.",
       "docs": "https://biomejs.dev/linter/rules/no-leaked-render/"
     },
     {
@@ -3483,8 +3516,8 @@
     },
     {
       "rule": "suspicious/noUnnecessaryConditions",
-      "decision": "error",
-      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
+      "decision": "inapplicable",
+      "reason": "Ambient DOM declarations and shared mutable React/RPC handles do not prove runtime availability. Pure domain modules separately enforce typed no-unnecessary-condition.",
       "docs": "https://biomejs.dev/linter/rules/no-unnecessary-conditions/"
     },
     {
@@ -3549,9 +3582,13 @@
     },
     {
       "rule": "suspicious/useArraySortCompare",
-      "decision": "error",
-      "reason": "Enforce this suspicious contract at error severity; framework-specific syntax is checked when present.",
-      "docs": "https://biomejs.dev/linter/rules/use-array-sort-compare/"
+      "decision": "delegated",
+      "reason": "Typed Oxlint requires numeric comparators while accepting intentional lexicographic sorting of string paths.",
+      "docs": "https://biomejs.dev/linter/rules/use-array-sort-compare/",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/require-array-sort-compare"
+      }
     },
     {
       "rule": "suspicious/useAwait",
@@ -3735,8 +3772,8 @@
     },
     {
       "rule": "nursery/noUnreadableForOfExpression",
-      "decision": "inapplicable",
-      "reason": "Nullish iterable fallbacks such as items ?? [] are valid supported contracts but still rejected; simple Object.entries calls are accepted in 2.6.5.",
+      "decision": "error",
+      "reason": "Name compound iterable expressions before looping so collection selection is separate from per-item processing.",
       "docs": "https://biomejs.dev/linter/rules/no-unreadable-for-of-expression"
     },
     {
@@ -4748,7 +4785,7 @@
     {
       "rule": "nursery/useConsistentBooleanName",
       "decision": "inapplicable",
-      "reason": "The project uses valid web API and component callback names such as disabled that are not boolean-prefixed. Enforcing prefixes would create broad naming-only churn and conflict with external callback vocabulary.",
+      "reason": "A universal boolean-prefix policy rejects valid callback vocabulary such as disabled and action-named predicates. Keep existing casing conventions and typed condition checks without imposing this additional naming dialect.",
       "docs": "https://biomejs.dev/linter/rules/use-consistent-boolean-name/"
     },
     {
@@ -5965,13 +6002,9 @@
     },
     {
       "rule": "import/extensions",
-      "decision": "delegated",
-      "reason": "Biome owns this syntax, formatting, accessibility, or test contract; its counterpart remains an error.",
-      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/extensions.html",
-      "owner": {
-        "tool": "biome",
-        "rule": "correctness/useImportExtensions"
-      }
+      "decision": "inapplicable",
+      "reason": "Rsbuild and TypeScript Bundler resolution intentionally support extensionless source imports. Neither linter should require runtime extensions.",
+      "docs": "https://oxc.rs/docs/guide/usage/linter/rules/import/extensions.html"
     },
     {
       "rule": "import/first",

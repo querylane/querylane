@@ -93,7 +93,7 @@ function Swatch({ className }: { className: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "rounded-control-xs inline-block size-2 shrink-0",
+        "inline-block size-2 shrink-0 rounded-control-xs",
         className
       )}
     />
@@ -116,11 +116,11 @@ function CapacityLine({ activity }: { activity: ConnectionActivityHealth }) {
       </span>
       <div
         aria-label={label}
-        className="bg-muted h-1.5 min-w-0 flex-1 overflow-hidden rounded-full"
+        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
         role="img"
       >
         <div
-          className="bg-chart-1 h-full w-(--connection-utilization) rounded-full"
+          className="h-full w-(--connection-utilization) rounded-full bg-chart-1"
           style={{
             "--connection-utilization": widthPercent(
               activity.totalConnections,
@@ -209,7 +209,7 @@ function ActivitySignals({ activity }: { activity: ConnectionActivityHealth }) {
 /** Names the swatch-only column headers below. */
 function StateLegend({ visible }: { visible: ReadonlySet<string> }) {
   return (
-    <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
       {CONNECTION_STATES.filter((state) => visible.has(state.key)).map(
         (state) => (
           <span className="flex items-center gap-1.5" key={state.key}>
@@ -226,7 +226,7 @@ function ApplicationLabel({ name }: { name: string }) {
   if (name === UNNAMED_APPLICATION) {
     return (
       <span
-        className="text-muted-foreground block truncate italic"
+        className="block truncate text-muted-foreground italic"
         title="Clients that don't set application_name"
       >
         no name set
@@ -467,12 +467,12 @@ function SessionsFooterLink({
     : 0;
   return (
     <Link
-      className="group border-border hover:bg-foreground/3 focus-visible:bg-foreground/3 focus-visible:ring-ring -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-t px-6 text-sm font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      className="group -mx-6 mt-auto -mb-6 flex h-11 items-center justify-between gap-3 border-t border-border px-6 text-sm font-medium transition-colors hover:bg-foreground/3 focus-visible:relative focus-visible:z-10 focus-visible:bg-foreground/3 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
       params={{ instanceId }}
       to="/instances/$instanceId/activity"
     >
       <span>View live sessions</span>
-      <span className="text-muted-foreground flex items-center gap-2">
+      <span className="flex items-center gap-2 text-muted-foreground">
         {hidden > 0 ? (
           <span className="text-xs font-normal">
             {hidden} more {hidden === 1 ? "application" : "applications"}
@@ -480,7 +480,7 @@ function SessionsFooterLink({
         ) : null}
         <ChevronRight
           aria-hidden="true"
-          className="group-hover:text-foreground size-4 transition-transform group-hover:translate-x-0.5"
+          className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
         />
       </span>
     </Link>
@@ -496,7 +496,7 @@ function ConnectionsCardBody({
 }) {
   if (isPending && !activity) {
     return (
-      <div className="bg-muted/40 h-full min-h-40 animate-pulse rounded-lg motion-reduce:animate-none" />
+      <div className="h-full min-h-40 animate-pulse rounded-lg bg-muted/40 motion-reduce:animate-none" />
     );
   }
 

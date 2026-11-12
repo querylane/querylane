@@ -91,7 +91,7 @@ export function RetryActionButton({
       </Button>
       {retryError === null ? null : (
         <span
-          className="text-destructive text-xs"
+          className="text-xs text-destructive"
           id={retryErrorId}
           role="alert"
         >

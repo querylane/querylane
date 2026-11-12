@@ -147,11 +147,11 @@ function assertNativeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
     const inactivePlugin =
       scope !== "eslint" && !plugins.has(scope?.replaceAll("_", "-") ?? "");
     assertReviewedLevel(entry, config.rules[rule], inactivePlugin);
-    assertNativeOverrides(entry, config.overrides);
+    assertRuleOverrides(entry, config.overrides);
   }
 }
 
-function assertNativeOverrides(
+function assertRuleOverrides(
   entry: z.infer<typeof ruleEntry>,
   configuredOverrides: { files: string[]; rules: Record<string, unknown> }[]
 ) {
@@ -210,20 +210,45 @@ async function assertBiomeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
   // Bun's JSONC loader preserves the actual commented configuration without
   // inventing a second JSON parser or inheriting a preset's default severity.
   const module: unknown = await import(join(ROOT, "biome.jsonc"));
-  const { rules, enabled } = z
+  const config = z
     .object({
       default: z.object({
         linter: z.object({
           enabled: z.boolean().optional(),
           rules: z.record(z.string(), z.unknown()),
         }),
+        overrides: z.array(
+          z.object({
+            includes: z.array(z.string()),
+            linter: z
+              .object({
+                rules: z
+                  .record(z.string(), z.record(z.string(), z.unknown()))
+                  .optional(),
+              })
+              .optional(),
+          })
+        ),
       }),
     })
-    .parse(module).default.linter;
+    .parse(module).default;
+  const { rules, enabled } = config.linter;
   if (enabled === false) {
     throw new Error("Biome linter must remain enabled");
   }
   await assertPlaywrightPresetRules(rules);
+  const overrides = config.overrides.map((override) => ({
+    files: override.includes,
+    rules: Object.fromEntries(
+      Object.entries(override.linter?.rules ?? {}).flatMap(
+        ([group, groupRules]) =>
+          Object.entries(groupRules).map(([name, value]) => [
+            `${group}/${name}`,
+            value,
+          ])
+      )
+    ),
+  }));
   for (const entry of entries) {
     const [group, name] = entry.rule.split("/");
     const groupRules = rules[group ?? ""];
@@ -231,6 +256,7 @@ async function assertBiomeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
       entry,
       isRecord(groupRules) ? groupRules[name ?? ""] : undefined
     );
+    assertRuleOverrides(entry, overrides);
   }
 }
 

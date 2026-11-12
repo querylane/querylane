@@ -144,7 +144,8 @@ function yAxisMax({
   for (const row of data) {
     max = Math.max(max, rowMax(row, series, stacked));
   }
-  for (const threshold of thresholds ?? []) {
+  const domainThresholds = thresholds ?? [];
+  for (const threshold of domainThresholds) {
     if (threshold.extendDomain === true) {
       max = Math.max(max, threshold.value);
     }

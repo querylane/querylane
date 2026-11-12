@@ -63,7 +63,7 @@ export function LabeledInput({
         />
       )}
       {isNonEmptyString(error) ? (
-        <p className="text-negative-300/80 text-xs" id={errorId} role="alert">
+        <p className="text-xs text-negative-300/80" id={errorId} role="alert">
           {error}
         </p>
       ) : null}

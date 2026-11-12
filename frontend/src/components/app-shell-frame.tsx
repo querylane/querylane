@@ -16,19 +16,19 @@ const FRONTEND_PACKAGE_VERSION = packageJson.version;
  */
 function SidebarRailPlaceholder() {
   return (
-    <aside className="border-border bg-sidebar hidden w-64 shrink-0 flex-col border-r lg:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar lg:flex">
       <div className="flex h-12 shrink-0 items-center gap-2 px-3">
         <Logo className="size-7" logoStyle="flat" />
         <span className="text-sm font-semibold tracking-tight">Querylane</span>
       </div>
       <div aria-hidden="true" className="space-y-2 p-3 opacity-50">
-        <div className="bg-sidebar-accent mb-4 h-4 w-20 rounded" />
-        <div className="bg-sidebar-accent h-7 rounded" />
-        <div className="bg-sidebar-accent h-7 w-4/5 rounded" />
-        <div className="bg-sidebar-accent h-7 w-3/5 rounded" />
-        <div className="bg-sidebar-accent mt-6 mb-4 h-4 w-24 rounded" />
-        <div className="bg-sidebar-accent h-7 rounded" />
-        <div className="bg-sidebar-accent h-7 w-4/5 rounded" />
+        <div className="mb-4 h-4 w-20 rounded bg-sidebar-accent" />
+        <div className="h-7 rounded bg-sidebar-accent" />
+        <div className="h-7 w-4/5 rounded bg-sidebar-accent" />
+        <div className="h-7 w-3/5 rounded bg-sidebar-accent" />
+        <div className="mt-6 mb-4 h-4 w-24 rounded bg-sidebar-accent" />
+        <div className="h-7 rounded bg-sidebar-accent" />
+        <div className="h-7 w-4/5 rounded bg-sidebar-accent" />
       </div>
     </aside>
   );
@@ -38,11 +38,11 @@ export function AppShellFrame({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
-    <div className="bg-background flex h-svh max-h-svh">
+    <div className="flex h-svh max-h-svh bg-background">
       <SidebarRailPlaceholder />
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border bg-background z-20 flex h-12 shrink-0 items-center justify-end gap-2 border-b px-3 lg:px-4">
-          <span className="text-muted-foreground font-mono text-xs">
+        <header className="z-20 flex h-12 shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-3 lg:px-4">
+          <span className="font-mono text-xs text-muted-foreground">
             Querylane {FRONTEND_PACKAGE_VERSION}
           </span>
           <ThemeModeMenu resolvedTheme={resolvedTheme} setTheme={setTheme} />

@@ -96,7 +96,8 @@ function getHealthCheckPartialReasons(
 ): HealthCheckPartialReasons {
   const reasons: HealthCheckPartialReasons = {};
 
-  for (const partialError of partialErrors ?? []) {
+  const errors = partialErrors ?? [];
+  for (const partialError of errors) {
     for (const detail of partialError.details) {
       const check = getHealthCheckKeyFromDetail(detail);
       if (check) {

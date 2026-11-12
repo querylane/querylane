@@ -53,18 +53,18 @@ function RoleGrantsTableStatus({
   return (
     <>
       {isPending ? (
-        <p className="text-muted-foreground text-sm" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           Loading results…
         </p>
       ) : null}
       {Boolean(error) ? (
-        <p className="text-destructive text-sm" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           Could not load filtered results.
         </p>
       ) : null}
       {children}
       {partial ? (
-        <p className="text-muted-foreground pt-2 text-xs">
+        <p className="pt-2 text-xs text-muted-foreground">
           Showing the first 1,000 matching rows. Refine the filters to narrow
           the results.
         </p>
@@ -83,8 +83,8 @@ function ObjectNameCell({ object }: { object: GrantedObject }) {
     GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED];
   return (
     <span className="flex items-center gap-2">
-      <meta.icon className="text-muted-foreground size-3.5 shrink-0" />
-      <span className="text-foreground font-mono text-(length:--text-caption)">
+      <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="font-mono text-(length:--text-caption) text-foreground">
         {showSchema ? (
           <>
             <span className="text-muted-foreground">{object.schemaName}.</span>
@@ -116,7 +116,7 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   }
   return (
     <span
-      className="text-muted-foreground font-mono text-(length:--text-label-lg)"
+      className="font-mono text-(length:--text-label-lg) text-muted-foreground"
       title={grantor.title}
     >
       {grantor.text}

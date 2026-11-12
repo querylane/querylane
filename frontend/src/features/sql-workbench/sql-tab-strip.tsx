@@ -20,7 +20,7 @@ function TabIcon({ isRunning, tab }: { isRunning: boolean; tab: SqlTab }) {
     return (
       <Bookmark
         aria-label="Saved query"
-        className="text-muted-foreground size-3 shrink-0"
+        className="size-3 shrink-0 text-muted-foreground"
       />
     );
   }
@@ -56,7 +56,7 @@ function SqlTabStrip({
   );
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   return (
-    <div className="border-border bg-muted/40 flex min-h-9 items-stretch border-b">
+    <div className="flex min-h-9 items-stretch border-b border-border bg-muted/40">
       <div className="min-w-0 flex-1 overflow-x-auto">
         <TabsList aria-label="Query tabs" presentation="sql-workbench">
           {tabs.map((tab) => (

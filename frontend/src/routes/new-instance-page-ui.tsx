@@ -81,13 +81,13 @@ function LabelsEditor({
           ))}
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           No labels. Labels help organize and filter instances.
         </p>
       )}
       {generalMessages.length > 0 ? (
         <p
-          className="text-destructive text-sm whitespace-pre-line"
+          className="text-sm whitespace-pre-line text-destructive"
           id={errorId}
           role="alert"
         >
@@ -110,7 +110,7 @@ export function CreateInstancePageHeader({ onBack }: { onBack: () => void }) {
         <h1 className="text-2xl font-semibold tracking-tight">
           Postgres server to manage
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           Step 2: connect an application, production, or analytics PostgreSQL
           server for Querylane to administer.
         </p>
@@ -174,7 +174,7 @@ export function CreateInstanceAdvancedSection({
               value={formState.instanceId}
             />
             <p
-              className="text-muted-foreground text-xs"
+              className="text-xs text-muted-foreground"
               id={`${instanceIdInputId}-help`}
             >
               Must start with a letter, may contain letters, digits, hyphens,
@@ -182,7 +182,7 @@ export function CreateInstanceAdvancedSection({
             </p>
             {isNonEmptyString(formErrors.instanceId) ? (
               <p
-                className="text-destructive text-sm"
+                className="text-sm text-destructive"
                 id={`${instanceIdInputId}-error`}
                 role="alert"
               >

@@ -146,19 +146,19 @@ function ColumnNameCell({ row }: { row: ColumnRow }) {
   return (
     <div className="min-w-[14rem]">
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="text-foreground truncate font-mono text-xs font-semibold">
+        <span className="truncate font-mono text-xs font-semibold text-foreground">
           {column.columnName}
         </span>
         <ColumnBadges row={row} />
       </div>
       {column.comment ? (
-        <div className="text-muted-foreground mt-1 max-w-[22rem] truncate text-xs">
+        <div className="mt-1 max-w-[22rem] truncate text-xs text-muted-foreground">
           {column.comment}
         </div>
       ) : null}
       {column.generationExpression ? (
         <div
-          className="text-muted-foreground mt-1 max-w-[22rem] truncate font-mono text-xs"
+          className="mt-1 max-w-[22rem] truncate font-mono text-xs text-muted-foreground"
           title={column.generationExpression}
         >
           AS {column.generationExpression}
@@ -177,7 +177,7 @@ function ColumnInventoryTypeCell({ column }: { column: TableColumn }) {
     typeMeta.badges.length > 0 ? ` ${typeMeta.badges.join(" · ")}.` : "";
   return (
     <span
-      className="text-muted-foreground font-mono text-xs"
+      className="font-mono text-xs text-muted-foreground"
       title={`${typeMeta.category}.${badgesLabel} ${typeMeta.summary}`}
     >
       {typeMeta.displayType}
@@ -362,7 +362,7 @@ function ColumnsInventoryTable({
               value={searchValue}
             />
             {filters}
-            <span className="text-muted-foreground ms-auto text-xs">
+            <span className="ms-auto text-xs text-muted-foreground">
               Catalog metadata
             </span>
           </>

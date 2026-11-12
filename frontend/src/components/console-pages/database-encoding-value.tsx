@@ -40,7 +40,7 @@ function DatabaseEncodingValue({
         </Badge>
       ) : null}
       {trimmedCollation ? (
-        <span className="text-muted-foreground min-w-0 truncate font-mono text-xs">
+        <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
           {trimmedCollation}
         </span>
       ) : null}

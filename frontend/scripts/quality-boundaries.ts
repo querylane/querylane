@@ -319,9 +319,10 @@ function assertBiomeOverrides(
     const generated =
       scope.length > 0 && scope.every((path) => generatedScopes.has(path));
     assertEngineSwitches(override, "", generated);
-    for (const { rule, value } of biomeRuleEntries(
+    const rules = biomeRuleEntries(
       recordAt(recordAt(override, "linter"), "rules")
-    )) {
+    );
+    for (const { rule, value } of rules) {
       assertOverrideLevel({
         tool: "Biome",
         scope,
@@ -394,9 +395,8 @@ function assertOxlint(
     throw new Error("Oxlint must retain type-aware fatal checks");
   }
   assertExclusions("Oxlint", strings(config["ignorePatterns"]), toolExclusions);
-  for (const override of z
-    .array(recordSchema)
-    .parse(config["overrides"] ?? [])) {
+  const overrides = z.array(recordSchema).parse(config["overrides"] ?? []);
+  for (const override of overrides) {
     assertOxlintOverride(override, policies, exceptions);
   }
 }
@@ -412,7 +412,8 @@ function assertOxlintOverride(
     );
   }
   const scope = strings(override["files"]);
-  for (const [name, value] of Object.entries(recordAt(override, "rules"))) {
+  const rules = Object.entries(recordAt(override, "rules"));
+  for (const [name, value] of rules) {
     const rule = name.includes("/") ? name : `eslint/${name}`;
     assertOverrideLevel({
       tool: "Oxlint",

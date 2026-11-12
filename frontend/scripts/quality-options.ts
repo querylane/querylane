@@ -6,18 +6,10 @@ import { isRecord, isUnknownArray } from "../src/lib/value-guards";
 const entrypoints = [
   "lint",
   "lint:fix",
-  "lint:biome",
-  "lint:imports",
-  "lint:oxlint",
-  "lint:shadcn",
-  "lint:changed",
   "doctor",
-  "doctor:full",
-  "doctor:ci",
   "doctor:dead-code",
   "quality:gate",
   "quality:changed",
-  "quality:rules",
   "type:check",
   "type:check:ui",
   "type:check:canary",
@@ -88,6 +80,7 @@ async function currentOptions(root: string): Promise<unknown> {
   const scripts = record(record(jsonFile(root, "package.json"))["scripts"]);
   const snapshot = {
     biome: {
+      root: biome["root"],
       rules: biomeOptions(biome),
       overrides: overrides(biome, true),
       assist: biome["assist"],

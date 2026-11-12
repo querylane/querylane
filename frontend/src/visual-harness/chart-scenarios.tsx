@@ -6,14 +6,14 @@ import { METRIC_CHART_SAMPLE_DATA } from "@/visual-harness/chart-scenario-data";
 function MetricChartKitScenario() {
   return (
     <div
-      className="border-border bg-card w-[760px] space-y-6 rounded-xl border p-6"
+      className="w-[760px] space-y-6 rounded-xl border border-border bg-card p-6"
       data-testid="metric-chart-fixture"
     >
       <div>
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h2 className="text-base">Requests</h2>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Current and previous five-minute windows
             </p>
           </div>

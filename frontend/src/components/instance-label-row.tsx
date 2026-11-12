@@ -72,7 +72,7 @@ export function InstanceLabelRow({
       </div>
       {invalid ? (
         <div
-          className="text-destructive text-sm [overflow-wrap:anywhere]"
+          className="text-sm [overflow-wrap:anywhere] text-destructive"
           id={errorId}
           role="alert"
         >

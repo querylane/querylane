@@ -18,10 +18,10 @@ export function RouteProgressBar() {
       {visible ? (
         <div
           aria-hidden="true"
-          className="bg-primary/15 pointer-events-none absolute inset-x-0 top-0 z-50 h-0.5 overflow-hidden"
+          className="pointer-events-none absolute inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-primary/15"
           data-testid="route-progress-bar"
         >
-          <div className="route-progress-bar-fill bg-primary h-full w-1/3 rounded-full" />
+          <div className="route-progress-bar-fill h-full w-1/3 rounded-full bg-primary" />
         </div>
       ) : null}
       <output className="sr-only">{visible ? "Loading page" : ""}</output>

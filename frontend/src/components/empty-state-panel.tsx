@@ -42,7 +42,7 @@ function EmptyStatePanel({
       return <EmptyTitle>{title}</EmptyTitle>;
     }
     return (
-      <TitleComponent className="text-foreground text-sm font-semibold">
+      <TitleComponent className="text-sm font-semibold text-foreground">
         {title}
       </TitleComponent>
     );
@@ -60,7 +60,7 @@ function EmptyStatePanel({
           <EmptyHeader width={contentWidth}>
             {Icon ? (
               <span
-                className="bg-muted text-muted-foreground mb-1 flex size-10 items-center justify-center rounded-full"
+                className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"
                 data-testid="empty-state-icon"
               >
                 <Icon aria-hidden={true} className="size-5" />
@@ -79,7 +79,7 @@ function EmptyStatePanel({
         <EmptyHeader>
           {Icon ? (
             <span
-              className="bg-muted text-muted-foreground mb-1 flex size-10 items-center justify-center rounded-full"
+              className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"
               data-testid="empty-state-icon"
             >
               <Icon aria-hidden={true} className="size-5" />

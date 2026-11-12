@@ -57,7 +57,7 @@ export function SummaryCard({ label, value }: SummaryCardProps) {
         className="flex h-full flex-col justify-center"
         presentation="metric"
       >
-        <p className="text-muted-foreground text-xs tracking-wide uppercase">
+        <p className="text-xs tracking-wide text-muted-foreground uppercase">
           {label}
         </p>
         <div className="flex min-h-6 items-center text-base font-semibold">
@@ -83,7 +83,7 @@ export function SummaryCountValue({
   }
   if (isPending) {
     return (
-      <span className="text-muted-foreground flex items-center gap-2 text-sm">
+      <span className="flex items-center gap-2 text-sm text-muted-foreground">
         <Spinner className="size-4" />
         <span>Loading…</span>
       </span>
@@ -101,7 +101,7 @@ export function InstanceStatsBar({
   return (
     <div
       className={cn(
-        "divide-border border-border grid grid-cols-2 divide-x overflow-hidden rounded-lg border lg:grid-cols-4",
+        "grid grid-cols-2 divide-x divide-border overflow-hidden rounded-lg border border-border lg:grid-cols-4",
         className
       )}
     >
@@ -130,7 +130,7 @@ export function InstanceStatItem({
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="text-muted-foreground flex w-fit cursor-help items-center gap-1 text-xs">
+                <span className="flex w-fit cursor-help items-center gap-1 text-xs text-muted-foreground">
                   {label}
                   <Info aria-hidden="true" className="size-3 opacity-60" />
                 </span>
@@ -139,12 +139,12 @@ export function InstanceStatItem({
             <TooltipContent className="max-w-xs">{hint}</TooltipContent>
           </Tooltip>
         ) : (
-          <span className="text-muted-foreground text-xs">{label}</span>
+          <span className="text-xs text-muted-foreground">{label}</span>
         )}
         <div className="flex min-h-7 items-baseline gap-1.5">
           {children}
           {isNonEmptyString(suffix) ? (
-            <span className="text-muted-foreground font-mono text-xs tabular-nums">
+            <span className="font-mono text-xs text-muted-foreground tabular-nums">
               {suffix}
             </span>
           ) : null}
@@ -190,7 +190,7 @@ export function PageHeader({
 }) {
   return (
     <div className="max-w-full min-w-0 space-y-2">
-      <p className="text-muted-foreground tracking-brand text-xs uppercase">
+      <p className="text-xs tracking-brand text-muted-foreground uppercase">
         {eyebrow}
       </p>
       <div className="space-y-1">
@@ -198,7 +198,7 @@ export function PageHeader({
           {title}
         </h1>
         {isNonEmptyString(description) ? (
-          <p className="text-muted-foreground max-w-3xl">{description}</p>
+          <p className="max-w-3xl text-muted-foreground">{description}</p>
         ) : null}
       </div>
     </div>
@@ -219,7 +219,7 @@ export function SectionCard({
         <div className="min-w-0 space-y-1">
           <CardTitle>{title}</CardTitle>
           {isNonEmptyString(description) ? (
-            <p className="text-muted-foreground text-sm">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
         {action}
@@ -244,7 +244,7 @@ export function MetadataCard({
         <dl className="grid gap-x-6 gap-y-2 md:grid-cols-3">
           {items.map((item) => (
             <div className="min-w-0 space-y-1" key={item.label}>
-              <dt className="text-muted-foreground text-xs tracking-wide uppercase">
+              <dt className="text-xs tracking-wide text-muted-foreground uppercase">
                 {item.label}
               </dt>
               <dd className="min-w-0 text-sm [overflow-wrap:anywhere] wrap-break-word">

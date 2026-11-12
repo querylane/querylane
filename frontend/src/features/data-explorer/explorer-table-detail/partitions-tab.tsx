@@ -86,11 +86,11 @@ function PartitionSummaryItem({
   value: string;
 }) {
   return (
-    <div className="bg-card/60 rounded-lg border p-3">
-      <p className="text-muted-foreground tracking-wider text-(length:--text-label-sm) uppercase">
+    <div className="rounded-lg border bg-card/60 p-3">
+      <p className="tracking-wider text-(length:--text-label-sm) text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="text-foreground mt-1 font-mono text-xs wrap-break-word">
+      <p className="mt-1 font-mono text-xs wrap-break-word text-foreground">
         {value}
       </p>
     </div>
@@ -114,7 +114,7 @@ function PartitionsToolbar({
         <div className="relative w-52 max-w-full shrink-0">
           <Search
             aria-hidden="true"
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
           />
           <Input
             aria-label="Search partitions…"
@@ -129,9 +129,9 @@ function PartitionsToolbar({
           />
         </div>
         {partitionKey ? (
-          <p className="text-muted-foreground ml-auto min-w-0 truncate text-xs">
+          <p className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
             Partitioned by{" "}
-            <span className="text-foreground font-mono">{partitionKey}</span>
+            <span className="font-mono text-foreground">{partitionKey}</span>
           </p>
         ) : null}
       </div>
@@ -164,7 +164,7 @@ function PartitionRowsTable({
   totalSizeLabel: string;
 }) {
   return (
-    <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
+    <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
       <Table>
         <TableHeader>
           <TableRow>
@@ -238,7 +238,7 @@ function PartitionRowsTable({
                   share: (
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                           <div
                             className={cn(
                               "h-full rounded-full",
@@ -247,7 +247,7 @@ function PartitionRowsTable({
                             )}
                           />
                         </div>
-                        <span className="text-muted-foreground w-9 text-right font-mono text-xs">
+                        <span className="w-9 text-right font-mono text-xs text-muted-foreground">
                           {row.shareLabel}
                         </span>
                       </div>
@@ -314,7 +314,7 @@ function PartitionPaginationFooter({
   const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
 
   return (
-    <div className="text-muted-foreground flex h-8 items-center gap-2 text-xs">
+    <div className="flex h-8 items-center gap-2 text-xs text-muted-foreground">
       <span className="text-xs">Rows per page</span>
       <Select
         onValueChange={(value) => {
@@ -528,10 +528,10 @@ function PartitionsTab({
         totalSizeLabel={filteredPartitionSummary.totalSizeLabel}
       />
       {defaultPartition && defaultPartition.estimatedRows > 0 ? (
-        <div className="bg-warning-500/10 flex items-start gap-2 rounded-lg p-3 text-sm leading-relaxed">
+        <div className="flex items-start gap-2 rounded-lg bg-warning-500/10 p-3 text-sm leading-relaxed">
           <TriangleExclamationPoint
             aria-hidden="true"
-            className="text-warning-600 dark:text-warning-300 mt-0.5 size-4 shrink-0"
+            className="mt-0.5 size-4 shrink-0 text-warning-600 dark:text-warning-300"
           />
           <span>
             The DEFAULT partition holds {defaultPartition.shareLabel} of

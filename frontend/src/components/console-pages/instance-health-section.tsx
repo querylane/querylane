@@ -57,7 +57,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
           {row.tone === "error" ? (
             <CircleExclamationPoint
               aria-hidden="true"
-              className="text-destructive size-4 shrink-0"
+              className="size-4 shrink-0 text-destructive"
             />
           ) : (
             <span
@@ -69,15 +69,15 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
             />
           )}
           <span className="sr-only">{TONE_SR_LABEL[row.tone]}:</span>
-          <span className="text-foreground w-32 shrink-0 truncate text-sm font-medium sm:w-40">
+          <span className="w-32 shrink-0 truncate text-sm font-medium text-foreground sm:w-40">
             {row.label}
           </span>
-          <span className="text-muted-foreground group-data-[tone=error]/health-check:text-destructive min-w-0 flex-1 truncate text-(length:--text-caption)">
+          <span className="min-w-0 flex-1 truncate text-(length:--text-caption) text-muted-foreground group-data-[tone=error]/health-check:text-destructive">
             {row.summary}
           </span>
           <ChevronDown
             aria-hidden="true"
-            className="text-muted-foreground/70 group-data-[tone=error]/health-check:text-destructive/70 size-4 shrink-0 transition-transform group-aria-expanded/health-row:rotate-180"
+            className="size-4 shrink-0 text-muted-foreground/70 transition-transform group-aria-expanded/health-row:rotate-180 group-data-[tone=error]/health-check:text-destructive/70"
           />
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -87,10 +87,10 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
           >
             {row.detail.map((entry) => (
               <div className="flex min-w-0 flex-col gap-0.5" key={entry.label}>
-                <dt className="text-muted-foreground group-data-[tone=error]/health-check:text-destructive/80 text-xs">
+                <dt className="text-xs text-muted-foreground group-data-[tone=error]/health-check:text-destructive/80">
                   {entry.label}
                 </dt>
-                <dd className="text-foreground group-data-[tone=error]/health-check:text-destructive min-w-0 [overflow-wrap:anywhere] wrap-break-word text-(length:--text-caption) tabular-nums">
+                <dd className="min-w-0 [overflow-wrap:anywhere] wrap-break-word text-(length:--text-caption) text-foreground tabular-nums group-data-[tone=error]/health-check:text-destructive">
                   {entry.value}
                 </dd>
               </div>
@@ -126,7 +126,7 @@ function HealthRowsSkeleton() {
 
 function InstanceFactsHeader({ facts }: { facts: string[] }) {
   return (
-    <p className="text-foreground/90 flex flex-wrap items-center gap-x-2 gap-y-1 text-(length:--text-caption)">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-(length:--text-caption) text-foreground/90">
       {facts.map((fact, index) => (
         <span className="inline-flex items-center gap-2" key={fact}>
           {index > 0 ? (

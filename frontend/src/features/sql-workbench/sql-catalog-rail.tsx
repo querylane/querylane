@@ -113,7 +113,7 @@ function RelationLabel({
 }) {
   return (
     <>
-      <Icon className="text-muted-foreground size-4 shrink-0" />
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate text-left">
         {highlightMatch(name, query)}
       </span>
@@ -206,7 +206,7 @@ function RelationColumns({
   }
   if (columns.data.length === 0) {
     return (
-      <p className="text-muted-foreground py-1 pr-2 pl-9 text-xs">No columns</p>
+      <p className="py-1 pr-2 pl-9 text-xs text-muted-foreground">No columns</p>
     );
   }
   return (
@@ -215,7 +215,7 @@ function RelationColumns({
         const identifier = quoteIdentifier(column.name);
         return (
           <li
-            className="group/column hover:bg-accent/60 relative flex h-6 items-center gap-2 rounded-sm pr-2 pl-9 text-xs"
+            className="group/column relative flex h-6 items-center gap-2 rounded-sm pr-2 pl-9 text-xs hover:bg-accent/60"
             key={column.name}
           >
             {/* The insert action lives in the row's indent gutter, under the
@@ -231,13 +231,13 @@ function RelationColumns({
             {column.isPrimaryKey ? (
               <KeyRound
                 aria-label="Primary key"
-                className="text-chart-4 size-3 shrink-0"
+                className="size-3 shrink-0 text-chart-4"
               />
             ) : null}
             <span className="min-w-0 flex-1 truncate font-mono">
               {column.name}
             </span>
-            <span className="text-muted-foreground max-w-[45%] truncate font-mono">
+            <span className="max-w-[45%] truncate font-mono text-muted-foreground">
               {column.type}
             </span>
           </li>
@@ -279,7 +279,7 @@ function RelationRow({
             <ChevronRight
               aria-hidden="true"
               className={cn(
-                "text-muted-foreground size-3.5 shrink-0 transition-transform",
+                "size-3.5 shrink-0 text-muted-foreground transition-transform",
                 expanded && "rotate-90"
               )}
             />
@@ -393,7 +393,7 @@ function SchemaSection({
       >
         <ChevronRight
           className={cn(
-            "text-muted-foreground size-3.5 shrink-0 transition-transform",
+            "size-3.5 shrink-0 text-muted-foreground transition-transform",
             expanded && "rotate-90"
           )}
         />
@@ -406,14 +406,14 @@ function SchemaSection({
         <span className="min-w-0 flex-1 truncate text-left font-mono text-xs">
           {highlightMatch(schema.id, query)}
         </span>
-        <span className="text-muted-foreground font-mono text-xs tabular-nums">
+        <span className="font-mono text-xs text-muted-foreground tabular-nums">
           {schema.relations.length}
         </span>
       </Button>
       {expanded ? (
         <ul className="pl-2">
           {schema.relations.length === 0 ? (
-            <li className="text-muted-foreground py-1 pl-7 text-xs">
+            <li className="py-1 pl-7 text-xs text-muted-foreground">
               No tables or views
             </li>
           ) : null}
@@ -522,7 +522,7 @@ function SqlCatalogRail(actions: CatalogRailActions) {
     >
       <div className="px-2 pt-2 pb-1.5">
         <div className="relative">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             aria-label="Filter tables and views"
             className="h-7"
@@ -551,7 +551,7 @@ function SqlCatalogRail(actions: CatalogRailActions) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {catalog.data?.coverage.isPartial === true ? (
-          <p className="text-muted-foreground px-2 pb-1.5 text-xs">
+          <p className="px-2 pb-1.5 text-xs text-muted-foreground">
             Showing the first {catalog.data.coverage.objectLimit} objects.
           </p>
         ) : null}

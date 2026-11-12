@@ -59,7 +59,7 @@ function ChartLegend({
                 item.dashed === true && "opacity-50"
               )}
             />
-            <span className="text-muted-foreground text-xs">{item.label}</span>
+            <span className="text-xs text-muted-foreground">{item.label}</span>
           </div>
         )
       )}
@@ -136,7 +136,7 @@ function ChartContainer({
           <p className="sr-only" id={descriptionId}>
             Emphasize a series without hiding values. Press Escape to reset.
           </p>
-          <p className="text-muted-foreground text-center text-xs">
+          <p className="text-center text-xs text-muted-foreground">
             All values remain shown.
           </p>
           <p className="sr-only" role="status">

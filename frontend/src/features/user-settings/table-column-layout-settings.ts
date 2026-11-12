@@ -56,7 +56,8 @@ function parsePersistedLayouts(
     return {};
   }
   const layouts: Record<string, TableColumnLayout> = {};
-  for (const [tableName, candidate] of Object.entries(value["layouts"])) {
+  const entries = Object.entries(value["layouts"]);
+  for (const [tableName, candidate] of entries) {
     const layout = parsePersistedLayout(tableName, candidate);
     if (layout) {
       layouts[tableName] = layout;

@@ -97,7 +97,7 @@ function ActiveSortSummary({ summary }: { summary: string | null }) {
       title={`Active sort: ${summary}`}
       variant="outline"
     >
-      <span className="text-foreground shrink-0 font-medium">Sort</span>
+      <span className="shrink-0 font-medium text-foreground">Sort</span>
       <span className="min-w-0 truncate font-mono text-xs">{summary}</span>
     </Badge>
   );
@@ -122,7 +122,7 @@ function SelectionSummary({
   }
   return (
     <>
-      <span className="text-foreground font-medium">
+      <span className="font-medium text-foreground">
         {selectedCount.toLocaleString()} selected
       </span>
       <Button
@@ -227,7 +227,7 @@ function DataGridToolbar({
         />
         <ActiveSortSummary summary={sortSummary} />
 
-        <div className="text-muted-foreground ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <SelectionSummary
             allowSqlExport={allowSqlExport}
             onClearSelection={onClearSelection}

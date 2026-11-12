@@ -278,7 +278,7 @@ function AccessMapKpiCount({
     <p className="flex items-baseline gap-2 text-lg font-semibold tabular-nums">
       {count}
       {partial ? (
-        <span className="text-muted-foreground text-xs font-normal">
+        <span className="text-xs font-normal text-muted-foreground">
           Partial
         </span>
       ) : null}
@@ -376,7 +376,7 @@ function AccessMapCanvasActions({
               {hiddenFacetCount > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="bg-muted text-muted-foreground rounded-full px-1.5 font-mono text-(length:--text-micro)"
+                  className="rounded-full bg-muted px-1.5 font-mono text-(length:--text-micro) text-muted-foreground"
                 >
                   {hiddenFacetCount}
                 </span>
@@ -591,7 +591,7 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
               {props.effectiveDb?.name ?? "No database"}
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Shows role membership, direct grants, owned objects, PUBLIC access,
             and default privileges in one canvas.
           </p>
@@ -601,9 +601,9 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="flex items-center" presentation="canvas">
-            <ShieldCheck className="text-primary size-5" />
+            <ShieldCheck className="size-5 text-primary" />
             <div>
-              <p className="text-muted-foreground text-xs tracking-wider uppercase">
+              <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 Parents
               </p>
               <p className="text-lg font-semibold tabular-nums">
@@ -614,9 +614,9 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
         <Card>
           <CardContent className="flex items-center" presentation="canvas">
-            <KeyRound className="text-primary size-5" />
+            <KeyRound className="size-5 text-primary" />
             <div>
-              <p className="text-muted-foreground text-xs tracking-wider uppercase">
+              <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 Direct grants
               </p>
               <AccessMapKpiCount
@@ -628,9 +628,9 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
         <Card>
           <CardContent className="flex items-center" presentation="canvas">
-            <GitBranch className="text-primary size-5" />
+            <GitBranch className="size-5 text-primary" />
             <div>
-              <p className="text-muted-foreground text-xs tracking-wider uppercase">
+              <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 Owned objects
               </p>
               <AccessMapKpiCount
@@ -642,9 +642,9 @@ function RoleAccessMapTab(props: RoleDetailViewProps) {
         </Card>
         <Card>
           <CardContent className="flex items-center" presentation="canvas">
-            <CircleExclamationPoint className="text-primary size-5" />
+            <CircleExclamationPoint className="size-5 text-primary" />
             <div>
-              <p className="text-muted-foreground text-xs tracking-wider uppercase">
+              <p className="text-xs tracking-wider text-muted-foreground uppercase">
                 PUBLIC grants
               </p>
               <AccessMapKpiCount
