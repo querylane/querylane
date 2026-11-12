@@ -45,7 +45,19 @@ test("SSL descriptions fit a phone", async ({ page }) => {
   await mockConsoleResources(page);
   await page.goto(CONFIGURATION_URL);
   await page.getByRole("combobox", { name: "SSL mode", exact: true }).click();
-  await expect(page.getByRole("listbox")).toHaveScreenshot("ssl-phone.png");
+  const listbox = page.getByRole("listbox");
+  const descriptions = listbox.locator(
+    '[data-querylane-slot="select-item-description"]'
+  );
+  await expect(descriptions).toHaveCount(6);
+  await expect
+    .poll(() =>
+      descriptions.evaluateAll((items) =>
+        items.every((item) => item.scrollWidth <= item.clientWidth)
+      )
+    )
+    .toBe(true);
+  await expect(listbox).toHaveScreenshot("ssl-phone.png");
 });
 
 test("role summary and keyboard-selected definition fit a phone", async ({

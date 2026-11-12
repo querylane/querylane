@@ -602,7 +602,7 @@ test("instance configuration: delete API error keeps instance page open", {
   await dialog.getByRole("button", { name: "Delete instance" }).click();
 
   await expect(
-    page.getByRole("alert").getByText("delete failed")
+    page.getByRole("main").getByRole("alert").getByText("delete failed")
   ).toBeVisible();
   await expect(page).toHaveURL(PRODUCTION_CONFIGURATION_URL_RE);
 });

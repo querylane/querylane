@@ -107,6 +107,26 @@ test("explains why another sort column cannot be added", async () => {
   );
 
   await page.getByRole("button", { name: `Sort ${MAX_SORT_COLUMNS}` }).click();
+  await Promise.all(
+    columns.map(async (sortedColumn, index) => {
+      await expect
+        .element(
+          page.getByRole("combobox", {
+            name: `Sort column ${index + 1}`,
+            exact: true,
+          })
+        )
+        .toHaveText(sortedColumn.columnName);
+      await expect
+        .element(
+          page.getByRole("combobox", {
+            name: `Sort direction ${index + 1}`,
+            exact: true,
+          })
+        )
+        .toHaveText("ASC");
+    })
+  );
   const addSortColumn = page.getByRole("combobox", {
     name: "Add sort column",
   });

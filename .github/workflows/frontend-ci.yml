@@ -91,7 +91,8 @@ jobs:
     if: needs.changes.outputs.frontend == 'true'
     name: Frontend Unit
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    # Full unit suite: 3m49s in CI, plus dependency setup and cleanup.
+    timeout-minutes: 6
     defaults:
       run:
         working-directory: frontend

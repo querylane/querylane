@@ -328,11 +328,12 @@ function SortRow({
       </Button>
       <Select onValueChange={swapColumn} value={sort.columnKey}>
         <SelectTrigger
+          aria-label={`Sort column ${index + 1}`}
           className="w-[min(var(--sort-column-select-width),calc(100vw-12rem))] max-w-full"
           presentation="identifier"
           size="sm"
         >
-          <SelectValue />
+          <SelectValue>{sort.columnKey}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {columns.reduce<React.ReactNode[]>((items, column) => {
@@ -364,8 +365,12 @@ function SortRow({
         </SelectContent>
       </Select>
       <Select onValueChange={swapDirection} value={sort.direction}>
-        <SelectTrigger className="w-20" size="sm">
-          <SelectValue />
+        <SelectTrigger
+          aria-label={`Sort direction ${index + 1}`}
+          className="w-20"
+          size="sm"
+        >
+          <SelectValue>{sort.direction}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem label="ASC" value="ASC">
