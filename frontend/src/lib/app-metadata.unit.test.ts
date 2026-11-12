@@ -5,6 +5,13 @@ import { resolveQuerylaneAboutMetadata } from "@/lib/app-metadata";
 import { BuildInfoSchema } from "@/protogen/querylane/console/v1alpha1/console_pb";
 
 describe("resolveQuerylaneAboutMetadata", () => {
+  test("displays an unversioned development build without a release prefix", () => {
+    const buildInfo = create(BuildInfoSchema, { version: "dev" });
+    expect(resolveQuerylaneAboutMetadata(buildInfo, "0.1.0").version).toBe(
+      "dev"
+    );
+  });
+
   test("falls back to frontend version and unknown placeholders", () => {
     const metadata = resolveQuerylaneAboutMetadata(undefined, "0.1.0");
 
