@@ -177,3 +177,43 @@ test("full-value result dialogs stay outside the agent snapshot", async () => {
   expect(snapshot).not.toContain("private-result");
   expect(snapshot).not.toContain("Copy text");
 });
+
+test("aborting permission clears the prompt and cannot apply a late approval", async () => {
+  useAgentAccessStore.getState().setEnabled(true);
+  const controller = new AbortController();
+  const result = requestAgentApproval(
+    {
+      ref: "name",
+      component: "input",
+      action: "setValue",
+      args: ["Cancelled"],
+    },
+    controller.signal
+  );
+  const { approval } = useAgentAccessStore.getState();
+  if (!approval) {
+    throw new Error("Expected pending approval");
+  }
+  controller.abort();
+  expect(await result).toBe(false);
+  expect(useAgentAccessStore.getState().approval).toBeNull();
+  approval.decide(true);
+  expect(useAgentAccessStore.getState().approval).toBeNull();
+});
+
+test("an approval cannot follow the agent onto another route", async () => {
+  useAgentAccessStore.getState().setEnabled(true);
+  const location = globalThis.location.href;
+  try {
+    const result = requestAgentApproval(
+      { ref: "name", component: "input", action: "setValue", args: ["Stale"] },
+      new AbortController().signal
+    );
+    globalThis.history.replaceState(null, "", "/another-instance");
+    useAgentAccessStore.getState().approval?.decide(true);
+    expect(await result).toBe(false);
+    expect(useAgentAccessStore.getState().approval).toBeNull();
+  } finally {
+    globalThis.history.replaceState(null, "", location);
+  }
+});

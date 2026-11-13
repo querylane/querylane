@@ -9,7 +9,7 @@ const REPLACED_PACKAGES = [
   "sonner",
   "next-themes",
 ];
-const SDK_VERSION = "0.1.0-beta.1";
+const SDK_VERSION = "0.1.0-beta.2";
 
 function referencesPackage(source: string, name: string) {
   return [`"${name}"`, `"${name}/`, `'${name}'`, `'${name}/`].some(
