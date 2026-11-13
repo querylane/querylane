@@ -56,7 +56,9 @@ const managedChunkCacheGroups = {
     name: "shared-ui",
     priority: 28,
     reuseExistingChunk: true,
-    test: /[/\\]src[/\\]components[/\\](?:querylane-ui|ui)[/\\]/u,
+    // Keep tiny shared filtering helpers in the already-counted core UI chunk,
+    // rather than repeating them in each lazy consumer.
+    test: /[/\\]src[/\\](?:components[/\\](?:querylane-ui|ui)[/\\]|lib[/\\]domain[/\\]aip-filter\.)/u,
   },
   sqlEditor: {
     chunks: "async",
