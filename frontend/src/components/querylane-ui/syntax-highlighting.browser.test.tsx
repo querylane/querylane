@@ -3,6 +3,9 @@ import { afterEach, expect, test } from "@rstest/core";
 import { BashSyntaxHighlight } from "./bash-syntax-highlight";
 import { SqlSyntaxHighlight } from "./sql-code-block";
 
+const SQL_SOURCE = "\tSELECT 'active' AS status;  \r\n\n";
+const BASH_SOURCE = '\techo "$POSTGRES_HOST"  \r\n\n';
+
 afterEach(async () => {
   await cleanup();
 });
@@ -10,21 +13,25 @@ afterEach(async () => {
 test.each([
   {
     language: "sql",
-    content: <SqlSyntaxHighlight sql="SELECT 'active' AS status;" />,
+    source: SQL_SOURCE,
+    content: <SqlSyntaxHighlight sql={SQL_SOURCE} />,
   },
   {
     language: "bash",
-    content: <BashSyntaxHighlight code='echo "$POSTGRES_HOST"' />,
+    source: BASH_SOURCE,
+    content: <BashSyntaxHighlight code={BASH_SOURCE} />,
   },
 ])(
   "$language tokens follow the global theme after lazy loading",
-  async ({ language, content }) => {
+  async ({ language, content, source }) => {
     const originalClassName = document.documentElement.className;
     await render(content);
 
     await expect
       .poll(() => document.querySelectorAll("[data-shiki-token]").length)
       .toBeGreaterThan(0);
+
+    expect(document.querySelector("code")?.textContent).toBe(source);
 
     const tokens = document.querySelectorAll<HTMLElement>("[data-shiki-token]");
     try {
@@ -46,3 +53,21 @@ test.each([
     }
   }
 );
+
+test("oversized SQL and Bash remain exact plaintext in Chromium", async () => {
+  const source = `\t${"🙂".repeat(32_768)}\r\n`;
+  await render(
+    <>
+      <pre>
+        <SqlSyntaxHighlight sql={source} />
+      </pre>
+      <pre>
+        <BashSyntaxHighlight code={source} />
+      </pre>
+    </>
+  );
+  expect(
+    [...document.querySelectorAll("code")].map((code) => code.textContent)
+  ).toEqual([source, source]);
+  expect(document.querySelectorAll("[data-shiki-token]")).toHaveLength(0);
+});
