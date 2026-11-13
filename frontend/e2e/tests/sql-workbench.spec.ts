@@ -127,6 +127,63 @@ for (const routeName of ["workbench", "sql"]) {
   });
 }
 
+test("superseded explain keeps its replacement visible and cancellable", async ({
+  page,
+}) => {
+  await mockConsoleResources(page);
+  await mockRpc(page, "SQLService/ValidateQuery", {});
+  const explainUrl = `**/${SQLService.typeName}/${SQLService.method.explainQuery.name}`;
+  const releaseResponses = Promise.withResolvers<void>();
+  await page.route(explainUrl, async (route) => {
+    await releaseResponses.promise;
+    await route.fulfill({
+      body: JSON.stringify({ plan: EXPLAIN_ANALYZE_FIXTURE }),
+      contentType: "application/json",
+    });
+  });
+  try {
+    await page.goto(`${DATABASE_URL}/workbench`);
+    const editor = page.getByRole("textbox", { name: "SQL editor" });
+    const menu = page.getByRole("button", { name: "More ways to run" });
+    const explain = page.getByRole("menuitem", {
+      name: "Explain analyze runs it",
+      exact: true,
+    });
+    await editor.fill("SELECT 1");
+    const firstRequest = page.waitForRequest(explainUrl);
+    await menu.click();
+    await explain.click();
+    const first = await firstRequest;
+    await expect(page.getByText("Explaining", { exact: true })).toBeVisible();
+    await editor.fill("SELECT 2");
+    const firstAborted = page.waitForEvent("requestfailed", {
+      predicate: (request) => request === first,
+    });
+    const secondRequest = page.waitForRequest(explainUrl);
+    await menu.click();
+    await explain.click();
+    const second = await secondRequest;
+    expect(second.postDataJSON()).toMatchObject({ statement: "SELECT 2" });
+    await firstAborted;
+    await expect(page.getByText("Explaining", { exact: true })).toBeVisible();
+    const cancel = page.getByRole("button", {
+      name: "Cancel explain",
+      exact: true,
+    });
+    await expect(cancel).toBeVisible();
+    const secondAborted = page.waitForEvent("requestfailed", {
+      predicate: (request) => request === second,
+    });
+    await cancel.click();
+    await secondAborted;
+    await expect(page.getByText("Cancelled", { exact: true })).toBeVisible();
+    await expect(cancel).toBeHidden();
+  } finally {
+    releaseResponses.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
+
 test("workbench recovers from an error and inspects the live execution plan", async ({
   page,
   checkAccessibility,

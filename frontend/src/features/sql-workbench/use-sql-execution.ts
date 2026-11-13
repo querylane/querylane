@@ -175,6 +175,9 @@ function useSqlExecution({
   );
   const [explains, setExplains] = useState<Record<string, SqlExplain>>({});
   const controllersRef = useRef(new Map<string, AbortController>());
+  // Stream patches must keep their owner after finally removes the controller:
+  // React may not apply the queued updates until the request has settled.
+  const executionOwnersRef = useRef(new Map<string, symbol>());
   const settledRef = useRef(onSettled);
   const parent = buildDatabaseName(instanceId, databaseId);
 
@@ -184,16 +187,25 @@ function useSqlExecution({
 
   useEffect(function abortInFlightOnUnmount() {
     const active = controllersRef.current;
+    const owners = executionOwnersRef.current;
     return () => {
       for (const controller of active.values()) {
         controller.abort();
       }
       active.clear();
+      owners.clear();
     };
   }, []);
 
-  function patchExecution(tabId: string, update: ExecutionPatch) {
+  function patchExecution(
+    tabId: string,
+    owner: symbol,
+    update: ExecutionPatch
+  ) {
     setExecutions((current) => {
+      if (executionOwnersRef.current.get(tabId) !== owner) {
+        return current;
+      }
       const existing = current[tabId];
       return existing ? { ...current, [tabId]: update(existing) } : current;
     });
@@ -209,12 +221,14 @@ function useSqlExecution({
 
   async function consumeStream({
     defaultSchema,
+    owner,
     rowLimit,
     signal,
     statement,
     tabId,
   }: {
     defaultSchema: string | undefined;
+    owner: symbol;
     rowLimit: number;
     signal: AbortSignal;
     statement: string;
@@ -236,7 +250,7 @@ function useSqlExecution({
       tally = tallyRows(tally, response);
       const patch = patchForResponse(response);
       if (patch) {
-        patchExecution(tabId, patch);
+        patchExecution(tabId, owner, patch);
       }
     }
     return { rowCount: tally.reported ?? tally.received };
@@ -244,14 +258,17 @@ function useSqlExecution({
 
   function settle(
     tabId: string,
-    context: { startedAt: number; statement: string },
+    context: { owner: symbol; startedAt: number; statement: string },
     outcome:
       | { error: AppUiError; status: "error" }
       | { status: "cancelled" }
       | { rowCount: number; status: "success" }
   ): ExecutionStatus {
+    if (executionOwnersRef.current.get(tabId) !== context.owner) {
+      return "cancelled";
+    }
     const finishedAt = Date.now();
-    patchExecution(tabId, (current) => ({
+    patchExecution(tabId, context.owner, (current) => ({
       ...current,
       error: outcome.status === "error" ? outcome.error : undefined,
       finishedAt,
@@ -278,10 +295,12 @@ function useSqlExecution({
     options: { defaultSchema?: string | undefined; rowLimit: number }
   ): Promise<ExecutionStatus> {
     cancel(tabId);
+    const owner = Symbol("sql-execution");
+    executionOwnersRef.current.set(tabId, owner);
     const controller = new AbortController();
     controllersRef.current.set(tabId, controller);
     const startedAt = Date.now();
-    const context = { startedAt, statement };
+    const context = { owner, startedAt, statement };
     setExecutions((current) => ({
       ...current,
       [tabId]: initialExecution(statement, options.rowLimit, startedAt),
@@ -289,6 +308,7 @@ function useSqlExecution({
     try {
       const { rowCount } = await consumeStream({
         defaultSchema: options.defaultSchema,
+        owner,
         rowLimit: options.rowLimit,
         signal: controller.signal,
         statement,
@@ -321,15 +341,18 @@ function useSqlExecution({
     const controller = new AbortController();
     controllersRef.current.set(explainKey(tabId), controller);
     const startedAt = Date.now();
-    const base = {
+    // The running object owns this request, even after controller cleanup.
+    // Replacement or clear removes that ownership before queued updates apply.
+    const pending: SqlExplain = {
       analyze: options.analyze,
       notices: [],
       startedAt,
       statement,
+      status: "running",
     };
     setExplains((current) => ({
       ...current,
-      [tabId]: { ...base, status: "running" },
+      [tabId]: pending,
     }));
     const client = createClient(SQLService, longRunningTransport);
     try {
@@ -344,33 +367,43 @@ function useSqlExecution({
         },
         { signal: controller.signal }
       );
-      setExplains((current) => ({
-        ...current,
-        [tabId]: {
-          ...base,
-          latencyMs: durationToMs(response.latency),
-          notices: response.notices,
-          rawPlan: response.plan,
-          status: "success",
-        },
-      }));
+      setExplains((current) => {
+        if (current[tabId] !== pending) {
+          return current;
+        }
+        return {
+          ...current,
+          [tabId]: {
+            ...pending,
+            latencyMs: durationToMs(response.latency),
+            notices: response.notices,
+            rawPlan: response.plan,
+            status: "success",
+          },
+        };
+      });
     } catch (error) {
       const cancelled = isCancellation(error) || controller.signal.aborted;
-      setExplains((current) => ({
-        ...current,
-        [tabId]: cancelled
-          ? { ...base, status: "cancelled" }
-          : {
-              ...base,
-              error: describeSqlExecutionError(
-                normalizeAppUiError(error, {
-                  ...SQL_WORKBENCH_ERROR_CONTEXT,
-                  action: "explain",
-                })
-              ),
-              status: "error",
-            },
-      }));
+      setExplains((current) => {
+        if (current[tabId] !== pending) {
+          return current;
+        }
+        return {
+          ...current,
+          [tabId]: cancelled
+            ? { ...pending, status: "cancelled" }
+            : {
+                ...pending,
+                error: describeSqlExecutionError(
+                  normalizeAppUiError(error, {
+                    ...SQL_WORKBENCH_ERROR_CONTEXT,
+                    action: "explain",
+                  })
+                ),
+                status: "error",
+              },
+        };
+      });
     } finally {
       if (controllersRef.current.get(explainKey(tabId)) === controller) {
         controllersRef.current.delete(explainKey(tabId));
@@ -379,6 +412,7 @@ function useSqlExecution({
   }
 
   function clear(tabId: string) {
+    executionOwnersRef.current.delete(tabId);
     cancel(tabId);
     cancelExplain(tabId);
     setExecutions((current) => {
