@@ -1,9 +1,9 @@
 import { AdminSectionError } from "@/components/admin-ops/admin-section-error";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { SectionCard } from "@/components/console-pages/console-layout";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
-import type { DataTableColumnDef } from "@/components/ui/data-table";
-import { DataTable } from "@/components/ui/data-table";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useListCatalogSyncStatesQuery } from "@/hooks/api/admin";

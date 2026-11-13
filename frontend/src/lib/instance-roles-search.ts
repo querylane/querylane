@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { rolesSortSchema } from "@/lib/metadata-table-search";
 import type { RoleKind } from "@/lib/role-display";
 
 const instanceRolesTabSchema = z.enum(["details", "map"]);
@@ -26,6 +27,7 @@ const instanceRolesTypeSchema = z
 type InstanceRolesTab = z.infer<typeof instanceRolesTabSchema>;
 interface InstanceRolesSearch {
   q?: string | undefined;
+  sort?: string | undefined;
   tab?: InstanceRolesTab | undefined;
   type?: RoleKind | undefined;
 }
@@ -47,12 +49,18 @@ function normalizeInstanceRolesTab(
 const instanceRolesSearchSchema = z
   .object({
     q: z.string().optional(),
+    sort: rolesSortSchema,
     tab: instanceRolesSearchTabSchema.optional(),
     type: instanceRolesTypeSchema.optional(),
   })
-  .transform<InstanceRolesSearch>(({ q, tab, type }) => {
+  .transform<InstanceRolesSearch>((parsed) => {
+    const { q, sort, tab, type } = parsed;
     const search: InstanceRolesSearch = {};
     const normalizedTab = normalizeInstanceRolesTab(tab);
+
+    if (Object.hasOwn(parsed, "sort")) {
+      search.sort = sort;
+    }
 
     if (q !== undefined) {
       search.q = q;

@@ -1,32 +1,13 @@
-"use client";
-
 import { Search, X } from "lucide-react";
 import { useRef } from "react";
+import { DataTableFacetedFilter } from "@/components/querylane-ui/data-table-faceted-filter";
+import type {
+  DataTableFilterFacet,
+  DataTableFilterToolbarProps,
+} from "@/components/querylane-ui/data-table-filter-types";
 import { Button } from "@/components/ui/button";
-import {
-  DataTableFacetedFilter,
-  type FacetedFilterOption,
-} from "@/components/ui/data-table-faceted-filter";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-interface DataTableFilterFacet {
-  label: string;
-  onChange: (values: string[]) => void;
-  options: FacetedFilterOption[];
-  selected: string[];
-  singleSelect?: boolean | undefined;
-}
-
-interface DataTableFilterToolbarProps {
-  className?: string | undefined;
-  dataSlot?: string | undefined;
-  facets: DataTableFilterFacet[];
-  onClearAll: () => void;
-  onSearchChange: (value: string) => void;
-  searchPlaceholder?: string | undefined;
-  searchValue: string;
-}
 
 function hasMultipleMeaningfulOptions(facet: DataTableFilterFacet) {
   return new Set(facet.options.map((option) => option.value)).size >= 2;
@@ -38,13 +19,13 @@ function DataTableFilterToolbar({
   facets,
   onClearAll,
   onSearchChange,
+  onSearchCommit,
   searchPlaceholder = "Filter...",
   searchValue,
 }: DataTableFilterToolbarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const visibleFacets = facets.filter(
-    (facet) =>
-      facet.selected.length > 0 || hasMultipleMeaningfulOptions(facet)
+    (facet) => facet.selected.length > 0 || hasMultipleMeaningfulOptions(facet)
   );
   const hasActiveFilters =
     Boolean(searchValue) || facets.some((facet) => facet.selected.length > 0);
@@ -78,7 +59,15 @@ function DataTableFilterToolbar({
           aria-label={searchPlaceholder}
           className="h-8 pl-8 text-sm"
           name="table-filter"
-          onChange={(event) => onSearchChange(event.target.value)}
+          onBlur={onSearchCommit}
+          onChange={(event) => {
+            onSearchChange(event.target.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onSearchCommit?.();
+            }
+          }}
           placeholder={searchPlaceholder}
           ref={searchInputRef}
           value={searchValue}
@@ -87,7 +76,9 @@ function DataTableFilterToolbar({
       {visibleFacets.map((facet) => (
         <DataTableFacetedFilter
           key={facet.label}
-          onSelectedValuesChange={(values) => handleFacetChange(facet, values)}
+          onSelectedValuesChange={(values) => {
+            handleFacetChange(facet, values);
+          }}
           options={facet.options}
           selectedValues={facet.selected}
           singleSelect={facet.singleSelect}
@@ -110,5 +101,4 @@ function DataTableFilterToolbar({
   );
 }
 
-export type { DataTableFilterFacet, DataTableFilterToolbarProps };
 export { DataTableFilterToolbar };

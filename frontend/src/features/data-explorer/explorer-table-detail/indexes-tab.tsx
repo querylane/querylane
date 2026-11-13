@@ -15,11 +15,9 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
 import {
   Tooltip,
   TooltipContent,

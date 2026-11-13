@@ -1,8 +1,9 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
+import type { SortingState } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import {
   PageHeader,
   ResourcePageState,
@@ -15,15 +16,16 @@ import {
   type RoleMapKindVisibility,
 } from "@/components/console-pages/roles-access-map-model";
 import { RolesAccessMapNotice } from "@/components/console-pages/roles-access-map-notice";
-import { SearchEmptyState } from "@/components/search-empty-state";
+import { DataTable } from "@/components/querylane-ui/data-table";
 import {
-  DataTable,
-  type DataTableColumnDef,
   DataTableFilter,
-  listColumnDefinitions,
   SortableHeader,
-} from "@/components/ui/data-table";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+} from "@/components/querylane-ui/data-table-controls";
+import { DataTableFacetedFilter } from "@/components/querylane-ui/data-table-faceted-filter";
+import {
+  type DataTableColumnDef,
+  listColumnDefinitions,
+} from "@/components/querylane-ui/data-table-model";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -37,13 +39,17 @@ import {
   SERVER_FILTER_DEBOUNCE_MS,
 } from "@/lib/domain/aip-filter";
 import {
-  type InstanceRolesSearch,
   type InstanceRolesTab,
   isInstanceRolesTab,
   isInstanceRolesType,
 } from "@/lib/instance-roles-search";
-import { useListColumnSelection, useListColumns } from "@/lib/list-columns";
+import {
+  listColumnsSearchSchema,
+  useListColumnSelection,
+  useListColumns,
+} from "@/lib/list-columns";
 import { listReadMask } from "@/lib/list-read-mask";
+import { rolesSortSchema } from "@/lib/metadata-table-search";
 import { handleNavigationResult } from "@/lib/navigation-errors";
 import {
   deriveRoleKind,
@@ -56,6 +62,7 @@ import { handleAsyncAction } from "@/lib/ui-action";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
+  useUrlTableSorting,
 } from "@/lib/url-search-state";
 import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
@@ -63,16 +70,22 @@ import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 type KindFilter = "all" | RoleKind;
 
 function normalizeRolesNavigateSearch(previous: {
+  columns?: unknown;
+  columnOrder?: unknown;
+  listSort?: unknown;
   q?: unknown;
+  sort?: unknown;
   tab?: unknown;
   type?: unknown;
-}): InstanceRolesSearch {
+}) {
   const q = typeof previous.q === "string" ? previous.q : undefined;
   const tab = typeof previous.tab === "string" ? previous.tab : undefined;
   const type = typeof previous.type === "string" ? previous.type : undefined;
 
   return {
+    ...listColumnsSearchSchema.parse(previous),
     q,
+    sort: rolesSortSchema.parse(previous.sort),
     tab: isInstanceRolesTab(tab) ? tab : undefined,
     type: isInstanceRolesType(type) ? type : undefined,
   };
@@ -84,6 +97,11 @@ const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
   repl: true,
   super: true,
 } satisfies RoleMapKindVisibility;
+
+const EMPTY_ROLES: Role[] = [];
+function roleRows(data: { roles: Role[] } | undefined): Role[] {
+  return data?.roles ?? EMPTY_ROLES;
+}
 
 const ROLE_TYPE_FILTERS: {
   id: RoleKind;
@@ -244,10 +262,6 @@ function rolesDescription(
   return `${counts.all} ${roleUnit} · ${loginCount} can log in · ${counts.group} ${groupUnit} · ${counts.builtin} built-in`;
 }
 
-function hasNoMatchingRoles(visibleRoleCount: number, roleCount: number) {
-  return visibleRoleCount === 0 && roleCount > 0;
-}
-
 function roleMatchesTableFilters(
   role: Role,
   query: string,
@@ -266,61 +280,59 @@ function RolesDetailsContent({
   error,
   filter,
   isPending,
+  isRefreshing,
   onFilterChange,
   onOpenRole,
   partial,
-  roleCount,
   roles,
+  sorting,
+  onSortingChange,
+  hasActiveFilters,
 }: {
   columnSelection: ReturnType<typeof useListColumnSelection>;
   error: unknown;
   filter: string;
   isPending: boolean;
+  isRefreshing: boolean;
   onFilterChange: (value: string) => void;
   onOpenRole: (role: Role) => void;
   partial: boolean;
-  roleCount: number;
   roles: Role[];
+  sorting: SortingState;
+  onSortingChange: (value: SortingState) => void;
+  hasActiveFilters: boolean;
 }) {
-  let body: ReactNode;
-  if (isPending) {
-    body = (
-      <p className="text-sm text-muted-foreground" role="status">
-        Loading matching roles…
-      </p>
-    );
-  } else if (Boolean(error)) {
-    body = (
+  if (Boolean(error)) {
+    return (
       <p className="text-sm text-destructive" role="alert">
         Could not load matching roles.
       </p>
     );
-  } else if (hasNoMatchingRoles(roles.length, roleCount)) {
-    body = <SearchEmptyState resourceName="roles" />;
-  } else {
-    body = (
+  }
+  return (
+    <div className="flex flex-col gap-4">
       <DataTable
         columnSelection={columnSelection}
         columns={COLUMNS}
         data={roles}
+        distinguishEmpty={true}
         emptyResourceName="roles"
         filterColumn="roleName"
         filterValue={filter}
-        initialSorting={[{ desc: false, id: "roleName" }]}
+        hasActiveFilters={hasActiveFilters}
+        isPending={isPending}
+        isRefreshing={isRefreshing}
         onFilterChange={onFilterChange}
         onRowClick={onOpenRole}
+        onSortingChange={onSortingChange}
+        pendingMessage="Loading matching roles…"
+        sorting={sorting}
         tableKey="instance-roles"
       />
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {body}
       {partial ? (
         <p className="text-xs text-muted-foreground" role="status">
-          Showing the first 5,000 matching roles. Refine your search to narrow
-          the results.
+          Showing the first 5,000 matching roles. Sorting applies to these
+          loaded roles. Refine your search to narrow the results.
         </p>
       ) : null}
     </div>
@@ -359,6 +371,40 @@ function selectRoleMapData({
   };
 }
 
+function rolesTablePendingState(
+  query: { isPending: boolean; isFetching: boolean },
+  filter: string,
+  debouncedFilter: string
+) {
+  return {
+    isPending: query.isPending || filter !== debouncedFilter,
+    isRefreshing: query.isFetching && !query.isPending,
+  };
+}
+function rolesHeaderDescription(
+  query: { isPending: boolean; data?: { nextPageToken: string } | undefined },
+  counts: ReturnType<typeof summarizeRoles>["counts"],
+  loginCount: number
+) {
+  if (query.isPending) {
+    return undefined;
+  }
+  return rolesPageDescription(
+    counts,
+    loginCount,
+    Boolean(query.data?.nextPageToken)
+  );
+}
+function roleTypeOptions(
+  counts: ReturnType<typeof summarizeRoles>["counts"],
+  isPending: boolean
+) {
+  return ROLE_TYPE_FILTERS.map((entry) => ({
+    ...(isPending ? {} : { count: counts[entry.id] }),
+    label: entry.label,
+    value: entry.id,
+  }));
+}
 function roleSummaryQueryInput(
   instanceId: string,
   tab: InstanceRolesTab,
@@ -381,7 +427,10 @@ export function InstanceRolesPage({
   tab?: InstanceRolesTab | undefined;
   type?: RoleKind | undefined;
 }) {
-  const [filter, setFilter] = useUrlTableSearch(searchRoute);
+  const [filter, setFilter, flushFilter] = useUrlTableSearch(searchRoute, {
+    debounce: true,
+  });
+  const [sorting, setSorting] = useUrlTableSorting(searchRoute, "roles");
   const [roleSelectedNodeId, setRoleSelectedNodeId] = useState<string | null>(
     null
   );
@@ -417,7 +466,7 @@ export function InstanceRolesPage({
   const rolesQuery = useListAllRolesQuery(
     roleSummaryQueryInput(instanceId, activeTab, readMask)
   );
-  const roles = rolesQuery.data?.roles ?? [];
+  const roles = roleRows(rolesQuery.data);
 
   const debouncedFilter = useDebouncedValue(filter, SERVER_FILTER_DEBOUNCE_MS);
   const serverFilter = buildRoleFilter({ query: debouncedFilter, type });
@@ -429,7 +478,7 @@ export function InstanceRolesPage({
     },
     { enabled: activeTab === "details" }
   );
-  const tableRoles = (filteredRolesQuery.data?.roles ?? []).filter((role) =>
+  const tableRoles = roleRows(filteredRolesQuery.data).filter((role) =>
     roleMatchesTableFilters(role, filter, type)
   );
 
@@ -465,40 +514,48 @@ export function InstanceRolesPage({
     setRoleSelectedNodeId(null);
   }
 
+  async function publishRolesTab(next: InstanceRolesTab) {
+    if (!(await flushFilter())) {
+      return;
+    }
+    setOptimisticTab(next);
+    await navigate({
+      hash: true,
+      params: { instanceId },
+      replace: false,
+      resetScroll: false,
+      search: (previous) => ({
+        ...normalizeRolesNavigateSearch(previous),
+        tab: next === "details" ? undefined : next,
+      }),
+      to: "/instances/$instanceId/roles",
+    });
+  }
+
   function handleRolesTabChange(next: string) {
     if (!isInstanceRolesTab(next)) {
       return;
     }
-    setOptimisticTab(next);
-    handleNavigationResult(
-      navigate({
-        params: { instanceId },
-        replace: false,
-        resetScroll: false,
-        search: (previous) => ({
-          ...previous,
-          ...normalizeRolesNavigateSearch(previous),
-          tab: next === "details" ? undefined : next,
-        }),
-        to: "/instances/$instanceId/roles",
-      }),
-      { area: "roles.tab" }
-    );
+    handleNavigationResult(publishRolesTab(next), { area: "roles.tab" });
   }
 
   function handleRoleTypeChange(nextType: RoleKind | undefined) {
     handleNavigationResult(
-      navigate({
-        params: { instanceId },
-        replace: false,
-        resetScroll: false,
-        search: (previous) => ({
-          ...previous,
-          ...normalizeRolesNavigateSearch(previous),
-          type: nextType,
-        }),
-        to: "/instances/$instanceId/roles",
-      }),
+      flushFilter().then((published) =>
+        published
+          ? navigate({
+              hash: true,
+              params: { instanceId },
+              replace: false,
+              resetScroll: false,
+              search: (previous) => ({
+                ...normalizeRolesNavigateSearch(previous),
+                type: nextType,
+              }),
+              to: "/instances/$instanceId/roles",
+            })
+          : undefined
+      ),
       { area: "roles.type-filter" }
     );
   }
@@ -514,17 +571,29 @@ export function InstanceRolesPage({
     );
   }
 
+  function retryRolesPage() {
+    return activeTab === "details"
+      ? Promise.all([rolesQuery.refetch(), filteredRolesQuery.refetch()])
+      : rolesQuery.refetch();
+  }
+
   const rolesDetailsContent = (
     <RolesDetailsContent
       columnSelection={columnSelection}
       error={filteredRolesQuery.error}
       filter={filter}
-      isPending={filteredRolesQuery.isPending}
+      hasActiveFilters={Boolean(type)}
+      {...rolesTablePendingState(filteredRolesQuery, filter, debouncedFilter)}
       onFilterChange={handleAsyncAction(setFilter)}
       onOpenRole={handleOpenRole}
+      onSortingChange={handleAsyncAction(async (next: SortingState) => {
+        if (await flushFilter()) {
+          setSorting(next);
+        }
+      })}
       partial={Boolean(filteredRolesQuery.data?.nextPageToken)}
-      roleCount={roles.length}
       roles={tableRoles}
+      sorting={sorting}
     />
   );
 
@@ -562,82 +631,76 @@ export function InstanceRolesPage({
       />
     </div>
   );
+  const content = (
+    <div className="flex w-full flex-col gap-6">
+      <PageHeader
+        description={rolesHeaderDescription(rolesQuery, counts, loginCount)}
+        eyebrow="Instance"
+        title="Roles"
+      />
+
+      <Tabs
+        className="w-full"
+        onValueChange={handleRolesTabChange}
+        value={activeTab}
+      >
+        {/* One toolbar row: search + type filter lead on the left like every
+              other page's toolbar; the view switcher sits on the right because
+              both filters apply to the table and the access map alike. */}
+        <div className="flex min-w-0 flex-wrap items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="min-w-0 sm:flex-none">
+              <DataTableFilter
+                onChange={handleAsyncAction(setFilter)}
+                onCommit={handleAsyncAction(flushFilter)}
+                placeholder="Search roles…"
+                value={filter}
+              />
+            </div>
+            <DataTableFacetedFilter
+              onSelectedValuesChange={(values) => {
+                handleRoleTypeChange(
+                  values.find((value) => isInstanceRolesType(value))
+                );
+              }}
+              options={roleTypeOptions(counts, rolesQuery.isPending)}
+              selectedValues={[type].filter((value) =>
+                isInstanceRolesType(value)
+              )}
+              singleSelect={true}
+              title="Type"
+            />
+          </div>
+          <div hidden={activeTab !== "details"}>
+            <ListColumnSelector columns={columnOptions} {...columnSelection} />
+          </div>
+          <TabsList className="shrink-0 basis-full group-data-horizontal/tabs:h-8 sm:basis-auto">
+            <TabsTrigger value="details">Table</TabsTrigger>
+            <TabsTrigger value="map">Access map</TabsTrigger>
+          </TabsList>
+        </div>
+        {/* Tabs root already adds gap-2; mt-1 lands on the 12px toolbar→table
+              gap that the shared DataTable toolbar uses on other pages. */}
+        <TabsContent className="mt-1" value="details">
+          {rolesDetailsContent}
+        </TabsContent>
+        <TabsContent className="mt-1" value="map">
+          {rolesMapContent}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
   return (
     <ResourcePageState
       area="console.roles"
       error={rolesQuery.error}
       hasData={Boolean(rolesQuery.data)}
       loading={rolesQuery.isPending}
-      retry={rolesQuery.refetch}
+      loadingContent={content}
+      retry={retryRolesPage}
       title="Roles"
     >
-      <div className="flex w-full flex-col gap-6">
-        <PageHeader
-          description={rolesPageDescription(
-            counts,
-            loginCount,
-            Boolean(rolesQuery.data?.nextPageToken)
-          )}
-          eyebrow="Instance"
-          title="Roles"
-        />
-
-        <Tabs
-          className="w-full"
-          onValueChange={handleRolesTabChange}
-          value={activeTab}
-        >
-          {/* One toolbar row: search + type filter lead on the left like every
-              other page's toolbar; the view switcher sits on the right because
-              both filters apply to the table and the access map alike. */}
-          <div className="flex min-w-0 flex-wrap items-start gap-2">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <div className="min-w-0 sm:flex-none">
-                <DataTableFilter
-                  onChange={handleAsyncAction(setFilter)}
-                  placeholder="Search roles…"
-                  value={filter}
-                />
-              </div>
-              <DataTableFacetedFilter
-                onSelectedValuesChange={(values) => {
-                  handleRoleTypeChange(
-                    values.find((value) => isInstanceRolesType(value))
-                  );
-                }}
-                options={ROLE_TYPE_FILTERS.map((entry) => ({
-                  count: counts[entry.id],
-                  label: entry.label,
-                  value: entry.id,
-                }))}
-                selectedValues={[type].filter((value) =>
-                  isInstanceRolesType(value)
-                )}
-                singleSelect={true}
-                title="Type"
-              />
-            </div>
-            <div hidden={activeTab !== "details"}>
-              <ListColumnSelector
-                columns={columnOptions}
-                {...columnSelection}
-              />
-            </div>
-            <TabsList className="shrink-0 basis-full group-data-horizontal/tabs:h-8 sm:basis-auto">
-              <TabsTrigger value="details">Table</TabsTrigger>
-              <TabsTrigger value="map">Access map</TabsTrigger>
-            </TabsList>
-          </div>
-          {/* Tabs root already adds gap-2; mt-1 lands on the 12px toolbar→table
-              gap that the shared DataTable toolbar uses on other pages. */}
-          <TabsContent className="mt-1" value="details">
-            {rolesDetailsContent}
-          </TabsContent>
-          <TabsContent className="mt-1" value="map">
-            {rolesMapContent}
-          </TabsContent>
-        </Tabs>
-      </div>
+      {content}
     </ResourcePageState>
   );
 }

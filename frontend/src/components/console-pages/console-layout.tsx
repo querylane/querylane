@@ -46,10 +46,23 @@ interface ResourcePageStateProps {
   error?: unknown;
   hasData: boolean;
   loading: boolean;
+  loadingContent?: React.ReactNode;
   notFoundState?: React.ReactNode | undefined;
   retry?: () => Promise<unknown> | undefined;
   title: string;
 }
+function resourceLoadingContent(title: string, content?: React.ReactNode) {
+  return (
+    content ?? (
+      <BrandedLoadingState
+        description="Fetching live metadata from the backend."
+        title={title}
+        variant="section"
+      />
+    )
+  );
+}
+
 export function SummaryCard({ label, value }: SummaryCardProps) {
   return (
     <Card className="h-16" presentation="bordered" size="sm">
@@ -263,6 +276,7 @@ export function ResourcePageState({
   error,
   hasData,
   loading,
+  loadingContent,
   notFoundState,
   retry,
   title,
@@ -292,13 +306,7 @@ export function ResourcePageState({
     );
   }
   if (loading && !hasData) {
-    return (
-      <BrandedLoadingState
-        description="Fetching live metadata from the backend."
-        title={title}
-        variant="section"
-      />
-    );
+    return resourceLoadingContent(title, loadingContent);
   }
   if (!hasData) {
     return notFoundState ?? <NotFoundState containerClassName="min-h-[60vh]" />;

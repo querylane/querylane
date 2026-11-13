@@ -46,6 +46,14 @@ const state = rs.hoisted(
   })
 );
 
+const testLocation = rs.hoisted(() => ({
+  hash: "",
+  pathname: "/",
+  searchStr: "",
+  search: {},
+  state: {},
+}));
+
 rs.mock("@tanstack/react-router", () => ({
   Link: MockLink,
   useLocation: ({
@@ -57,14 +65,14 @@ rs.mock("@tanstack/react-router", () => ({
       searchStr: string;
     }) => unknown;
   } = {}) => {
-    const location = {
-      hash: "",
-      pathname: `/instances/${CONSOLE_INSTANCE_ID}`,
-      searchStr: "",
-    };
-    return select ? select(location) : location;
+    testLocation.pathname = `/instances/${CONSOLE_INSTANCE_ID}`;
+    return select ? select(testLocation) : testLocation;
   },
   useNavigate: () => state.navigate,
+  useRouter: () => ({
+    history: { subscribe: () => () => undefined },
+    state: { location: testLocation },
+  }),
   useSearch: ({
     select,
   }: {
