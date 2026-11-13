@@ -2,8 +2,8 @@ import { expect, test } from "@rstest/core";
 import { migrationViolations } from "./check-ui-sdk-migration";
 
 const dependencies = {
-  "@ui-sdk/core": "0.1.0-beta.1",
-  "@ui-sdk/react": "0.1.0-beta.1",
+  "@ui-sdk/core": "0.1.0-beta.2",
+  "@ui-sdk/react": "0.1.0-beta.2",
 };
 
 test("accepts pinned sdk packages and migrated imports", () => {
@@ -23,7 +23,7 @@ test("rejects unpinned adapters, legacy dependencies, and feature imports", () =
       {
         dependencies: {
           ...dependencies,
-          "@ui-sdk/react": "^0.1.0-beta.1",
+          "@ui-sdk/react": "^0.1.0-beta.2",
           cmdk: "1.1.1",
         },
       },
@@ -32,7 +32,7 @@ test("rejects unpinned adapters, legacy dependencies, and feature imports", () =
       ])
     )
   ).toEqual([
-    "@ui-sdk/react must be pinned to 0.1.0-beta.1",
+    "@ui-sdk/react must be pinned to 0.1.0-beta.2",
     "Remove replaced dependency cmdk",
     "src/feature.tsx still references @base-ui/react",
   ]);
