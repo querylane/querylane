@@ -4,6 +4,7 @@ import * as reactActual from "react" with { rstest: "importActual" };
 import type { SortColumn } from "react-data-grid";
 import {
   MAX_SORT_COLUMNS,
+  pushPageToken,
   useTableDataController,
 } from "@/features/data-explorer/table-data/use-table-data-controller";
 import { isRecord } from "@/lib/value-guards";
@@ -283,7 +284,15 @@ describe("useTableDataController", () => {
     });
   });
 
-  test("keeps token state when pushing the existing next token", () => {
+  test("truncates obsolete forward tokens when the continuation changes", () => {
+    const tokens = ["", "T2", "T3"];
+    expect(pushPageToken(tokens, 0, "new-T2")).toEqual(["", "new-T2"]);
+    expect(pushPageToken(tokens, 1, "new-T3")).toEqual(["", "T2", "new-T3"]);
+    expect(pushPageToken(tokens, 0, "T2")).toBe(tokens);
+    expect(tokens).toEqual(["", "T2", "T3"]);
+  });
+
+  test("advances the page while reusing the existing next token", () => {
     const controller = useTableDataController({
       name: "table-a",
       onPageSizeChange: rs.fn(),
@@ -306,6 +315,9 @@ describe("useTableDataController", () => {
       tokens: ["", "page-2"],
     };
 
-    expect(pushUpdater(previous)).toBe(previous);
+    const next = pushUpdater(previous);
+    expect(next.currentPageIndex).toBe(1);
+    expect(next.tokens).toBe(previous.tokens);
+    expect(pushUpdater(next)).toBe(next);
   });
 });
