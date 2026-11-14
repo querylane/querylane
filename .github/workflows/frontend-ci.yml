@@ -202,7 +202,8 @@ jobs:
     container:
       image: *playwright_image
       options: --ipc=host
-    timeout-minutes: 8
+    # Include browser-image setup and the full single-worker E2E/a11y suite.
+    timeout-minutes: 10
     env:
       HOME: /root
     defaults:
