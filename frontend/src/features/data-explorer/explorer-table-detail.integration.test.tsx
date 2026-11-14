@@ -415,7 +415,9 @@ function getTableRowFor(text: string) {
 }
 
 function getIndexSummaryStrip() {
-  const strip = document.querySelector('[data-slot="index-summary-strip"]');
+  const strip = document.querySelector(
+    '[data-querylane-slot="index-summary-strip"]'
+  );
   if (!strip) {
     throw new Error("Expected the index summary strip to render.");
   }
@@ -423,7 +425,9 @@ function getIndexSummaryStrip() {
 }
 
 function getSearchEmptyState() {
-  const emptyState = document.querySelector('[data-slot="search-empty-state"]');
+  const emptyState = document.querySelector(
+    '[data-querylane-slot="search-empty-state"]'
+  );
   if (!emptyState) {
     throw new Error("Expected the filtered-empty state to render.");
   }
@@ -590,8 +594,9 @@ describe("table detail definition document", () => {
     const reproduceHeading = screen.getByRole("heading", {
       name: "Reproduce locally",
     });
-    const reproduceCard =
-      reproduceHeading.closest<HTMLElement>('[data-slot="card"]');
+    const reproduceCard = reproduceHeading.closest<HTMLElement>(
+      '[data-querylane-slot="card"]'
+    );
     if (!reproduceCard) {
       throw new Error("Expected the reproduce locally card to render.");
     }
@@ -612,7 +617,7 @@ describe("table detail definition document", () => {
     });
     expect(
       reproduceHeading
-        .closest('[data-slot="card-header"]')
+        .closest('[data-querylane-slot="card-header"]')
         ?.contains(copyAllSteps)
     ).toBe(true);
     const highlightedCommands = [
@@ -758,8 +763,8 @@ describe("table detail tab routing", () => {
     expect(
       screen
         .getByRole("tab", { name: COLUMNS_TAB_RE })
-        .hasAttribute("data-active")
-    ).toBe(true);
+        .getAttribute("aria-selected")
+    ).toBe("true");
 
     await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
 
@@ -841,7 +846,7 @@ describe("table detail constraints tab", () => {
     const search = screen.getByRole("textbox", {
       name: "Search constraints…",
     });
-    const kindFilter = screen.getByRole("button", { name: KIND_FILTER_RE });
+    const kindFilter = screen.getByRole("combobox", { name: KIND_FILTER_RE });
 
     await user.type(search, "account_id");
 
@@ -850,7 +855,7 @@ describe("table detail constraints tab", () => {
     expect(screen.queryByText("customers_status_check")).toBeNull();
 
     await user.click(kindFilter);
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "CHECK" }));
+    await user.click(screen.getByRole("option", { name: "CHECK" }));
 
     expect(getSearchEmptyState().textContent).toContain("No results found");
 
@@ -981,7 +986,7 @@ describe("table detail columns tab", () => {
       "Default",
       "Generation",
     ]) {
-      expect(screen.getByRole("button", { name: filter })).toBeTruthy();
+      expect(screen.getByRole("combobox", { name: filter })).toBeTruthy();
     }
     expect(screen.getByText("Catalog metadata")).toBeTruthy();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
@@ -1013,10 +1018,8 @@ describe("table detail columns tab", () => {
       screen.getAllByTitle("Not available from the current column metadata API")
     ).toHaveLength(16);
 
-    await user.click(screen.getByRole("button", { name: "Nullability" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Nullable" })
-    );
+    await user.click(screen.getByRole("combobox", { name: "Nullability" }));
+    await user.click(screen.getByRole("option", { name: "Nullable" }));
     await waitFor(() => {
       expect(screen.queryByText("Surrogate key")).toBeNull();
     });
@@ -1222,8 +1225,8 @@ describe("table detail triggers tab", () => {
     expect(screen.getAllByText("trg_event_10").length).toBeGreaterThan(0);
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "Enabled" }));
+    await user.click(screen.getByRole("combobox", { name: "State" }));
+    await user.click(screen.getByRole("option", { name: "Enabled" }));
     expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
@@ -1472,11 +1475,9 @@ describe("table detail policies tab pagination", () => {
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
     );
-    await user.click(screen.getByRole("button", { name: "Mode" }));
-    await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Restrictive" })
-    );
-    await user.click(screen.getByRole("menuitem", { name: "Clear filter" }));
+    await user.click(screen.getByRole("combobox", { name: "Mode" }));
+    await user.click(screen.getByRole("option", { name: "Restrictive" }));
+    await user.click(screen.getByRole("button", { name: "Clear filter" }));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })

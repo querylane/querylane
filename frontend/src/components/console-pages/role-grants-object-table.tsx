@@ -1,5 +1,3 @@
-"use client";
-
 import type { RowData, SortingState } from "@tanstack/react-table";
 import { type ReactNode, useDeferredValue } from "react";
 import { HeldPillStrip } from "@/components/console-pages/role-grants-pills";
@@ -14,12 +12,9 @@ import {
   slugForObjectType,
 } from "@/components/console-pages/role-grants-shared";
 import { Badge } from "@/components/querylane-ui/badge";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { DataTable, SortableHeader } from "@/components/ui/data-table";
 import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
 // Object types in the order their tabs appear, matching the Owns view.

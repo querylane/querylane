@@ -1,8 +1,12 @@
 "use client";
 
+import { CatchBoundary } from "@tanstack/react-router";
+import { announce, type ChangeDetails, type ChangeSource } from "@ui-sdk/core";
+import { withSource } from "@ui-sdk/core/observe";
+import { usePrimitive } from "@ui-sdk/react/primitive";
 import { CircleCheck, CircleExclamationPoint, Save } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
+import { Controller, useWatch } from "react-hook-form";
 import { SectionCard } from "@/components/console-pages/console-layout";
 import {
   type InstanceLabelEntry,
@@ -38,10 +42,17 @@ import { Button } from "@/components/ui/button";
 import { DisabledReasonButton } from "@/components/ui/disabled-reason-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectTrigger } from "@/components/ui/select";
+import { useAgentDraftStore } from "@/features/agent-drafts/agent-draft-state";
+import {
+  agentDraftChangeError,
+  type DraftKey,
+  instanceDraft,
+} from "@/features/agent-drafts/instance-draft";
 import {
   formErrorMessages,
   labelRowErrors,
 } from "@/features/instance-label-errors";
+import { useAgentAccessStore } from "@/features/user-settings/agent-access";
 import type { UseProtoFormReturn } from "@/hooks/use-proto-form/use-proto-form";
 import { useProtoForm } from "@/hooks/use-proto-form/use-proto-form";
 import {
@@ -61,6 +72,24 @@ import {
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
 } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+
+const LazyAgentDraftPanel = lazy(() =>
+  import("@/features/agent-drafts/agent-draft-panel").then((module) => ({
+    default: module.AgentDraftPanel,
+  }))
+);
+function AgentDraftUnavailable() {
+  return (
+    <p
+      className="mt-4 text-sm text-destructive"
+      data-agent-hidden={true}
+      role="alert"
+    >
+      Draft review is unavailable. Disable agent access and reload to try again.
+      Existing draft fields have not been saved.
+    </p>
+  );
+}
 
 const REQUIRED_ERROR_BY_FIELD = {
   database: "Default database is required.",
@@ -222,6 +251,7 @@ function InstanceConfigurationFields({
   isConfigManaged,
   sslMode,
   sslNegotiation,
+  onDraftFieldChange,
 }: {
   credentialGuidanceId: string;
   credentialsUnreadable: boolean;
@@ -230,6 +260,11 @@ function InstanceConfigurationFields({
   isConfigManaged: boolean;
   sslMode: string;
   sslNegotiation: string;
+  onDraftFieldChange: (
+    key: DraftKey,
+    value: unknown,
+    source: ChangeSource
+  ) => boolean;
 }) {
   const displayNameId = useId();
   const hostId = useId();
@@ -246,12 +281,28 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={displayNameId}>
           Display name
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.displayName)}
-          data-instance-config-field="displayName"
-          disabled={isConfigManaged}
-          id={displayNameId}
-          {...form.register("displayName")}
+        <Controller
+          control={form.control}
+          name="displayName"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.displayName)}
+              data-instance-config-field="displayName"
+              disabled={isConfigManaged}
+              id={displayNameId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value, details) => {
+                if (!onDraftFieldChange("displayName", value, details.source)) {
+                  details.cancel();
+                }
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.displayName} />
       </div>
@@ -259,12 +310,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={hostId}>
           Host
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.host)}
-          data-instance-config-field="host"
-          disabled={isConfigManaged}
-          id={hostId}
-          {...form.register("config.host")}
+        <Controller
+          control={form.control}
+          name="config.host"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.host)}
+              data-instance-config-field="host"
+              disabled={isConfigManaged}
+              id={hostId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.host} />
       </div>
@@ -272,13 +337,27 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={portId}>
           Port
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.port)}
-          data-instance-config-field="port"
-          disabled={isConfigManaged}
-          id={portId}
-          type="number"
-          {...form.register("config.port", { valueAsNumber: true })}
+        <Controller
+          control={form.control}
+          name="config.port"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.port)}
+              data-instance-config-field="port"
+              disabled={isConfigManaged}
+              id={portId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value === "" ? Number.NaN : Number(value));
+              }}
+              ref={field.ref}
+              type="number"
+              value={Number.isFinite(field.value) ? String(field.value) : ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.port} />
       </div>
@@ -286,12 +365,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={databaseId}>
           Default database
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.database)}
-          data-instance-config-field="database"
-          disabled={isConfigManaged}
-          id={databaseId}
-          {...form.register("config.database")}
+        <Controller
+          control={form.control}
+          name="config.database"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.database)}
+              data-instance-config-field="database"
+              disabled={isConfigManaged}
+              id={databaseId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.database} />
       </div>
@@ -299,12 +392,26 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={usernameId}>
           Username
         </label>
-        <Input
-          aria-invalid={Boolean(fieldErrors.username)}
-          data-instance-config-field="username"
-          disabled={isConfigManaged}
-          id={usernameId}
-          {...form.register("config.username")}
+        <Controller
+          control={form.control}
+          name="config.username"
+          render={({ field }) => (
+            <Input
+              aria-invalid={Boolean(fieldErrors.username)}
+              data-instance-config-field="username"
+              disabled={isConfigManaged}
+              id={usernameId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.username} />
       </div>
@@ -312,15 +419,29 @@ function InstanceConfigurationFields({
         <label className="text-sm" htmlFor={passwordId}>
           Password
         </label>
-        <PasswordInput
-          aria-describedby={
-            credentialsUnreadable ? credentialGuidanceId : undefined
-          }
-          aria-invalid={Boolean(fieldErrors.password)}
-          data-instance-config-field="password"
-          disabled={isConfigManaged}
-          id={passwordId}
-          {...form.register("config.password")}
+        <Controller
+          control={form.control}
+          name="config.password"
+          render={({ field }) => (
+            <PasswordInput
+              aria-describedby={
+                credentialsUnreadable ? credentialGuidanceId : undefined
+              }
+              aria-invalid={Boolean(fieldErrors.password)}
+              data-instance-config-field="password"
+              disabled={isConfigManaged}
+              id={passwordId}
+              name={field.name}
+              onBlur={() => {
+                field.onBlur();
+              }}
+              onValueChange={(value) => {
+                field.onChange(value);
+              }}
+              ref={field.ref}
+              value={field.value ?? ""}
+            />
+          )}
         />
         <FieldError error={fieldErrors.password} />
       </div>
@@ -331,13 +452,9 @@ function InstanceConfigurationFields({
           </label>
           <Select
             disabled={isConfigManaged}
-            onValueChange={(value) => {
-              if (isNonEmptyString(value)) {
-                form.setValue("config.sslMode", toSslMode(value), {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                  shouldValidate: true,
-                });
+            onValueChange={(value, details) => {
+              if (!onDraftFieldChange("sslMode", value, details.source)) {
+                details.cancel();
               }
             }}
             value={sslMode}
@@ -362,17 +479,11 @@ function InstanceConfigurationFields({
           </label>
           <Select
             disabled={isConfigManaged}
-            onValueChange={(value) => {
-              if (isNonEmptyString(value)) {
-                form.setValue(
-                  "config.sslNegotiation",
-                  toSslNegotiation(value),
-                  {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true,
-                  }
-                );
+            onValueChange={(value, details) => {
+              if (
+                !onDraftFieldChange("sslNegotiation", value, details.source)
+              ) {
+                details.cancel();
               }
             }}
             value={sslNegotiation}
@@ -448,6 +559,8 @@ function InstanceConfigurationSection({
   ) => unknown;
   pending: boolean;
 }) {
+  const agentEnabled = useAgentAccessStore((state) => state.enabled);
+  const [draftRefusal, setDraftRefusal] = useState<string | null>(null);
   const credentialGuidanceId = useId();
   const formDefaults = createInstanceFormDefaults(instance);
   const form = useProtoForm(InstanceSchema, {
@@ -511,6 +624,91 @@ function InstanceConfigurationSection({
       shouldValidate: true,
     });
   };
+  const draftValue = {
+    displayName: values.displayName ?? "",
+    labels,
+    sslMode,
+    sslNegotiation,
+  };
+  function allowDraftChange(
+    key: DraftKey,
+    value: unknown,
+    details: Pick<ChangeDetails, "source" | "cancel">
+  ) {
+    let reason: string | null = null;
+    if (details.source === "agent") {
+      reason = pending
+        ? "Wait for the current save to finish."
+        : agentDraftChangeError(draftValue, key, value);
+    }
+    if (reason !== null) {
+      details.cancel();
+      setDraftRefusal(
+        `The agent request was refused: ${reason} Existing draft fields were kept.`
+      );
+      announce(reason);
+      return false;
+    }
+    setDraftRefusal(null);
+    return true;
+  }
+  const draft = usePrimitive(instanceDraft, {
+    ...draftValue,
+    disabled: isConfigManaged,
+    pending,
+    onDisplayNameChange(value, details) {
+      if (allowDraftChange("displayName", value, details)) {
+        form.setValue("displayName", value, {
+          shouldDirty: true,
+          shouldTouch: details.source === "agent",
+          shouldValidate: true,
+        });
+      }
+    },
+    onLabelsChange(value, details) {
+      if (allowDraftChange("labels", value, details)) {
+        handleLabelsChange(value);
+      }
+    },
+    onSslModeChange(value, details) {
+      if (allowDraftChange("sslMode", value, details)) {
+        form.setValue("config.sslMode", toSslMode(value), {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+      }
+    },
+    onSslNegotiationChange(value, details) {
+      if (allowDraftChange("sslNegotiation", value, details)) {
+        form.setValue("config.sslNegotiation", toSslNegotiation(value), {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+      }
+    },
+  });
+  function changeDraftField(
+    key: DraftKey,
+    value: unknown,
+    source: ChangeSource
+  ) {
+    return withSource(source, () => {
+      switch (key) {
+        case "displayName":
+          return draft.api.setDisplayName(value);
+        case "labels":
+          return draft.api.setLabels(value);
+        case "sslMode":
+          return draft.api.setSslMode(value);
+        case "sslNegotiation":
+          return draft.api.setSslNegotiation(value);
+        default:
+          return false;
+      }
+    });
+  }
   const requestInvalidLabelFocus = () => {
     if (form.getFieldState("labels").invalid) {
       requestLabelFocus();
@@ -536,10 +734,13 @@ function InstanceConfigurationSection({
       return;
     }
     form.clearServerErrorContext();
+    const clearSavedDraft = useAgentDraftStore.getState().clearDraft;
     const error = await onSave(update.instance, update.updatePaths);
     if (Boolean(error)) {
       surfaceSaveError({ error, form, onInvalidSave });
       requestInvalidLabelFocus();
+    } else {
+      clearSavedDraft?.();
     }
   };
 
@@ -548,6 +749,7 @@ function InstanceConfigurationSection({
       action={
         isConfigManaged ? null : (
           <DisabledReasonButton
+            data-agent-confirm="Updates the saved instance connection. Ask the person to save these changes manually."
             disabled={pending}
             disabledReason={saveDisabledReason}
             onClick={handleAsyncAction(handleSaveClick)}
@@ -578,6 +780,7 @@ function InstanceConfigurationSection({
         fieldErrors={fieldErrors}
         form={form}
         isConfigManaged={isConfigManaged}
+        onDraftFieldChange={changeDraftField}
         sslMode={sslMode}
         sslNegotiation={sslNegotiation}
       />
@@ -586,10 +789,39 @@ function InstanceConfigurationSection({
         error={fieldErrors.labels}
         isConfigManaged={isConfigManaged}
         labels={labels}
-        onChange={handleLabelsChange}
+        onChange={(value, source = "programmatic") =>
+          changeDraftField("labels", value, source)
+        }
         rowErrors={labelRowErrors(errors.labels, labels, labelsError)}
       />
 
+      {agentEnabled ? (
+        <CatchBoundary
+          errorComponent={AgentDraftUnavailable}
+          getResetKey={() => instance.name}
+          onCatch={() => {
+            setDraftRefusal(
+              "Draft review is unavailable. Agent access was disabled; existing fields have not been saved. Reload to try again."
+            );
+            useAgentAccessStore.getState().setEnabled(false);
+          }}
+        >
+          <Suspense
+            fallback={
+              <p data-agent-hidden={true} role="status">
+                Loading draft review…
+              </p>
+            }
+          >
+            <LazyAgentDraftPanel draft={draft} />
+          </Suspense>
+        </CatchBoundary>
+      ) : null}
+      {draftRefusal === null ? null : (
+        <p className="mt-3 text-sm text-destructive" role="alert">
+          {draftRefusal}
+        </p>
+      )}
       <InstanceConfigurationNotice formNotice={formNotice} />
     </SectionCard>
   );

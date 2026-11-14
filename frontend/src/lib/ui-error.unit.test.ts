@@ -518,7 +518,7 @@ describe("error routing and reporting", () => {
     expect(dependencies.toast.error.mock.calls[0]?.[1]).toMatchObject({
       action: {
         label: "Report bug",
-        onClick: expect.any(Function) as unknown,
+        onAction: expect.any(Function) as unknown,
       },
     });
   });

@@ -162,8 +162,8 @@ function SchemaFilterBar({
           aria-label={`Filter ${unit}s in ${schema}`}
           className="h-7"
           name={`grant-filter-${schema}`}
-          onChange={(event) => {
-            setSearch(event.target.value);
+          onValueChange={(value) => {
+            setSearch(value);
           }}
           placeholder={`Filter ${total.toLocaleString()} ${unit}s in ${schema}…`}
           presentation="identifier-search"

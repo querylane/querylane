@@ -45,7 +45,53 @@ test("SSL descriptions fit a phone", async ({ page }) => {
   await mockConsoleResources(page);
   await page.goto(CONFIGURATION_URL);
   await page.getByRole("combobox", { name: "SSL mode", exact: true }).click();
-  await expect(page.getByRole("listbox")).toHaveScreenshot("ssl-phone.png");
+  const listbox = page.getByRole("listbox");
+  const descriptions = listbox.locator(
+    '[data-querylane-slot="select-item-description"]'
+  );
+  await expect(descriptions).toHaveCount(6);
+  await expect
+    .poll(() =>
+      descriptions.evaluateAll((items) =>
+        items.every((item) => item.scrollWidth <= item.clientWidth)
+      )
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      listbox.evaluate((element) => {
+        const content = element.closest<HTMLElement>(
+          '[data-querylane-slot="select-content"]'
+        );
+        return (
+          content?.hasAttribute("data-open") === true &&
+          content
+            .getAnimations({ subtree: true })
+            .every((animation) => animation.playState !== "running")
+        );
+      })
+    )
+    .toBe(true);
+  // Normalize the capture rectangle, not SDK placement: outward rounding of
+  // a fractional native popup otherwise alternates between 310px and 311px.
+  const capture = await listbox.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      fitsViewport:
+        rect.left >= 0 &&
+        rect.top >= 0 &&
+        rect.right <= globalThis.innerWidth &&
+        rect.bottom <= globalThis.innerHeight,
+      clip: {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+    };
+  });
+  expect(capture.fitsViewport).toBe(true);
+  await expect(page).toHaveScreenshot("ssl-phone.png", { clip: capture.clip });
 });
 
 test("role summary and keyboard-selected definition fit a phone", async ({

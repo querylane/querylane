@@ -1,11 +1,10 @@
-"use client";
-
 import { Link } from "@tanstack/react-router";
 import { Table2 } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+
 import { HeaderStat } from "@/features/data-explorer/explorer-shared-ui";
 import { ColumnsTab } from "@/features/data-explorer/explorer-table-detail/columns-tab";
 import { ConstraintsTab } from "@/features/data-explorer/explorer-table-detail/constraints-tab";
@@ -132,8 +131,8 @@ function TableDetail({
     setActiveTab(resolvedUrlTab);
   }
 
-  function handleTabChange(next: string) {
-    if (!isTableDetailTab(next)) {
+  function handleTabChange(next: string | null) {
+    if (next === null || !isTableDetailTab(next)) {
       return;
     }
     setActiveTab(next);

@@ -267,8 +267,8 @@ function SchemaMapToolbar({
           <Input
             aria-label="Find a table"
             className="h-8"
-            onChange={(event) => {
-              onQueryChange(event.currentTarget.value);
+            onValueChange={(value) => {
+              onQueryChange(value);
             }}
             placeholder="Find a table…"
             presentation="search"

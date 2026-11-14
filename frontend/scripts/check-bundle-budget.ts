@@ -4,6 +4,7 @@ import process from "node:process";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { z } from "zod";
 import { isNonEmptyString } from "../src/lib/value-guards";
+import { isAgentToolsModulePath } from "./agent-bundle-contract";
 
 const BYTES_PER_KIB = 1024;
 const SCRIPT_DIR = import.meta.dirname;
@@ -19,9 +20,12 @@ const UNUSED_CHART_CAPABILITY_PATTERN =
 const DEVELOPMENT_PROFILER_PATTERN =
   /(?:^|[/@])(?:react-scan|bippy)(?:[./@-]|$)/u;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
+// Native tools and draft review load only after tab opt-in. Keep the existing
+// core/initial caps, and independently bound this new optional capability.
+const MAX_DEFERRED_AGENT_TOOLS_GZIP_KIB = 20;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
-// CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
+// CodeMirror (+ lang-sql, lezer), sql-formatter and the UI SDK resizer
 // only load on the SQL workbench route, so they are split out and guarded
 // separately from core.
 // 203 (was 200): align CodeMirror/Lezer singletons after the security lock refresh.
@@ -45,7 +49,7 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 970 (was 960): main sat at 959.8; the SQL workbench adds ~6.5 KiB of
 // shared code (its icons in ui-vendor, field/resizable wrappers in
 // shared-ui, the route stub). Its own sources, CodeMirror, sql-formatter and
-// react-resizable-panels are guarded by the deferred SQL editor budget.
+// the UI SDK resizer are guarded by the deferred SQL editor budget.
 // 960 (was 950): the instance overview metrics/health work landed at 950.2,
 // exactly at the previous line. Deferred database visualization chunks are
 // split out and guarded by a separate feature budget.
@@ -85,6 +89,8 @@ interface BundleBudgetStats {
   coreTotalBrotli: number;
   coreTotalGzip: number;
   coreTotalRaw: number;
+  deferredAgentToolsAssets: BundleBudgetAsset[];
+  deferredAgentToolsGzip: number;
   deferredChartsAssets: BundleBudgetAsset[];
   deferredChartsBrotli: number;
   deferredChartsGzip: number;
@@ -123,6 +129,8 @@ interface CollectBundleBudgetStatsInput {
 
 const budgets = {
   maxAsyncScriptGzipBytes: MAX_ASYNC_SCRIPT_GZIP_KIB * BYTES_PER_KIB,
+  maxDeferredAgentToolsGzipBytes:
+    MAX_DEFERRED_AGENT_TOOLS_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredChartsGzipBytes: MAX_DEFERRED_CHARTS_GZIP_KIB * BYTES_PER_KIB,
   maxDeferredSqlEditorGzipBytes:
     MAX_DEFERRED_SQL_EDITOR_GZIP_KIB * BYTES_PER_KIB,
@@ -230,6 +238,39 @@ function productionAssetViolations(distDir: string, path: string): string[] {
   return violations;
 }
 
+function isDeferredAgentToolsAsset(distDir: string, relativePath: string) {
+  if (!relativePath.startsWith("static/js/async/agent-tools.")) {
+    return false;
+  }
+  const sources = sourceMapSources(distDir, relativePath).flatMap((source) => {
+    const normalized = source.replaceAll("\\", "/");
+    return normalized.includes("src/") || normalized.includes("node_modules/")
+      ? [normalized]
+      : [];
+  });
+  return (
+    sources.length > 0 &&
+    sources.every((source) => isAgentToolsModulePath(source))
+  );
+}
+
+function initialAgentViolations(
+  distDir: string,
+  assets: BundleBudgetAsset[],
+  initial: Set<string>
+) {
+  return assets.flatMap((asset) => {
+    if (!initial.has(asset.path)) {
+      return [];
+    }
+    return sourceMapSources(distDir, asset.path).some((source) =>
+      isAgentToolsModulePath(source)
+    )
+      ? [`Agent tools must stay opt-in and deferred: ${asset.path}`]
+      : [];
+  });
+}
+
 function isDeferredVisualizationAsset(distDir: string, relativePath: string) {
   return sourceMapSources(distDir, relativePath).some((source) => {
     const normalizedSource = source.replaceAll("\\", "/");
@@ -262,8 +303,6 @@ function isDeferredSqlEditorAsset(distDir: string, relativePath: string) {
       normalizedSource.includes("node_modules/@codemirror/") ||
       normalizedSource.includes("node_modules/@lezer/") ||
       normalizedSource.includes("node_modules/sql-formatter/") ||
-      // Only the workbench's editor/results split uses resizable panels.
-      normalizedSource.includes("node_modules/react-resizable-panels/") ||
       normalizedSource.includes("src/features/sql-workbench/")
     );
   });
@@ -321,9 +360,20 @@ function collectBundleBudgetStats({
   const deferredSqlEditorPaths = new Set(
     deferredSqlEditorAssets.map((asset) => asset.path)
   );
+  const deferredAgentToolsAssets = allAssets.filter((asset) =>
+    isDeferredAgentToolsAsset(distDir, asset.path)
+  );
+  const deferredAgentToolsPaths = new Set(
+    deferredAgentToolsAssets.map((asset) => asset.path)
+  );
+  const deferredAgentToolsGzip = deferredAgentToolsAssets.reduce(
+    (sum, asset) => sum + asset.gzip,
+    0
+  );
   const coreAssets = allAssets.filter(
     (asset) =>
       !(
+        deferredAgentToolsPaths.has(asset.path) ||
         deferredVisualizationPaths.has(asset.path) ||
         deferredSqlHighlighterPaths.has(asset.path) ||
         deferredChartsPaths.has(asset.path) ||
@@ -425,11 +475,12 @@ function collectBundleBudgetStats({
     allAssets,
     asyncScripts,
     chartContractViolations,
-    productionContractViolations: productionContractViolations(
-      distDir,
-      indexHtml,
-      allAssets
-    ),
+    productionContractViolations: [
+      ...productionContractViolations(distDir, indexHtml, allAssets),
+      ...initialAgentViolations(distDir, allAssets, initialPaths),
+    ],
+    deferredAgentToolsAssets,
+    deferredAgentToolsGzip,
     coreAssets,
     coreTotalBrotli,
     coreTotalGzip,
@@ -481,13 +532,19 @@ function check({
   }
 }
 
-function runBundleBudgetCheck() {
-  const stats = collectBundleBudgetStats();
+function runBundleBudgetCheck(input?: CollectBundleBudgetStatsInput) {
+  const stats = collectBundleBudgetStats(input);
   const failures = [
     ...stats.chartContractViolations,
     ...stats.productionContractViolations,
   ];
 
+  check({
+    failures,
+    label: "deferred agent tools gzip",
+    actual: stats.deferredAgentToolsGzip,
+    budget: budgets.maxDeferredAgentToolsGzipBytes,
+  });
   check({
     failures,
     label: "initial gzip",
@@ -553,6 +610,7 @@ function runBundleBudgetCheck() {
       `total=${formatKiB(stats.totalGzip)}`,
       `total-br=${formatKiB(stats.totalBrotli)}`,
       `total-raw=${formatKiB(stats.totalRaw)}`,
+      `deferred-agent-tools=${formatKiB(stats.deferredAgentToolsGzip)}`,
       `deferred-visualization=${formatKiB(stats.deferredVisualizationGzip)}`,
       `deferred-visualization-br=${formatKiB(stats.deferredVisualizationBrotli)}`,
       `deferred-sql-highlighter=${formatKiB(stats.deferredSqlHighlighterGzip)}`,
@@ -583,4 +641,4 @@ if (isMainModule()) {
   runBundleBudgetCheck();
 }
 
-export { collectBundleBudgetStats };
+export { collectBundleBudgetStats, runBundleBudgetCheck };

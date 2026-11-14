@@ -41,7 +41,7 @@ export function PaginationFooter({
         "flex min-h-8 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs text-muted-foreground",
         className
       )}
-      data-slot="pagination-footer"
+      data-querylane-slot="pagination-footer"
     >
       <div className="flex items-center gap-2">
         <span className="text-(length:--text-label-sm)">{pageSizeLabel}</span>

@@ -153,7 +153,7 @@ function ColumnsPopover({
                   checked={visible}
                   disabled={isLastVisible}
                   onCheckedChange={(checked) => {
-                    onVisibilityChange(column.columnName, checked);
+                    onVisibilityChange(column.columnName, checked === true);
                   }}
                 />
                 <span className="min-w-0 truncate font-mono text-xs">
@@ -169,6 +169,7 @@ function ColumnsPopover({
                 {isLastVisible ? (
                   <Tooltip>
                     <TooltipTrigger
+                      aria-label={`${column.columnName} must remain visible`}
                       render={
                         <span className="flex min-w-0 flex-1 cursor-not-allowed" />
                       }

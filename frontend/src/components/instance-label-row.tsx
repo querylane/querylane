@@ -1,3 +1,4 @@
+import type { ChangeSource } from "@ui-sdk/core";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +26,8 @@ export function InstanceLabelRow({
   index: number;
   label: LabelEntry;
   messages?: string[] | undefined;
-  onChange: (label: LabelEntry) => void;
-  onRemove?: (() => void) | undefined;
+  onChange: (label: LabelEntry, source: ChangeSource) => unknown;
+  onRemove?: ((source: ChangeSource) => void) | undefined;
   configurationField?: string | undefined;
 }) {
   const invalid = messages.length > 0;
@@ -41,8 +42,10 @@ export function InstanceLabelRow({
           data-instance-config-field={configurationField}
           data-label-key-input=""
           disabled={disabled}
-          onChange={(event) => {
-            onChange({ ...label, key: event.target.value });
+          onValueChange={(value, details) => {
+            if (onChange({ ...label, key: value }, details.source) === false) {
+              details.cancel();
+            }
           }}
           placeholder="Key"
           value={label.key}
@@ -52,8 +55,10 @@ export function InstanceLabelRow({
           aria-invalid={invalid}
           aria-label={`Label value ${index + 1}`}
           disabled={disabled}
-          onChange={(event) => {
-            onChange({ ...label, value: event.target.value });
+          onValueChange={(value, details) => {
+            if (onChange({ ...label, value }, details.source) === false) {
+              details.cancel();
+            }
           }}
           placeholder="Value"
           value={label.value}
@@ -61,7 +66,9 @@ export function InstanceLabelRow({
         {onRemove ? (
           <Button
             aria-label="Remove label"
-            onClick={onRemove}
+            onClick={(_event, details) => {
+              onRemove(details.source);
+            }}
             size="icon"
             type="button"
             variant="ghost"

@@ -1,11 +1,12 @@
 import { NullValue } from "@bufbuild/protobuf/wkt";
 import "./header-edge-fixture.css";
 import { page } from "@rstest/browser";
-import { cleanup, render } from "@rstest/browser-react";
+import { cleanup } from "@rstest/browser-react";
 import { afterEach, expect, rs, test } from "@rstest/core";
 import { screen, within } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { ColumnHeader } from "@/components/data-grid/table-data-grid/column-header";
 import { DataGridToolbar } from "@/components/data-grid/table-data-grid/data-grid-toolbar";
 import { GridStatusBar } from "@/components/data-grid/table-data-grid/grid-status-bar";
@@ -333,7 +334,7 @@ async function renderOrdersGrid(
 
 function getPopoverBox() {
   const popover = document.querySelector<HTMLElement>(
-    '[data-slot="popover-content"]'
+    '[data-querylane-slot="popover-content"]'
   );
   if (!popover) {
     throw new Error("expected popover");
@@ -351,7 +352,7 @@ function getPopoverBox() {
 
 function getPopoverBoundary() {
   const boundary = document.querySelector<HTMLElement>(
-    "[data-slot='data-grid-popover-boundary']"
+    "[data-querylane-slot='data-grid-popover-boundary']"
   );
   if (!boundary) {
     throw new Error("expected data-grid popover boundary");
@@ -549,7 +550,7 @@ test("select-all stays tooltip-free and preserves native selection behavior", as
   await expect.element(selectAllCheckbox).toBeVisible();
   const selectAllBox = screen
     .getByRole("checkbox", { name: "Select All" })
-    .closest('[data-slot="grid-checkbox"]');
+    .closest('[data-querylane-slot="grid-checkbox"]');
   if (!(selectAllBox instanceof HTMLElement)) {
     throw new TypeError("Expected the select-all input inside its styled box.");
   }
@@ -986,7 +987,9 @@ test("foreign key reference popover keeps the source table visible", async () =>
     name: "public.customers",
   });
   expect(previewElement.dataset["slot"]).toBe("popover-content");
-  expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+  expect(
+    document.querySelector('[data-querylane-slot="sheet-content"]')
+  ).toBeNull();
   await expect.element(customerLink).toBeVisible();
   await expect.element(page.getByText("Hanse Container Line")).toBeVisible();
   expect(
@@ -1024,7 +1027,9 @@ test("foreign key reference waits for first-load data before opening", async () 
     .first();
   await trigger.click();
 
-  expect(document.querySelector('[data-slot="popover-content"]')).toBeNull();
+  expect(
+    document.querySelector('[data-querylane-slot="popover-content"]')
+  ).toBeNull();
   await expect.element(trigger).toHaveAttribute("aria-busy", "true");
 
   releaseCustomers?.();
@@ -1168,7 +1173,7 @@ test("row detail drawer wraps dense catalog fields without visual collisions", a
 
   const valueBoxes = [
     ...document.querySelectorAll<HTMLElement>(
-      '[data-slot="record-field-value"]'
+      '[data-querylane-slot="record-field-value"]'
     ),
   ];
   expect(valueBoxes).toHaveLength(5);
@@ -1205,7 +1210,7 @@ test("filter popover keeps multiple rules compact and aligned", async () => {
   expect(rows).toHaveLength(2);
   const rowBoxes = rows.map((row) => {
     const triggers = row.querySelectorAll<HTMLElement>(
-      '[data-slot="select-trigger"]'
+      '[data-querylane-slot="select-trigger"]'
     );
     // Boolean columns render a true/false select instead of a text input, so
     // match the value control by its accessible name across both shapes.
@@ -1274,7 +1279,7 @@ test("advanced filter popover shows negation and regex controls", async () => {
     .toBeVisible();
   const operatorValue = screen
     .getByRole("combobox", { name: "Filter operator" })
-    .querySelector<HTMLElement>('[data-slot="select-value"]');
+    .querySelector<HTMLElement>('[data-querylane-slot="select-value"]');
   if (!operatorValue) {
     throw new Error("expected selected operator label");
   }
@@ -1328,7 +1333,7 @@ test("page size select shows every option when the footer is near the viewport e
   await expect.element(page.getByRole("listbox")).toBeVisible();
 
   const selectContent = document.querySelector<HTMLElement>(
-    '[data-slot="select-content"]'
+    '[data-querylane-slot="select-content"]'
   );
   if (!selectContent) {
     throw new Error("expected page size select content");
@@ -1362,16 +1367,21 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
   const boundary = getPopoverBoundary();
   const boundaryBox = boundary.getBoundingClientRect();
   const popoverBox = getPopoverBox();
-  expect(boundary.contains(popoverBox.element)).toBe(false);
-  expect(popoverBox.left).toBeGreaterThanOrEqual(boundaryBox.left - 1);
-  expect(popoverBox.right).toBeLessThanOrEqual(boundaryBox.right + 1);
+  // Native top-layer popovers stay in their logical DOM subtree.
+  expect(getComputedStyle(popoverBox.element).position).toBe("fixed");
+  await expect
+    .poll(() => getPopoverBox().left)
+    .toBeGreaterThanOrEqual(boundaryBox.left - 1);
+  await expect
+    .poll(() => getPopoverBox().right)
+    .toBeLessThanOrEqual(boundaryBox.right + 1);
 
   const filterRow = popoverBox.element.querySelector("li");
   if (!filterRow) {
     throw new Error("expected filter row");
   }
   const rowControls = filterRow.querySelectorAll<HTMLElement>(
-    'button, input, [data-slot="select-trigger"]'
+    'button, input, [data-querylane-slot="select-trigger"]'
   );
   for (const control of rowControls) {
     const controlBox = control.getBoundingClientRect();
@@ -1391,7 +1401,7 @@ test("sort popover keeps every row control aligned", async () => {
   expect(rows).toHaveLength(5);
   const rowBoxes = rows.map((row) => {
     const triggers = row.querySelectorAll<HTMLElement>(
-      '[data-slot="select-trigger"]'
+      '[data-querylane-slot="select-trigger"]'
     );
     expect(triggers).toHaveLength(2);
     const [columnTrigger, directionTrigger] = triggers;
@@ -1444,9 +1454,14 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
   const boundary = getPopoverBoundary();
   const boundaryBox = boundary.getBoundingClientRect();
   const popoverBox = getPopoverBox();
-  expect(boundary.contains(popoverBox.element)).toBe(false);
-  expect(popoverBox.left).toBeGreaterThanOrEqual(boundaryBox.left - 1);
-  expect(popoverBox.right).toBeLessThanOrEqual(boundaryBox.right + 1);
+  // Native top-layer popovers stay in their logical DOM subtree.
+  expect(getComputedStyle(popoverBox.element).position).toBe("fixed");
+  await expect
+    .poll(() => getPopoverBox().left)
+    .toBeGreaterThanOrEqual(boundaryBox.left - 1);
+  await expect
+    .poll(() => getPopoverBox().right)
+    .toBeLessThanOrEqual(boundaryBox.right + 1);
 });
 
 test("grid status bar exposes actionable warning labels as visible UI", async () => {
@@ -1632,7 +1647,7 @@ test("narrow column headers keep the options menu visible", async () => {
   await expect.element(page.getByText("Sort ascending")).toBeVisible();
 
   const menu = document.querySelector<HTMLElement>(
-    '[data-slot="dropdown-menu-content"]'
+    '[data-querylane-slot="dropdown-menu-content"]'
   );
   if (!menu) {
     throw new Error("expected column menu");

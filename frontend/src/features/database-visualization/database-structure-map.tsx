@@ -316,7 +316,7 @@ function DatabaseMapCanvasActions({
       </Button>
       <div
         className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
-        data-slot="button-group"
+        data-querylane-slot="button-group"
       >
         <Button
           aria-pressed={isSelectedSchemaActive}

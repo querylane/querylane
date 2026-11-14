@@ -1,6 +1,5 @@
-"use client";
-
 import { Link } from "@tanstack/react-router";
+import { toast } from "@ui-sdk/react/toast";
 import {
   CircleCheck,
   Eye,
@@ -9,7 +8,6 @@ import {
   TriangleExclamationPoint,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { TableDataGrid } from "@/components/data-grid/table-data-grid/table-data-grid";
 import { EmptyStatePanel } from "@/components/empty-state-panel";
 import {
@@ -30,7 +28,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import {
   Card,
   CardContent,
@@ -707,6 +706,7 @@ function MaterializedRefreshControl({
               <>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <Button
+                  data-agent-confirm="Replaces stored PostgreSQL rows. Ask the person to refresh this view manually."
                   onClick={handleStandardRefresh}
                   type="button"
                   variant="outline"
@@ -714,7 +714,11 @@ function MaterializedRefreshControl({
                   Refresh normally
                 </Button>
                 {readiness === "ready" ? (
-                  <Button onClick={handleConcurrentRefresh} type="button">
+                  <Button
+                    data-agent-confirm="Replaces stored PostgreSQL rows. Ask the person to refresh this view manually."
+                    onClick={handleConcurrentRefresh}
+                    type="button"
+                  >
                     Refresh concurrently
                   </Button>
                 ) : null}
@@ -882,7 +886,10 @@ function MaterializedViewTabs({
   return (
     <Tabs
       className="min-h-0 w-full min-w-0 flex-1 flex-col"
-      onValueChange={(value: string) => {
+      onValueChange={(value: string | null) => {
+        if (value === null) {
+          return;
+        }
         if (isMaterializedViewTab(value)) {
           onTabChange(value);
         }

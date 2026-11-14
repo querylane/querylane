@@ -111,7 +111,7 @@ function ChartContainer({
         isRefreshing && "opacity-60",
         className
       )}
-      data-slot="chart"
+      data-querylane-slot="chart"
       onKeyDownCapture={
         emphasisEnabled
           ? (event) => {

@@ -1,28 +1,29 @@
-"use client"
-
-import * as React from "react"
-
-import { cn } from "@/lib/utils"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { type ComponentProps, type ReactNode, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_TOOLTIP_CLASS_NAME =
-  "max-w-lg whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+  "max-w-lg whitespace-pre-wrap break-words [overflow-wrap:anywhere]";
 
 function isElementOverflowing(element: HTMLElement) {
-  const hasHorizontalOverflow = element.scrollWidth - element.clientWidth > 1
-  const hasVerticalOverflow = element.scrollHeight - element.clientHeight > 1
+  const hasHorizontalOverflow = element.scrollWidth - element.clientWidth > 1;
+  const hasVerticalOverflow = element.scrollHeight - element.clientHeight > 1;
 
-  return hasHorizontalOverflow || hasVerticalOverflow
+  return hasHorizontalOverflow || hasVerticalOverflow;
 }
 
-interface OverflowTooltipProps extends React.ComponentProps<"span"> {
-  forceTooltip?: boolean
-  tooltipClassName?: string
-  tooltipContent?: React.ReactNode
+interface OverflowTooltipProps extends ComponentProps<"span"> {
+  forceTooltip?: boolean;
+  tooltipClassName?: string;
+  tooltipContent?: ReactNode;
   tooltipProps?: Omit<
-    React.ComponentProps<typeof TooltipContent>,
+    ComponentProps<typeof TooltipContent>,
     "children" | "className"
-  >
+  >;
 }
 
 function OverflowTooltip({
@@ -34,52 +35,46 @@ function OverflowTooltip({
   tooltipProps,
   ...props
 }: OverflowTooltipProps) {
-  const elementRef = React.useRef<HTMLSpanElement | null>(null)
-  const [isOverflowing, setIsOverflowing] = React.useState(forceTooltip)
-
-  React.useEffect(() => {
-    const element = elementRef.current
-
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  function observeOverflow(element: HTMLSpanElement | null) {
     if (!element) {
-      setIsOverflowing(forceTooltip)
-      return
+      return undefined;
     }
-
-    setIsOverflowing(forceTooltip || isElementOverflowing(element))
-  }, [children, className, forceTooltip])
-
-  React.useEffect(() => {
-    const element = elementRef.current
-
-    if (!element || typeof ResizeObserver === "undefined") {
-      return undefined
+    function updateOverflow() {
+      if (element) {
+        setIsOverflowing(isElementOverflowing(element));
+      }
     }
+    updateOverflow();
+    if (typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }
 
-    const observer = new ResizeObserver(() => {
-      setIsOverflowing(forceTooltip || isElementOverflowing(element))
-    })
-
-    observer.observe(element)
-
-    return () => observer.disconnect()
-  }, [forceTooltip])
-
-  const content = tooltipContent ?? children
+  const content = tooltipContent ?? children;
   const hasTooltipContent =
-    content !== null && content !== undefined && content !== false
+    content !== null && content !== undefined && content !== false;
   const trigger = (
-    <span
-      ref={elementRef}
-      className={cn("min-w-0", className)}
-      {...props}
-    >
+    <span className={cn("min-w-0", className)} ref={observeOverflow} {...props}>
       {children}
     </span>
-  )
+  );
+
+  if (!(hasTooltipContent && (forceTooltip || isOverflowing))) {
+    return trigger;
+  }
 
   return (
-    <Tooltip disabled={!hasTooltipContent || !isOverflowing}>
-      <TooltipTrigger render={trigger} />
+    <Tooltip>
+      <TooltipTrigger
+        aria-label={typeof children === "string" ? children : undefined}
+        render={trigger}
+      />
       <TooltipContent
         className={cn(DEFAULT_TOOLTIP_CLASS_NAME, tooltipClassName)}
         {...tooltipProps}
@@ -87,7 +82,7 @@ function OverflowTooltip({
         {content}
       </TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
-export { OverflowTooltip }
+export { OverflowTooltip };

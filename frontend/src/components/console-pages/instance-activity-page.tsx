@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Activity,
   LockKeyhole,
@@ -39,15 +37,10 @@ import {
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
+import { DataTable, SortableHeader } from "@/components/ui/data-table";
+import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/ui/data-table-filter-toolbar-types";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import { handleAsyncAction } from "@/lib/ui-action";
@@ -672,8 +665,7 @@ function ActivitySessionSheet({
         presentation="detail"
         side="right"
         // Registry sheets cap at sm:max-w-sm; the session inspector needs a
-        // wide drawer, and `ui/` must stay native shadcn output, so the width
-        // override lives here.
+        // wide drawer, so use the app-owned detail-width variant.
         width="detail"
       >
         <SessionSheetContent

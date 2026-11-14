@@ -211,7 +211,7 @@ describe("database objects panel", () => {
 
     const card = screen
       .getByText("Sequences")
-      .closest<HTMLElement>("[data-slot=card]");
+      .closest<HTMLElement>("[data-querylane-slot=card]");
     if (!card) {
       throw new Error("Expected sequences card");
     }

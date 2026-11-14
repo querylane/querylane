@@ -607,7 +607,7 @@ function ExpandedDataGridDialog({
         if (
           !nextOpen &&
           eventDetails.reason === "escape-key" &&
-          eventDetails.event.defaultPrevented
+          eventDetails.event?.defaultPrevented === true
         ) {
           eventDetails.cancel();
           return;
@@ -618,6 +618,7 @@ function ExpandedDataGridDialog({
     >
       <DialogContent
         className="!flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:!max-w-[calc(100vw-2rem)]"
+        data-agent-hidden={true}
         presentation="canvas"
       >
         <DialogTitle className="sr-only">Expanded data grid</DialogTitle>
@@ -680,6 +681,7 @@ function ResultDataGridContent({
         "flex h-full flex-col",
         fill ? "min-h-0 flex-1" : "min-h-[480px]"
       )}
+      data-agent-hidden={true}
     >
       <CellSelectionLiveStatus
         cellSelectionStore={chromeProps.cellSelectionStore}

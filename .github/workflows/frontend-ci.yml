@@ -83,15 +83,16 @@ jobs:
         run: bun run doctor:dead-code
       - name: Type check
         run: bun run type:check
-      - name: Verify shadcn registry sync
-        run: bun run scripts/check-shadcn-registry-sync.ts
+      - name: Verify UI SDK migration
+        run: bun run scripts/check-ui-sdk-migration.ts
 
   unit:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     name: Frontend Unit
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    # Full unit suite: 3m49s in CI, plus dependency setup and cleanup.
+    timeout-minutes: 6
     defaults:
       run:
         working-directory: frontend
@@ -201,7 +202,8 @@ jobs:
     container:
       image: *playwright_image
       options: --ipc=host
-    timeout-minutes: 8
+    # Include browser-image setup and the full single-worker E2E/a11y suite.
+    timeout-minutes: 10
     env:
       HOME: /root
     defaults:

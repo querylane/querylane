@@ -14,6 +14,9 @@ import {
 
 const STORAGE_KEY = "querylane-ui-theme";
 const DOM_GLOBAL_KEYS = [
+  "Element",
+  "Node",
+  "MutationObserver",
   "Event",
   "HTMLElement",
   "IS_REACT_ACT_ENVIRONMENT",
@@ -71,6 +74,9 @@ function installDom() {
   const window = new Window({ url: "http://querylane.test" });
   window.SyntaxError = SyntaxError;
 
+  setDomGlobal("Element", window.Element);
+  setDomGlobal("Node", window.Node);
+  setDomGlobal("MutationObserver", window.MutationObserver);
   setDomGlobal("Event", window.Event);
   setDomGlobal("HTMLElement", window.HTMLElement);
   setDomGlobal("IS_REACT_ACT_ENVIRONMENT", true);

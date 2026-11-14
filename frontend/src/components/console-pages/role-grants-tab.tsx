@@ -384,14 +384,14 @@ function DatabaseSelect({
 }) {
   return (
     <Select
-      // Base UI's <Select.Value> needs an `items` map to render the selected
-      // item's label; without it the trigger shows the raw value (database id).
+      // Supply labels before popup items mount so the trigger shows a
+      // database name rather than its internal resource id.
       items={databases.map((database) => ({
         label: database.name,
         value: database.id,
       }))}
       onValueChange={(next) => {
-        if (next !== null) {
+        if (next !== null && next !== undefined) {
           onChange(next);
         }
       }}

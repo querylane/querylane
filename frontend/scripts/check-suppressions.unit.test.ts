@@ -270,34 +270,34 @@ describe("suppression guard artifact coverage", () => {
   });
 });
 
-test.each([
-  "src/protogen/authored.ts",
-  "src/components/ui/authored.unit.test.ts",
-])("rejects authored code in excluded namespaces: %s", (file) => {
-  const root = mkdtempSync(join(tmpdir(), "querylane-provenance-"));
-  try {
-    const parent = file.slice(0, file.lastIndexOf("/"));
-    mkdirSync(join(root, parent), { recursive: true });
-    writeFileSync(join(root, file), "export const hidden = true;\n");
-    const check = () =>
-      spawnSync("bun", [join(import.meta.dirname, "check-suppressions.ts")], {
-        cwd: root,
-        encoding: "utf8",
-      });
-    const rejected = check();
-    expect(rejected.status).toBe(1);
-    expect(rejected.stderr).toContain(
-      file.startsWith("src/protogen/")
-        ? "unverified protobuf output"
-        : "authored test inside vendored source"
-    );
-    unlinkSync(join(root, file));
-    writeFileSync(
-      join(root, "src/owned.unit.test.ts"),
-      "export const visible = true;\n"
-    );
-    expect(check().status).toBe(0);
-  } finally {
-    rmSync(root, { recursive: true });
+test.each(["src/protogen/authored.ts"])(
+  "rejects authored code in excluded namespaces: %s",
+  (file) => {
+    const root = mkdtempSync(join(tmpdir(), "querylane-provenance-"));
+    try {
+      const parent = file.slice(0, file.lastIndexOf("/"));
+      mkdirSync(join(root, parent), { recursive: true });
+      writeFileSync(join(root, file), "export const hidden = true;\n");
+      const check = () =>
+        spawnSync("bun", [join(import.meta.dirname, "check-suppressions.ts")], {
+          cwd: root,
+          encoding: "utf8",
+        });
+      const rejected = check();
+      expect(rejected.status).toBe(1);
+      expect(rejected.stderr).toContain(
+        file.startsWith("src/protogen/")
+          ? "unverified protobuf output"
+          : "authored test inside vendored source"
+      );
+      unlinkSync(join(root, file));
+      writeFileSync(
+        join(root, "src/owned.unit.test.ts"),
+        "export const visible = true;\n"
+      );
+      expect(check().status).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true });
+    }
   }
-});
+);

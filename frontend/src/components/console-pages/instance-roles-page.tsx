@@ -1,5 +1,3 @@
-"use client";
-
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -18,12 +16,14 @@ import { RolesAccessMapNotice } from "@/components/console-pages/roles-access-ma
 import { SearchEmptyState } from "@/components/search-empty-state";
 import {
   DataTable,
-  type DataTableColumnDef,
   DataTableFilter,
-  listColumnDefinitions,
   SortableHeader,
 } from "@/components/ui/data-table";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import {
+  type DataTableColumnDef,
+  listColumnDefinitions,
+} from "@/components/ui/data-table-model";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -465,8 +465,8 @@ export function InstanceRolesPage({
     setRoleSelectedNodeId(null);
   }
 
-  function handleRolesTabChange(next: string) {
-    if (!isInstanceRolesTab(next)) {
+  function handleRolesTabChange(next: string | null) {
+    if (next === null || !isInstanceRolesTab(next)) {
       return;
     }
     setOptimisticTab(next);

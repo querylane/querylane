@@ -1,7 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import type { ServiceImpl } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
@@ -9,6 +8,7 @@ import * as actualRouter from "@tanstack/react-router" with {
 import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { ExplorerRailFrame } from "@/__tests__/explorer-rail-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { DataExplorerPage } from "@/features/data-explorer/data-explorer-page";
 import type { DataExplorerSearch } from "@/features/data-explorer/data-explorer-route-search";
 import { cn } from "@/lib/utils";
@@ -185,14 +185,16 @@ test("data explorer table grid uses width immediately beside object browser", as
     "aside[aria-label='Database objects']"
   );
   const grid = document.querySelector("[data-testid='mock-table-data-grid']");
-  const tabsList = document.querySelector("[data-slot='tabs-list']");
+  const tabsList = document.querySelector("[data-querylane-slot='tabs-list']");
   if (!(shell && rail && sidebar && grid && tabsList)) {
     throw new Error("Expected explorer shell, rail, sidebar, tabs, and grid.");
   }
 
   // The object browser portals into the fixed-width rail; no drag handle.
   expect(rail.contains(sidebar)).toBe(true);
-  expect(document.querySelector("[data-slot='resizable-handle']")).toBeNull();
+  expect(
+    document.querySelector("[data-querylane-slot='resizable-handle']")
+  ).toBeNull();
 
   const shellRect = shell.getBoundingClientRect();
   const railRect = rail.getBoundingClientRect();
@@ -208,7 +210,7 @@ test("data explorer table grid uses width immediately beside object browser", as
   expect(gapBetweenRailAndGrid).toBeLessThanOrEqual(64);
   expect(unusedRightSpace).toBeLessThanOrEqual(64);
 
-  const filterInput = sidebar.querySelector("[data-slot='input']");
+  const filterInput = sidebar.querySelector("[data-querylane-slot='input']");
   const schemaNode = [...sidebar.querySelectorAll("button")].find((button) =>
     button.textContent?.includes("analytics")
   );

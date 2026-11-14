@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
@@ -22,12 +22,12 @@ test("keeps a SQL copy tooltip inside a right-edge sheet", async () => {
 
   await page.getByRole("button", { name: "Copy SQL" }).hover();
 
-  const tooltip = page.locator('[data-slot="tooltip-content"]');
+  const tooltip = page.locator('[data-querylane-slot="tooltip-content"]');
   await expect.element(tooltip).toBeVisible();
 
   const sqlBlock = document.querySelector("pre");
   const tooltipContent = document.querySelector(
-    '[data-slot="tooltip-content"]'
+    '[data-querylane-slot="tooltip-content"]'
   );
   if (!(sqlBlock instanceof HTMLPreElement && tooltipContent)) {
     throw new Error("Expected SQL code block and copy tooltip");

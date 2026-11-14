@@ -31,7 +31,7 @@ function DataGridCheckbox(props: RenderCheckboxProps) {
         isMarked && "border-primary bg-primary dark:bg-primary",
         props.disabled === true && "opacity-50"
       )}
-      data-slot="grid-checkbox"
+      data-querylane-slot="grid-checkbox"
     >
       {renderCheckbox(checkboxProps)}
       {props.indeterminate === true ? (

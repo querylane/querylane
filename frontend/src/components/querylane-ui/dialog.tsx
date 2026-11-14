@@ -8,7 +8,6 @@ import {
   DialogFooter as BaseDialogFooter,
   DialogHeader as BaseDialogHeader,
   DialogOverlay as BaseDialogOverlay,
-  DialogPortal as BaseDialogPortal,
   DialogTitle as BaseDialogTitle,
   DialogTrigger as BaseDialogTrigger,
 } from "@/components/ui/dialog";
@@ -80,9 +79,6 @@ function DialogFooter(props: ComponentProps<typeof BaseDialogFooter>) {
 function DialogOverlay(props: ComponentProps<typeof BaseDialogOverlay>) {
   return <BaseDialogOverlay {...props} />;
 }
-function DialogPortal(props: ComponentProps<typeof BaseDialogPortal>) {
-  return <BaseDialogPortal {...props} />;
-}
 function DialogTitle(props: ComponentProps<typeof BaseDialogTitle>) {
   return <BaseDialogTitle {...props} />;
 }
@@ -98,7 +94,6 @@ export {
   DialogFooter,
   DialogHeader,
   DialogOverlay,
-  DialogPortal,
   DialogTitle,
   DialogTrigger,
 };

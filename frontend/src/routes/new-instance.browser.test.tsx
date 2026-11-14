@@ -1,13 +1,13 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { beforeEach, expect, rs, test } from "@rstest/core";
 import * as actualReactQuery from "@tanstack/react-query" with {
   rstest: "importActual",
 };
 import { screen } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { BadRequestSchema } from "@/protogen/google/rpc/error_details_pb";
 import type { CreateInstancePageState } from "@/routes/new-instance-page";
 import { CreateInstancePageInner } from "@/routes/new-instance-page";
@@ -18,7 +18,6 @@ import { CreateInstancePageInner } from "@/routes/new-instance-page";
 const MANAGED_NOT_INTERNAL_STORAGE_RE = /not Querylane internal storage/u;
 const NAVIGATION_FAILURE_RE = /could not open it automatically/u;
 const INVALID_CONFIG_FIELD_RE = /invalid field "config"/u;
-const TOOLTIP_TRIGGER_SELECTOR = "[data-base-ui-tooltip-trigger]";
 const SSL_MODE_DESCRIPTION =
   "Require TLS and verify both the trusted CA and the server hostname.";
 
@@ -175,7 +174,7 @@ test("create instance form warns about DSN parameters it cannot apply", async ()
     .element(
       page
         .getByLabel("SSL mode")
-        .locator('[data-slot="ssl-mode-icon"][data-mode="require"]')
+        .locator('[data-querylane-slot="ssl-mode-icon"][data-mode="require"]')
     )
     .toBeAttached();
   await expect
@@ -197,7 +196,7 @@ test("create instance SSL mode menu keeps descriptions readable", async () => {
   await expect.element(page.getByText(SSL_MODE_DESCRIPTION)).toBeVisible();
 
   const popup = document.querySelector(
-    '[data-slot="select-content"][data-open]'
+    '[data-querylane-slot="select-content"][data-open]'
   );
   const description = screen.getByText(SSL_MODE_DESCRIPTION);
 
@@ -229,14 +228,16 @@ test("create instance SSL mode shows icons in the trigger and menu", async () =>
 
   const trigger = screen.getByLabelText("SSL mode");
   expect(
-    trigger.querySelector('[data-slot="ssl-mode-icon"][data-mode="prefer"]')
+    trigger.querySelector(
+      '[data-querylane-slot="ssl-mode-icon"][data-mode="prefer"]'
+    )
   ).toBeInstanceOf(SVGSVGElement);
 
   await page.getByLabel("SSL mode").click();
   await expect.element(page.getByText(SSL_MODE_DESCRIPTION)).toBeVisible();
 
   const renderedModes = [
-    ...document.querySelectorAll('[data-slot="ssl-mode-icon"]'),
+    ...document.querySelectorAll('[data-querylane-slot="ssl-mode-icon"]'),
   ].map((icon) => icon.getAttribute("data-mode"));
 
   expect(new Set(renderedModes)).toEqual(
@@ -279,10 +280,7 @@ test("new instance creation is gated on successful connection test", async () =>
 
   const createButton = page.getByRole("button", { name: "Create instance" });
   await expect.element(createButton).toBeDisabled();
-  await page
-    .locator(TOOLTIP_TRIGGER_SELECTOR)
-    .filter({ has: createButton })
-    .hover();
+  await createButton.hover();
   await expect
     .element(
       page

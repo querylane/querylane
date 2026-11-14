@@ -1,5 +1,5 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { toast } from "sonner";
+import { toast } from "@ui-sdk/react/toast";
 import { captureException, logger } from "@/lib/diagnostics";
 import { buildGitHubBugReportUrl } from "@/lib/error-report";
 import { normalizeConnectErrorState } from "@/lib/ui-error-connect";
@@ -537,14 +537,14 @@ function buildReportTags(
 }
 
 function buildToastOptions(error: AppUiError): {
-  action: { label: string; onClick: () => void };
+  action: { label: string; onAction: () => void };
   description: string;
   id?: string;
 } {
   const options = {
     action: {
       label: "Report bug",
-      onClick: () => {
+      onAction: () => {
         if (typeof globalThis !== "undefined") {
           globalThis.open(
             buildGitHubBugReportUrl(error),

@@ -1,7 +1,7 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { type Locator, page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
+import { render } from "@/__tests__/render-ui";
 import { ColumnHeaderMenu } from "@/components/data-grid/table-data-grid/column-header-menu";
 import { ColumnsPopover } from "@/components/data-grid/table-data-grid/columns-popover";
 import { FilterPopover } from "@/components/data-grid/table-data-grid/filter-popover";
@@ -28,7 +28,9 @@ function column(name: string): TableResultColumn {
 // Disabled controls cannot receive pointer events, so the tooltip hangs off
 // the nearest tooltip trigger: either the control itself or its wrapper.
 async function hoverTooltipTrigger(control: Locator) {
-  const tooltipTrigger = page.locator('[data-slot="tooltip-trigger"]');
+  const tooltipTrigger = page.locator(
+    '[data-querylane-slot="tooltip-trigger"]'
+  );
   await tooltipTrigger
     .filter({ has: control })
     .or(tooltipTrigger.and(control))
@@ -90,8 +92,9 @@ test("explains why the last visible column cannot be hidden from its menu", asyn
 });
 
 test("explains why another sort column cannot be added", async () => {
+  const longColumnName = "column_with_a_name_that_needs_an_overflow_tooltip";
   const columns = Array.from({ length: MAX_SORT_COLUMNS }, (_, index) =>
-    column(`column_${index + 1}`)
+    column(index === 0 ? longColumnName : `column_${index + 1}`)
   );
   await render(
     <SortPopover
@@ -105,6 +108,39 @@ test("explains why another sort column cannot be added", async () => {
   );
 
   await page.getByRole("button", { name: `Sort ${MAX_SORT_COLUMNS}` }).click();
+  const firstColumn = page.getByRole("combobox", {
+    name: "Sort column 1",
+    exact: true,
+  });
+  await firstColumn.hover();
+  await expect.element(firstColumn.getByRole("tooltip")).toBeVisible();
+  // Native tooltips remain logical descendants; read the value, not their copy.
+  await Promise.all(
+    columns.map(async (sortedColumn, index) => {
+      await expect
+        .element(
+          page
+            .getByRole("combobox", {
+              name: `Sort column ${index + 1}`,
+              exact: true,
+            })
+            .locator('[data-slot="select-value"]')
+            .first()
+        )
+        .toHaveText(sortedColumn.columnName);
+      await expect
+        .element(
+          page
+            .getByRole("combobox", {
+              name: `Sort direction ${index + 1}`,
+              exact: true,
+            })
+            .locator('[data-slot="select-value"]')
+            .first()
+        )
+        .toHaveText("ASC");
+    })
+  );
   const addSortColumn = page.getByRole("combobox", {
     name: "Add sort column",
   });

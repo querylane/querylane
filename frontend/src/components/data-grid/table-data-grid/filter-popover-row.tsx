@@ -148,9 +148,8 @@ function FilterRow({
   );
   const operatorMeta = FILTER_OPERATOR_META[rule.operator];
   const operators = getOperatorsForColumn(column);
-  // Base UI's <Select.Value> only renders the item label (e.g. "!=") when the
-  // root is given an `items` map; otherwise it falls back to the raw value
-  // (e.g. "ne"). The SelectItem `label` prop only drives keyboard typeahead.
+  // Supply labels before popup items mount so the trigger never falls back
+  // to an internal operator key such as "ne".
   const operatorItems = operators.map((operator) => ({
     label: FILTER_OPERATOR_META[operator].label,
     value: operator,
@@ -255,11 +254,11 @@ function FilterRow({
           aria-label="Filter value"
           className="h-8 min-w-0"
           onBlur={commitValueDraft}
-          onChange={(event) => {
-            setDraftValue(event.target.value);
-          }}
           onKeyDown={(event) => {
             applyOnEnter(event, commitValueDraft);
+          }}
+          onValueChange={(value) => {
+            setDraftValue(value);
           }}
           placeholder={getValuePlaceholder(rule, column)}
           presentation="identifier"
@@ -271,11 +270,11 @@ function FilterRow({
             aria-label="Filter end value"
             className="h-8 min-w-0"
             onBlur={commitValue2Draft}
-            onChange={(event) => {
-              setDraftValue2(event.target.value);
-            }}
             onKeyDown={(event) => {
               applyOnEnter(event, commitValue2Draft);
+            }}
+            onValueChange={(value) => {
+              setDraftValue2(value);
             }}
             placeholder="And"
             presentation="identifier"

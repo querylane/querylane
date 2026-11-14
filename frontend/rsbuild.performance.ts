@@ -1,4 +1,5 @@
 import type { Rspack, SplitChunksConfig } from "@rsbuild/core";
+import { AGENT_TOOLS_MODULE_PATTERN } from "./scripts/agent-bundle-contract";
 import { isNonEmptyString } from "./src/lib/value-guards";
 
 const KIB = 1024;
@@ -9,6 +10,13 @@ const MAX_INITIAL_CHUNK_REQUESTS = 20;
 const MIN_SPLIT_SIZE_KIB = 10;
 
 const managedChunkCacheGroups = {
+  agentTools: {
+    chunks: "async",
+    name: "agent-tools",
+    priority: 35,
+    reuseExistingChunk: true,
+    test: AGENT_TOOLS_MODULE_PATTERN,
+  },
   databaseVisualization: {
     chunks: "async",
     name: "database-visualization",
@@ -63,7 +71,8 @@ const managedChunkCacheGroups = {
     name: "sql-editor",
     priority: 31,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/u,
+    // The SQL-only UI SDK resizer belongs with the editor, not shared UI.
+    test: /[/\\]node_modules[/\\](?:(?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]|@ui-sdk[/\\](?:core[/\\]dist[/\\]components[/\\]resizable[/\\]|react[/\\]dist[/\\]resizable\.))/u,
   },
   // The PostgreSQL grammar and the Lezer runtime load alongside the editor
   // core; keeping them apart holds each chunk under the async script cap.
@@ -93,7 +102,7 @@ const managedChunkCacheGroups = {
     name: "ui-vendor",
     priority: 10,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@base-ui|lucide-react)[/\\]/u,
+    test: /[/\\]node_modules[/\\](?:@ui-sdk|lucide-react)[/\\]/u,
   },
 } satisfies NonNullable<SplitChunksConfig["cacheGroups"]>;
 

@@ -501,8 +501,8 @@ test("role filters retain bookmarked sorting and column order", async ({
   await page.goto(
     `/instances/production/roles?columnOrder=${encodeURIComponent(order)}&listSort=${encodeURIComponent(sorting)}`
   );
-  await page.getByRole("button", { name: "Type", exact: true }).click();
-  await page.getByRole("menuitemcheckbox", { name: USERS_FILTER }).click();
+  await page.getByRole("combobox", { name: "Type", exact: true }).click();
+  await page.getByRole("option", { name: USERS_FILTER }).click();
   await page.keyboard.press("Escape");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("type"))

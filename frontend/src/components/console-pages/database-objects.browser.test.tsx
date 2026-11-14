@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import {
   DatabaseObjectsGridScenario,
   DatabaseObjectsLoadingScenario,
@@ -17,7 +17,7 @@ function cardColumnGaps() {
   }
 
   const cards = [
-    ...section.querySelectorAll<HTMLElement>('[data-slot="card"]'),
+    ...section.querySelectorAll<HTMLElement>('[data-querylane-slot="card"]'),
   ].map((card) => card.getBoundingClientRect());
   const columns = Map.groupBy(cards, (card) => Math.round(card.left));
   const gaps: number[] = [];

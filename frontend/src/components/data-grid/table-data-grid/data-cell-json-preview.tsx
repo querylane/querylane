@@ -22,7 +22,7 @@ function JsonPreview({
   raw,
   rawType,
 }: JsonPreviewProps) {
-  const { onOpenChange, open, openDialog } = useDataValueDialogState();
+  const { mounted, onOpenChange, open, openDialog } = useDataValueDialogState();
   const preview = formatJsonPreview(raw);
   const pretty = open ? formatPrettyJson(raw) : "";
   const title = truncateForAttribute(raw, JSON_TITLE_MAX_LENGTH);
@@ -53,12 +53,13 @@ function JsonPreview({
       >
         <Maximize2 className="size-3" />
       </Button>
-      {open ? (
+      {mounted ? (
         <DataValuePreviewDialog
           columnName={columnName}
           format="JSON"
           isTruncated={isTruncated}
           onOpenChange={onOpenChange}
+          open={open}
           raw={raw}
           rawType={rawType}
         >

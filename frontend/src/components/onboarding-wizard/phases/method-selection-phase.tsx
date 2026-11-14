@@ -5,7 +5,6 @@ import {
   ServerCog,
   TriangleExclamationPoint,
 } from "lucide-react";
-import type { KeyboardEvent } from "react";
 import { getMethodLabel } from "@/components/onboarding-wizard/mappers";
 import { WizardPage } from "@/components/onboarding-wizard/shared/wizard-page";
 import type { ConfigMethod } from "@/components/onboarding-wizard/types";
@@ -17,6 +16,7 @@ import {
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
+import { Radio, RadioGroup } from "@/components/ui/radio";
 import { formatSetupMethod } from "@/lib/protobuf-enums";
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
@@ -65,30 +65,19 @@ function getConfigMethods(
 function MethodOption({
   isSelected,
   method,
-  onKeyDown,
-  onSelect,
 }: {
   isSelected: boolean;
   method: ConfigMethod;
-  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
-  onSelect: (method: ConfigMethod) => void;
 }) {
   const content = METHOD_CONTENT[method];
   const Icon = content.icon;
   return (
-    <Button
-      aria-checked={isSelected}
-      className="group flex h-auto w-full min-w-0 items-start overflow-hidden text-left"
+    <Radio
+      aria-label={getMethodLabel(method)}
+      className="text-left"
       data-selected={isSelected}
       data-setup-method-card={method}
-      onClick={() => {
-        onSelect(method);
-      }}
-      onKeyDown={onKeyDown}
-      presentation="onboarding-method"
-      role="radio"
-      type="button"
-      variant="ghost"
+      value={method}
     >
       <span
         className={cn(
@@ -119,44 +108,8 @@ function MethodOption({
           {content.description}
         </span>
       </span>
-    </Button>
+    </Radio>
   );
-}
-
-const NEXT_METHOD_KEYS = new Set(["ArrowDown", "ArrowRight"]);
-const PREVIOUS_METHOD_KEYS = new Set(["ArrowUp", "ArrowLeft"]);
-
-function getNextMethodFromKey({
-  currentMethod,
-  key,
-  methods,
-}: {
-  currentMethod: ConfigMethod | null;
-  key: string;
-  methods: ConfigMethod[];
-}): ConfigMethod | null {
-  if (methods.length === 0) {
-    return null;
-  }
-  const currentIndex = Math.max(
-    0,
-    currentMethod ? methods.indexOf(currentMethod) : 0
-  );
-  if (NEXT_METHOD_KEYS.has(key)) {
-    return methods[(currentIndex + 1) % methods.length] ?? null;
-  }
-  if (PREVIOUS_METHOD_KEYS.has(key)) {
-    return (
-      methods[(currentIndex - 1 + methods.length) % methods.length] ?? null
-    );
-  }
-  if (key === "Home") {
-    return methods[0] ?? null;
-  }
-  if (key === "End") {
-    return methods.at(-1) ?? null;
-  }
-  return null;
 }
 
 export function MethodSelectionPhase() {
@@ -173,24 +126,6 @@ export function MethodSelectionPhase() {
   const manualSetupReason = onboardingState
     ? `Querylane cannot write its configuration to ${onboardingState.configFilePath}, so UI-configured and embedded setup are unavailable. Fix the directory permissions or configure the file manually.`
     : "";
-
-  const handleMethodKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const nextMethod = getNextMethodFromKey({
-      currentMethod: selectedMethod,
-      key: event.key,
-      methods,
-    });
-    if (!nextMethod) {
-      return;
-    }
-    event.preventDefault();
-    selectMethod(nextMethod);
-    requestAnimationFrame(() => {
-      document
-        .querySelector<HTMLElement>(`[data-setup-method-card="${nextMethod}"]`)
-        ?.focus();
-    });
-  };
 
   return (
     <WizardPage
@@ -229,7 +164,15 @@ export function MethodSelectionPhase() {
           </AlertDescription>
         </Alert>
       ) : null}
-      <div aria-label="Setup method" className="space-y-2.5" role="radiogroup">
+      <RadioGroup<ConfigMethod>
+        aria-label="Setup method"
+        onValueChange={(method) => {
+          if (method && methods.includes(method)) {
+            selectMethod(method);
+          }
+        }}
+        value={selectedMethod}
+      >
         {methods.length === 0 ? (
           <div className="rounded-xl border border-dashed border-white/12 bg-white/3 px-4 py-6 text-center">
             <p className="text-sm font-medium text-white">
@@ -246,12 +189,10 @@ export function MethodSelectionPhase() {
               isSelected={selectedMethod === method}
               key={method}
               method={method}
-              onKeyDown={handleMethodKeyDown}
-              onSelect={selectMethod}
             />
           ))
         )}
-      </div>
+      </RadioGroup>
     </WizardPage>
   );
 }

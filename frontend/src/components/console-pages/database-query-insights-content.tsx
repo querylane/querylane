@@ -40,10 +40,8 @@ import {
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { RetryActionButton } from "@/components/retry-action-button";
 import { SelectValue } from "@/components/select-extensions";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
+import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/ui/data-table-filter-toolbar-types";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
   Select,
@@ -703,7 +701,7 @@ function QueryPaginationFooter({
   return (
     <div
       className="flex min-h-10 flex-wrap items-center gap-2 border-t px-5 py-2 text-xs text-muted-foreground"
-      data-slot="query-insights-pagination"
+      data-querylane-slot="query-insights-pagination"
     >
       {totalRows > 0 ? (
         <span className="tabular-nums">
