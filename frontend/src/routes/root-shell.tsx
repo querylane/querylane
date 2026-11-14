@@ -1,6 +1,6 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AgentAccessIntegration } from "@/components/agent-access";
 import { AppErrorRedirectController } from "@/components/app-error-redirect-controller";
 import { AppShellFrame } from "@/components/app-shell-frame";
@@ -10,6 +10,7 @@ import { NotFoundState } from "@/components/not-found-state";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { RouteErrorView } from "@/components/route-error-view";
 import { Toaster } from "@/components/ui/toast";
+import { initializeUiObservation } from "@/features/agent-drafts/ui-observation";
 import { DbProvider } from "@/lib/db-context";
 import { ThemeProvider } from "@/theme-provider";
 
@@ -20,6 +21,9 @@ const LazyDatabaseLayout = lazy(() =>
 );
 
 export function RootComponent() {
+  useEffect(function observeUiChanges() {
+    return initializeUiObservation();
+  }, []);
   return (
     <ThemeProvider defaultTheme="system">
       <AgentAccessIntegration />

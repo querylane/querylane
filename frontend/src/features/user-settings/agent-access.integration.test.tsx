@@ -8,6 +8,7 @@ import { DataValuePreviewDialog } from "@/components/data-grid/table-data-grid/d
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAgentDraftStore } from "@/features/agent-drafts/agent-draft-state";
 import { requestAgentApproval, useAgentAccessStore } from "./agent-access";
 
 const agent = createAgent({
@@ -216,4 +217,41 @@ test("an approval cannot follow the agent onto another route", async () => {
   } finally {
     globalThis.history.replaceState(null, "", location);
   }
+});
+
+test("a draft value guard is rechecked after the person approves", async () => {
+  useAgentAccessStore.getState().setEnabled(true);
+  let current = "Preview";
+  useAgentDraftStore.setState({ approvalGuard: () => current === "Preview" });
+  const result = requestAgentApproval(
+    {
+      ref: "draft",
+      component: "instance-draft",
+      action: "setDisplayName",
+      args: ["Before"],
+    },
+    new AbortController().signal
+  );
+  expect(useAgentAccessStore.getState().approval).not.toBeNull();
+  current = "Later human edit";
+  useAgentAccessStore.getState().approval?.decide(true);
+  expect(await result).toBe(false);
+  expect(useAgentAccessStore.getState().approval).toBeNull();
+});
+
+test("a stale draft operation is refused before showing a permission prompt", async () => {
+  useAgentAccessStore.getState().setEnabled(true);
+  useAgentDraftStore.setState({ approvalGuard: () => false });
+  await expect(
+    requestAgentApproval(
+      {
+        ref: "draft",
+        component: "instance-draft",
+        action: "setSslMode",
+        args: ["require"],
+      },
+      new AbortController().signal
+    )
+  ).resolves.toBe(false);
+  expect(useAgentAccessStore.getState().approval).toBeNull();
 });

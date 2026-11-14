@@ -1,4 +1,5 @@
 import type { Rspack, SplitChunksConfig } from "@rsbuild/core";
+import { AGENT_TOOLS_MODULE_PATTERN } from "./scripts/agent-bundle-contract";
 import { isNonEmptyString } from "./src/lib/value-guards";
 
 const KIB = 1024;
@@ -9,6 +10,13 @@ const MAX_INITIAL_CHUNK_REQUESTS = 20;
 const MIN_SPLIT_SIZE_KIB = 10;
 
 const managedChunkCacheGroups = {
+  agentTools: {
+    chunks: "async",
+    name: "agent-tools",
+    priority: 35,
+    reuseExistingChunk: true,
+    test: AGENT_TOOLS_MODULE_PATTERN,
+  },
   databaseVisualization: {
     chunks: "async",
     name: "database-visualization",

@@ -76,11 +76,15 @@ function AgentAccessIntegration() {
       }}
       open={approval !== null}
     >
-      <DialogContent data-agent-hidden={true} showCloseButton={false}>
+      <DialogContent
+        data-agent-hidden={true}
+        motion="none"
+        showCloseButton={false}
+      >
         <DialogHeader>
           <DialogTitle>Approve one agent action?</DialogTitle>
           <DialogDescription>
-            The browser agent requests {approval?.action.action} on{" "}
+            An agent action requests {approval?.action.action} on{" "}
             {approval?.action.label ?? "an unnamed control"}. Only this action
             is approved. SQL execution, database writes, and destructive actions
             must be performed manually.

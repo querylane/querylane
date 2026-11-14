@@ -105,3 +105,9 @@ All commits must follow: `type(scope): description`
 - Read `node_modules/@ui-sdk/react/docs/llms.txt` and the relevant component docs before changing UI SDK usage. For a new behavior, also read the relevant headings in `docs/core.md` and `docs/rendering.md`.
 - UI SDK owns `data-slot`; app-owned styling hooks use `data-querylane-slot`.
 - State updates must use SDK change callbacks so agent actions update application state. Keep credentials secret, query results hidden, and sensitive final actions marked `data-agent-confirm`.
+
+### Core composition and agent drafts
+
+- For a new composed primitive, read the installed SDK's `docs/core.md`, `docs/rendering.md`, and `docs/agents.md`. Keep its behavior framework-independent and its React/Tailwind facade in the existing UI layer; declare the exact agent action allowlist.
+- Verify owned primitives with SDK `checkServer`, `checkPattern`, and `checkDirection` where applicable, plus a real consumer flow. Native WebMCP coverage lives in `e2e/tests/agent-drafts.spec.ts`; only its disposable test browser enables the experimental feature.
+- Preserve the opt-in and manual-write boundaries. Draft history owns only `DRAFT_KEYS` from `features/agent-drafts/instance-draft.ts`, never credentials, SQL/results, or database operations. Keep its leaf observation anchor free of unrelated controls. Bind async subscriptions to the committed primitive instance and recheck route/session/current values after approval; speculative render handles are not lifetime identities.

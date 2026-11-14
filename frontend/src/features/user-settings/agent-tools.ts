@@ -11,4 +11,4 @@ function registerAgentTools() {
   });
 }
 
-export { registerAgentTools };
+export { agent, registerAgentTools };
