@@ -105,6 +105,7 @@ function ChartContainer({
   );
   return (
     <fieldset
+      aria-busy={isRefreshing}
       aria-label={emphasisEnabled ? "Metric chart" : undefined}
       className={cn(
         "flex size-full min-w-0 flex-col text-xs transition-opacity",
