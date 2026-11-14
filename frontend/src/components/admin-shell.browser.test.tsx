@@ -507,6 +507,12 @@ test("command palette opens over the layout and restores focus on dismissal", as
   await renderAdminShell();
 
   const trigger = page.getByRole("button", { name: "Search or jump to" });
+  await expect
+    .element(trigger)
+    .toHaveAttribute(
+      "aria-keyshortcuts",
+      navigator.platform.startsWith("Mac") ? "Meta+K" : "Control+K"
+    );
   await trigger.click();
 
   const dialog = page.getByRole("dialog", { name: "Search or jump to" });

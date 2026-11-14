@@ -33,3 +33,11 @@ Long-lived subscriptions belong to the committed primitive **instance**, not a s
 The opt-in agent/history/review chunk has its own 20 KiB gzip cap. Source-map checks reject mixed chunks or agent modules in the initial download; the eager observer, store, and draft model still count against the existing core budget.
 
 Read the installed `docs/core.md`, `docs/rendering.md`, and `docs/agents.md` before changing these contracts. Custom primitives are checked with `@ui-sdk/core/testing` (`checkPattern`, `checkServer`, `checkDirection`). `e2e/tests/agent-drafts.spec.ts` uses Playwright's native `page.webmcp` client and a disposable Chromium launched with WebMCP enabled; it does not stub browser registration, the SDK, or the app. The launch flag affects only that test browser, not personal browser settings. Normal supported-browser feature detection and explicit tab opt-in remain required in production.
+
+## React hook ownership
+
+Application shortcuts use SDK `useShortcut` for key matching, text-entry/IME guards, repeat suppression, modal-layer priority, latest handlers, and registration cleanup. The app registry still owns action names, native editor/grid help entries, and the one-second two-stroke navigation chords; the chord adapter tracks only the prefix, while the SDK checks both strokes. `useShortcutHint` formats the help sheet's primary modifier and the search button's accessible shortcut metadata for the actual platform. Keep CodeMirror and data-grid native keymaps with their existing owners.
+
+`ThemeProvider` uses `createColorScheme`, SDK local storage, and `usePreference`. Keep the `querylane-ui-theme` storage contract, external CSP-safe `theme-init.js`, Tailwind's existing light/dark classes, and `color-scheme` in sync. Preference changes from another tab and unavailable storage must not break the ordinary UI.
+
+Do not add `useFieldControl` around SDK inputs: their implementations already join the nearest Field. Use it when an actual app-owned custom control needs to join a Field. Keep server-backed selectors on Connect Query for cache, cancellation, and stale-result ownership; do not stack `useAsyncOptions` over an existing query solely to increase API usage. It is appropriate for a future standalone async-options loader with one clear owner.

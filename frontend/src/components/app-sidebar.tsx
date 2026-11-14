@@ -6,6 +6,7 @@ import {
   useLocation,
   useRouter,
 } from "@tanstack/react-router";
+import { useShortcutHint } from "@ui-sdk/react/shortcuts";
 import {
   ArrowLeftIcon,
   ChevronsUpDown,
@@ -657,9 +658,10 @@ function SidebarNavigationContent({
 }
 function SidebarSearchButton() {
   const { openPalette } = useCommandPalette();
+  const shortcut = useShortcutHint("mod+k");
   return (
     <Button
-      aria-keyshortcuts="Meta+K Control+K"
+      aria-keyshortcuts={shortcut.ariaKeyshortcuts}
       className="h-8 w-full justify-start"
       onClick={openPalette}
       presentation="sidebar-action"

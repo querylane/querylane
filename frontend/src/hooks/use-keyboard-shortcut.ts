@@ -1,30 +1,47 @@
-import { createContext, use, useEffect, useEffectEvent } from "react";
-import type { KeyboardShortcutId } from "@/lib/keyboard-shortcut-registry";
+import { useShortcut } from "@ui-sdk/react/shortcuts";
+import { createContext, use, useEffect } from "react";
+import {
+  KEYBOARD_SHORTCUTS,
+  keyboardShortcutBindingKey,
+} from "@/lib/keyboard-shortcut-registry";
 
-type RegisterKeyboardShortcut = (
-  id: KeyboardShortcutId,
-  handler: () => void
-) => () => void;
+type HandledKeyboardShortcutId = Extract<
+  (typeof KEYBOARD_SHORTCUTS)[number],
+  { kind: "handled" }
+>["id"];
+
+interface KeyboardShortcutRegistration {
+  isChordPending: (prefix: string) => boolean;
+  registerPrefix: (prefix: string) => () => void;
+}
 
 const KeyboardShortcutRegistrationContext =
-  createContext<RegisterKeyboardShortcut | null>(null);
+  createContext<KeyboardShortcutRegistration | null>(null);
 
-function useKeyboardShortcut(id: KeyboardShortcutId, handler: () => void) {
-  const register = use(KeyboardShortcutRegistrationContext);
-  const runShortcut = useEffectEvent(handler);
-  if (!register) {
+function useKeyboardShortcut(
+  id: HandledKeyboardShortcutId,
+  handler: () => void
+) {
+  const registration = use(KeyboardShortcutRegistrationContext);
+  if (!registration) {
     throw new Error(
       "useKeyboardShortcut must be used within KeyboardShortcutsProvider."
     );
   }
-
+  const shortcut = KEYBOARD_SHORTCUTS.find((entry) => entry.id === id);
+  const binding = shortcut?.bindings[0] ?? [];
+  const prefix = keyboardShortcutBindingKey(binding.slice(0, -1));
+  const keys = keyboardShortcutBindingKey(binding.slice(-1));
+  useShortcut(keys, handler, {
+    description: shortcut?.description ?? id,
+    when: () => prefix === "" || registration.isChordPending(prefix),
+  });
   useEffect(
-    function registerKeyboardShortcut() {
-      return register(id, runShortcut);
+    function registerChordPrefix() {
+      return prefix ? registration.registerPrefix(prefix) : undefined;
     },
-    [id, register]
+    [prefix, registration]
   );
 }
 
-export type { RegisterKeyboardShortcut };
 export { KeyboardShortcutRegistrationContext, useKeyboardShortcut };

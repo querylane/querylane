@@ -106,7 +106,7 @@ function renderAdminCommandPalette() {
   );
 }
 
-test("Cmd+K searches and jumps to a table", async () => {
+test("the platform primary shortcut searches and jumps to a table", async () => {
   const user = userEvent.setup();
   renderAdminCommandPalette();
 
@@ -116,7 +116,8 @@ test("Cmd+K searches and jumps to a table", async () => {
     )
   ).toBeNull();
 
-  await user.keyboard("{Meta>}k{/Meta}");
+  const modifier = navigator.platform.startsWith("Mac") ? "Meta" : "Control";
+  await user.keyboard(`{${modifier}>}k{/${modifier}}`);
   await user.type(
     await screen.findByRole("combobox", {
       name: "Search tables, screens, roles, or saved queries",
