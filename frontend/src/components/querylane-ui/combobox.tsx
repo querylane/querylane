@@ -10,7 +10,7 @@ import {
 } from "@ui-sdk/react/combobox";
 import { CheckIcon, SearchIcon } from "lucide-react";
 import type * as React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
@@ -30,22 +30,43 @@ function Combobox({
 }: React.ComponentProps<typeof ComboboxPrimitiveRoot<string, false>>) {
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
   const [localQuery, setQuery] = useState("");
+  const restoreTriggerRef = useRef(false);
   return (
     <PopupAnchorContext value={{ button, setButton }}>
       <ComboboxPrimitiveRoot
         autoHighlight={true}
         {...props}
         onOpenChange={(open, details) => {
+          const focusLeft =
+            details.reason === "outside-press" ||
+            details.reason === "focus-out" ||
+            details.reason === "window-blur";
           if (open) {
             setQuery("");
           }
           onOpenChange?.(open, details);
+          if (!details.canceled) {
+            restoreTriggerRef.current = !(open || focusLeft);
+          }
         }}
         onOpenChangeComplete={(open) => {
-          if (!open) {
-            button?.focus();
-          }
-          onOpenChangeComplete?.(open);
+          // Let input/presence cleanup finish before recovering focus; its own
+          // restoration must not override the input-in-popup trigger afterward.
+          queueMicrotask(() => {
+            const document = button?.ownerDocument;
+            const focused = document?.activeElement;
+            if (
+              !open &&
+              button?.isConnected === true &&
+              document &&
+              (!focused ||
+                focused === document.body ||
+                restoreTriggerRef.current)
+            ) {
+              button.focus({ preventScroll: true });
+            }
+            onOpenChangeComplete?.(open);
+          });
         }}
         onQueryChange={(next, details) => {
           setQuery(next);
