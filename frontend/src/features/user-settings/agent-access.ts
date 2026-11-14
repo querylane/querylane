@@ -1,5 +1,6 @@
 import type { AgentAction } from "@ui-sdk/react/agent";
 import { create } from "zustand";
+import { useAgentDraftStore } from "@/features/agent-drafts/agent-draft-state";
 
 interface AgentApproval {
   action: AgentAction;
@@ -18,6 +19,10 @@ const useAgentAccessStore = create<AgentAccessState>()((set, get) => ({
   setEnabled(enabled) {
     get().approval?.decide(false);
     set({ enabled });
+    if (!enabled) {
+      useAgentDraftStore.getState().clearDraft?.();
+      useAgentDraftStore.setState({ activity: [], approvalGuard: null });
+    }
   },
 }));
 
@@ -30,6 +35,10 @@ function requestAgentApproval(action: AgentAction, signal: AbortSignal) {
     signal.aborted ||
     state.approval
   ) {
+    return Promise.resolve(false);
+  }
+  const { approvalGuard } = useAgentDraftStore.getState();
+  if (approvalGuard && !approvalGuard(action)) {
     return Promise.resolve(false);
   }
   const location = globalThis.location.href;
@@ -46,7 +55,8 @@ function requestAgentApproval(action: AgentAction, signal: AbortSignal) {
         approved &&
           useAgentAccessStore.getState().enabled &&
           globalThis.location.href === location &&
-          !signal.aborted
+          !signal.aborted &&
+          (!approvalGuard || approvalGuard(action))
       );
     }
     function cancel() {

@@ -1,9 +1,13 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { afterEach, describe, expect, test } from "@rstest/core";
-import { collectBundleBudgetStats } from "./check-bundle-budget";
+import {
+  collectBundleBudgetStats,
+  runBundleBudgetCheck,
+} from "./check-bundle-budget";
 
 const tempDirs: string[] = [];
 
@@ -322,4 +326,69 @@ test("allows production assets without profiling sources", () => {
       indexHtmlPath: join(distDir, "index.html"),
     }).productionContractViolations
   ).toEqual([]);
+});
+
+describe("opt-in agent bundle contract", () => {
+  const agentSource = "../../src/features/agent-drafts/agent-draft-session.ts";
+  const agentPath = "static/js/async/agent-tools.test.js";
+  function agentAsset(
+    sources: string[],
+    text = "console.info('opt-in agent');"
+  ) {
+    const dir = createDistDir();
+    writeAsset(
+      dir,
+      "index.html",
+      '<script src="/static/js/index.js"></script>'
+    );
+    writeAsset(dir, "static/js/index.js", "console.info('ordinary UI');");
+    writeAsset(dir, agentPath, text);
+    writeAsset(dir, `${agentPath}.map`, JSON.stringify({ sources }));
+    return { distDir: dir, indexHtmlPath: join(dir, "index.html") };
+  }
+  test("separately measures a pure agent-tools chunk without changing core caps", () => {
+    const input = agentAsset([agentSource]);
+    const stats = collectBundleBudgetStats(input);
+    expect(stats.deferredAgentToolsGzip).toBe(
+      gzipSync("console.info('opt-in agent');").byteLength
+    );
+    expect(stats.coreTotalGzip).toBe(
+      stats.totalGzip - stats.deferredAgentToolsGzip
+    );
+    expect(stats.productionContractViolations).toEqual([]);
+  });
+  test.each([
+    "../../src/components/console-pages/instance-page.tsx",
+    "../../src/features/agent-drafts/instance-draft.ts",
+    "../../src/features/agent-drafts/ui-observation.ts",
+    "../../node_modules/@ui-sdk/core/dist/components/button/button.js",
+  ])("keeps mixed or eager modules in core: %s", (source) => {
+    const stats = collectBundleBudgetStats(agentAsset([agentSource, source]));
+    expect(stats.deferredAgentToolsGzip).toBe(0);
+    expect(stats.coreTotalGzip).toBe(stats.totalGzip);
+  });
+  test("rejects native tools accidentally imported into the initial download", () => {
+    const input = agentAsset([agentSource]);
+    writeAsset(
+      input.distDir,
+      "static/js/index.js.map",
+      JSON.stringify({
+        sources: ["../../node_modules/@ui-sdk/core/dist/page/agent/agent.js"],
+      })
+    );
+    expect(
+      collectBundleBudgetStats(input).productionContractViolations
+    ).toEqual([
+      "Agent tools must stay opt-in and deferred: static/js/index.js",
+    ]);
+  });
+  test("the real checker rejects an oversized optional agent chunk", () => {
+    const oversized = Array.from({ length: 3000 }, (_, index) =>
+      createHash("sha256").update(String(index)).digest("hex")
+    ).join("");
+    const input = agentAsset([agentSource], oversized);
+    expect(() => {
+      runBundleBudgetCheck(input);
+    }).toThrow("deferred agent tools gzip");
+  });
 });

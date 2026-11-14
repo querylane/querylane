@@ -3,8 +3,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-
 import { RouteErrorView } from "@/components/route-error-view";
+import { initializeUiObservation } from "@/features/agent-drafts/ui-observation";
 import { logger } from "@/lib/diagnostics";
 import { queryClient } from "@/lib/query-client";
 import { createReactRootErrorHandlers } from "@/lib/react-root-errors";
@@ -68,6 +68,8 @@ const rootElement = document.querySelector("#root");
 if (!rootElement) {
   throw new Error("Missing #root element in index.html");
 }
+
+initializeUiObservation();
 
 createRoot(rootElement, createReactRootErrorHandlers()).render(
   <StrictMode>
