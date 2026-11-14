@@ -46,3 +46,31 @@ test("Go request stays synchronized with playground input", async ({
     "api-samples.png"
   );
 });
+
+test("request samples preserve edits made while the playground loads", async ({
+  page,
+}) => {
+  const { promise: clientReady, resolve: releaseClient } =
+    Promise.withResolvers<void>();
+  await page.route("**/playground-client.*.js", async (route) => {
+    const response = await route.fetch();
+    await clientReady;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.goto("/api/instance/instance-service-get-instance");
+    await page.getByRole("tab", { name: "Go", exact: true }).click();
+    const clientRequested = page.waitForRequest("**/playground-client.*.js");
+    await page.getByText("Try it", { exact: true }).click();
+    await clientRequested;
+    await page
+      .getByRole("textbox", { name: INSTANCE_NAME })
+      .fill("instances/early-edit");
+    releaseClient();
+    await expect(
+      page.getByRole("tabpanel").filter({ hasText: "package main" })
+    ).toContainText("instances/early-edit");
+  } finally {
+    releaseClient();
+  }
+});

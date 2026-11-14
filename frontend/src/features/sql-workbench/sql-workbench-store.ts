@@ -1,5 +1,6 @@
 import { toast } from "sonner";
-import { z } from "zod";
+import { en } from "zod/locales";
+import { type ZodMiniType, z } from "zod/mini";
 import { create } from "zustand";
 import {
   type PersistStorage,
@@ -8,6 +9,8 @@ import {
 } from "zustand/middleware";
 import { captureException } from "@/lib/diagnostics";
 import { isNonEmptyString } from "@/lib/value-guards";
+
+z.config(en());
 
 /**
  * Editor tabs, run history and saved queries for the SQL workbench.
@@ -92,34 +95,36 @@ type PersistedSqlWorkbench = Pick<
 
 const sqlTabSchema = z.object({
   createdAt: z.number(),
-  defaultSchema: z.string().optional(),
-  id: z.string().min(1),
-  savedQueryId: z.string().optional(),
+  defaultSchema: z.optional(z.string()),
+  id: z.string().check(z.minLength(1)),
+  savedQueryId: z.optional(z.string()),
   text: z.string(),
   title: z.string(),
 });
 const sqlWorkspaceSchema = z
   .object({
-    activeTabId: z.string().min(1),
-    nextTabNumber: z.int().positive(),
-    tabs: z.array(sqlTabSchema).min(1),
+    activeTabId: z.string().check(z.minLength(1)),
+    nextTabNumber: z.int().check(z.gt(0)),
+    tabs: z.array(sqlTabSchema).check(z.minLength(1)),
   })
-  .refine(
-    (workspace) =>
-      workspace.tabs.some((tab) => tab.id === workspace.activeTabId),
-    {
-      message: "The active SQL tab is missing",
-    }
+  .check(
+    z.refine(
+      (workspace) =>
+        workspace.tabs.some((tab) => tab.id === workspace.activeTabId),
+      {
+        message: "The active SQL tab is missing",
+      }
+    )
   );
-const persistedWorkbenchSchema: z.ZodType<PersistedSqlWorkbench> = z.object({
+const persistedWorkbenchSchema: ZodMiniType<PersistedSqlWorkbench> = z.object({
   history: z.record(
     z.string(),
     z.array(
       z.object({
-        durationMs: z.number().nonnegative(),
-        errorSummary: z.string().optional(),
-        id: z.string().min(1),
-        rowCount: z.number().nonnegative().optional(),
+        durationMs: z.number().check(z.gte(0)),
+        errorSummary: z.optional(z.string()),
+        id: z.string().check(z.minLength(1)),
+        rowCount: z.optional(z.number().check(z.gte(0))),
         startedAt: z.number(),
         statement: z.string(),
         status: z.enum(["ok", "error", "cancelled"]),
@@ -131,7 +136,7 @@ const persistedWorkbenchSchema: z.ZodType<PersistedSqlWorkbench> = z.object({
     z.array(
       z.object({
         createdAt: z.number(),
-        id: z.string().min(1),
+        id: z.string().check(z.minLength(1)),
         name: z.string(),
         statement: z.string(),
         updatedAt: z.number(),
@@ -142,7 +147,7 @@ const persistedWorkbenchSchema: z.ZodType<PersistedSqlWorkbench> = z.object({
 });
 const storedWorkbenchSchema = z.object({
   state: persistedWorkbenchSchema,
-  version: z.int().nonnegative().optional(),
+  version: z.optional(z.int().check(z.gte(0))),
 });
 
 const STORAGE_KEY = "querylane.sql-workbench.v1";

@@ -1,13 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
+import { en } from "zod/locales";
+import { z } from "zod/mini";
 import { AccessDeniedRoutePage } from "@/routes/access-denied-page";
+
+z.config(en());
 
 const accessDeniedSearchSchema = z.object({
   returnTo: z.optional(
     z
       .string()
-      .min(1)
-      .regex(/^\/(?!\/).*/u, "returnTo must be an in-app absolute path")
+      .check(
+        z.minLength(1),
+        z.regex(/^\/(?!\/).*/u, "returnTo must be an in-app absolute path")
+      )
   ),
 });
 

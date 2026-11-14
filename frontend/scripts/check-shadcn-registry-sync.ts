@@ -36,7 +36,7 @@ const DIFF_CHANGED_LINE_PATTERN =
 const CN_IMPORT_PATTERN = /^import \{ cn \} from "(?:cn|@\/lib\/utils)"$/u;
 // Deliberate patches against shadcn output: card content leaves layout and
 // spacing to each usage, interactive items use the pointer cursor, and sonner
-// sanitizes the resolved theme before passing it to Sonner.
+// accepts an explicit theme (default system) from Querylane's theme owner.
 const ALLOWED_REGISTRY_DRIFT_FILES = new Set([
   "src/components/ui/card.tsx",
   "src/components/ui/command.tsx",

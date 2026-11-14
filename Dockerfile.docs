@@ -9,6 +9,7 @@ RUN apk add --no-cache git
 COPY --from=docs-git / /app/.git
 
 COPY package.json bun.lock ./
+COPY patches ./patches
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts
 
@@ -45,6 +46,7 @@ FROM oven/bun:1.4.4-alpine AS runtime-deps
 WORKDIR /app
 
 COPY package.json bun.lock ./
+COPY patches ./patches
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts
 

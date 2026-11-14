@@ -29,14 +29,16 @@ Versions are pinned in [package.json](../package.json), its lockfile, and [the i
 
 | Tool | Contract |
 | --- | --- |
-| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin. |
+| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin; `bun.lock` is the only maintained lockfile. |
 | Biome / Ultracite | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries. |
 | Oxlint / tsgolint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings. |
 | shadcn lint | Token colors, known utilities, component styling, static classes, and inline-style contracts. |
 | React Doctor | Full-project selected security, bugs, accessibility, performance and graph checks. Test/story/design findings block. Retired/capability-gated IDs and fail-open Socket coverage are not counted as complete enforcement. |
 | tsrs / TypeScript | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS. |
 | React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan; bundle checks reject emitted Scan/bippy instrumentation. |
-| Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
+| Blume | Root documentation-framework dependency, also installed in the docs SSR runtime image. |
+
+Build-only Tailwind and the router plugin are devDependencies. Both TanStack devtools and the type-only Standard Schema re-export remain dependencies because the unchanged source-dependency rule requires their application-source imports there. This classification does not include devtools in production or add runtime code for erased types.
 
 Biome's formatting settings are materialized from Ultracite. Its configuration explicitly extends `ultracite/biome/playwright` and restores `noEmptyPattern` for tests instead of accepting the preset's fixture waiver. Oxlint copies preset rules, not preset overrides. Upstream test/declaration waivers and broad generated-file globs cannot silently weaken coverage.
 
@@ -116,9 +118,13 @@ No repository can make its own configuration immutable. A contributor can edit a
 
 The current frontend refresh aligns direct runtime dependencies and their coupled packages. It retains the separately pinned TypeScript canary rather than downgrading it to the stable compiler tag. Run `bun outdated` to inspect remaining direct updates.
 
-`bun audit --production --json` returned an empty report during this refresh. The Buf registry returned HTTP 404 for the audit request, so the generated Google APIs package was not audited. This is not complete vulnerability coverage.
+`bun audit --production --json` returns an empty report for the frontend graph. Google RPC details and field-behavior annotations now use the existing local generated schemas; the unaudited remote Google APIs package and its Buf npm registry configuration are removed. Package advisory coverage is not a complete source-security review.
 
-The development audit still reports advisories in `basic-ftp`, `deepmerge`, `extract-zip`, `tmp`, `uuid`, and a Zod 3 dependency. Lighthouse constrains the older major versions; current Ultracite and shadcn depend on the reported `deepmerge` release. The compatible transitive refresh updates `body-parser` to 1.20.9. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`. No cross-major overrides or audit suppressions are added.
+The frontend development audit still reports advisories in `basic-ftp`, `deepmerge`, `glob`, and `minimatch`. LHCI 0.16.1 resolves the browser downloader's optional proxy-agent peer with its supported 8.x parent dependency, but get-uri and Lighthouse's pinned Sentry graph still constrain affected transitives. Current Ultracite and shadcn depend on the reported `deepmerge` release. Rstest 0.12.6 still declares optional happy-dom `^20.8.3`; the tested 21.0.4 remains installed rather than downgrading the DOM implementation to satisfy that stale range. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`. No cross-major overrides or audit suppressions are added.
+
+Run the root full audit separately for the docs graph: `Dockerfile.docs` installs all root devDependencies, so its empty production-only audit does not describe the deployed dependency tree. The compatible Blume 2.2.7 graph refresh still leaves parent-pinned `path-to-regexp`, `postcss-selector-parser`, and Zod advisories. The root's unused direct Zod entry is removed; Blume remains its transitive owner. Runtime-image pruning requires a verified SSR dependency closure, not `bun install --production`.
+
+The Bun patch for MIT-licensed Blume 2.2.7 synchronizes native form values when its lazy playground client initializes, preserving edits made before the download finishes. `frontend/e2e/docs/reader.spec.ts` delays that download to verify recovery. Both docs image install stages consume the pinned patch. Remove it when an upstream release passes that regression; use `bun patch blume` and `bun patch --commit node_modules/blume` to regenerate it rather than editing installed cache files.
 
 These tools must not process untrusted archives, proxy configuration, or project input. Cross-major overrides without parent compatibility evidence are not a safe fix. No advisory is suppressed in the audit command.
 
@@ -136,7 +142,7 @@ E2E's unmocked-request guard recognizes Connect POSTs by their protocol header, 
 
 The gate is safe to require repository-wide **after this workflow reaches main**. Requiring the new name while it exists only in this draft would strand unrelated PRs running the old workflow. Keep the existing zero-approval policy; do not invent human reviewers. Enforce resolved conversations, no administrator bypass, no force pushes, and no branch deletion with repository rules. A draft is not approval or merge authorization.
 
-GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit and its Buf-registry coverage limitation above remain explicit; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).
+GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit remains the package-advisory check; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).
 
 ### Biome 2.6.5
 

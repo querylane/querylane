@@ -16,7 +16,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { z } from "zod";
+import { z } from "zod/mini";
 import { UrlListColumnsProvider } from "@/components/list-columns-provider";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { listColumnsSearchSchema } from "@/lib/list-columns";
@@ -52,8 +52,8 @@ function Lists() {
 }
 function testRouter(url: string) {
   const root = createRootRoute({
-    validateSearch: listColumnsSearchSchema.extend({
-      q: z.string().optional(),
+    validateSearch: z.extend(listColumnsSearchSchema, {
+      q: z.optional(z.string()),
     }),
     component: () => (
       <UrlListColumnsProvider>
@@ -71,6 +71,35 @@ function testRouter(url: string) {
     history: createMemoryHistory({ initialEntries: [url] }),
   });
 }
+
+test("malformed shared layouts fall back to usable lists and can be replaced", async () => {
+  const user = userEvent.setup();
+  const router = testRouter(
+    `/lists?q=analytics&columns=${encodeURIComponent(JSON.stringify({ first: "name" }))}&columnOrder=${encodeURIComponent(JSON.stringify({ first: ["owner", 7] }))}&listSort=${encodeURIComponent(JSON.stringify({ first: [{ id: "name", desc: "false" }] }))}`
+  );
+  render(<RouterProvider router={router} />);
+
+  const first = await screen.findByRole("region", { name: "First" });
+  expect(
+    within(first)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent)
+  ).toEqual(["Name", "Owner"]);
+  expect(within(first).getAllByRole("row")[1]?.textContent).toBe("zebraalice");
+
+  await user.click(
+    within(first).getByRole("button", { name: "Name, not sorted" })
+  );
+  await waitFor(() => {
+    expect(router.state.location.search).toEqual({
+      q: "analytics",
+      listSort: { first: [{ id: "name", desc: false }] },
+    });
+  });
+  expect(within(first).getAllByRole("row")[1]?.textContent).toBe(
+    "analyticspostgres"
+  );
+});
 
 test("selections stay in the current URL, survive reload, preserve filters and isolate lists", async () => {
   const user = userEvent.setup();

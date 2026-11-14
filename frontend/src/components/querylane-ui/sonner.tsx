@@ -4,7 +4,7 @@ import { Toaster as BaseToaster } from "@/components/ui/sonner";
 import { useTheme } from "@/theme-context";
 
 function Toaster({ theme: toastTheme, ...props }: ToasterProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   useEffect(function replayPreMountNotifications() {
     // Sonner 2.0 does not replay notifications published before subscription.
@@ -16,7 +16,7 @@ function Toaster({ theme: toastTheme, ...props }: ToasterProps) {
     }
   }, []);
 
-  return <BaseToaster theme={toastTheme ?? theme} {...props} />;
+  return <BaseToaster theme={toastTheme ?? resolvedTheme} {...props} />;
 }
 
 export { Toaster };
