@@ -8,7 +8,7 @@ UI SDK owns `data-slot`. Querylane styling and test hooks use `data-querylane-sl
 
 The sidebar picker uses UI SDK Combobox with an in-popup search field. The navigation drawer uses UI SDK's horizontal Drawer. Specialized CodeMirror, data-grid, chart, and graph engines remain unchanged.
 
-The package-matched API documentation is in `node_modules/@ui-sdk/react/docs/llms.txt`. UI SDK is pinned to `0.1.0-beta.2`; upgrades must rerun keyboard, focus, accessibility, and visual checks.
+The package-matched API documentation is in `node_modules/@ui-sdk/react/docs/llms.txt`. UI SDK is pinned to `0.1.0-beta.5`; upgrades must rerun keyboard, focus, accessibility, and visual checks.
 
 ## Agent access
 

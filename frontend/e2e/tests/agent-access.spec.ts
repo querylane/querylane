@@ -7,6 +7,7 @@ import { expect, test } from "./base";
 
 interface BrowserAgentTool {
   annotations: {
+    consequentialHint: boolean;
     readOnlyHint: boolean;
     untrustedContentHint: boolean;
   };
@@ -109,15 +110,27 @@ test("agent access requires a person and never submits connection changes", asyn
     expect.arrayContaining([
       {
         name: "snapshot",
-        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        annotations: {
+          consequentialHint: false,
+          readOnlyHint: true,
+          untrustedContentHint: true,
+        },
       },
       {
         name: "query",
-        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        annotations: {
+          consequentialHint: false,
+          readOnlyHint: true,
+          untrustedContentHint: true,
+        },
       },
       {
         name: "act",
-        annotations: { readOnlyHint: false, untrustedContentHint: true },
+        annotations: {
+          consequentialHint: true,
+          readOnlyHint: false,
+          untrustedContentHint: true,
+        },
       },
     ])
   );

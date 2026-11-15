@@ -84,7 +84,7 @@ const optionsSchema = {
   onSslNegotiationChange: "callback",
 } satisfies PropSchema<InstanceDraftOptions>;
 
-// Keep beta.2’s concrete schema in its public metadata for exact optional-property typing.
+// Keep the SDK’s concrete schema in public metadata for exact optional-property typing.
 const instanceDraft = Object.assign(
   definePrimitive({
     name: "instance-draft",
