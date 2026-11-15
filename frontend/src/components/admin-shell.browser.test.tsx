@@ -627,3 +627,36 @@ test("admin header keeps the disabled register instance tooltip open while hover
 
   await expect.element(tooltip).toBeVisible();
 });
+
+test("the real command palette opens and closes with its platform shortcut", async () => {
+  await renderAdminShell();
+  const trigger = page.getByRole("button", { name: "Search or jump to" });
+  const shortcut = navigator.platform.startsWith("Mac")
+    ? "Meta+k"
+    : "Control+k";
+  await trigger.focus();
+  await trigger.press(shortcut);
+  const palette = page.getByRole("dialog", { name: "Search or jump to" });
+  await expect.element(palette).toBeVisible();
+  await palette
+    .getByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    })
+    .press(shortcut);
+  await expect.element(palette).not.toBeVisible();
+  await expect.element(trigger).toBeFocused();
+});
+
+test("an unrelated modal pauses the palette opener", async () => {
+  await renderAdminShell();
+  await page.locator("body").press("Shift+?");
+  const help = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  await expect.element(help).toBeVisible();
+  await page
+    .locator("body")
+    .press(navigator.platform.startsWith("Mac") ? "Meta+k" : "Control+k");
+  await expect.element(help).toBeVisible();
+  await expect
+    .element(page.getByRole("dialog", { name: "Search or jump to" }))
+    .not.toBeVisible();
+});

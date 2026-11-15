@@ -1,8 +1,9 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
+import { useShortcut } from "@ui-sdk/react/shortcuts";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Command,
   CommandDialog,
@@ -335,6 +336,11 @@ function AdminCommandPaletteContent({
   const navigate = useNavigate({ from: "/" });
   const { navigationIds, selectedDatabase } = useDb();
   const [query, setQuery] = useState("");
+  const commandRef = useRef<HTMLDivElement | null>(null);
+  useShortcut("mod+k", close, {
+    layer: commandRef,
+    description: "Close command palette",
+  });
   const instanceId = navigationIds.instanceId ?? "";
   const databaseId = navigationIds.databaseId ?? "";
   const hasDatabaseScope = Boolean(instanceId && databaseId);
@@ -433,6 +439,7 @@ function AdminCommandPaletteContent({
       filter={false}
       onQueryChange={setQuery}
       query={query}
+      ref={commandRef}
     >
       <div className="relative">
         <CommandInput

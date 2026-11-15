@@ -10,6 +10,7 @@ import {
   CommandList as BaseCommandList,
   CommandSeparator as BaseCommandSeparator,
   CommandShortcut as BaseCommandShortcut,
+  CommandStatus as BaseCommandStatus,
 } from "@/components/ui/command";
 import {
   Dialog,
@@ -131,6 +132,10 @@ function CommandShortcut(props: ComponentProps<typeof BaseCommandShortcut>) {
   return <BaseCommandShortcut {...props} />;
 }
 
+function CommandStatus(props: ComponentProps<typeof BaseCommandStatus>) {
+  return <BaseCommandStatus {...props} />;
+}
+
 export {
   Command,
   CommandDialog,
@@ -141,4 +146,5 @@ export {
   CommandList,
   CommandSeparator,
   CommandShortcut,
+  CommandStatus,
 };

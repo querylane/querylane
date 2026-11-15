@@ -1,5 +1,6 @@
 import { toJson } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { SchemaService } from "../../src/protogen/querylane/console/v1alpha1/schema_pb";
 import {
   ExecuteQueryResponseSchema,
   SQLService,
@@ -13,10 +14,12 @@ import {
 import { connectStreamBody } from "../visual/serve-service";
 import { expect, softScreenshot, test } from "./base";
 import { mockRpc } from "./helpers";
+import { readRpcRequestBody } from "./read-rpc-request-body";
 
 const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
 
 const RUN_BUTTON_NAME_RE = /^Run/u;
+const DEFAULT_SCHEMA_NAME_RE = /^Default schema/u;
 
 test("storage quota keeps rejected SQL work intact and warns that new drafts are in memory", async ({
   page,
@@ -319,4 +322,77 @@ test("phone navigation dismisses the sidebar and plan focus restores keyboard fo
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Focus plan" })).toBeFocused();
+});
+
+test("schema search retries its failed query and applies context without executing SQL", async ({
+  page,
+  checkAccessibility,
+}) => {
+  await mockConsoleResources(page);
+  const filters: string[] = [];
+  let executions = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/ExecuteQuery")) {
+      executions += 1;
+    }
+  });
+  await page.route(
+    `**/${SchemaService.typeName}/${SchemaService.method.listSchemas.name}`,
+    async (route) => {
+      const request = readRpcRequestBody(route.request().postDataJSON());
+      if (request["pageSize"] !== 50) {
+        await route.fallback();
+        return;
+      }
+      const filter =
+        typeof request["filter"] === "string" ? request["filter"] : "";
+      filters.push(filter);
+      if (filters.length === 2) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            code: "unavailable",
+            message: "Schema search temporarily unavailable",
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          schemas: [
+            {
+              name: `${DATABASE_URL.slice(1)}/schemas/public`,
+              displayName: "public",
+              isSystemSchema: false,
+            },
+          ],
+        }),
+      });
+    }
+  );
+  await page.goto(`${DATABASE_URL}/workbench`);
+  const trigger = page.getByRole("button", { name: DEFAULT_SCHEMA_NAME_RE });
+  await trigger.click();
+  const search = page.getByRole("combobox", { name: "Search schemas…" });
+  const popup = page.getByRole("dialog").filter({ has: search });
+  await expect(
+    popup.getByRole("option", { name: "public", exact: true })
+  ).toBeVisible();
+  await search.fill("public");
+  await expect(
+    popup.getByRole("status", { name: "Schema search status" })
+  ).toHaveText("Couldn't load schemas.");
+  await popup.getByRole("button", { name: "Retry schema search" }).click();
+  await expect(
+    popup.getByRole("status", { name: "Schema search status" })
+  ).toHaveText("1 schema loaded.");
+  await checkAccessibility();
+  await popup.getByRole("option", { name: "public", exact: true }).click();
+  await expect(popup).not.toBeVisible();
+  await expect(trigger).toContainText("public");
+  await expect(trigger).toBeFocused();
+  expect(filters).toEqual(["", 'name:"public"', 'name:"public"']);
+  expect(executions).toBe(0);
 });

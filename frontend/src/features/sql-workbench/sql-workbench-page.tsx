@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useSidebar } from "@/components/querylane-ui/sidebar-context";
 import { Tabs, TabsContent } from "@/components/querylane-ui/tabs";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -418,14 +419,21 @@ function SqlWorkbench({
           }}
           rowLimit={rowLimit}
           schemaSelect={
-            <SqlSchemaSelect
-              databaseId={databaseId}
-              instanceId={instanceId}
-              onChange={(next) => {
-                store.updateTabSchema(scope, activeTab.id, next);
-              }}
-              value={activeTab.defaultSchema}
-            />
+            <Field className="contents *:w-auto" name="default-schema">
+              <FieldLabel className="sr-only">Default schema</FieldLabel>
+              <FieldDescription className="sr-only">
+                Resolve unqualified table names in this SQL tab.
+              </FieldDescription>
+              <SqlSchemaSelect
+                databaseId={databaseId}
+                instanceId={instanceId}
+                key={activeTab.id}
+                onChange={(next) => {
+                  store.updateTabSchema(scope, activeTab.id, next);
+                }}
+                value={activeTab.defaultSchema}
+              />
+            </Field>
           }
           statementCount={statementCount}
         />

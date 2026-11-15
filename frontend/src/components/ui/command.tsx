@@ -7,6 +7,7 @@ import {
   CommandItem as CommandPrimitiveItem,
   CommandList as CommandPrimitiveList,
   CommandSeparator as CommandPrimitiveSeparator,
+  CommandStatus as CommandPrimitiveStatus,
 } from "@ui-sdk/react/command";
 import { cn } from "cn";
 import { CheckIcon, SearchIcon } from "lucide-react";
@@ -208,6 +209,19 @@ function CommandShortcut({
   );
 }
 
+function CommandStatus({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitiveStatus>) {
+  return (
+    <CommandPrimitiveStatus
+      className={cn("px-3 py-2 text-xs text-muted-foreground", className)}
+      data-querylane-slot="command-status"
+      {...props}
+    />
+  );
+}
+
 export {
   Command,
   CommandDialog,
@@ -218,4 +232,5 @@ export {
   CommandList,
   CommandSeparator,
   CommandShortcut,
+  CommandStatus,
 };
