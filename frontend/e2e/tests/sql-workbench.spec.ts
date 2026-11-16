@@ -1,7 +1,9 @@
-import { toJson } from "@bufbuild/protobuf";
+import { fromJsonString, toJson } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { SchemaService } from "../../src/protogen/querylane/console/v1alpha1/schema_pb";
 import {
+  type ExecuteQueryRequest,
+  ExecuteQueryRequestSchema,
   ExecuteQueryResponseSchema,
   SQLService,
 } from "../../src/protogen/querylane/console/v1alpha1/sql_pb";
@@ -18,6 +20,7 @@ import { readRpcRequestBody } from "./read-rpc-request-body";
 
 const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
 
+const CONNECT_ENVELOPE_HEADER_BYTES = 5;
 const RUN_BUTTON_NAME_RE = /^Run/u;
 const DEFAULT_SCHEMA_NAME_RE = /^Default schema/u;
 
@@ -92,9 +95,20 @@ for (const routeName of ["workbench", "sql"]) {
   }) => {
     await mockConsoleResources(page);
     await mockRpc(page, "SQLService/ValidateQuery", {});
+    const executions: ExecuteQueryRequest[] = [];
     await page.route(
       `**/${SQLService.typeName}/${SQLService.method.executeQuery.name}`,
       async (route) => {
+        const body = route.request().postDataBuffer();
+        if (!body) {
+          throw new Error("Expected a framed SQL execution request");
+        }
+        executions.push(
+          fromJsonString(
+            ExecuteQueryRequestSchema,
+            body.subarray(CONNECT_ENVELOPE_HEADER_BYTES).toString("utf8")
+          )
+        );
         await route.fulfill({
           body: connectStreamBody(
             workbenchQueryResponses().map((message) =>
@@ -107,6 +121,15 @@ for (const routeName of ["workbench", "sql"]) {
     );
     const url = `${DATABASE_URL}/${routeName}`;
     await page.goto(url);
+    const limit = page.getByRole("combobox", {
+      name: "Row limit",
+      exact: true,
+    });
+    await expect(limit).toContainText("1,000 rows");
+    await limit.click();
+    await page.getByRole("option", { name: "5,000 rows", exact: true }).click();
+    await expect(limit).toContainText("5,000 rows");
+    await expect(limit).toBeFocused();
     const editor = page.getByRole("textbox", { name: "SQL editor" });
     await editor.fill("SELECT ref, carrier, eta FROM shipping.shipments;");
     // Unlike the retired editor, the shipped workbench exposes its working
@@ -125,6 +148,7 @@ for (const routeName of ["workbench", "sql"]) {
       page.getByText("ML-2026-048292", { exact: true })
     ).toBeVisible();
     await expect(page.getByText("2 rows", { exact: true })).toBeVisible();
+    expect(executions).toEqual([expect.objectContaining({ rowLimit: 5000 })]);
     await expect(page).toHaveURL(url);
     await softScreenshot(page, `${routeName}-current-workbench`);
   });
