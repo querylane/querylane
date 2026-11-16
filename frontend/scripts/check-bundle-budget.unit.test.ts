@@ -393,12 +393,30 @@ describe("opt-in agent bundle contract", () => {
   });
 });
 
-function coreBudgetFixture(hashes: number) {
-  const distDir = createDistDir();
-  writeAsset(distDir, "index.html", "<main></main>");
-  const payload = Array.from({ length: hashes }, (_, index) =>
+function payloadForGzipBytes(targetBytes: number) {
+  const source = Array.from({ length: 3000 }, (_, index) =>
     createHash("sha256").update(String(index)).digest("hex")
   ).join("");
+  let start = 0;
+  let end = source.length;
+  // gzip implementations differ across platforms; target compressed bytes,
+  // rather than assuming a fixed number of hashes crosses the budget.
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2);
+    const size = gzipSync(source.slice(0, middle)).byteLength;
+    if (size < targetBytes) {
+      start = middle + 1;
+    } else {
+      end = middle;
+    }
+  }
+  return source.slice(0, start);
+}
+
+function coreBudgetFixture(targetKiB: number) {
+  const distDir = createDistDir();
+  writeAsset(distDir, "index.html", "<main></main>");
+  const payload = payloadForGzipBytes(Math.floor((targetKiB * 1024) / 16));
   // Many sub-limit chunks exercise total core size, not the async-file cap.
   for (let index = 0; index < 16; index += 1) {
     writeAsset(distDir, `static/js/async/core-${index}.js`, payload);
@@ -407,16 +425,20 @@ function coreBudgetFixture(hashes: number) {
 }
 
 test("accepts the approved Base UI plus SDK core allowance", () => {
-  const input = coreBudgetFixture(1895);
+  const input = coreBudgetFixture(1080);
   const stats = collectBundleBudgetStats(input);
-  expect(stats.coreTotalGzip).toBeGreaterThan(1050 * 1024);
+  expect(stats.coreTotalGzip).toBeGreaterThanOrEqual(1080 * 1024);
+  expect(stats.coreTotalGzip).toBeLessThan(1081 * 1024);
   expect(() => {
     runBundleBudgetCheck(input);
   }).not.toThrow();
 });
 
 test("rejects growth beyond the approved Base UI plus SDK core allowance", () => {
-  const input = coreBudgetFixture(1905);
+  const input = coreBudgetFixture(1100);
+  const stats = collectBundleBudgetStats(input);
+  expect(stats.coreTotalGzip).toBeGreaterThanOrEqual(1100 * 1024);
+  expect(stats.coreTotalGzip).toBeLessThan(1101 * 1024);
   expect(() => {
     runBundleBudgetCheck(input);
   }).toThrow("core total gzip");
