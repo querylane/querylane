@@ -38,6 +38,9 @@ export default defineConfig({
     ...core.rules,
     ...react.rules,
     ...shadcn.rules,
+    // Newly recommended in 1.94; retain fatal enforcement independently of presets.
+    "oxc/misrefactored-assign-op": "error",
+    "oxc/no-this-in-exported-function": "error",
     "querylane/no-manual-memoization": "error",
     "no-restricted-imports": "off",
     "no-restricted-globals": "off",
