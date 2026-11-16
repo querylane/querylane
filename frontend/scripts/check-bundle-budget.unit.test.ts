@@ -392,3 +392,32 @@ describe("opt-in agent bundle contract", () => {
     }).toThrow("deferred agent tools gzip");
   });
 });
+
+function coreBudgetFixture(hashes: number) {
+  const distDir = createDistDir();
+  writeAsset(distDir, "index.html", "<main></main>");
+  const payload = Array.from({ length: hashes }, (_, index) =>
+    createHash("sha256").update(String(index)).digest("hex")
+  ).join("");
+  // Many sub-limit chunks exercise total core size, not the async-file cap.
+  for (let index = 0; index < 16; index += 1) {
+    writeAsset(distDir, `static/js/async/core-${index}.js`, payload);
+  }
+  return { distDir, indexHtmlPath: join(distDir, "index.html") };
+}
+
+test("accepts the approved Base UI plus SDK core allowance", () => {
+  const input = coreBudgetFixture(1895);
+  const stats = collectBundleBudgetStats(input);
+  expect(stats.coreTotalGzip).toBeGreaterThan(1050 * 1024);
+  expect(() => {
+    runBundleBudgetCheck(input);
+  }).not.toThrow();
+});
+
+test("rejects growth beyond the approved Base UI plus SDK core allowance", () => {
+  const input = coreBudgetFixture(1905);
+  expect(() => {
+    runBundleBudgetCheck(input);
+  }).toThrow("core total gzip");
+});

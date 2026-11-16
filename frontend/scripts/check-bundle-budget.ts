@@ -20,8 +20,8 @@ const UNUSED_CHART_CAPABILITY_PATTERN =
 const DEVELOPMENT_PROFILER_PATTERN =
   /(?:^|[/@])(?:react-scan|bippy)(?:[./@-]|$)/u;
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
-// Native tools and draft review load only after tab opt-in. Keep the existing
-// core/initial caps, and independently bound this new optional capability.
+// Native tools and draft review load only after tab opt-in. Bound this optional
+// capability independently; eager hooks/adapters remain charged to core below.
 const MAX_DEFERRED_AGENT_TOOLS_GZIP_KIB = 20;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
@@ -72,7 +72,11 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // 1043.3 KiB core gzip with Bun 1.4.4 on both macOS and Linux CI.
 // 1050 (was 1045): shareable list sorting and layout state. No new dependencies;
 // initial-load, SQL-editor and largest-async caps stay unchanged.
-const MAX_TOTAL_GZIP_KIB = 1050;
+// 1090 (was 1050): approved Base UI foundation plus UI SDK enhancements.
+// Bun 1.4.4 measures 1086.5 KiB after sharing both libraries in ui-vendor
+// (1104.0 KiB before removing duplication). Previous SDK-only core: 1046.6 KiB.
+// Initial is 368.9 KiB; initial, async, SQL, agent and route/latency caps stay put.
+const MAX_TOTAL_GZIP_KIB = 1090;
 
 interface BundleBudgetAsset {
   brotli: number;
