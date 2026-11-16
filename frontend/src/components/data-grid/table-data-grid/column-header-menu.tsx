@@ -99,7 +99,6 @@ function ColumnHeaderMenu({
         <DropdownMenuCheckboxItem
           checked={sortDirection === "ASC"}
           onCheckedChange={handleSortAsc}
-          value="ascending"
         >
           <ArrowUp className="size-3.5" />
           Sort ascending
@@ -107,7 +106,6 @@ function ColumnHeaderMenu({
         <DropdownMenuCheckboxItem
           checked={sortDirection === "DESC"}
           onCheckedChange={handleSortDesc}
-          value="descending"
         >
           <ArrowDown className="size-3.5" />
           Sort descending

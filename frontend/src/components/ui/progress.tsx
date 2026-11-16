@@ -1,42 +1,30 @@
-import {
-  ProgressIndicator as ProgressPrimitiveIndicator,
-  ProgressLabel as ProgressPrimitiveLabel,
-  Progress as ProgressPrimitiveRoot,
-  ProgressTrack as ProgressPrimitiveTrack,
-  ProgressValue as ProgressPrimitiveValue,
-} from "@ui-sdk/react/progress";
+import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 import { cn } from "cn";
-import type * as React from "react";
 
 function Progress({
   className,
   children,
   value,
   ...props
-}: Omit<React.ComponentProps<typeof ProgressPrimitiveRoot>, "children"> & {
-  children?: React.ReactNode;
-}) {
+}: ProgressPrimitive.Root.Props) {
   return (
-    <ProgressPrimitiveRoot
+    <ProgressPrimitive.Root
       className={cn("flex flex-wrap gap-3", className)}
       data-querylane-slot="progress"
-      value={value ?? null}
+      value={value}
       {...props}
     >
       {children}
       <ProgressTrack>
         <ProgressIndicator />
       </ProgressTrack>
-    </ProgressPrimitiveRoot>
+    </ProgressPrimitive.Root>
   );
 }
 
-function ProgressTrack({
-  className,
-  ...props
-}: React.ComponentProps<typeof ProgressPrimitiveTrack>) {
+function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
   return (
-    <ProgressPrimitiveTrack
+    <ProgressPrimitive.Track
       className={cn(
         "relative flex h-1.5 w-full items-center overflow-x-hidden rounded-full bg-muted",
         className
@@ -50,9 +38,9 @@ function ProgressTrack({
 function ProgressIndicator({
   className,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitiveIndicator>) {
+}: ProgressPrimitive.Indicator.Props) {
   return (
-    <ProgressPrimitiveIndicator
+    <ProgressPrimitive.Indicator
       className={cn("h-full bg-primary transition-all", className)}
       data-querylane-slot="progress-indicator"
       {...props}
@@ -60,12 +48,9 @@ function ProgressIndicator({
   );
 }
 
-function ProgressLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof ProgressPrimitiveLabel>) {
+function ProgressLabel({ className, ...props }: ProgressPrimitive.Label.Props) {
   return (
-    <ProgressPrimitiveLabel
+    <ProgressPrimitive.Label
       className={cn("text-sm font-medium", className)}
       data-querylane-slot="progress-label"
       {...props}
@@ -73,12 +58,9 @@ function ProgressLabel({
   );
 }
 
-function ProgressValue({
-  className,
-  ...props
-}: React.ComponentProps<typeof ProgressPrimitiveValue>) {
+function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   return (
-    <ProgressPrimitiveValue
+    <ProgressPrimitive.Value
       className={cn(
         "ml-auto text-sm text-muted-foreground tabular-nums",
         className

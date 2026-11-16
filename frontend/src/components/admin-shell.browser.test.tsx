@@ -304,7 +304,7 @@ test("sidebar database combobox exposes the selection and switches with Enter", 
   await renderAdminShell();
   const trigger = page
     .getByRole("navigation", { name: "Workspace" })
-    .getByRole("button", {
+    .getByRole("combobox", {
       name: `Database: ${LONG_DATABASE_NAME}`,
     });
   await expect.element(trigger).toBeVisible();

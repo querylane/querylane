@@ -405,3 +405,78 @@ test("leaving the form cancels pending draft approval and forgets the history", 
     page.getByRole("region", { name: "Agent draft review" }).getByRole("radio")
   ).toHaveCount(1);
 });
+
+test("native WebMCP discovers and edits Base UI controls through adapters without permitting saves", async ({
+  page,
+}) => {
+  await mockConsoleResources(page);
+  let writes = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/UpdateInstance")) {
+      writes += 1;
+    }
+  });
+  await page.goto(CONFIGURATION_URL);
+  await expect(
+    page.getByRole("textbox", { name: "Display name", exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Enable agent access for this tab" })
+    .click();
+  await expect
+    .poll(async () => {
+      const tools = await page.webmcp.tools();
+      return tools.map((tool) => tool.name).toSorted();
+    })
+    .toEqual(["act", "query", "snapshot"]);
+  const found: unknown = await page.webmcp.callTool("query", {
+    text: "Display name",
+  });
+  expect(found).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        component: "base-input",
+        label: "Display name",
+        actions: expect.arrayContaining(["setValue"]),
+      }),
+    ])
+  );
+  const edit = page.webmcp.callTool("act", {
+    steps: [
+      {
+        ref: "Display name",
+        action: "setValue",
+        args: ["Native adapter draft"],
+      },
+    ],
+  });
+  await approve(page);
+  await expect(edit).resolves.toMatchObject({ ok: true });
+  await expect(
+    page.getByRole("textbox", { name: "Display name", exact: true })
+  ).toHaveValue("Native adapter draft");
+  const ssl = page.webmcp.callTool("act", {
+    steps: [{ ref: "SSL mode", action: "setValue", args: ["verify-full"] }],
+  });
+  // SDK owns closed-choice discovery and the approval for this action.
+  await approve(page);
+  await expect(ssl).resolves.toMatchObject({ ok: true });
+  const snapshot: unknown = await page.webmcp.callTool("snapshot", {});
+  expect(snapshot).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        component: "base-select",
+        label: "SSL mode",
+        value: "verify-full",
+      }),
+    ])
+  );
+  await expect(
+    page.webmcp.callTool("act", {
+      steps: [{ ref: "Save changes", action: "press" }],
+    })
+  ).resolves.toMatchObject({ ok: false });
+  expect(writes).toBe(0);
+  await page.getByRole("button", { name: "Disable agent access" }).click();
+  await expect.poll(() => page.webmcp.tools()).toEqual([]);
+});

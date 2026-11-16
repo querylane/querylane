@@ -10,7 +10,13 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
+import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
 import { Input } from "@/components/ui/input";
+
+const DATABASE_ITEMS = createComboboxItems(["appdb", "warehouse"], {
+  getLabel: (item) => item,
+  getValue: (item) => item,
+});
 
 function DatabasePicker() {
   const [database, setDatabase] = useState<string | null>("appdb");
@@ -19,6 +25,7 @@ function DatabasePicker() {
   return (
     <>
       <Combobox
+        items={DATABASE_ITEMS}
         onOpenChangeComplete={(open) => {
           setSettled(open ? "Open" : "Closed");
         }}
@@ -29,12 +36,11 @@ function DatabasePicker() {
         <ComboboxContent className="duration-200 motion-reduce:transition-opacity">
           <ComboboxInput aria-label="Search databases" />
           <ComboboxList>
-            <ComboboxItem label="appdb" value="appdb">
-              appdb
-            </ComboboxItem>
-            <ComboboxItem label="warehouse" value="warehouse">
-              warehouse
-            </ComboboxItem>
+            {(item: string) => (
+              <ComboboxItem key={item} label={item} value={item}>
+                {item}
+              </ComboboxItem>
+            )}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
@@ -51,7 +57,7 @@ function DatabasePicker() {
 
 test("outside dismissal leaves focus and subsequent typing in the chosen field", async () => {
   await render(<DatabasePicker />);
-  await page.getByRole("button", { name: "Database", exact: true }).click();
+  await page.getByRole("combobox", { name: "Database", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: "Search databases" }))
     .toBeFocused();
@@ -73,9 +79,9 @@ test("outside dismissal leaves focus and subsequent typing in the chosen field",
 
 test("escape and selection still restore the database trigger", async () => {
   await render(<DatabasePicker />);
-  const trigger = page.getByRole("button", { name: "Database", exact: true });
-  // The SDK may restore a previously focused outside control; Escape and
-  // selection still belong to this input-in-popup trigger.
+  const trigger = page.getByRole("combobox", { name: "Database", exact: true });
+  // Base UI owns focus return after Escape and selection, including after
+  // a previously focused outside control.
   await page.getByRole("textbox", { name: "Search columns" }).click();
   await trigger.click();
   await page
@@ -95,10 +101,13 @@ test("escape and selection still restore the database trigger", async () => {
 
 test("focus-out dismissal preserves a programmatically focused field", async () => {
   await render(<DatabasePicker />);
-  await page.getByRole("button", { name: "Database", exact: true }).click();
+  await page.getByRole("combobox", { name: "Database", exact: true }).click();
   await expect
     .element(page.getByRole("status", { name: "Picker lifecycle" }))
     .toHaveText("Open");
+  await expect
+    .element(page.getByRole("combobox", { name: "Search databases" }))
+    .toBeFocused();
   const columns = page.getByRole("textbox", { name: "Search columns" });
   await columns.focus();
   await expect

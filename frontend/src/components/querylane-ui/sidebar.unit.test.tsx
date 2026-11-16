@@ -118,9 +118,7 @@ describe("sidebar hover reveal", () => {
       );
     });
     expect(
-      screen
-        .getByRole("button", { name: "Hidden navigation" })
-        .getAttribute("tabindex")
-    ).toBeNull();
+      screen.getByRole("button", { name: "Hidden navigation" }).tabIndex
+    ).toBe(0);
   });
 });

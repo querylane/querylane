@@ -233,7 +233,7 @@ test.describe("triggers", () => {
       tab: "triggers",
       table: "shipment_event",
     });
-    const stateFilter = page.getByRole("combobox", {
+    const stateFilter = page.getByRole("button", {
       exact: true,
       name: "State",
     });
@@ -253,7 +253,7 @@ test.describe("triggers", () => {
     await test.step("state filter open", async () => {
       await stateFilter.click();
       await expect(
-        page.getByRole("option", { exact: true, name: "Disabled" })
+        page.getByRole("menuitemcheckbox", { exact: true, name: "Disabled" })
       ).toBeVisible();
       await expect(pageContent(page)).toHaveScreenshot(
         "table-trigger-filter-open.png"
@@ -261,9 +261,11 @@ test.describe("triggers", () => {
     });
 
     await test.step("no matching triggers", async () => {
-      await page.getByRole("option", { exact: true, name: "Disabled" }).click();
       await page
-        .getByRole("combobox", { exact: true, name: "State Disabled" })
+        .getByRole("menuitemcheckbox", { exact: true, name: "Disabled" })
+        .click();
+      await page
+        .getByRole("button", { exact: true, name: "State Disabled" })
         .click();
       await page
         .getByRole("textbox", { exact: true, name: "Search triggers…" })

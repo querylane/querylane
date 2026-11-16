@@ -86,7 +86,7 @@ test("a person opts in, approves one change, and revokes WebMCP access", async (
       .element(page.getByRole("dialog", { name: "Approve one agent action?" }))
       .toBeVisible();
     await expect
-      .element(page.getByRole("textbox", { name: "Connection name" }))
+      .element(page.locator('input[aria-label="Connection name"]'))
       .toHaveValue("Original");
     await page.getByRole("button", { name: "Approve action" }).click();
     const outcome = await result;
@@ -158,7 +158,9 @@ test("agent approval over an open dialog stays usable and restores its focus", a
     await expect
       .element(page.getByRole("button", { name: "Deny action" }))
       .toBeFocused();
-    await expect.element(input).toHaveValue("Original");
+    await expect
+      .element(page.locator('input[aria-label="Draft connection name"]'))
+      .toHaveValue("Original");
     await page.getByRole("button", { name: "Approve action" }).click();
     await expect(result).resolves.toMatchObject({ ok: true });
     await expect.element(approval).toBeDetached();

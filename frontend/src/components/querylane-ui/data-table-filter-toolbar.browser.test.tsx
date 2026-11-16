@@ -16,10 +16,10 @@ test("active filter toolbar shows search, facet chips, and clear all", async () 
     .element(page.getByRole("textbox", { name: "Search databases..." }))
     .toHaveValue("customer");
   await expect
-    .element(page.getByRole("combobox", { name: "Kind Regular" }))
+    .element(page.getByRole("button", { name: "Kind Regular" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Owner analytics" }))
+    .element(page.getByRole("button", { name: "Owner analytics" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Clear all" }))

@@ -1,31 +1,44 @@
-import {
-  AlertDialogBackdrop as AlertDialogPrimitiveBackdrop,
-  AlertDialogClose as AlertDialogPrimitiveClose,
-  AlertDialogDescription as AlertDialogPrimitiveDescription,
-  AlertDialogContent as AlertDialogPrimitivePopup,
-  AlertDialog as AlertDialogPrimitiveRoot,
-  AlertDialogTitle as AlertDialogPrimitiveTitle,
-  AlertDialogTrigger as AlertDialogPrimitiveTrigger,
-} from "@ui-sdk/react/alert-dialog";
+"use client";
+
+import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import { cn } from "cn";
 import type * as React from "react";
-
 import { Button } from "@/components/ui/button";
+import { BaseUiAgent } from "@/features/ui-agent/base-ui-adapter";
+import { BaseUiSafetyBoundary } from "@/features/ui-agent/base-ui-safety";
+import {
+  type BaseUiSafetyProps,
+  baseUiModal,
+} from "@/features/ui-agent/base-ui-safety-context";
 
 function AlertDialog({
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveRoot>) {
+}: AlertDialogPrimitive.Root.Props & BaseUiSafetyProps) {
   return (
-    <AlertDialogPrimitiveRoot data-querylane-slot="alert-dialog" {...props} />
+    <BaseUiSafetyBoundary markers={props} modal={baseUiModal(props, true)}>
+      <AlertDialogPrimitive.Root
+        data-querylane-slot="alert-dialog"
+        {...props}
+      />
+    </BaseUiSafetyBoundary>
   );
 }
 
-function AlertDialogTrigger({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveTrigger>) {
+function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
   return (
-    <AlertDialogPrimitiveTrigger
-      data-querylane-slot="alert-dialog-trigger"
+    <BaseUiAgent kind="popup">
+      <AlertDialogPrimitive.Trigger
+        data-querylane-slot="alert-dialog-trigger"
+        {...props}
+      />
+    </BaseUiAgent>
+  );
+}
+
+function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
+  return (
+    <AlertDialogPrimitive.Portal
+      data-querylane-slot="alert-dialog-portal"
       {...props}
     />
   );
@@ -34,9 +47,9 @@ function AlertDialogTrigger({
 function AlertDialogOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveBackdrop>) {
+}: AlertDialogPrimitive.Backdrop.Props) {
   return (
-    <AlertDialogPrimitiveBackdrop
+    <AlertDialogPrimitive.Backdrop
       className={cn(
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
@@ -51,22 +64,24 @@ function AlertDialogContent({
   className,
   size = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitivePopup> & {
+}: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm";
 }) {
   return (
-    <>
+    <AlertDialogPortal>
       <AlertDialogOverlay />
-      <AlertDialogPrimitivePopup
-        className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-1/2 gap-6 rounded-xl bg-popover p-6 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
-        )}
-        data-querylane-slot="alert-dialog-content"
-        data-size={size}
-        {...props}
-      />
-    </>
+      <BaseUiAgent kind="popup">
+        <AlertDialogPrimitive.Popup
+          className={cn(
+            "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-1/2 gap-6 rounded-xl bg-popover p-6 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
+          data-querylane-slot="alert-dialog-content"
+          data-size={size}
+          {...props}
+        />
+      </BaseUiAgent>
+    </AlertDialogPortal>
   );
 }
 
@@ -121,9 +136,9 @@ function AlertDialogMedia({
 function AlertDialogTitle({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveTitle>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
-    <AlertDialogPrimitiveTitle
+    <AlertDialogPrimitive.Title
       className={cn(
         "text-lg font-medium sm:group-data-[size=default]/alert-dialog-content:group-has-data-[querylane-slot=alert-dialog-media]/alert-dialog-content:col-start-2",
         className
@@ -137,9 +152,9 @@ function AlertDialogTitle({
 function AlertDialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveDescription>) {
+}: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
   return (
-    <AlertDialogPrimitiveDescription
+    <AlertDialogPrimitive.Description
       className={cn(
         "text-sm text-balance text-muted-foreground md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className
@@ -168,10 +183,10 @@ function AlertDialogCancel({
   variant = "outline",
   size = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitiveClose> &
+}: AlertDialogPrimitive.Close.Props &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
   return (
-    <AlertDialogPrimitiveClose
+    <AlertDialogPrimitive.Close
       className={cn(className)}
       data-querylane-slot="alert-dialog-cancel"
       render={<Button size={size} variant={variant} />}
@@ -190,6 +205,7 @@ export {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogOverlay,
+  AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
 };

@@ -1,4 +1,3 @@
-import type { SelectProps } from "@ui-sdk/react/select";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import {
@@ -14,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 function Select<Value, Multiple extends boolean | undefined = false>(
-  props: SelectProps<Value, Multiple>
+  props: ComponentProps<typeof BaseSelect<Value, Multiple>>
 ) {
   return <BaseSelect<Value, Multiple> {...props} />;
 }

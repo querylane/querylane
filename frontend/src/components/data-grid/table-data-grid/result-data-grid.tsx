@@ -607,7 +607,7 @@ function ExpandedDataGridDialog({
         if (
           !nextOpen &&
           eventDetails.reason === "escape-key" &&
-          eventDetails.event?.defaultPrevented === true
+          eventDetails.event?.defaultPrevented
         ) {
           eventDetails.cancel();
           return;

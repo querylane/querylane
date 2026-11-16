@@ -102,7 +102,7 @@ const managedChunkCacheGroups = {
     name: "ui-vendor",
     priority: 10,
     reuseExistingChunk: true,
-    test: /[/\\]node_modules[/\\](?:@ui-sdk|lucide-react)[/\\]/u,
+    test: /[/\\]node_modules[/\\](?:@base-ui|@ui-sdk|lucide-react)[/\\]/u,
   },
 } satisfies NonNullable<SplitChunksConfig["cacheGroups"]>;
 

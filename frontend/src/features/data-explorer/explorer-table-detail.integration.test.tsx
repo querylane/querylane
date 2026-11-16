@@ -846,7 +846,7 @@ describe("table detail constraints tab", () => {
     const search = screen.getByRole("textbox", {
       name: "Search constraints…",
     });
-    const kindFilter = screen.getByRole("combobox", { name: KIND_FILTER_RE });
+    const kindFilter = screen.getByRole("button", { name: KIND_FILTER_RE });
 
     await user.type(search, "account_id");
 
@@ -855,7 +855,7 @@ describe("table detail constraints tab", () => {
     expect(screen.queryByText("customers_status_check")).toBeNull();
 
     await user.click(kindFilter);
-    await user.click(screen.getByRole("option", { name: "CHECK" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "CHECK" }));
 
     expect(getSearchEmptyState().textContent).toContain("No results found");
 
@@ -986,7 +986,7 @@ describe("table detail columns tab", () => {
       "Default",
       "Generation",
     ]) {
-      expect(screen.getByRole("combobox", { name: filter })).toBeTruthy();
+      expect(screen.getByRole("button", { name: filter })).toBeTruthy();
     }
     expect(screen.getByText("Catalog metadata")).toBeTruthy();
     expect(screen.getByText(LAST_FETCHED_RE)).toBeTruthy();
@@ -1018,8 +1018,10 @@ describe("table detail columns tab", () => {
       screen.getAllByTitle("Not available from the current column metadata API")
     ).toHaveLength(16);
 
-    await user.click(screen.getByRole("combobox", { name: "Nullability" }));
-    await user.click(screen.getByRole("option", { name: "Nullable" }));
+    await user.click(screen.getByRole("button", { name: "Nullability" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Nullable" })
+    );
     await waitFor(() => {
       expect(screen.queryByText("Surrogate key")).toBeNull();
     });
@@ -1225,8 +1227,8 @@ describe("table detail triggers tab", () => {
     expect(screen.getAllByText("trg_event_10").length).toBeGreaterThan(0);
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
 
-    await user.click(screen.getByRole("combobox", { name: "State" }));
-    await user.click(screen.getByRole("option", { name: "Enabled" }));
+    await user.click(screen.getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Enabled" }));
     expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
@@ -1475,9 +1477,11 @@ describe("table detail policies tab pagination", () => {
     await user.click(
       screen.getByRole("button", { name: "Next policies page" })
     );
-    await user.click(screen.getByRole("combobox", { name: "Mode" }));
-    await user.click(screen.getByRole("option", { name: "Restrictive" }));
-    await user.click(screen.getByRole("button", { name: "Clear filter" }));
+    await user.click(screen.getByRole("button", { name: "Mode" }));
+    await user.click(
+      screen.getByRole("menuitemcheckbox", { name: "Restrictive" })
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Clear filter" }));
 
     expect(
       screen.getByRole("heading", { name: "invoices_policy_1" })

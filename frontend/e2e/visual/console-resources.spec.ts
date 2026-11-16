@@ -314,11 +314,13 @@ test.describe("database overview", () => {
       await drawer
         .getByRole("textbox", { name: "Search queries…" })
         .fill("SELECT");
-      await drawer.getByRole("combobox", { name: "Type" }).click();
-      await page.getByRole("option", { name: "Read queries" }).click();
+      await drawer.getByRole("button", { name: "Type" }).click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "Read queries" })
+        .click();
       await drawer.getByText("Top queries by total time").click();
       await expect(
-        drawer.getByRole("combobox", { name: "Type Read queries" })
+        drawer.getByRole("button", { name: "Type Read queries" })
       ).toBeVisible();
       await expect(
         drawer.getByRole("button", { name: "Clear all" })

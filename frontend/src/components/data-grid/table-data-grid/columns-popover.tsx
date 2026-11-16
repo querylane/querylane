@@ -153,7 +153,7 @@ function ColumnsPopover({
                   checked={visible}
                   disabled={isLastVisible}
                   onCheckedChange={(checked) => {
-                    onVisibilityChange(column.columnName, checked === true);
+                    onVisibilityChange(column.columnName, checked);
                   }}
                 />
                 <span className="min-w-0 truncate font-mono text-xs">

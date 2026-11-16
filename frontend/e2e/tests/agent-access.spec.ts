@@ -167,7 +167,9 @@ test("agent access requires a person and never submits connection changes", asyn
     name: "Approve one agent action?",
   });
   await expect(approval).toBeVisible();
-  await expect(name).toHaveValue(original);
+  await expect(
+    page.locator('input[data-instance-config-field="displayName"]')
+  ).toHaveValue(original);
   const screenshot = testInfo.outputPath("agent-approval.png");
   await page.screenshot({ path: screenshot });
   await testInfo.attach("Agent approval on the configuration page", {
@@ -191,7 +193,9 @@ test("agent access requires a person and never submits connection changes", asyn
       button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     );
   await expect(approval).toBeVisible();
-  await expect(name).toHaveValue(original);
+  await expect(
+    page.locator('input[data-instance-config-field="displayName"]')
+  ).toHaveValue(original);
   await page.getByRole("button", { name: "Approve action" }).click();
   const outcome = await approved;
   expect(outcome).toMatchObject({ ok: true });
@@ -209,7 +213,9 @@ test("agent access requires a person and never submits connection changes", asyn
   ]);
   await expect(approval).toBeVisible();
   await page.getByRole("button", { name: "Approve action" }).click();
-  await expect(name).toHaveValue("Approved batch step");
+  await expect(
+    page.locator('input[data-instance-config-field="displayName"]')
+  ).toHaveValue("Approved batch step");
   await expect(approval).toBeVisible();
   await page.getByRole("button", { name: "Deny action" }).click();
   await expect(batch).resolves.toMatchObject({ ok: false });

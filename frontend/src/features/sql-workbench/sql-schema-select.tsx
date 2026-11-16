@@ -265,7 +265,12 @@ function SchemaPicker({
           </Button>
         }
       />
-      <PopoverContent align="end" className="w-72" presentation="detail">
+      <PopoverContent
+        align="end"
+        aria-label="Choose default schema"
+        className="w-72"
+        presentation="detail"
+      >
         {open ? (
           <SchemaSearch
             databaseId={databaseId}

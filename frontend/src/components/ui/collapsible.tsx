@@ -1,34 +1,33 @@
-import {
-  CollapsiblePanel as CollapsiblePrimitivePanel,
-  Collapsible as CollapsiblePrimitiveRoot,
-  CollapsibleTrigger as CollapsiblePrimitiveTrigger,
-} from "@ui-sdk/react/collapsible";
+import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 import type * as React from "react";
+import { BaseUiAgent } from "@/features/ui-agent/base-ui-adapter";
 
 function Collapsible({
   ...props
-}: React.ComponentProps<typeof CollapsiblePrimitiveRoot>) {
+}: React.ComponentProps<typeof CollapsiblePrimitive.Root>) {
   return (
-    <CollapsiblePrimitiveRoot data-querylane-slot="collapsible" {...props} />
+    <CollapsiblePrimitive.Root data-querylane-slot="collapsible" {...props} />
   );
 }
 
 function CollapsibleTrigger({
   ...props
-}: React.ComponentProps<typeof CollapsiblePrimitiveTrigger>) {
+}: React.ComponentProps<typeof CollapsiblePrimitive.Trigger>) {
   return (
-    <CollapsiblePrimitiveTrigger
-      data-querylane-slot="collapsible-trigger"
-      {...props}
-    />
+    <BaseUiAgent kind="popup">
+      <CollapsiblePrimitive.Trigger
+        data-querylane-slot="collapsible-trigger"
+        {...props}
+      />
+    </BaseUiAgent>
   );
 }
 
 function CollapsibleContent({
   ...props
-}: React.ComponentProps<typeof CollapsiblePrimitivePanel>) {
+}: React.ComponentProps<typeof CollapsiblePrimitive.Panel>) {
   return (
-    <CollapsiblePrimitivePanel
+    <CollapsiblePrimitive.Panel
       data-querylane-slot="collapsible-content"
       {...props}
     />

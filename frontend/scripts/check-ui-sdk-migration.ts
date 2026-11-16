@@ -3,13 +3,26 @@ import { resolve } from "node:path";
 import { isRecord } from "../src/lib/value-guards";
 
 const REPLACED_PACKAGES = [
-  "@base-ui/react",
   "cmdk",
   "react-resizable-panels",
   "sonner",
   "next-themes",
 ];
-const SDK_VERSION = "0.1.0-beta.5";
+const REQUIRED_PACKAGES = {
+  "@base-ui/react": "1.9.0",
+  "@ui-sdk/react": "0.1.0-beta.5",
+  "@ui-sdk/core": "0.1.0-beta.5",
+};
+const BASE_UI_FOUNDATIONS = [
+  "button",
+  "input",
+  "dialog",
+  "select",
+  "popover",
+  "tabs",
+  "checkbox",
+  "switch",
+];
 
 function referencesPackage(source: string, name: string) {
   return [`"${name}"`, `"${name}/`, `'${name}'`, `'${name}/`].some(
@@ -29,6 +42,18 @@ function sourceViolations(files: ReadonlyMap<string, string>) {
   return violations;
 }
 
+function foundationViolations(files: ReadonlyMap<string, string>) {
+  const violations: string[] = [];
+  for (const name of BASE_UI_FOUNDATIONS) {
+    const path = `src/components/ui/${name}.tsx`;
+    const source = files.get(path);
+    if (source !== undefined && !referencesPackage(source, "@base-ui/react")) {
+      violations.push(`${path} must keep Base UI as its foundation`);
+    }
+  }
+  return violations;
+}
+
 function migrationViolations(
   manifest: unknown,
   files: ReadonlyMap<string, string>
@@ -38,9 +63,9 @@ function migrationViolations(
     isRecord(manifest) && isRecord(manifest["dependencies"])
       ? manifest["dependencies"]
       : {};
-  for (const name of ["@ui-sdk/react", "@ui-sdk/core"]) {
-    if (dependencies[name] !== SDK_VERSION) {
-      violations.push(`${name} must be pinned to ${SDK_VERSION}`);
+  for (const [name, version] of Object.entries(REQUIRED_PACKAGES)) {
+    if (dependencies[name] !== version) {
+      violations.push(`${name} must be pinned to ${version}`);
     }
   }
   for (const name of REPLACED_PACKAGES) {
@@ -48,7 +73,7 @@ function migrationViolations(
       violations.push(`Remove replaced dependency ${name}`);
     }
   }
-  violations.push(...sourceViolations(files));
+  violations.push(...sourceViolations(files), ...foundationViolations(files));
   return violations;
 }
 
@@ -67,7 +92,9 @@ if (import.meta.main) {
   if (violations.length > 0) {
     throw new Error(violations.join("\n"));
   }
-  console.log("UI SDK pins and application imports are consistent.");
+  console.log(
+    "Base UI foundations and UI SDK enhancement pins are consistent."
+  );
 }
 
 export { migrationViolations };

@@ -1,7 +1,6 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
-import { useShortcut } from "@ui-sdk/react/shortcuts";
 import { ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import {
@@ -25,6 +24,7 @@ import {
 } from "@/hooks/api/role";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
+import { useUiShortcut as useShortcut } from "@/hooks/use-ui-shortcut";
 import {
   navigateToCanonicalAdminTarget,
   resolveCanonicalAdminPageTarget,

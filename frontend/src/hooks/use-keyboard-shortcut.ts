@@ -1,5 +1,5 @@
-import { useShortcut } from "@ui-sdk/react/shortcuts";
 import { createContext, use, useEffect } from "react";
+import { useUiShortcut as useShortcut } from "@/hooks/use-ui-shortcut";
 import {
   KEYBOARD_SHORTCUTS,
   keyboardShortcutBindingKey,

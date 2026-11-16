@@ -99,12 +99,15 @@ All commits must follow: `type(scope): description`
 - Protobuf v2: use `create(Schema, { ... })`. Do not construct messages as object literals with `$typeName`.
 - Protobuf v2: use Standard Schema + protovalidate as react-hook-form resolver instead of duplicating validation in Zod
 
-## UI SDK
+## Base UI with UI SDK enhancements
+
+- Keep `@base-ui/react` as the foundation for standard controls. Base UI owns their keyboard, focus, popup, and selection behavior; SDK enhancements must not stack another interaction state machine on them.
+- Preserve generic SDK/WebMCP discovery through the explicit passive adapters in `features/ui-agent`. Bind the actual native control, declare exact actions, publish async pending/error state, and carry secret/hidden/manual markers through portals.
 
 - Both UI directories are authored code. Never overwrite them with a shadcn registry command.
 - Read `node_modules/@ui-sdk/react/docs/llms.txt` and the relevant component docs before changing UI SDK usage. For a new behavior, also read the relevant headings in `docs/core.md` and `docs/rendering.md`.
 - UI SDK owns `data-slot`; app-owned styling hooks use `data-querylane-slot`.
-- State updates must use SDK change callbacks so agent actions update application state. Keep credentials secret, query results hidden, and sensitive final actions marked `data-agent-confirm`.
+- SDK primitives and adapted Input/Select changes use source-aware SDK callbacks, honoring cancellation while updating the real application state. Keep credentials secret, query results hidden, and sensitive final actions marked `data-agent-confirm`.
 
 ### Core composition and agent drafts
 

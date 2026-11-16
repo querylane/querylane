@@ -986,7 +986,7 @@ test("foreign key reference popover keeps the source table visible", async () =>
   const previewElement = screen.getByRole("dialog", {
     name: "public.customers",
   });
-  expect(previewElement.dataset["slot"]).toBe("popover-content");
+  expect(previewElement.dataset["querylaneSlot"]).toBe("popover-content");
   expect(
     document.querySelector('[data-querylane-slot="sheet-content"]')
   ).toBeNull();
@@ -1367,8 +1367,14 @@ test("filter popover stays inside the data-grid boundary when the grid is offset
   const boundary = getPopoverBoundary();
   const boundaryBox = boundary.getBoundingClientRect();
   const popoverBox = getPopoverBox();
-  // Native top-layer popovers stay in their logical DOM subtree.
-  expect(getComputedStyle(popoverBox.element).position).toBe("fixed");
+  // Base UI owns the fixed positioning wrapper around its portaled popup.
+  const positioner = popoverBox.element.closest(
+    '[data-querylane-slot="grid-popover-positioner"]'
+  );
+  if (!(positioner instanceof HTMLElement)) {
+    throw new TypeError("Expected Base UI positioner");
+  }
+  expect(getComputedStyle(positioner).position).toBe("fixed");
   await expect
     .poll(() => getPopoverBox().left)
     .toBeGreaterThanOrEqual(boundaryBox.left - 1);
@@ -1454,8 +1460,14 @@ test("sort popover stays inside the data-grid boundary when the grid is offset",
   const boundary = getPopoverBoundary();
   const boundaryBox = boundary.getBoundingClientRect();
   const popoverBox = getPopoverBox();
-  // Native top-layer popovers stay in their logical DOM subtree.
-  expect(getComputedStyle(popoverBox.element).position).toBe("fixed");
+  // Base UI owns the fixed positioning wrapper around its portaled popup.
+  const positioner = popoverBox.element.closest(
+    '[data-querylane-slot="grid-popover-positioner"]'
+  );
+  if (!(positioner instanceof HTMLElement)) {
+    throw new TypeError("Expected Base UI positioner");
+  }
+  expect(getComputedStyle(positioner).position).toBe("fixed");
   await expect
     .poll(() => getPopoverBox().left)
     .toBeGreaterThanOrEqual(boundaryBox.left - 1);

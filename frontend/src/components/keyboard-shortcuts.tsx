@@ -1,6 +1,6 @@
 "use client";
 
-import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
+import { useShortcutHint } from "@ui-sdk/react/shortcuts";
 import { useEffect, useRef, useState } from "react";
 import {
   Sheet,
@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/querylane-ui/sheet";
 import { KeyboardShortcutRegistrationContext } from "@/hooks/use-keyboard-shortcut";
+import { useUiShortcut as useShortcut } from "@/hooks/use-ui-shortcut";
 import {
   KEYBOARD_SHORTCUTS,
   type KeyboardShortcutGroup,

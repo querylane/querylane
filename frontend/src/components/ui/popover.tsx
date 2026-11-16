@@ -1,61 +1,68 @@
-import {
-  PopoverDescription as PopoverPrimitiveDescription,
-  PopoverContent as PopoverPrimitivePopup,
-  Popover as PopoverPrimitiveRoot,
-  PopoverTitle as PopoverPrimitiveTitle,
-  PopoverTrigger as PopoverPrimitiveTrigger,
-} from "@ui-sdk/react/popover";
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { cn } from "cn";
 import type * as React from "react";
+import { BaseUiAgent } from "@/features/ui-agent/base-ui-adapter";
+import { BaseUiSafetyBoundary } from "@/features/ui-agent/base-ui-safety";
+import {
+  type BaseUiSafetyProps,
+  baseUiModal,
+  useBaseUiSafety,
+} from "@/features/ui-agent/base-ui-safety-context";
 
 function Popover({
   ...props
-}: React.ComponentProps<typeof PopoverPrimitiveRoot>) {
-  return <PopoverPrimitiveRoot data-querylane-slot="popover" {...props} />;
+}: PopoverPrimitive.Root.Props & BaseUiSafetyProps) {
+  return (
+    <BaseUiSafetyBoundary markers={props} modal={baseUiModal(props, false)}>
+      <PopoverPrimitive.Root data-querylane-slot="popover" {...props} />
+    </BaseUiSafetyBoundary>
+  );
 }
 
-function PopoverTrigger({
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitiveTrigger>) {
+function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
   return (
-    <PopoverPrimitiveTrigger data-querylane-slot="popover-trigger" {...props} />
+    <BaseUiAgent kind="popup">
+      <PopoverPrimitive.Trigger
+        data-querylane-slot="popover-trigger"
+        {...props}
+      />
+    </BaseUiAgent>
   );
 }
 
 function PopoverContent({
-  "aria-label": ariaLabel,
-  children,
   className,
   align = "center",
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitivePopup>) {
+}: PopoverPrimitive.Popup.Props &
+  Pick<
+    PopoverPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "side" | "sideOffset"
+  >) {
+  const safety = useBaseUiSafety(props);
   return (
-    <PopoverPrimitivePopup
-      align={align}
-      alignOffset={alignOffset}
-      className={cn(
-        "z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-md bg-popover p-4 text-sm whitespace-normal text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-        className
-      )}
-      data-querylane-slot="popover-content"
-      side={side}
-      sideOffset={sideOffset}
-      {...props}
-    >
-      {(state) => (
-        <>
-          {ariaLabel === undefined ? null : (
-            <PopoverPrimitiveTitle className="sr-only">
-              {ariaLabel}
-            </PopoverPrimitiveTitle>
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Positioner
+        align={align}
+        alignOffset={alignOffset}
+        className="isolate z-50"
+        side={side}
+        sideOffset={sideOffset}
+      >
+        <PopoverPrimitive.Popup
+          className={cn(
+            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-md bg-popover p-4 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
           )}
-          {typeof children === "function" ? children(state) : children}
-        </>
-      )}
-    </PopoverPrimitivePopup>
+          data-querylane-slot="popover-content"
+          {...props}
+          {...safety}
+        />
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
   );
 }
 
@@ -69,12 +76,9 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function PopoverTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitiveTitle>) {
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
   return (
-    <PopoverPrimitiveTitle
+    <PopoverPrimitive.Title
       className={cn("font-medium", className)}
       data-querylane-slot="popover-title"
       {...props}
@@ -85,9 +89,9 @@ function PopoverTitle({
 function PopoverDescription({
   className,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitiveDescription>) {
+}: PopoverPrimitive.Description.Props) {
   return (
-    <PopoverPrimitiveDescription
+    <PopoverPrimitive.Description
       className={cn("text-muted-foreground", className)}
       data-querylane-slot="popover-description"
       {...props}

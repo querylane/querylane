@@ -1,0 +1,9 @@
+/* Base UI supplies gesture strength while the swipe drawer closes. */
+.backdrop:not([data-starting-style]):not([data-ending-style]) {
+  opacity: calc(1 - var(--drawer-swipe-progress));
+}
+
+.backdrop[data-ending-style],
+.popup[data-ending-style] {
+  transition-duration: calc(var(--drawer-swipe-strength) * 200ms);
+}

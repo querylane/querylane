@@ -162,11 +162,11 @@ test("console roles list shows an inline type filter, sortable columns, and role
     .element(page.getByRole("tab", { name: "Access map" }))
     .toBeVisible();
   await expect
-    .element(page.getByRole("combobox", { name: "Type" }))
+    .element(page.getByRole("button", { name: "Type" }))
     .toBeVisible();
   const tabList = screen.getByRole("tablist");
   const search = screen.getByPlaceholderText("Search roles…");
-  const typeFilter = screen.getByRole("combobox", { name: "Type" });
+  const typeFilter = screen.getByRole("button", { name: "Type" });
   expect(typeFilter.getBoundingClientRect().left).toBeGreaterThan(
     search.getBoundingClientRect().right
   );
@@ -427,7 +427,7 @@ test("console role schema grants capture active shared filters", async () => {
 
   await page.getByRole("textbox", { name: "Search objects…" }).fill("orders");
   await expect
-    .element(page.getByRole("combobox", { name: "Kind Table" }))
+    .element(page.getByRole("button", { name: "Kind Table" }))
     .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Clear all" }))

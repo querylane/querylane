@@ -28,6 +28,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
+import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
 import { useCommandPalette } from "@/components/querylane-ui/command-palette-context";
 import { OverflowTooltip } from "@/components/querylane-ui/overflow-tooltip";
 import {
@@ -438,6 +439,8 @@ function ExplorerRailContent({
           <SidebarMenuItem>
             <SidebarMenuButton
               disabled={!backLink}
+              nativeButton={!backLink}
+              role={backLink ? "link" : undefined}
               {...(backLink ? { render: renderNavLink(backLink, router) } : {})}
               variant="subtle"
             >
@@ -479,6 +482,8 @@ function renderSidebarNavigationItem({
     <SidebarMenuItem key={item.key}>
       <SidebarMenuButton
         disabled={item.isDisabled === true || !itemLinkProps}
+        nativeButton={!itemLinkProps}
+        role={itemLinkProps ? "link" : undefined}
         {...activeProps}
         {...renderProps}
         tooltip={`${sectionTitle} ${item.label}`}
@@ -506,12 +511,17 @@ function renderSidebarNavigationItem({
 function SidebarDatabaseSelector() {
   const { databases, navigateToDatabase, queryStates, selectedDatabase } =
     useDb();
-
+  const items = createComboboxItems(databases, {
+    getLabel: (database) => database.name,
+    getValue: (database) => database.id,
+  });
   const databaseError = Boolean(queryStates.databases.error)
     ? normalizeAppUiError(queryStates.databases.error)
     : null;
   return (
     <Combobox
+      autoHighlight={true}
+      items={items}
       onValueChange={(id) => {
         const database = databases.find((item) => item.id === id);
         if (database) {
@@ -564,12 +574,8 @@ function SidebarDatabaseSelector() {
             : "No databases found"}
         </ComboboxEmpty>
         <ComboboxList aria-label="Databases">
-          {databases.map((database: PostgresDatabase) => (
-            <ComboboxItem
-              key={database.id}
-              label={database.name}
-              value={database.id}
-            >
+          {(database: PostgresDatabase) => (
+            <ComboboxItem key={database.id} value={database.id}>
               <HardDrive
                 aria-hidden="true"
                 className="size-4 shrink-0 text-muted-foreground"
@@ -585,7 +591,7 @@ function SidebarDatabaseSelector() {
                 ) : null}
               </div>
             </ComboboxItem>
-          ))}
+          )}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

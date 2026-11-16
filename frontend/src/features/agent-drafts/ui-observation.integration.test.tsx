@@ -1,5 +1,5 @@
 import { expect, test } from "@rstest/core";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useAgentAccessStore } from "@/features/user-settings/agent-access";
@@ -26,7 +26,7 @@ function ObservationFields() {
   );
 }
 
-test("page observation is opt-in, provenance-only, and never retains secrets or hidden data", () => {
+test("page observation is opt-in, provenance-only, and never retains secrets or hidden data", async () => {
   useAgentAccessStore.getState().setEnabled(false);
   const stop = initializeUiObservation();
   const mounted = render(<ObservationFields />);
@@ -44,6 +44,13 @@ test("page observation is opt-in, provenance-only, and never retains secrets or 
     });
     fireEvent.input(screen.getByLabelText("Hidden SQL"), {
       target: { value: "select private_row" },
+    });
+    await waitFor(() => {
+      expect(
+        useAgentDraftStore
+          .getState()
+          .activity.some((entry) => entry.label === "Visible draft")
+      ).toBe(true);
     });
     const { activity } = useAgentDraftStore.getState();
     expect(activity.some((entry) => entry.label === "Visible draft")).toBe(

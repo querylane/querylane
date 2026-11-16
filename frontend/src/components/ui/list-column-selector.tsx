@@ -40,7 +40,7 @@ function ListColumnSelector({
         {columns.map((column) => (
           <DropdownMenuCheckboxItem
             checked={visible.has(column.id)}
-            closeOnSelect={false}
+            closeOnClick={false}
             disabled={
               column.required === true ||
               (visible.size === 1 && visible.has(column.id))
@@ -56,7 +56,6 @@ function ListColumnSelector({
               });
               setSelection(next.length === columns.length ? undefined : next);
             }}
-            value={column.id}
           >
             {column.label}
           </DropdownMenuCheckboxItem>

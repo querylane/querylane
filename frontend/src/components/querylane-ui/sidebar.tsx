@@ -1,4 +1,4 @@
-import { Button as SidebarButtonPrimitive } from "@ui-sdk/react/button";
+import { Button as SidebarButtonPrimitive } from "@base-ui/react/button";
 import { type PartProps, renderElement } from "@ui-sdk/react/primitive";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
@@ -31,6 +31,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { BaseUiAgent } from "@/features/ui-agent/base-ui-adapter";
+import { handleAsyncAction } from "@/lib/ui-action";
 import { cn } from "@/lib/utils";
 import styles from "./sidebar.module.css";
 
@@ -439,7 +441,11 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Drawer onOpenChange={setOpenMobile} open={openMobile} side={side}>
+      <Drawer
+        onOpenChange={setOpenMobile}
+        open={openMobile}
+        swipeDirection={side}
+      >
         <DrawerContent
           className="w-[min(var(--sidebar-width),calc(100vw-1rem))] bg-sidebar p-0 text-sidebar-foreground sm:max-w-none"
           data-mobile="true"
@@ -531,10 +537,10 @@ function SidebarTrigger({
       className={cn(className)}
       data-querylane-slot="sidebar-trigger"
       data-sidebar="trigger"
-      onClick={(event, details) => {
-        onClick?.(event, details);
+      onClick={handleAsyncAction(async (event, details) => {
+        await onClick?.(event, details);
         toggleSidebar();
-      }}
+      })}
       size="icon-sm"
       variant="ghost"
       {...props}
@@ -689,18 +695,20 @@ function SidebarGroupAction({
   ...props
 }: ComponentProps<typeof SidebarButtonPrimitive>) {
   return (
-    <SidebarButtonPrimitive
-      {...{
-        ...props,
-        className: cn(
-          "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
-          className
-        ),
-        "data-sidebar": "group-action",
-        "data-querylane-slot": "sidebar-group-action",
-      }}
-      {...(render === undefined ? {} : { render })}
-    />
+    <BaseUiAgent kind="button">
+      <SidebarButtonPrimitive
+        {...{
+          ...props,
+          className: cn(
+            "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+            className
+          ),
+          "data-sidebar": "group-action",
+          "data-querylane-slot": "sidebar-group-action",
+        }}
+        {...(render === undefined ? {} : { render })}
+      />
+    </BaseUiAgent>
   );
 }
 
@@ -777,17 +785,22 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const { hoverRevealOpen, isMobile, state } = useSidebar();
   const comp = (
-    <SidebarButtonPrimitive
-      {...{
-        ...props,
-        className: cn(sidebarMenuButtonVariants({ size, variant }), className),
-        "data-active": isActive,
-        "data-sidebar": "menu-button",
-        "data-size": size,
-        "data-querylane-slot": "sidebar-menu-button",
-      }}
-      {...(render === undefined ? {} : { render })}
-    />
+    <BaseUiAgent kind="button">
+      <SidebarButtonPrimitive
+        {...{
+          ...props,
+          className: cn(
+            sidebarMenuButtonVariants({ size, variant }),
+            className
+          ),
+          "data-active": isActive,
+          "data-sidebar": "menu-button",
+          "data-size": size,
+          "data-querylane-slot": "sidebar-menu-button",
+        }}
+        {...(render === undefined ? {} : { render })}
+      />
+    </BaseUiAgent>
   );
 
   if (!Boolean(tooltip)) {
@@ -819,20 +832,22 @@ function SidebarMenuAction({
   showOnHover?: boolean;
 }) {
   return (
-    <SidebarButtonPrimitive
-      {...{
-        ...props,
-        className: cn(
-          "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
-          showOnHover &&
-            "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground aria-expanded:opacity-100 md:opacity-0",
-          className
-        ),
-        "data-sidebar": "menu-action",
-        "data-querylane-slot": "sidebar-menu-action",
-      }}
-      {...(render === undefined ? {} : { render })}
-    />
+    <BaseUiAgent kind="button">
+      <SidebarButtonPrimitive
+        {...{
+          ...props,
+          className: cn(
+            "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 after:absolute after:-inset-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 md:after:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+            showOnHover &&
+              "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-active/menu-button:text-sidebar-accent-foreground aria-expanded:opacity-100 md:opacity-0",
+            className
+          ),
+          "data-sidebar": "menu-action",
+          "data-querylane-slot": "sidebar-menu-action",
+        }}
+        {...(render === undefined ? {} : { render })}
+      />
+    </BaseUiAgent>
   );
 }
 

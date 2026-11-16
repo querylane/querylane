@@ -10,6 +10,7 @@ import { NotFoundState } from "@/components/not-found-state";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { RouteErrorView } from "@/components/route-error-view";
 import { Toaster } from "@/components/ui/toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { initializeUiObservation } from "@/features/agent-drafts/ui-observation";
 import { DbProvider } from "@/lib/db-context";
 import { ThemeProvider } from "@/theme-provider";
@@ -26,17 +27,19 @@ export function RootComponent() {
   }, []);
   return (
     <ThemeProvider defaultTheme="system">
-      <AgentAccessIntegration />
-      <RouteAnnouncer />
-      <AppErrorRedirectController />
-      <UrlListColumnsProvider>
-        <BootGate>
-          <DbProvider>
-            <Outlet />
-          </DbProvider>
-        </BootGate>
-      </UrlListColumnsProvider>
-      <Toaster />
+      <TooltipProvider>
+        <AgentAccessIntegration />
+        <RouteAnnouncer />
+        <AppErrorRedirectController />
+        <UrlListColumnsProvider>
+          <BootGate>
+            <DbProvider>
+              <Outlet />
+            </DbProvider>
+          </BootGate>
+        </UrlListColumnsProvider>
+        <Toaster />
+      </TooltipProvider>
     </ThemeProvider>
   );
 }
@@ -44,9 +47,11 @@ export function RootComponent() {
 export function RootErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
     <ThemeProvider defaultTheme="system">
-      <AppShellFrame>
-        <RouteErrorView error={error} reset={reset} />
-      </AppShellFrame>
+      <TooltipProvider>
+        <AppShellFrame>
+          <RouteErrorView error={error} reset={reset} />
+        </AppShellFrame>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

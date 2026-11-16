@@ -13,6 +13,8 @@ import {
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
 
+import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
+
 interface DatabaseOption {
   id: string;
   name: string;
@@ -25,9 +27,13 @@ function AsyncDatabasePicker({
   options: readonly DatabaseOption[];
   onValueChange: (id: string | null) => void;
 }) {
+  const items = createComboboxItems(options, {
+    getLabel: (option) => option.name,
+    getValue: (option) => option.id,
+  });
   return (
     <ScreenshotFrame>
-      <Combobox onValueChange={onValueChange}>
+      <Combobox items={items} onValueChange={onValueChange}>
         <ComboboxTrigger aria-label="Pick database">
           Pick database
         </ComboboxTrigger>
@@ -35,7 +41,7 @@ function AsyncDatabasePicker({
           <ComboboxInput aria-label="Search databases" />
           <ComboboxEmpty>No databases found</ComboboxEmpty>
           <ComboboxList>
-            {options.map((database: DatabaseOption) => (
+            {(database: DatabaseOption) => (
               <ComboboxItem
                 key={database.id}
                 label={database.name}
@@ -43,7 +49,7 @@ function AsyncDatabasePicker({
               >
                 {database.name}
               </ComboboxItem>
-            ))}
+            )}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
@@ -57,9 +63,9 @@ test("async results highlight after typing and duplicate labels retain distinct 
     <AsyncDatabasePicker onValueChange={onValueChange} options={[]} />
   );
   await expect
-    .element(page.getByRole("button", { name: "Pick database" }))
-    .toHaveAttribute("aria-haspopup", "listbox");
-  await page.getByRole("button", { name: "Pick database" }).click();
+    .element(page.getByRole("combobox", { name: "Pick database" }))
+    .toHaveAttribute("aria-haspopup", "dialog");
+  await page.getByRole("combobox", { name: "Pick database" }).click();
   const input = page.getByRole("combobox", { name: "Search databases" });
   await input.fill("reports");
   await expect.element(page.getByText("No databases found")).toBeVisible();
@@ -87,6 +93,6 @@ test("async results highlight after typing and duplicate labels retain distinct 
   );
   await expect.element(page.getByRole("listbox")).toBeDetached();
   await expect
-    .element(page.getByRole("button", { name: "Pick database" }))
+    .element(page.getByRole("combobox", { name: "Pick database" }))
     .toBeFocused();
 });

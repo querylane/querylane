@@ -94,12 +94,18 @@ test("page shortcuts pause for a modal and resume after dismissal", async () => 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const input = page.getByRole("textbox", { name: "Dialog draft" });
   await input.press(primaryShortcut());
-  await expect.element(commandsRun()).toHaveText("0");
+  // Base UI correctly makes the background counter inaccessible while modal.
+  await expect
+    .element(page.locator('output[aria-label="Commands run"]'))
+    .toHaveText("0");
   // Even a chord started outside a text field must not navigate behind a modal.
   await page.getByRole("heading", { name: "Settings" }).click();
   await page.locator("body").press("g");
   await page.locator("body").press("d");
-  await expect.element(commandsRun()).toHaveText("0");
+  // Base UI correctly makes the background counter inaccessible while modal.
+  await expect
+    .element(page.locator('output[aria-label="Commands run"]'))
+    .toHaveText("0");
   await page.locator("body").press("Escape");
   await expect
     .element(page.getByRole("dialog", { name: "Settings" }))

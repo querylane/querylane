@@ -108,7 +108,7 @@ Hook regressions also cover non-string paths, missing files, the repository root
 
 - No app, protobuf-form implementation, test, script, or E2E directory has a blanket quality exclusion.
 - Generated protobuf/route files are generator-owned. Do not edit them manually.
-- `src/components/ui` and `src/components/querylane-ui` are authored UI SDK primitives and variants. Both receive the full lint, Doctor, and compiler gates. CI rejects replaced UI dependencies and imports; no shadcn registry synchronization or source exclusion remains.
+- `src/components/ui` and `src/components/querylane-ui` are authored Base UI foundations plus UI SDK enhancements and variants. Both receive the full lint, Doctor, and compiler gates. CI requires the Base UI foundation and pinned SDK enhancement packages, and rejects replaced auxiliary dependencies/imports; no shadcn registry synchronization or source exclusion remains.
 - Owned primitives define appearance. Their consumers cannot restyle them. Primitives still get raw-color, utility, inline-style, type, and correctness checks.
 - Node tooling can use Node APIs and CLI output. Browser source cannot. Test fixtures can contain representative numeric values and test credentials. These are file-role contracts, not one-off file waivers.
 - Artifact/dependency directories are not source. The suppression guard rejects reserved artifact directories nested inside authored paths, source symlinks, nested quality configurations, ignore files, and generated-looking authored filenames.

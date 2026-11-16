@@ -2,6 +2,8 @@
 "@querylane/frontend": minor
 ---
 
-Migrate interactive controls to UI SDK beta.5, use all seven public React hooks, and add opt-in, approval-gated browser agent access with credential redaction and hidden query data.
+Keep Base UI 1.9.0 as the core control foundation, enhance it with UI SDK beta.5 and all seven public React hooks, and add opt-in, approval-gated browser agent access with credential redaction and hidden query data.
 
 Add source-aware instance draft coordination, tab-local non-secret history with preview/keep/revert and agent-only undo, accessible revision navigation, and real browser-native WebMCP verification. Saving and destructive operations remain manual.
+
+Preserve generic control discovery with explicit passive Base UI adapters, source-aware cancellation, safe portaled metadata, exact multi-selection, and async completion/refusal reporting. Base UI remains the single owner of native keyboard, focus, popup, and selection behavior.

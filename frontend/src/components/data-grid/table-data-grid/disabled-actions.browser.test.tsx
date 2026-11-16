@@ -113,8 +113,8 @@ test("explains why another sort column cannot be added", async () => {
     exact: true,
   });
   await firstColumn.hover();
-  await expect.element(firstColumn.getByRole("tooltip")).toBeVisible();
-  // Native tooltips remain logical descendants; read the value, not their copy.
+  await expect.element(page.getByRole("tooltip")).toBeVisible();
+  // Base UI portals the tooltip; the selected-value assertion stays scoped to its control.
   await Promise.all(
     columns.map(async (sortedColumn, index) => {
       await expect
@@ -124,7 +124,7 @@ test("explains why another sort column cannot be added", async () => {
               name: `Sort column ${index + 1}`,
               exact: true,
             })
-            .locator('[data-slot="select-value"]')
+            .locator('[data-querylane-slot="select-value"]')
             .first()
         )
         .toHaveText(sortedColumn.columnName);
@@ -135,7 +135,7 @@ test("explains why another sort column cannot be added", async () => {
               name: `Sort direction ${index + 1}`,
               exact: true,
             })
-            .locator('[data-slot="select-value"]')
+            .locator('[data-querylane-slot="select-value"]')
             .first()
         )
         .toHaveText("ASC");

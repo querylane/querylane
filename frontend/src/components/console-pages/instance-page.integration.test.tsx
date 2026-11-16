@@ -1015,8 +1015,8 @@ describe("backend instance activity", () => {
     expect(within(table).getByText("4211")).toBeTruthy();
 
     await user.click(nextPage);
-    await user.click(within(activity).getByRole("combobox", { name: "State" }));
-    await user.click(screen.getByRole("option", { name: "active" }));
+    await user.click(within(activity).getByRole("button", { name: "State" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "active" }));
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
@@ -1191,16 +1191,16 @@ describe("backend instance database list", () => {
       name: "Search databases…",
     });
     expect(search).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Kind" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Encoding" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Owner" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Kind" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Encoding" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Owner" })).toBeTruthy();
     const filterRail = search.parentElement?.parentElement;
     if (!filterRail) {
       throw new Error("Missing database filter rail");
     }
     expect(
       within(filterRail)
-        .getAllByRole("combobox")
+        .getAllByRole("button")
         .map((button) => button.textContent)
     ).toEqual(["Kind", "Owner", "Encoding"]);
 
@@ -1211,8 +1211,8 @@ describe("backend instance database list", () => {
     expect(screen.queryByText("postgres")).toBeNull();
 
     await user.clear(search);
-    await user.click(screen.getByRole("combobox", { name: "Kind" }));
-    await user.click(screen.getByRole("option", { name: "System" }));
+    await user.click(screen.getByRole("button", { name: "Kind" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "System" }));
 
     expect(
       await screen.findByRole("button", {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { OnboardingWizardControllerProvider } from "@/components/onboarding-wizard/controller-provider";
 import type { OnboardingWizardController } from "@/components/onboarding-wizard/hooks/use-onboarding-wizard-controller";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/theme-provider";
 
@@ -19,13 +20,15 @@ function ScreenshotFrame({ children }: { children: ReactNode }) {
       defaultTheme={visualTheme}
       storageKey="querylane-browser-test-theme"
     >
-      <div
-        className={cn(themeClassName, "bg-background p-6 text-foreground")}
-        data-testid="screenshot-frame"
-        data-visual-test-root=""
-      >
-        {children}
-      </div>
+      <TooltipProvider>
+        <div
+          className={cn(themeClassName, "bg-background p-6 text-foreground")}
+          data-testid="screenshot-frame"
+          data-visual-test-root=""
+        >
+          {children}
+        </div>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }
