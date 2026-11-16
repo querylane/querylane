@@ -363,7 +363,9 @@ test("roles: empty list renders role-specific empty state", {
   await expect(
     page.getByText("0 roles · 0 can log in · 0 groups · 0 built-in")
   ).toBeVisible();
-  await expect(page.getByText("No roles found")).toBeVisible();
+  await expect(
+    page.getByText("No roles available.", { exact: true })
+  ).toBeVisible();
 });
 
 test("roles: backend error renders retryable route error", {
@@ -393,6 +395,30 @@ test("roles: backend error renders retryable route error", {
     "href",
     BUG_REPORT_URL_RE
   );
+});
+
+test("roles: retry recovers both summary and matching metadata with a search", async ({
+  page,
+}) => {
+  await mockReadyAppWithInstance(page);
+  await mockRpcError({
+    page,
+    method: "RoleService/ListRoles",
+    message: "roles metadata offline",
+  });
+  await page.goto("/instances/production/roles?q=replicator");
+  await expect(page.getByText("roles metadata offline")).toBeVisible();
+
+  await mockRoles(page);
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+
+  await expect(page.getByPlaceholder("Search roles…")).toHaveValue(
+    "replicator"
+  );
+  await expect(
+    page.getByRole("cell", { name: REPLICATOR_ROLE_RE })
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
 test("roles: renders permissions, special attributes, and memberships", {

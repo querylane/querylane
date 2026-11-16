@@ -1,4 +1,5 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -66,3 +67,60 @@ test("shares a lazy page with its small route wrapper without duplicating it", a
     await result.close();
   }
 });
+
+test.each([
+  "src/lib/url-search-state.ts",
+  "src/components/data-grid/table-data-grid/pagination-footer.tsx",
+])(
+  "emits one shared table runtime for independent routes: %s",
+  async (modulePath) => {
+    const cwd = mkdtempSync(join(tmpdir(), "querylane-url-split-"));
+    temporaryDirectories.push(cwd);
+    mkdirSync(join(cwd, modulePath, ".."), { recursive: true });
+    writeFileSync(
+      join(cwd, "entry.js"),
+      'globalThis.loadRoles = () => import("./roles.js"); globalThis.loadDatabases = () => import("./databases.js"); globalThis.loadExtensions = () => import("./extensions.js");'
+    );
+    for (const route of ["roles", "databases", "extensions"]) {
+      writeFileSync(
+        join(cwd, `${route}.js`),
+        `import { publication } from "./${modulePath}"; export const state = publication;`
+      );
+    }
+    // Below the generic shared-module threshold, like the real URL controller.
+    writeFileSync(
+      join(cwd, modulePath),
+      "export const publication = { revision: 0, queued: null };"
+    );
+    const rsbuild = await createRsbuild({
+      cwd,
+      rsbuildConfig: {
+        logLevel: "error",
+        output: { minify: false, sourceMap: { js: "source-map" } },
+        performance: { buildCache: false, printFileSize: false },
+        source: { entry: { index: "./entry.js" } },
+        splitChunks: managedSplitChunksConfig,
+      },
+    });
+    const result = await rsbuild.build();
+    try {
+      const dist = join(cwd, "dist");
+      const runtimeChunks = readdirSync(dist, {
+        encoding: "utf8",
+        recursive: true,
+      })
+        .filter((file) => file.endsWith(".js.map"))
+        .filter((file) =>
+          sourceMapSchema
+            .parse(JSON.parse(readFileSync(join(dist, file), "utf8")))
+            .sources.some((source) => source.endsWith(`/${modulePath}`))
+        );
+      expect(runtimeChunks).toHaveLength(1);
+      expect(runtimeChunks[0]?.replaceAll("\\", "/")).toContain(
+        "static/js/async/"
+      );
+    } finally {
+      await result.close();
+    }
+  }
+);

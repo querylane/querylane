@@ -42,17 +42,13 @@ import { InstanceMetricsPanel } from "@/components/console-pages/instance-metric
 import { StatCell, StatStrip } from "@/components/console-pages/stat-strip";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/querylane-ui/badge";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import { DataTableFilterToolbar } from "@/components/querylane-ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/querylane-ui/data-table-filter-types";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
 import {
@@ -101,6 +97,7 @@ import { normalizeAppUiError } from "@/lib/ui-error";
 import {
   type UrlTableSearchRoute,
   useUrlTableSearch,
+  useUrlTableSorting,
 } from "@/lib/url-search-state";
 import { isNonEmptyString } from "@/lib/value-guards";
 import type { Status } from "@/protogen/google/rpc/status_pb";
@@ -654,7 +651,11 @@ function InstanceOverviewSection({
   searchRoute: UrlTableSearchRoute;
   unavailableMessage?: string | undefined;
 }) {
-  const [dbFilter, setDbFilter] = useUrlTableSearch(searchRoute);
+  const [dbFilter, setDbFilter, flushDbFilter] = useUrlTableSearch(
+    searchRoute,
+    { debounce: true }
+  );
+  const [sorting, setSorting] = useUrlTableSorting(searchRoute, "databases");
   const [kindFilters, setKindFilters] = useState<string[]>([]);
   const [encodingFilters, setEncodingFilters] = useState<string[]>([]);
   const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
@@ -694,59 +695,54 @@ function InstanceOverviewSection({
       selected: encodingFilters,
     },
   ] satisfies DataTableFilterFacet[];
-  let databasesContent: React.ReactNode;
-  if (isUnavailableEmpty) {
-    databasesContent = (
-      <EmptyState
-        description={
-          unavailableMessage ??
-          "Databases are unavailable while this instance is not connected."
+  const databasesContent = isUnavailableEmpty ? (
+    <EmptyState
+      description={
+        unavailableMessage ??
+        "Databases are unavailable while this instance is not connected."
+      }
+      icon={Database}
+      title="Databases unavailable"
+    />
+  ) : (
+    <DataTable
+      columns={databaseColumns}
+      data={filteredDatabases}
+      distinguishEmpty={true}
+      emptyResourceName="databases"
+      filterColumn="name"
+      filterValue={dbFilter}
+      hasActiveFilters={
+        kindFilters.length + encodingFilters.length + ownerFilters.length > 0
+      }
+      isPending={isLoading}
+      isRefreshing={queryState.isFetching && !isLoading}
+      onFilterChange={handleAsyncAction(setDbFilter)}
+      onRowClick={(database) => {
+        navigateToDatabase(database, {
+          overridePage: "database.overview",
+        });
+      }}
+      onSortingChange={handleAsyncAction(async (next) => {
+        if (await flushDbFilter()) {
+          setSorting(next);
         }
-        icon={Database}
-        title="Databases unavailable"
-      />
-    );
-  } else if (isLoading) {
-    databasesContent = (
-      <AsyncSectionState
-        emptyState={null}
-        hasContent={false}
-        isPending={true}
-        isRefreshing={false}
-        loadingMessage="Loading databases…"
-        refreshingMessage="Refreshing databases…"
-      >
-        {null}
-      </AsyncSectionState>
-    );
-  } else {
-    databasesContent = (
-      <DataTable
-        columns={databaseColumns}
-        data={filteredDatabases}
-        emptyResourceName="databases"
-        filterColumn="name"
-        filterValue={dbFilter}
-        onFilterChange={handleAsyncAction(setDbFilter)}
-        onRowClick={(database) => {
-          navigateToDatabase(database, {
-            overridePage: "database.overview",
-          });
-        }}
-        tableKey="instance-databases"
-        toolbarFilters={
-          <DataTableFilterToolbar
-            dataSlot="instance-database-filter-bar"
-            facets={databaseFacetFilters}
-            onClearAll={handleClearAll}
-            onSearchChange={handleAsyncAction(setDbFilter)}
-            searchPlaceholder="Search databases…"
-            searchValue={dbFilter}
-          />
-        }
-      />
-    );
-  }
+      })}
+      sorting={sorting}
+      tableKey="instance-databases"
+      toolbarFilters={
+        <DataTableFilterToolbar
+          dataSlot="instance-database-filter-bar"
+          facets={databaseFacetFilters}
+          onClearAll={handleClearAll}
+          onSearchChange={handleAsyncAction(setDbFilter)}
+          onSearchCommit={handleAsyncAction(flushDbFilter)}
+          searchPlaceholder="Search databases…"
+          searchValue={dbFilter}
+        />
+      }
+    />
+  );
   return (
     <section className="flex flex-col gap-3">
       <InstanceDatabasesSectionHeader
@@ -754,7 +750,6 @@ function InstanceOverviewSection({
           isUnavailableEmpty || isLoading ? null : filteredDatabases.length
         }
       />
-
       {databasesContent}
     </section>
   );

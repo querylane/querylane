@@ -1,10 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {
   CONSTRAINT_TYPE_LABELS,

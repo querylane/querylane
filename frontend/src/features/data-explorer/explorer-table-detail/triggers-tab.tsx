@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
+import { DataTableFilter } from "@/components/querylane-ui/data-table-controls";
 import { RefreshControl } from "@/components/querylane-ui/refresh-control";
 import { SqlSyntaxHighlight } from "@/components/querylane-ui/sql-code-block";
 import { SearchEmptyState } from "@/components/search-empty-state";
-import { DataTableFilter } from "@/components/ui/data-table";
 import { deriveMetadataToolbar } from "@/features/data-explorer/explorer-table-detail/metadata";
 import {
   isTriggerStateFilter,

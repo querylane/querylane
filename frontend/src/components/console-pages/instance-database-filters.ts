@@ -1,4 +1,4 @@
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
+import type { FacetedFilterOption } from "@/components/querylane-ui/data-table-filter-types";
 
 interface DatabaseFacetRow {
   characterSet: string;

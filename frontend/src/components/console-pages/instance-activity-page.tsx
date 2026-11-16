@@ -29,6 +29,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/querylane-ui/card";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import { SortableHeader } from "@/components/querylane-ui/data-table-controls";
+import { DataTableFilterToolbar } from "@/components/querylane-ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/querylane-ui/data-table-filter-types";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import {
   Sheet,
   SheetContent,
@@ -39,15 +44,6 @@ import {
 import { SqlCodeBlock } from "@/components/querylane-ui/sql-code-block";
 import { WarningBadge } from "@/components/querylane-ui/warning-badge";
 import { CopyIconButton } from "@/components/ui/copy-icon-button";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
 import { useMinimumSpin } from "@/hooks/use-minimum-spin";
 import type { DbConnectionStatus } from "@/lib/console-resources";
 import { handleAsyncAction } from "@/lib/ui-action";

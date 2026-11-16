@@ -9,9 +9,9 @@ import {
 } from "@/components/admin-ops/job-queue-columns";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { SectionCard } from "@/components/console-pages/console-layout";
+import { DataTable } from "@/components/querylane-ui/data-table";
+import type { DataTableColumnDef } from "@/components/querylane-ui/data-table-model";
 import { Button } from "@/components/ui/button";
-import type { DataTableColumnDef } from "@/components/ui/data-table";
-import { DataTable } from "@/components/ui/data-table";
 import {
   Select,
   SelectContent,

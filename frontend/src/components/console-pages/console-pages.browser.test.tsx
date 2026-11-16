@@ -33,6 +33,14 @@ import {
 import { HarnessProviders } from "@/visual-harness/harness-providers";
 import { SQLSTATE_SCENARIOS } from "@/visual-harness/sqlstate-scenarios";
 
+const testLocation = rs.hoisted(() => ({
+  hash: "",
+  pathname: "/",
+  searchStr: "",
+  search: {},
+  state: {},
+}));
+
 rs.mock("@tanstack/react-router", () => {
   const linkExportName = "Link";
   return {
@@ -59,14 +67,14 @@ rs.mock("@tanstack/react-router", () => {
         searchStr: string;
       }) => unknown;
     } = {}) => {
-      const location = {
-        hash: "",
-        pathname: `/instances/${ROLE_FIXTURE_INSTANCE_ID}/roles`,
-        searchStr: "",
-      };
-      return select ? select(location) : location;
+      testLocation.pathname = `/instances/${ROLE_FIXTURE_INSTANCE_ID}/roles`;
+      return select ? select(testLocation) : testLocation;
     },
     useNavigate: () => () => undefined,
+    useRouter: () => ({
+      history: { subscribe: () => () => undefined },
+      state: { location: testLocation },
+    }),
     useSearch: ({
       select,
     }: {

@@ -62,6 +62,7 @@ interface ColumnJourney {
   filterRole?: "button" | "textbox";
   index?: number;
   key: string;
+  metadataSort?: string;
   openView?: () => Promise<void>;
   role?: "table" | "grid";
   skipNavigation?: boolean;
@@ -105,10 +106,23 @@ async function expectColumnPickerInline(
     .toBeLessThanOrEqual(1);
 }
 
+async function expectBookmarkedSorting(
+  page: Page,
+  key: string,
+  metadataSort: string | undefined
+) {
+  const parameter = metadataSort === undefined ? "listSort" : "sort";
+  const expected = metadataSort ?? expect.stringContaining(key);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get(parameter) ?? "")
+    .toEqual(expected);
+}
+
 async function bookmarkColumns(
   page: Page,
   {
     key,
+    metadataSort,
     filterLabel,
     filterRole,
     url,
@@ -147,9 +161,7 @@ async function bookmarkColumns(
       .first()
       .click();
   }
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get("listSort") ?? "")
-    .toContain(key);
+  await expectBookmarkedSorting(page, key, metadataSort);
   const control = page
     .getByRole("button", { name: "Columns", exact: true })
     .nth(index);
@@ -205,9 +217,7 @@ async function bookmarkColumns(
   await afterReload?.();
   await expect(headers).toHaveCount(count - 1);
   await expect.poll(() => headers.allTextContents()).toEqual(chosenHeaders);
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get("listSort") ?? "")
-    .toContain(key);
+  await expectBookmarkedSorting(page, key, metadataSort);
   await control.click();
   await page
     .getByRole(checkbox === "checkbox" ? "button" : "menuitem", {
@@ -233,6 +243,7 @@ for (const entry of [
   { key: "instance-applications", url: INSTANCE_URL },
   {
     key: "instance-databases",
+    metadataSort: "name:asc",
     url: INSTANCE_URL,
     index: 1,
     filterLabel: "Search databases…",
@@ -311,6 +322,7 @@ test("bookmarked columns: roles", async ({ page }) => {
   await mockRolesScreen(page, accessMapFixture({ roles: ROLES_TABLE_ROLES }));
   const table = await bookmarkColumns(page, {
     key: "instance-roles",
+    metadataSort: "roleName:desc",
     filterLabel: "Search roles…",
     url: "/instances/production/roles",
   });

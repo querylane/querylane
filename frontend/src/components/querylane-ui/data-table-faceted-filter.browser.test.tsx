@@ -4,7 +4,7 @@ import { expect, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
-import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
+import { DataTableFacetedFilter } from "@/components/querylane-ui/data-table-faceted-filter";
 
 const RGBA_RED_GREEN_BLUE_PATTERN =
   /^rgba?\(\s*(?<red>[\d.]+)\s*,\s*(?<green>[\d.]+)\s*,\s*(?<blue>[\d.]+)(?:\s*,\s*[\d.]+)?\s*\)$/u;
