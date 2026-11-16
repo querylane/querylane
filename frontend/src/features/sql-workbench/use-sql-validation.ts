@@ -53,8 +53,10 @@ function useSqlValidator({
           { defaultSchema: defaultSchema ?? "", parent, statement },
           { signal }
         )
-        .then(
-          ({ diagnostic }) => (diagnostic ? toSqlProblem(diagnostic) : null),
+        .then(({ diagnostic }) =>
+          diagnostic ? toSqlProblem(diagnostic) : null
+        )
+        .catch(
           // The check itself failed: nothing is known about the statement.
           () => undefined
         ),

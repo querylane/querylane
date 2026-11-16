@@ -919,6 +919,60 @@ test.each([
   }
 });
 
+test.each([
+  {
+    rule: "no-floating-promises",
+    invalid:
+      "export function launch(work: () => Promise<void>): void { work(); }\n",
+    valid:
+      "export function launch(work: () => Promise<void>): Promise<void> { return work(); }\n",
+  },
+  {
+    rule: "misrefactored-assign-op",
+    invalid:
+      "export function add(value: number, increment: number): number { value += value + increment; return value; }\n",
+    valid:
+      "export function add(value: number, increment: number): number { return value + increment; }\n",
+  },
+  {
+    rule: "no-this-in-exported-function",
+    invalid:
+      "export function read(this: { name: string }): string { return this.name; }\n",
+    valid:
+      "export function read(value: { name: string }): string { return value.name; }\n",
+  },
+])("oxlint with tsrs-lint enforces $rule", ({ rule, invalid, valid }) => {
+  const directory = mkdtempSync(join(root, "src", "quality-probe-"));
+  const source = join(directory, "probe.unit.test.ts");
+  try {
+    for (const [content, status] of [
+      [invalid, 1],
+      [valid, 0],
+    ] as const) {
+      writeFileSync(source, content);
+      const result = spawnSync(
+        join(root, "node_modules/.bin/oxlint"),
+        [
+          "--config",
+          "oxlint.config.ts",
+          "--type-aware",
+          "--deny-warnings",
+          source,
+        ],
+        {
+          cwd: root,
+          encoding: "utf8",
+        }
+      );
+      const output = result.stdout + result.stderr;
+      expect(result.status, output).toBe(status);
+      expect(output.includes(rule)).toBe(status === 1);
+    }
+  } finally {
+    rmSync(directory, { recursive: true });
+  }
+});
+
 test.each(["biome", "oxlint"])(
   "%s rejects invalid source through the real CLI",
   (tool) => {
