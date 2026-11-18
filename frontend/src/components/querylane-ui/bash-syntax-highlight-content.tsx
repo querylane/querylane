@@ -5,7 +5,7 @@ import githubDark from "@shikijs/themes/github-dark";
 import githubLight from "@shikijs/themes/github-light";
 import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
-import { createHighlighterCoreSync } from "shiki/core";
+import { codeToTokensWithThemes, createShikiPrimitive } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import styles from "./bash-syntax-highlight-content.module.css";
 import { keyedTokenLines } from "./keyed-token-lines";
@@ -19,7 +19,7 @@ type ShikiTokenStyle = CSSProperties & {
   "--querylane-bash-token-light"?: string | undefined;
 };
 
-const HIGHLIGHTER = createHighlighterCoreSync({
+const HIGHLIGHTER = createShikiPrimitive({
   engine: createJavaScriptRegexEngine(),
   langs: [bash],
   themes: [githubLight, githubDark],
@@ -37,7 +37,7 @@ function highlightBash(code: string): ThemedTokenWithVariants[][] {
     return cachedTokenLines;
   }
 
-  const tokenLines = HIGHLIGHTER.codeToTokensWithThemes(code, {
+  const tokenLines = codeToTokensWithThemes(HIGHLIGHTER, code, {
     lang: "bash",
     themes: THEMES,
     tokenizeTimeLimit: 200,

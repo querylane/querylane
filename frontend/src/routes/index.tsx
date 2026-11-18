@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { z } from "zod";
+import { en } from "zod/locales";
+import { z } from "zod/mini";
 import { AppErrorView } from "@/components/app-error-view";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BrandedLoadingState } from "@/components/branded-loading-state";
@@ -13,8 +14,10 @@ import { normalizeAppUiError } from "@/lib/ui-error";
 import { isNonEmptyString } from "@/lib/value-guards";
 import { useSetupStore } from "@/stores/setup-store";
 
+z.config(en());
+
 const homeSearchSchema = z.object({
-  instanceId: z.string().min(1).optional(),
+  instanceId: z.optional(z.string().check(z.minLength(1))),
 });
 
 function resolveHomeInstanceId({

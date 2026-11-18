@@ -229,7 +229,7 @@ async function parseChronoInput(
   input: string,
   now: Date
 ): Promise<RefreshIntervalParseResult | null> {
-  const { casual } = await import("chrono-node");
+  const { casual } = await import("chrono-node/en");
   const parsedDate = casual.parseDate(input, now);
   if (!parsedDate) {
     return null;

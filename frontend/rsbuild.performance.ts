@@ -99,6 +99,8 @@ const managedChunkCacheGroups = {
   },
   uiVendor: {
     chunks: "async",
+    // Keep vendor modules used by only one route out of unrelated pages.
+    minChunks: 2,
     name: "ui-vendor",
     priority: 10,
     reuseExistingChunk: true,
