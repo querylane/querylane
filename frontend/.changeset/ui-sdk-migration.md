@@ -2,7 +2,7 @@
 "@querylane/frontend": minor
 ---
 
-Keep Base UI 1.9.0 as the core control foundation, enhance it with UI SDK beta.5 and all seven public React hooks, and add opt-in, approval-gated browser agent access with credential redaction and hidden query data.
+Keep shadcn/ui and Tailwind on Base UI 1.9.0, enhance them with UI SDK beta.5 and all seven public React hooks, and add opt-in, approval-gated browser agent access with credential redaction and hidden query data.
 
 Add source-aware instance draft coordination, tab-local non-secret history with preview/keep/revert and agent-only undo, accessible revision navigation, and real browser-native WebMCP verification. Saving and destructive operations remain manual.
 
