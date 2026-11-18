@@ -482,7 +482,11 @@ test("instance configuration: API error stays inline and keeps form editable", {
   await page.getByRole("textbox", { name: "Host" }).fill("db.internal");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByRole("alert").getByText("save failed")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("alert").getByText("save failed", {
+      exact: true,
+    })
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Host" })).toBeEditable();
 });
 
