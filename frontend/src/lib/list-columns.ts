@@ -1,10 +1,13 @@
 import { createContext, use, useState } from "react";
-import { z } from "zod";
+import { en } from "zod/locales";
+import { catch as catchSchema, z } from "zod/mini";
 import {
   type ListSort,
   resolveListColumnOrder,
   resolveListSorting,
 } from "@/lib/list-layout";
+
+z.config(en());
 
 const MAX_COLUMN_ID_LENGTH = 100;
 const MAX_LIST_KEY_LENGTH = 512;
@@ -13,38 +16,50 @@ const MAX_SORT_COLUMNS = 8;
 
 // Stable table keys, not mount order, identify independent lists on one page.
 const listColumnsSearchSchema = z.object({
-  columnOrder: z
-    .record(
-      z.string().min(1).max(MAX_LIST_KEY_LENGTH),
-      z
-        .array(z.string().min(1).max(MAX_COLUMN_ID_LENGTH))
-        .max(MAX_SELECTED_COLUMNS)
-    )
-    .optional()
-    .catch(undefined),
-  listSort: z
-    .record(
-      z.string().min(1).max(MAX_LIST_KEY_LENGTH),
-      z
-        .array(
-          z.object({
-            id: z.string().min(1).max(MAX_COLUMN_ID_LENGTH),
-            desc: z.boolean(),
-          })
-        )
-        .max(MAX_SORT_COLUMNS)
-    )
-    .optional()
-    .catch(undefined),
-  columns: z
-    .record(
-      z.string().min(1).max(MAX_LIST_KEY_LENGTH),
-      z
-        .array(z.string().min(1).max(MAX_COLUMN_ID_LENGTH))
-        .max(MAX_SELECTED_COLUMNS)
-    )
-    .optional()
-    .catch(undefined),
+  columnOrder: catchSchema(
+    z.optional(
+      z.record(
+        z.string().check(z.minLength(1), z.maxLength(MAX_LIST_KEY_LENGTH)),
+        z
+          .array(
+            z.string().check(z.minLength(1), z.maxLength(MAX_COLUMN_ID_LENGTH))
+          )
+          .check(z.maxLength(MAX_SELECTED_COLUMNS))
+      )
+    ),
+    undefined
+  ),
+  listSort: catchSchema(
+    z.optional(
+      z.record(
+        z.string().check(z.minLength(1), z.maxLength(MAX_LIST_KEY_LENGTH)),
+        z
+          .array(
+            z.object({
+              id: z
+                .string()
+                .check(z.minLength(1), z.maxLength(MAX_COLUMN_ID_LENGTH)),
+              desc: z.boolean(),
+            })
+          )
+          .check(z.maxLength(MAX_SORT_COLUMNS))
+      )
+    ),
+    undefined
+  ),
+  columns: catchSchema(
+    z.optional(
+      z.record(
+        z.string().check(z.minLength(1), z.maxLength(MAX_LIST_KEY_LENGTH)),
+        z
+          .array(
+            z.string().check(z.minLength(1), z.maxLength(MAX_COLUMN_ID_LENGTH))
+          )
+          .check(z.maxLength(MAX_SELECTED_COLUMNS))
+      )
+    ),
+    undefined
+  ),
 });
 type ListColumnsSearch = z.infer<typeof listColumnsSearchSchema>;
 type ColumnSelections = NonNullable<ListColumnsSearch["columns"]>;

@@ -18,7 +18,9 @@ const highlighter = rs.hoisted(() => ({
 }));
 
 rs.mock("shiki/core", () => ({
-  createHighlighterCoreSync: () => {
+  codeToTokensWithThemes: (_primitive: unknown, sqlText: string) =>
+    highlighter.codeToTokensWithThemes(sqlText),
+  createShikiPrimitive: () => {
     highlighter.creations += 1;
     return highlighter;
   },

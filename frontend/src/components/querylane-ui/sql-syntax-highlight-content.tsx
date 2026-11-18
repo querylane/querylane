@@ -5,7 +5,7 @@ import githubDark from "@shikijs/themes/github-dark";
 import githubLight from "@shikijs/themes/github-light-high-contrast";
 import type { CSSProperties } from "react";
 import type { ThemedTokenWithVariants } from "shiki";
-import { createHighlighterCoreSync } from "shiki/core";
+import { codeToTokensWithThemes, createShikiPrimitive } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import { keyedTokenLines } from "./keyed-token-lines";
 import styles from "./sql-syntax-highlight-content.module.css";
@@ -19,7 +19,7 @@ type ShikiTokenStyle = CSSProperties & {
   "--querylane-sql-token-light"?: string | undefined;
 };
 
-let sqlHighlighter: ReturnType<typeof createHighlighterCoreSync> | undefined;
+let sqlHighlighter: ReturnType<typeof createShikiPrimitive> | undefined;
 
 const SQL_THEMES = {
   dark: "github-dark",
@@ -35,12 +35,12 @@ function highlightSql(sqlText: string): ThemedTokenWithVariants[][] {
   }
 
   // Route preloads import SQL-only tabs before their contents are mounted.
-  sqlHighlighter ??= createHighlighterCoreSync({
+  sqlHighlighter ??= createShikiPrimitive({
     engine: createJavaScriptRegexEngine(),
     langs: [sql],
     themes: [githubLight, githubDark],
   });
-  const tokenLines = sqlHighlighter.codeToTokensWithThemes(sqlText, {
+  const tokenLines = codeToTokensWithThemes(sqlHighlighter, sqlText, {
     lang: "sql",
     themes: SQL_THEMES,
     tokenizeTimeLimit: 200,

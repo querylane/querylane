@@ -50,6 +50,10 @@ export default defineConfig({
     // Newly recommended in 1.94; retain fatal enforcement independently of presets.
     "oxc/misrefactored-assign-op": "error",
     "oxc/no-this-in-exported-function": "error",
+    // Preserve the reviewed defaults instead of inheriting new preset exceptions.
+    "no-unused-vars": "error",
+    "no-warning-comments": "error",
+    "jsx-a11y/aria-role": "error",
     "querylane/no-manual-memoization": "error",
     "no-restricted-imports": "off",
     "no-restricted-globals": "off",
