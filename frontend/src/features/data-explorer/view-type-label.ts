@@ -3,7 +3,7 @@ import {
   View_ViewType,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-export function viewTypeLabel(view: View | undefined): string {
+export function viewTypeLabel(view: View | undefined) {
   if (!view) {
     return "View";
   }

@@ -18,17 +18,17 @@ const DEFAULT_SCHEMA = "public";
  * Map key for a relation. NUL cannot appear in a PostgreSQL identifier, so
  * `a.b` + `c` and `a` + `b.c` stay distinct (a `.` separator would merge them).
  */
-function relationKey(relation: { name: string; schema: string }): string {
+function relationKey(relation: { name: string; schema: string }) {
   return `${relation.schema}\u0000${relation.name}`;
 }
 
-function toSqlRelation(object: CatalogObject): SqlRelation {
+function toSqlRelation(object: CatalogObject) {
   return {
     isMaterialized: object.isMaterialized,
     kind: object.kind,
     name: object.objectId,
     schema: object.schemaId,
-  };
+  } satisfies SqlRelation;
 }
 
 export type { SqlRelation };

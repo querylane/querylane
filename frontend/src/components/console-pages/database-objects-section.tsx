@@ -30,9 +30,6 @@ interface DatabaseParams {
   instanceId: string;
 }
 
-// ————————————————————————————————————————————————————————————————
-// Category cards
-
 function ViewAllButton({
   label,
   onOpen,
@@ -161,9 +158,6 @@ function ExtensionsCard({
     </Card>
   );
 }
-
-// ————————————————————————————————————————————————————————————————
-// Section
 
 interface DatabaseObjectsPanelProps {
   error?: unknown;

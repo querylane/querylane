@@ -14,12 +14,7 @@ function useGetConsoleConfigQuery(
   return useQuery(getConsoleConfig, input, options);
 }
 
-function useConsoleConfigStatus(): {
-  configFilePath: string;
-  isConfigManaged: boolean;
-  isLoaded: boolean;
-  mode: InstanceManagementMode;
-} {
+function useConsoleConfigStatus() {
   const { data, isFetching } = useGetConsoleConfigQuery(
     undefined,
     CONSOLE_CONFIG_STATIC_QUERY_OPTIONS
@@ -31,6 +26,11 @@ function useConsoleConfigStatus(): {
     isConfigManaged: mode === InstanceManagementMode.CONFIG,
     isLoaded: data !== undefined || (!isFetching && data === undefined),
     mode,
+  } satisfies {
+    configFilePath: string;
+    isConfigManaged: boolean;
+    isLoaded: boolean;
+    mode: InstanceManagementMode;
   };
 }
 
@@ -39,15 +39,15 @@ function useConsoleConfigStatus(): {
  * and cannot be created, updated, or deleted via the API.
  * Returns false while the console config is still loading.
  */
-function useConfigManagedInstancesStatus(): {
-  isConfigManaged: boolean;
-  isLoaded: boolean;
-} {
+function useConfigManagedInstancesStatus() {
   const { isConfigManaged, isLoaded } = useConsoleConfigStatus();
-  return { isConfigManaged, isLoaded };
+  return { isConfigManaged, isLoaded } satisfies {
+    isConfigManaged: boolean;
+    isLoaded: boolean;
+  };
 }
 
-function useIsConfigManagedInstances(): boolean {
+function useIsConfigManagedInstances() {
   return useConfigManagedInstancesStatus().isConfigManaged;
 }
 

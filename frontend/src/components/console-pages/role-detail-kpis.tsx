@@ -22,7 +22,6 @@ function PartialKpiValue({
   );
 }
 
-// KPI strip for an ordinary (non-built-in) role.
 function OrdinaryRoleKpis({
   attributes,
   belongsTo,

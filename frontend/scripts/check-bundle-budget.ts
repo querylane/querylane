@@ -11,9 +11,7 @@ const DIST_DIR = join(SCRIPT_DIR, "..", "dist");
 const INDEX_HTML_PATH = join(DIST_DIR, "index.html");
 const BUILD_ASSET_EXTENSION_PATTERN = /\.(?:html|css|js)$/u;
 const LEADING_SLASH_PATTERN = /^\//u;
-// Monitoring charts use SVG and compact numeric scales. Adding another
-// capability requires an intentional budget/contract update, not an implicit
-// dependency from a barrel or adapter import. D3 used by React Flow is separate.
+
 const UNUSED_CHART_CAPABILITY_PATTERN =
   /node_modules\/(?:@tanstack\/charts\/dist\/(?:canvas|motion|spring)[./-]|d3-scale\/)/u;
 const DEVELOPMENT_PROFILER_PATTERN =
@@ -21,53 +19,13 @@ const DEVELOPMENT_PROFILER_PATTERN =
 const MAX_ASYNC_SCRIPT_GZIP_KIB = 130;
 const MAX_DEFERRED_VISUALIZATION_GZIP_KIB = 91;
 const MAX_DEFERRED_SQL_HIGHLIGHTER_GZIP_KIB = 90;
-// CodeMirror (+ lang-sql, lezer), sql-formatter and react-resizable-panels
-// only load on the SQL workbench route, so they are split out and guarded
-// separately from core.
-// 203 (was 200): align CodeMirror/Lezer singletons after the security lock refresh.
-// Measured with Bun 1.4.3: 201.3 KiB. Initial/largest-chunk caps are unchanged.
-// 205 (was 203): latest sql-formatter and panel releases add deferred code.
-// Paired Bun 1.4.4 builds: SQL editor 199.3 -> 203.5 KiB gzip.
-// 206 (was 205): proposed allowance for lossless SQL result display sorting.
-// Paired Bun 1.4.4 builds of this rebased PR: 204.8 -> 205.1 KiB gzip.
-// Core, initial-load and largest-async caps remain unchanged.
+
 const MAX_DEFERRED_SQL_EDITOR_GZIP_KIB = 206;
-// TanStack Charts is lazy-loaded and only pulled in on the instance
-// overview metrics panel, so it is split out and guarded separately from core.
-// 145 (was 140): the console-pages chunk shares these sources and also grew
-// with the instance health section redesign.
+
 const MAX_DEFERRED_CHARTS_GZIP_KIB = 145;
 const MAX_INITIAL_GZIP_KIB = 450;
 const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
-// 975 (was 970): the data explorer's grid interaction layer became a shared
-// ResultDataGrid chunk used by the SQL workbench too (~3 KiB of optional
-// capability props and chunk overhead; the logic itself did not grow).
-// 970 (was 960): main sat at 959.8; the SQL workbench adds ~6.5 KiB of
-// shared code (its icons in ui-vendor, field/resizable wrappers in
-// shared-ui, the route stub). Its own sources, CodeMirror, sql-formatter and
-// react-resizable-panels are guarded by the deferred SQL editor budget.
-// 960 (was 950): the instance overview metrics/health work landed at 950.2,
-// exactly at the previous line. Deferred database visualization chunks are
-// split out and guarded by a separate feature budget.
-// 1010 (was 975): Base UI 1.9.0's filterable facets, native database
-// combobox, and gesture-enabled mobile Drawer add ~34 KiB gzip to deferred UI.
-// Measured core: 971.6 -> 1005.8 KiB; initial stays ~325 KiB (budget: 450).
-// 1015 (was 1010): approved +5 KiB for the lazy-loaded SQL plan explorer.
-// Measured core: 1013.6 KiB; initial: 334.4 KiB (+0.5, budget unchanged).
-// 1018 (was 1015): accessible SQL tabs and complete, row-linked label errors.
-// Measured core: 1013.8 -> 1016.6 KiB; initial remains 334.3 KiB.
-// 1024 (was 1018): validated persisted drafts, fail-closed forms and explicit
-// runtime guards. Measured with Bun 1.4.3: 1022.5 KiB, keeping similar headroom.
-// 1027 (was 1024): port plan search, findings and ranked timing onto the spatial
-// workspace. Paired Bun 1.4.4 builds: main 1023.8 -> 1025.9 KiB core gzip.
-// No new dependencies; initial, SQL editor and largest-async caps are unchanged.
-// 1043 (was 1027): approved latest-dependency refresh, primarily the grid.
-// Paired Bun 1.4.4 builds: core 1025.9 -> 1040.7 KiB gzip (+1.4%).
-// Initial-load and largest-async caps stay unchanged.
-// 1045 (was 1043): approved dependency refresh on current main measures
-// 1043.3 KiB core gzip with Bun 1.4.4 on both macOS and Linux CI.
-// 1050 (was 1045): shareable list sorting and layout state. No new dependencies;
-// initial-load, SQL-editor and largest-async caps stay unchanged.
+
 const MAX_TOTAL_GZIP_KIB = 1050;
 
 interface BundleBudgetAsset {
@@ -138,10 +96,7 @@ const budgets = {
 const kib = (bytes: number) => bytes / BYTES_PER_KIB;
 const formatKiB = (bytes: number) => `${kib(bytes).toFixed(1)} KiB`;
 
-function assetSizes(
-  distDir: string,
-  relativePath: string
-): Pick<BundleBudgetAsset, "brotli" | "gzip" | "raw"> {
+function assetSizes(distDir: string, relativePath: string) {
   const contents = readFileSync(join(distDir, relativePath));
   return {
     brotli: brotliCompressSync(contents).byteLength,
@@ -150,8 +105,11 @@ function assetSizes(
   };
 }
 
-function allBuildAssets(directory: string, prefix = ""): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+const allBuildAssets: (directory: string, prefix?: string) => string[] = (
+  directory,
+  prefix = ""
+) =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
     const absolutePath = join(directory, entry.name);
 
@@ -160,9 +118,8 @@ function allBuildAssets(directory: string, prefix = ""): string[] {
     }
     return BUILD_ASSET_EXTENSION_PATTERN.test(entry.name) ? [relativePath] : [];
   });
-}
 
-function initialAssetPaths(indexHtml: string): string[] {
+function initialAssetPaths(indexHtml: string) {
   const files: string[] = [];
   for (const match of indexHtml.matchAll(
     /<(?:script|link)\b[^>]+(?:src|href)="(?<capture1>[^"]+)"/gu
@@ -182,7 +139,7 @@ function initialAssetPaths(indexHtml: string): string[] {
   return files;
 }
 
-function sourceMapSources(distDir: string, relativePath: string): string[] {
+function sourceMapSources(distDir: string, relativePath: string) {
   if (!relativePath.endsWith(".js")) {
     return [];
   }
@@ -200,7 +157,7 @@ function productionContractViolations(
   distDir: string,
   indexHtml: string,
   assets: readonly BundleBudgetAsset[]
-): string[] {
+) {
   const violations: string[] = [];
   for (const match of indexHtml.matchAll(
     /<script\b[^>]+src=["'](?<source>[^"']+)["']/gu
@@ -218,7 +175,7 @@ function productionContractViolations(
   ];
 }
 
-function productionAssetViolations(distDir: string, path: string): string[] {
+function productionAssetViolations(distDir: string, path: string) {
   const violations = DEVELOPMENT_PROFILER_PATTERN.test(path)
     ? [`Development profiler asset: ${path}`]
     : [];
@@ -243,10 +200,7 @@ function isDeferredVisualizationAsset(distDir: string, relativePath: string) {
 function isDeferredChartsAsset(distDir: string, relativePath: string) {
   return sourceMapSources(distDir, relativePath).some((source) => {
     const normalizedSource = source.replaceAll("\\", "/");
-    // Match only the lazily-imported chart modules, never the whole charts
-    // directory: the eager lazy-boundary (metric-chart.tsx) and range picker
-    // are bundled into the console-pages route chunk, and matching them would
-    // silently exclude that entire chunk from the core budget.
+
     return (
       normalizedSource.includes("node_modules/@tanstack/charts/") ||
       normalizedSource.includes("src/components/charts/metric-time-chart") ||
@@ -262,7 +216,6 @@ function isDeferredSqlEditorAsset(distDir: string, relativePath: string) {
       normalizedSource.includes("node_modules/@codemirror/") ||
       normalizedSource.includes("node_modules/@lezer/") ||
       normalizedSource.includes("node_modules/sql-formatter/") ||
-      // Only the workbench's editor/results split uses resizable panels.
       normalizedSource.includes("node_modules/react-resizable-panels/") ||
       normalizedSource.includes("src/features/sql-workbench/")
     );
@@ -282,7 +235,7 @@ function isDeferredSqlHighlighterAsset(distDir: string, relativePath: string) {
 function collectBundleBudgetStats({
   distDir = DIST_DIR,
   indexHtmlPath = INDEX_HTML_PATH,
-}: CollectBundleBudgetStatsInput = {}): BundleBudgetStats {
+}: CollectBundleBudgetStatsInput = {}) {
   if (!existsSync(indexHtmlPath)) {
     throw new Error("Missing dist/index.html. Run `bun run build` first.");
   }
@@ -462,7 +415,7 @@ function collectBundleBudgetStats({
     totalBrotli,
     totalGzip,
     totalRaw,
-  };
+  } satisfies BundleBudgetStats;
 }
 
 function check({

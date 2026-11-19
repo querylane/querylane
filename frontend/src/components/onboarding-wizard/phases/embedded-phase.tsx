@@ -27,8 +27,6 @@ export function EmbeddedPhase() {
   const { goBackToMethodSelection } = useOnboardingWizardControllerContext();
   const embeddedDataPath =
     onboardingState?.embeddedDataPath ?? "~/.querylane/pgdata";
-  // Embedded setup is normally only offered when the home directory is
-  // writable; treat a non-writable home defensively as "no persistence".
   const persistenceAvailable = onboardingState?.isHomeWritable ?? true;
   const handleContinue = () => {
     setSubmittedEmbeddedConfig(
@@ -89,8 +87,7 @@ export function EmbeddedPhase() {
                 : "Ephemeral: data is cleared on shutdown"}
             </div>
             <div>Data path</div>
-            {/* Mono has a larger x-height than the sans face — one size down
-                keeps the path visually level with the 14px sans values. */}
+
             <div className="min-w-0 font-mono text-xs leading-5 break-all text-white/88">
               {embeddedDataPath}
             </div>

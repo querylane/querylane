@@ -53,7 +53,7 @@ function appendViolationSegment(
 function violationToIssue(
   violation: Violation,
   formatter?: ProtoformMessageFormatter
-): StandardSchemaV1.Issue {
+) {
   const path: PropertyKey[] = [];
 
   for (const segment of violation.field) {
@@ -69,7 +69,7 @@ export function createDescriptorAwareStandardSchema<Desc extends DescMessage>(
   options?: ValidatorOptions & {
     formatMessage?: ProtoformMessageFormatter | undefined;
   }
-): StandardSchemaV1<MessageShape<Desc>, MessageValidType<Desc>> {
+) {
   const { formatMessage, ...validatorOptions } = options ?? {};
   const registry = createRegistry(
     desc,
@@ -107,5 +107,5 @@ export function createDescriptorAwareStandardSchema<Desc extends DescMessage>(
       vendor: "protoform",
       version: 1,
     },
-  };
+  } satisfies StandardSchemaV1<MessageShape<Desc>, MessageValidType<Desc>>;
 }

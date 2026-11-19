@@ -2,8 +2,6 @@ import { isNonEmptyString } from "@/lib/value-guards";
 import type { View } from "@/protogen/querylane/console/v1alpha1/view_pb";
 import { View_ViewType } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-// Best-effort UI hints only. These regexes intentionally avoid becoming a SQL
-// parser, so comments/string literals can still produce false positives.
 const SQL_SOURCE_PATTERN =
   /\b(?:from|join)\s+(?<capture1>(?:"[^"]+"|[a-zA-Z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|[a-zA-Z_][\w$]*))?)/giu;
 const SQL_IDENTIFIER_DOT_PATTERN = /\s*\.\s*/gu;

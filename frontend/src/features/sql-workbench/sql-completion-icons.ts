@@ -1,16 +1,5 @@
 import type { Completion } from "@codemirror/autocomplete";
 
-/**
- * Typed icons for the completion popup, in the spirit of DataGrip: every row
- * starts with a glyph that says what kind of thing it is, so the eye can
- * separate tables from columns from keywords before reading a label.
- *
- * Shapes are lucide path data (24px grid, 2px stroke) so the popup matches
- * the icons in the catalog rail; the materialized-view glyph is the project's
- * own. They are built as DOM nodes because CodeMirror renders options
- * outside React.
- */
-
 type IconShape =
   | { d: string; tag: "path" }
   | { cx: string; cy: string; r: string; tag: "circle" }
@@ -25,7 +14,6 @@ type IconShape =
   | { tag: "line"; x1: string; x2: string; y1: string; y2: string };
 
 interface CompletionIcon {
-  /** CSS color for the glyph; design tokens keep it theme-aware. */
   color: string;
   shapes: readonly IconShape[];
 }
@@ -111,7 +99,6 @@ const COMPLETION_ICONS: Record<string, CompletionIcon> = {
       { cx: "16.5", cy: "7.5", r: ".5", tag: "circle" },
     ],
   },
-  // lang-sql labels built-in functions "variable".
   variable: {
     color: "var(--chart-5)",
     shapes: [
@@ -138,7 +125,7 @@ function appendShape(svg: SVGSVGElement, shape: IconShape) {
   svg.append(element);
 }
 
-function renderCompletionIcon(completion: Completion): Node {
+function renderCompletionIcon(completion: Completion) {
   const icon = COMPLETION_ICONS[completion.type ?? ""] ?? FALLBACK_ICON;
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("aria-hidden", "true");

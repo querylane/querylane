@@ -25,7 +25,7 @@ const SPARK_MAX_POINTS = 36;
 const FLAT_SERIES_PADDING_RATIO = 0.01;
 const MINIMUM_FLAT_SERIES_PADDING = 1;
 
-function finiteExtent(data: SparklineDatum[]): [number, number] {
+function finiteExtent(data: SparklineDatum[]) {
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
   for (const row of data) {
@@ -35,26 +35,27 @@ function finiteExtent(data: SparklineDatum[]): [number, number] {
     }
   }
   if (!(Number.isFinite(minimum) && Number.isFinite(maximum))) {
-    return [0, 1];
+    return [0, 1] satisfies [number, number];
   }
   if (minimum === maximum) {
     const padding = Math.max(
       Math.abs(minimum) * FLAT_SERIES_PADDING_RATIO,
       MINIMUM_FLAT_SERIES_PADDING
     );
-    return [minimum - padding, maximum + padding];
+    return [minimum - padding, maximum + padding] satisfies [number, number];
   }
-  return [minimum, maximum];
+  return [minimum, maximum] satisfies [number, number];
 }
 
 /** A bare, parent-sized trend glyph with no guides or interaction chrome. */
 function SparklineChart({ color, data, seriesKey }: SparklineChartProps) {
   const gradientId = `spark-${useId().replaceAll(/[^a-zA-Z0-9_-]/gu, "")}`;
   const trend = downsampleTrend(data, seriesKey, SPARK_MAX_POINTS).map(
-    (row): SparklineDatum => ({
-      time: row.time,
-      value: row[seriesKey] ?? null,
-    })
+    (row) =>
+      ({
+        time: row.time,
+        value: row[seriesKey] ?? null,
+      }) satisfies SparklineDatum
   );
   const [minimum, maximum] = finiteExtent(trend);
   const firstTime = trend[0]?.time ?? 0;

@@ -23,15 +23,13 @@ async function prefetchRouteQuery<
     QueryData,
     PrefetchQueryKey
   >
-): Promise<void> {
-  // Query owns freshness, invalidation, in-flight deduplication and errors.
+) {
   try {
     await queryClient.query({
       ...options,
       meta: { ...options.meta, appErrorSurface: "silent" },
     });
   } catch (error) {
-    // The cache retains the error for mounted observers and their retry UI.
     logger.warn("Route data prefetch failed", { error });
   }
 }

@@ -50,9 +50,7 @@ const METHOD_CONTENT: Record<
   },
 };
 
-function getConfigMethods(
-  availableMethods: readonly SetupMethod[]
-): ConfigMethod[] {
+function getConfigMethods(availableMethods: readonly SetupMethod[]) {
   return availableMethods.reduce<ConfigMethod[]>((methods, setupMethod) => {
     const method = formatSetupMethod(setupMethod);
     if (method) {
@@ -134,7 +132,7 @@ function getNextMethodFromKey({
   currentMethod: ConfigMethod | null;
   key: string;
   methods: ConfigMethod[];
-}): ConfigMethod | null {
+}) {
   if (methods.length === 0) {
     return null;
   }

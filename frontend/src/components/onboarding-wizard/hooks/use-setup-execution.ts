@@ -58,7 +58,7 @@ interface ResolveSetupFailureOptions {
 function resolveSetupFailureAction({
   error,
   failedEvent,
-}: ResolveSetupFailureOptions): SetupFailureResolution {
+}: ResolveSetupFailureOptions) {
   const connectError = toConnectError(error);
   const failureContext = {
     area: "onboarding-setup",
@@ -72,7 +72,7 @@ function resolveSetupFailureAction({
     error instanceof Error ? error : new Error(SETUP_FAILURE_FALLBACK_MESSAGE);
 
   if (isAlreadyConfigured(connectError)) {
-    return { action: "success" };
+    return { action: "success" } satisfies SetupFailureResolution;
   }
 
   if (connectError.code === Code.InvalidArgument) {
@@ -82,7 +82,7 @@ function resolveSetupFailureAction({
         ...failureContext,
         source: "setup",
       }),
-    };
+    } satisfies SetupFailureResolution;
   }
 
   return {
@@ -96,7 +96,7 @@ function resolveSetupFailureAction({
         source: failedEvent ? "setup_stream" : "setup",
       }
     ),
-  };
+  } satisfies SetupFailureResolution;
 }
 
 async function executeSetupRequest({
@@ -185,7 +185,6 @@ function useSetupExecution({
     setStreamFailure(resolution.streamError);
   });
 
-  // keep setup inputs current without restarting execution
   useEffect(function syncSetupExecutionOptions() {
     setupRequestOptionsRef.current = {
       phase,
@@ -196,9 +195,8 @@ function useSetupExecution({
     };
   });
 
-  // execute each explicitly requested setup run
   useEffect(
-    function executeSetupRun(): (() => void) | undefined {
+    function executeSetupRun() {
       const currentOptions = setupRequestOptionsRef.current;
       if (
         setupRunToken === 0 ||
@@ -228,9 +226,9 @@ function useSetupExecution({
           }
         });
 
-      return () => {
+      return (() => {
         controller.abort();
-      };
+      }) satisfies (() => void) | undefined;
     },
     [setupRunToken]
   );

@@ -1,11 +1,8 @@
-// Runs before React. Keep the storage key and system fallback aligned with
-// ThemeProvider; startup E2E tests cover the handoff to the mounted provider.
 {
   let theme;
   try {
     theme = globalThis.window.localStorage.getItem("querylane-ui-theme");
   } catch {
-    // Storage can be unavailable in restricted browsing contexts.
     theme = "system";
   }
 

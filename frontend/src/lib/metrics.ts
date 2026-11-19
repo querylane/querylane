@@ -19,7 +19,6 @@ const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
 const PERCENT_MULTIPLIER = 100;
 const RATIO_DECIMALS = 1;
-/** The largest percentage a sub-1 ratio may display as (never a false 100%). */
 const MAX_UNPEGGED_PERCENT = 99.9;
 const MAX_UNPEGGED_DETAILED_PERCENT = 99.99;
 const TREND_DECIMALS = 1;
@@ -33,14 +32,11 @@ const compactNumberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
 });
 
-// signDisplay "negative" drops the sign on values that round to zero, so a
-// -0.001 never renders as "-0".
 const plainNumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
   signDisplay: "negative",
 });
 
-/** Threshold below which fractional values keep their decimals. */
 const SMALL_NUMBER_LIMIT = 10;
 
 const smallNumberFormatter = new Intl.NumberFormat("en-US", {
@@ -55,7 +51,7 @@ const detailedNumberFormatter = new Intl.NumberFormat("en-US", {
 
 const DETAILED_RATIO_DECIMALS = 2;
 
-function timestampToMs(timestamp: Timestamp | undefined): number {
+function timestampToMs(timestamp: Timestamp | undefined) {
   if (!timestamp) {
     return 0;
   }
@@ -65,7 +61,7 @@ function timestampToMs(timestamp: Timestamp | undefined): number {
   );
 }
 
-function durationToMs(duration: Duration | undefined): number {
+function durationToMs(duration: Duration | undefined) {
   if (!duration) {
     return 0;
   }
@@ -75,29 +71,18 @@ function durationToMs(duration: Duration | undefined): number {
   );
 }
 
-function toTimestampInit(ms: number): { seconds: bigint; nanos: number } {
-  return { nanos: 0, seconds: BigInt(Math.floor(ms / MS_PER_SECOND)) };
+function toTimestampInit(ms: number) {
+  return {
+    nanos: 0,
+    seconds: BigInt(Math.floor(ms / MS_PER_SECOND)),
+  } satisfies { seconds: bigint; nanos: number };
 }
 
-/**
- * The point floor for the "collecting metrics" (nascent) coverage state.
- *
- * The overview panel defaults to a live ~1h window whose x-axis auto-fits the
- * actual sample span, so a short span is no longer misleading — a freshly
- * connected instance just needs enough points to draw. A series is drawable
- * once it has 3 finite points (2 is a single segment with no shape); below
- * that the chart would be a degenerate blob, so we show the collecting state
- * instead. This floor is range-independent: 3 points draw under any window.
- */
 const NASCENT_MIN_POINTS = 3;
 
-/** Minimum finite-valued rows for a time chart to be non-degenerate. */
 const MIN_RENDERABLE_ROWS = 2;
 
-function finiteSeriesStats(series: MetricSeries): {
-  finiteCount: number;
-  firstMs: number | null;
-} {
+function finiteSeriesStats(series: MetricSeries) {
   let finiteCount = 0;
   let firstMs: number | null = null;
   for (const point of decodePoints(series.points)) {
@@ -106,13 +91,13 @@ function finiteSeriesStats(series: MetricSeries): {
       firstMs = firstMs === null ? point.time : Math.min(firstMs, point.time);
     }
   }
-  return { finiteCount, firstMs };
+  return { finiteCount, firstMs } satisfies {
+    finiteCount: number;
+    firstMs: number | null;
+  };
 }
 
-function finiteSampleStats(response: QueryMetricsResponse | undefined): {
-  firstMs: number | null;
-  maxFinitePoints: number;
-} {
+function finiteSampleStats(response: QueryMetricsResponse | undefined) {
   let firstMs: number | null = null;
   let maxFinitePoints = 0;
 
@@ -128,7 +113,10 @@ function finiteSampleStats(response: QueryMetricsResponse | undefined): {
     maxFinitePoints = Math.max(maxFinitePoints, seriesStats.finiteCount);
   }
 
-  return { firstMs, maxFinitePoints };
+  return { firstMs, maxFinitePoints } satisfies {
+    firstMs: number | null;
+    maxFinitePoints: number;
+  };
 }
 
 /** A single decoded point on a metric series; value is null for a gap (NaN). */
@@ -210,7 +198,7 @@ export const METRIC_RANGES: MetricRange[] = [
 ];
 
 /** Resolves a range by its window hours, falling back to the default. */
-export function metricRangeByHours(hours: number): MetricRange {
+export function metricRangeByHours(hours: number) {
   return (
     METRIC_RANGES.find((range) => range.hours === hours) ?? DEFAULT_METRIC_RANGE
   );
@@ -220,7 +208,7 @@ export function metricRangeByHours(hours: number): MetricRange {
  * The caption shown in place of a trend when the previous period has no data
  * yet, e.g. "no 1h comparison yet" — honest about which window is missing.
  */
-export function noComparisonCaption(range: MetricRange): string {
+export function noComparisonCaption(range: MetricRange) {
   return `no ${range.shortLabel} comparison yet`;
 }
 
@@ -298,9 +286,9 @@ export const OVERVIEW_METRIC_IDS: MetricId[] = [
  * Expands a columnar Points message into `{time, value}` pairs on the implicit
  * `start_time + i*step` grid. NaN buckets become null so charts break the line.
  */
-export function decodePoints(points: Points | undefined): MetricPoint[] {
+export function decodePoints(points: Points | undefined) {
   if (!points) {
-    return [];
+    return [] satisfies MetricPoint[];
   }
 
   const startMs = timestampToMs(points.startTime);
@@ -322,7 +310,7 @@ export function mergeSeriesData(
     key: string;
     points: MetricPoint[];
   }[]
-): ChartRow[] {
+) {
   const rowsByTime = new Map<number, ChartRow>();
 
   for (const { key, points } of series) {
@@ -342,9 +330,7 @@ export function mergeSeriesData(
 }
 
 /** Indexes a response's series by metric id for direct tab lookup. */
-export function seriesByMetric(
-  response: QueryMetricsResponse | undefined
-): Map<MetricId, MetricSeries> {
+export function seriesByMetric(response: QueryMetricsResponse | undefined) {
   const byMetric = new Map<MetricId, MetricSeries>();
   const metricSeries = response?.series ?? [];
   for (const series of metricSeries) {
@@ -375,7 +361,7 @@ export interface MetricsCoverage {
  */
 export function assessMetricsCoverage(
   response: QueryMetricsResponse | undefined
-): MetricsCoverage {
+) {
   const interval = response?.interval;
   const windowEndMs = interval?.endTime
     ? timestampToMs(interval.endTime)
@@ -387,19 +373,19 @@ export function assessMetricsCoverage(
     firstSampleMs: firstMs,
     nascent: maxFinitePoints < NASCENT_MIN_POINTS,
     windowEndMs,
-  };
+  } satisfies MetricsCoverage;
 }
 
 /**
  * How many more finite samples the best-covered series needs before its chart
  * can draw (never negative). Drives the collecting state's concrete hint.
  */
-export function samplesUntilChart(coverage: MetricsCoverage): number {
+export function samplesUntilChart(coverage: MetricsCoverage) {
   return Math.max(0, NASCENT_MIN_POINTS - coverage.finitePointCount);
 }
 
 /** Coarse human elapsed-time label, e.g. "8 minutes", "about 2 hours", "about 3 days". */
-export function formatElapsedDuration(elapsedMs: number): string {
+export function formatElapsedDuration(elapsedMs: number) {
   const totalMinutes = Math.floor(
     elapsedMs / (SECONDS_PER_MINUTE * MS_PER_SECOND)
   );
@@ -415,8 +401,6 @@ export function formatElapsedDuration(elapsedMs: number): string {
     return hours === 1 ? "about 1 hour" : `about ${hours} hours`;
   }
 
-  // Decompose past hours — "about 168 hours" is how a week-old transaction
-  // used to read.
   const days = Math.floor(hours / HOURS_PER_DAY);
   return days === 1 ? "about 1 day" : `about ${days} days`;
 }
@@ -427,7 +411,7 @@ export function formatElapsedDuration(elapsedMs: number): string {
  * that, a lone point on a dataMin→dataMax axis renders as a degenerate blob,
  * so callers should fall back to an empty state instead.
  */
-export function hasRenderableSpan(rows: ChartRow[]): boolean {
+export function hasRenderableSpan(rows: ChartRow[]) {
   let finiteRows = 0;
   for (const row of rows) {
     const hasFiniteValue = Object.entries(row).some(
@@ -450,13 +434,11 @@ export function hasRenderableSpan(rows: ChartRow[]): boolean {
  * values (< 10) keep up to two decimals — rounding a 0.5-step axis to whole
  * numbers would render duplicate tick labels ("0, 1, 1, 2").
  */
-export function formatCompactNumber(value: number): string {
+export function formatCompactNumber(value: number) {
   if (!Number.isFinite(value)) {
     return "—";
   }
 
-  // Threshold on the ROUNDED value so 9,999.5 renders "10K" like 10,000
-  // does, instead of flipping notation at the boundary.
   if (Math.abs(Math.round(value)) >= COMPACT_THRESHOLD) {
     return compactNumberFormatter.format(value);
   }
@@ -474,14 +456,14 @@ export function formatCompactNumber(value: number): string {
  * KB/MB/GB; everything else ticks on the decimal 1-2-5 ladder. Keep this next
  * to formatMetricValue — the two must agree or axis labels grow decimals.
  */
-export function metricTickBase(unit: MetricUnit): 10 | 1024 {
+export function metricTickBase(unit: MetricUnit) {
   return unit === MetricUnit.BYTES || unit === MetricUnit.BYTES_PER_SECOND
     ? BINARY_TICK_BASE
     : DECIMAL_TICK_BASE;
 }
 
 /** A series' finite values in order, gaps dropped: the input of a stat-tile sparkline. */
-export function sparklineValues(series: MetricSeries | undefined): number[] {
+export function sparklineValues(series: MetricSeries | undefined) {
   return (series?.points?.values ?? []).filter((value) =>
     Number.isFinite(value)
   );
@@ -491,7 +473,7 @@ export function sparklineValues(series: MetricSeries | undefined): number[] {
 export function formatMetricValue(
   value: number | null | undefined,
   unit: MetricUnit
-): string {
+) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "—";
   }
@@ -507,8 +489,6 @@ export function formatMetricValue(
       let rounded = Number(
         (value * PERCENT_MULTIPLIER).toFixed(RATIO_DECIMALS)
       );
-      // A ratio below 1 must never display as a pegged "100%" — a 99.99%
-      // cache hit is a different story than a true 100%.
       if (rounded >= PERCENT_MULTIPLIER && value < 1) {
         rounded = MAX_UNPEGGED_PERCENT;
       }
@@ -529,7 +509,7 @@ export function formatMetricValue(
 export function formatMetricValueDetailed(
   value: number | null | undefined,
   unit: MetricUnit
-): string {
+) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "—";
   }
@@ -561,9 +541,7 @@ export function formatMetricValueDetailed(
  * The representative scalar for a stat tile: the server's delta.current_value
  * when present and finite, otherwise the last non-gap point.
  */
-export function representativeValue(
-  series: MetricSeries | undefined
-): number | null {
+export function representativeValue(series: MetricSeries | undefined) {
   if (!series) {
     return null;
   }
@@ -587,9 +565,7 @@ export function representativeValue(
  * Formats a TrendDelta for a stat tile, or null when it should be suppressed
  * (no previous window, or a non-finite percent change).
  */
-export function formatTrend(
-  delta: TrendDelta | undefined
-): FormattedTrend | null {
+export function formatTrend(delta: TrendDelta | undefined) {
   if (
     !(delta?.previousAvailable === true && Number.isFinite(delta.percentChange))
   ) {
@@ -608,7 +584,7 @@ export function formatTrend(
   return {
     direction,
     label: `${sign}${rounded}%`,
-  };
+  } satisfies FormattedTrend | null;
 }
 
 /**
@@ -698,7 +674,7 @@ export function buildPreviousInstanceMetricsInput(
 }
 
 /** The window length in ms for a range, i.e. the comparison overlay's shift. */
-export function metricRangeWindowMs(range: MetricRange): number {
+export function metricRangeWindowMs(range: MetricRange) {
   return range.hours * SECONDS_PER_HOUR * MS_PER_SECOND;
 }
 
@@ -706,10 +682,7 @@ export function metricRangeWindowMs(range: MetricRange): number {
  * Shifts decoded points forward in time so a previous-period series overlays
  * the current window ("this time last period"). Gaps stay gaps.
  */
-export function shiftMetricPoints(
-  points: MetricPoint[],
-  offsetMs: number
-): MetricPoint[] {
+export function shiftMetricPoints(points: MetricPoint[], offsetMs: number) {
   return points.map((point) => ({
     time: point.time + offsetMs,
     value: point.value,
@@ -721,7 +694,7 @@ export function shiftMetricPoints(
  * comparison overlay is omitted entirely below this, so an empty previous
  * window never leaves a phantom legend entry.
  */
-export function hasDrawablePoints(points: MetricPoint[]): boolean {
+export function hasDrawablePoints(points: MetricPoint[]) {
   let finiteCount = 0;
   for (const point of points) {
     if (point.value !== null) {

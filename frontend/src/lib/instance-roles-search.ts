@@ -19,9 +19,7 @@ const instanceRolesTypeValueSchema = z.enum(INSTANCE_ROLES_TYPES);
 const instanceRolesTypeSchema = z
   .string()
   .optional()
-  .transform((value): RoleKind | undefined =>
-    isInstanceRolesType(value) ? value : undefined
-  );
+  .transform((value) => (isInstanceRolesType(value) ? value : undefined));
 
 type InstanceRolesTab = z.infer<typeof instanceRolesTabSchema>;
 interface InstanceRolesSearch {
@@ -32,7 +30,7 @@ interface InstanceRolesSearch {
 
 function normalizeInstanceRolesTab(
   value: z.infer<typeof instanceRolesSearchTabSchema> | undefined
-): InstanceRolesTab | undefined {
+) {
   if (value === "access-map") {
     return "map";
   }

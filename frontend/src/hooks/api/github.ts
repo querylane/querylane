@@ -1,4 +1,3 @@
-// GitHub REST API, not a ConnectRPC service
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_STALE_TIME } from "@/lib/query-policy";
 import { isRecord } from "@/lib/value-guards";
@@ -10,7 +9,7 @@ const STAR_COUNT_THOUSAND = 1000;
 const GITHUB_STARS_GC_TIME_MS =
   SIXTY_MINUTES * ONE_MINUTE_IN_SECONDS * ONE_SECOND_IN_MILLISECONDS;
 
-export function formatGithubStarCount(starCount: number): string {
+export function formatGithubStarCount(starCount: number) {
   if (starCount >= STAR_COUNT_THOUSAND) {
     return `${Math.round(starCount / STAR_COUNT_THOUSAND)}k`;
   }
@@ -18,10 +17,7 @@ export function formatGithubStarCount(starCount: number): string {
   return String(starCount);
 }
 
-export async function fetchGithubRepoStars(
-  repo: string,
-  signal?: AbortSignal
-): Promise<string | null> {
+export async function fetchGithubRepoStars(repo: string, signal?: AbortSignal) {
   try {
     const response = await fetch(
       `https://api.github.com/repos/${repo}`,
@@ -45,7 +41,6 @@ export async function fetchGithubRepoStars(
 
     return formatGithubStarCount(stars);
   } catch {
-    // Github stars are decorative only, so we silently ignore failures.
     return null;
   }
 }

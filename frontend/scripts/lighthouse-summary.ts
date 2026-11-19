@@ -45,41 +45,41 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getString(value: unknown): string | undefined {
+function getString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value
     : undefined;
 }
 
-function getNumericScore(value: unknown): number | undefined {
+function getNumericScore(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
 }
 
-function readAudit(
+const readAudit: (
   report: LighthouseReportLike,
   auditId: string
-): LighthouseAudit | undefined {
+) => LighthouseAudit | undefined = (report, auditId) => {
   if (!isRecord(report.audits)) {
     return undefined;
   }
 
   const audit = report.audits[auditId];
   return isRecord(audit) ? audit : undefined;
-}
+};
 
-function readCategory(
+const readCategory: (
   report: LighthouseReportLike,
   categoryId: string
-): LighthouseCategory | undefined {
+) => LighthouseCategory | undefined = (report, categoryId) => {
   if (!isRecord(report.categories)) {
     return undefined;
   }
 
   const category = report.categories[categoryId];
   return isRecord(category) ? category : undefined;
-}
+};
 
 function formatCategoryScore(report: LighthouseReportLike, categoryId: string) {
   const score = getNumericScore(readCategory(report, categoryId)?.score);
@@ -114,7 +114,7 @@ function getReportUrl(report: LighthouseReportLike) {
   );
 }
 
-function toSummaryRow(report: LighthouseReportLike): LighthouseSummaryRow {
+function toSummaryRow(report: LighthouseReportLike) {
   return {
     accessibility: formatCategoryScore(report, "accessibility"),
     bestPractices: formatCategoryScore(report, "best-practices"),
@@ -131,7 +131,7 @@ function toSummaryRow(report: LighthouseReportLike): LighthouseSummaryRow {
     speedIndex: formatAuditValue(report, "speed-index"),
     totalBlockingTime: formatAuditValue(report, "total-blocking-time"),
     url: getReportUrl(report),
-  };
+  } satisfies LighthouseSummaryRow;
 }
 
 function summarizeLighthouseReports(reports: readonly unknown[]) {

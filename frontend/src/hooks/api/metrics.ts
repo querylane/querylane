@@ -10,11 +10,6 @@ import {
 } from "@/lib/metrics";
 import { queryMetrics } from "@/protogen/querylane/console/v1alpha1/metrics-MetricsService_connectquery";
 
-/**
- * Quantizes to the current minute so the window (and thus the query key) is
- * stable across re-renders within the same minute instead of churning on every
- * render.
- */
 const ANCHOR_QUANTUM_MS = 60_000;
 
 /**
@@ -25,7 +20,7 @@ const ANCHOR_QUANTUM_MS = 60_000;
  * forever. Both the current- and previous-window queries must share ONE anchor
  * value so their windows tile exactly.
  */
-export function quantizedMetricsAnchor(): number {
+export function quantizedMetricsAnchor() {
   return Math.floor(Date.now() / ANCHOR_QUANTUM_MS) * ANCHOR_QUANTUM_MS;
 }
 

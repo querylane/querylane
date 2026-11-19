@@ -7,14 +7,11 @@ interface NetworkNavigator extends Navigator {
   };
 }
 
-// Router intent preloads can rerun active parent loaders with preload=false.
-// Sidebar intent uses loadRouteChunk instead, never preloadRoute.
-export function getDefaultPreload(): false {
-  return false;
+export function getDefaultPreload() {
+  return false as const;
 }
 
-// Rechecked on each interaction; missing Network Information API is allowed.
-export function canPreloadRouteCode(): boolean {
+export function canPreloadRouteCode() {
   const network: NetworkNavigator | undefined =
     typeof navigator === "undefined" ? undefined : navigator;
   if (network?.onLine === false || network?.connection?.saveData === true) {
@@ -31,15 +28,11 @@ export function canPreloadRouteCode(): boolean {
   }
 }
 
-export function getDefaultPreloadStaleTime(): number {
+export function getDefaultPreloadStaleTime() {
   return 0;
 }
 
-export function getDefaultViewTransition(): NonNullable<
-  NavigateOptions<AnyRouter>["viewTransition"]
-> {
-  // Router skips the types callback on older implementations. Disable those
-  // entirely so they cannot bypass the per-navigation motion preference.
+export function getDefaultViewTransition() {
   if (
     globalThis.window === undefined ||
     !globalThis.window.CSS?.supports(
@@ -56,5 +49,5 @@ export function getDefaultViewTransition(): NonNullable<
       !globalThis.window.matchMedia("(prefers-reduced-motion: reduce)").matches
         ? ["page-navigation"]
         : false,
-  };
+  } satisfies NonNullable<NavigateOptions<AnyRouter>["viewTransition"]>;
 }

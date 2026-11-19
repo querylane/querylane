@@ -30,13 +30,13 @@ function WaitingForConfigBody({
   const copyPath = async () => {
     try {
       await navigator.clipboard.writeText(configFilePath);
-      setPathCopied(true);
-      globalThis.window.setTimeout(() => {
-        setPathCopied(false);
-      }, COPY_RESET_MS);
     } catch {
-      /* noop */
+      return;
     }
+    setPathCopied(true);
+    globalThis.window.setTimeout(() => {
+      setPathCopied(false);
+    }, COPY_RESET_MS);
   };
   return (
     <div className="space-y-5">
@@ -67,8 +67,7 @@ function WaitingForConfigBody({
             <ClipboardCopy className="size-4 shrink-0 text-white/50" />
           )}
         </Button>
-        {/* No explanatory copy here: the page description above this body
-            already says Querylane is watching the path shown. */}
+
         <Button
           className="h-9"
           disabled={retryPending}

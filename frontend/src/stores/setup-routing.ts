@@ -16,7 +16,7 @@ interface RoutingDecision {
 function resolveRoutingDecision(
   isConfigured: boolean,
   dbState: AppDatabaseStatus_State
-): RoutingDecision {
+) {
   if (!isConfigured) {
     if (dbState === AppDatabaseStatus_State.ERROR) {
       return {
@@ -24,7 +24,7 @@ function resolveRoutingDecision(
         showDegradedBanner: false,
         showWizardErrorBanner: true,
         warningCode: null,
-      };
+      } satisfies RoutingDecision;
     }
 
     if (dbState === AppDatabaseStatus_State.READY) {
@@ -33,7 +33,7 @@ function resolveRoutingDecision(
         showDegradedBanner: false,
         showWizardErrorBanner: false,
         warningCode: "INCONSISTENT_READY_WHILE_NOT_CONFIGURED",
-      };
+      } satisfies RoutingDecision;
     }
 
     return {
@@ -41,7 +41,7 @@ function resolveRoutingDecision(
       showDegradedBanner: false,
       showWizardErrorBanner: false,
       warningCode: null,
-    };
+    } satisfies RoutingDecision;
   }
 
   if (dbState === AppDatabaseStatus_State.ERROR) {
@@ -50,7 +50,7 @@ function resolveRoutingDecision(
       showDegradedBanner: true,
       showWizardErrorBanner: false,
       warningCode: null,
-    };
+    } satisfies RoutingDecision;
   }
 
   if (dbState === AppDatabaseStatus_State.NOT_CONFIGURED) {
@@ -59,7 +59,7 @@ function resolveRoutingDecision(
       showDegradedBanner: false,
       showWizardErrorBanner: false,
       warningCode: "INCONSISTENT_NOT_CONFIGURED_WHILE_CONFIGURED",
-    };
+    } satisfies RoutingDecision;
   }
 
   return {
@@ -67,7 +67,7 @@ function resolveRoutingDecision(
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     warningCode: null,
-  };
+  } satisfies RoutingDecision;
 }
 
 export type { RoutingWarningCode };

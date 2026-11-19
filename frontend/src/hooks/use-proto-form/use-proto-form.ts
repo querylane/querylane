@@ -106,10 +106,7 @@ function normalizeFormValues<Desc extends DescMessage>(
     | MessageShape<Desc>
     | DefaultValues<ProtoFormShape<Desc>>
 ): ProtoFormShape<Desc>;
-function normalizeFormValues(
-  schema: DescMessage,
-  values: unknown
-): Record<string, unknown> {
+function normalizeFormValues(schema: DescMessage, values: unknown) {
   if (isMessage(values, schema)) {
     return protoToFormValues(schema, values);
   }
@@ -126,7 +123,7 @@ function useProtoForm<Desc extends DescMessage>(
 function useProtoForm(
   schema: DescMessage,
   options?: UseProtoFormOptions<DescMessage>
-): UseProtoFormReturn<DescMessage> {
+) {
   const {
     emptyRepeatedStringPolicies,
     formatMessage,
@@ -213,7 +210,7 @@ function useProtoForm(
     }
   };
   useEffect(
-    function subscribeToModifiedFields(): (() => void) | undefined {
+    function subscribeToModifiedFields() {
       if (validationScope !== "modified-fields") {
         return undefined;
       }
@@ -273,7 +270,7 @@ function useProtoForm(
   };
   const createMessage = (
     values?: ProtoFormShape<DescMessage> | MessageShape<DescMessage>
-  ): MessageShape<DescMessage> => {
+  ) => {
     if (isMessage(values, schema)) {
       return values;
     }
@@ -286,7 +283,7 @@ function useProtoForm(
     });
   };
 
-  const createUpdateMask = (): FieldMask =>
+  const createUpdateMask = () =>
     createDirtyUpdateMask({
       schema,
       dirtyFields:
@@ -355,7 +352,7 @@ function useProtoForm(
     setServerErrors,
     setValue,
     setValues,
-  };
+  } satisfies UseProtoFormReturn<DescMessage>;
 }
 
 function collectServerFieldErrors(
@@ -394,7 +391,7 @@ function collectServerFieldErrors(
 function useProtoFormDefaults<Desc extends DescMessage>(
   schema: Desc,
   init?: MessageInitShape<Desc>
-): MessageShape<Desc> {
+) {
   return create(schema, init);
 }
 
@@ -412,7 +409,7 @@ function restoreDefaultSection(
       MessageShape<DescMessage>
     >["resetField"]
   >[1]
-): void {
+) {
   if (options?.defaultValue !== undefined) {
     return;
   }
@@ -432,7 +429,7 @@ function restoreDefaultSection(
   }
 }
 
-function stripPrefix(field: string, prefixes: readonly string[]): string {
+function stripPrefix(field: string, prefixes: readonly string[]) {
   for (const prefix of prefixes) {
     if (!prefix) {
       continue;
@@ -445,7 +442,7 @@ function stripPrefix(field: string, prefixes: readonly string[]): string {
   return field;
 }
 
-function setModifiedPath(target: ModifiedFieldTree, path: string): void {
+function setModifiedPath(target: ModifiedFieldTree, path: string) {
   const segments = path.match(/[^.[\]]+/gu) ?? [];
   let current = target;
   for (const [index, segment] of segments.entries()) {
@@ -468,7 +465,7 @@ function setModifiedPath(target: ModifiedFieldTree, path: string): void {
   }
 }
 
-function clearModifiedPath(target: ModifiedFieldTree, path: string): void {
+function clearModifiedPath(target: ModifiedFieldTree, path: string) {
   const segments = path.match(/[^.[\]]+/gu) ?? [];
   const [segment, ...rest] = segments;
   if (!isNonEmptyString(segment)) {

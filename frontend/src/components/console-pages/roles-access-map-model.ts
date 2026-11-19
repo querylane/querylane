@@ -78,9 +78,7 @@ const PUBLIC_ROLE_NODE: RolesAccessMapRoleNode = {
   title: "PUBLIC",
 };
 
-function grantObjectKind(
-  type: GrantObjectType
-): RolesAccessMapObjectKind | null {
+function grantObjectKind(type: GrantObjectType) {
   switch (type) {
     case GrantObjectType.DATABASE:
       return "database";
@@ -107,7 +105,7 @@ function grantObjectKind(
   }
 }
 
-function roleSubtitle(kind: RoleKind): string {
+function roleSubtitle(kind: RoleKind) {
   switch (kind) {
     case "builtin":
       return "built-in";
@@ -124,15 +122,15 @@ function roleSubtitle(kind: RoleKind): string {
   }
 }
 
-function normalizeSearch(search: string | undefined): string {
+function normalizeSearch(search: string | undefined) {
   return search?.trim().toLowerCase() ?? "";
 }
 
-function roleMatchesSearch(roleName: string, search: string): boolean {
+function roleMatchesSearch(roleName: string, search: string) {
   return search === "" || roleName.toLowerCase().includes(search);
 }
 
-function roleToNode(role: Role, kind: RoleKind): RolesAccessMapRoleNode {
+function roleToNode(role: Role, kind: RoleKind) {
   const roleId = roleIdOf(role);
   return {
     id: `role:${roleId}`,
@@ -140,13 +138,13 @@ function roleToNode(role: Role, kind: RoleKind): RolesAccessMapRoleNode {
     roleId,
     subtitle: roleSubtitle(kind),
     title: role.roleName,
-  };
+  } satisfies RolesAccessMapRoleNode;
 }
 
 function sortRoles(
   left: RolesAccessMapRoleNode,
   right: RolesAccessMapRoleNode
-): number {
+) {
   const kindRank: Record<RolesAccessMapRoleNode["kind"], number> = {
     builtin: 5,
     group: 3,
@@ -163,7 +161,7 @@ function grantObjectTitle(input: {
   objectName: string;
   objectType: GrantObjectType;
   schemaName: string;
-}): string {
+}) {
   if (input.objectType === GrantObjectType.DATABASE) {
     return input.objectName || input.databaseName;
   }
@@ -178,7 +176,7 @@ function grantObjectKey(input: {
   objectName: string;
   objectType: GrantObjectType;
   schemaName: string;
-}): string | null {
+}) {
   const kind = grantObjectKind(input.objectType);
   if (kind === null) {
     return null;
@@ -200,7 +198,7 @@ function objectSubtitle(input: {
   databaseName: string;
   kind: RolesAccessMapObjectKind;
   schemaName: string;
-}): string {
+}) {
   if (input.kind === "database") {
     return "database";
   }
@@ -222,7 +220,7 @@ function addObjectNode(
     objectType: GrantObjectType;
     schemaName: string;
   }
-): string | null {
+) {
   const kind = grantObjectKind(input.objectType);
   const id = grantObjectKey(input);
   if (kind === null || id === null) {
@@ -268,7 +266,7 @@ function mergeEdge(input: {
   });
 }
 
-function membershipTargetRoleId(role: Role["memberOf"][number]): string {
+function membershipTargetRoleId(role: Role["memberOf"][number]) {
   return role.role ? parseResourceLeafId(role.role) : role.roleName;
 }
 
@@ -326,7 +324,7 @@ function buildVisibleRoleNodes({
   roles: Role[];
   search: string;
   visibleKinds: RoleMapKindVisibility;
-}): RolesAccessMapRoleNode[] {
+}) {
   const nodes: RolesAccessMapRoleNode[] = [];
   for (const role of roles) {
     const kind = deriveRoleKind(role);
@@ -339,7 +337,7 @@ function buildVisibleRoleNodes({
   return nodes;
 }
 
-function roleNodeIdForAccess(access: RoleAccessMapResource): string {
+function roleNodeIdForAccess(access: RoleAccessMapResource) {
   return `role:${access.roleId || access.roleName}`;
 }
 
@@ -492,7 +490,7 @@ function buildRolesAccessMapModel({
   roles,
   search,
   visibleKinds,
-}: BuildRolesAccessMapModelInput): RolesAccessMapModel {
+}: BuildRolesAccessMapModelInput) {
   const normalizedSearch = normalizeSearch(search);
   const visibleRoles = buildVisibleRoleNodes({
     roles,
@@ -550,7 +548,7 @@ function buildRolesAccessMapModel({
     edges,
     objects,
     roles: rolesWithPublic,
-  };
+  } satisfies RolesAccessMapModel;
 }
 
 export type {

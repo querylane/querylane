@@ -37,7 +37,7 @@ interface NormalizedConnectErrorState {
   reason: string | null;
 }
 
-function getCodeLabel(code: Code | null): string | null {
+function getCodeLabel(code: Code | null) {
   if (code === null) {
     return null;
   }
@@ -46,7 +46,7 @@ function getCodeLabel(code: Code | null): string | null {
   return typeof label === "string" ? label : null;
 }
 
-function normalizeMetadata(metadata: Headers): Record<string, string[]> {
+function normalizeMetadata(metadata: Headers) {
   const entries = new Map<string, string[]>();
   for (const [key, value] of metadata.entries()) {
     const normalizedKey = key.toLowerCase();
@@ -65,7 +65,7 @@ function normalizeSafeString(
   value: unknown,
   pattern: RegExp,
   transform: (input: string) => string = (input) => input
-): string | null {
+) {
   if (typeof value !== "string") {
     return null;
   }
@@ -74,9 +74,9 @@ function normalizeSafeString(
   return pattern.test(normalizedValue) ? normalizedValue : null;
 }
 
-function normalizeServerFields(value: unknown): Record<string, string> {
+function normalizeServerFields(value: unknown) {
   if (!isRecord(value)) {
-    return {};
+    return {} satisfies Record<string, string>;
   }
 
   return Object.fromEntries(
@@ -105,7 +105,7 @@ function isPostgreSqlErrorRetryGuidance(
 function normalizePostgresRecord(
   record: Record<string, unknown>,
   typedDetail: boolean
-): AppUiErrorPostgres | null {
+) {
   const sqlstate = normalizeSafeString(
     record["sqlstate"],
     SQLSTATE_PATTERN,
@@ -151,13 +151,13 @@ function normalizePostgresRecord(
     ),
     sqlstate,
     sqlstateClass,
-  };
+  } satisfies AppUiErrorPostgres | null;
 }
 
 function mergePostgres(
   primary: AppUiErrorPostgres | null,
   fallback: AppUiErrorPostgres | null
-): AppUiErrorPostgres | null {
+) {
   if (!primary) {
     return fallback;
   }
@@ -173,10 +173,10 @@ function mergePostgres(
     serverFields: primary.serverFields,
     sqlstate: primary.sqlstate ?? fallback.sqlstate,
     sqlstateClass: primary.sqlstateClass ?? fallback.sqlstateClass,
-  };
+  } satisfies AppUiErrorPostgres | null;
 }
 
-function decodePostgresBinary(value: Uint8Array): AppUiErrorPostgres | null {
+function decodePostgresBinary(value: Uint8Array) {
   if (value.length === 0) {
     return null;
   }
@@ -195,7 +195,7 @@ function extractPostgresDetail(input: {
   debug?: unknown;
   type: string;
   value?: Uint8Array | undefined;
-}): AppUiErrorPostgres | null {
+}) {
   if (input.type === POSTGRES_DETAIL_TYPE) {
     return mergePostgres(
       input.value ? decodePostgresBinary(input.value) : null,
@@ -214,7 +214,7 @@ function extractPostgresDetail(input: {
   return null;
 }
 
-function summarizePostgres(postgres: AppUiErrorPostgres): string {
+function summarizePostgres(postgres: AppUiErrorPostgres) {
   if (
     isNonEmptyString(postgres.sqlstate) &&
     typeof postgres.conditionName === "string" &&
@@ -249,9 +249,7 @@ function summarizeDetail(
     : "Structured detail available";
 }
 
-function normalizeDetail(
-  detail: ConnectError["details"][number]
-): AppUiErrorDetail {
+function normalizeDetail(detail: ConnectError["details"][number]) {
   if ("desc" in detail) {
     const postgres =
       detail.desc.typeName === POSTGRES_DETAIL_TYPE && isRecord(detail.value)
@@ -264,7 +262,7 @@ function normalizeDetail(
         ? summarizePostgres(postgres)
         : "Outgoing detail attached locally",
       type: detail.desc.typeName,
-    };
+    } satisfies AppUiErrorDetail;
   }
 
   const postgres = extractPostgresDetail(detail);
@@ -273,10 +271,10 @@ function normalizeDetail(
     postgres: postgres ?? undefined,
     summary: summarizeDetail(detail.type, detail.debug, postgres),
     type: detail.type,
-  };
+  } satisfies AppUiErrorDetail;
 }
 
-function normalizeDetails(connectError: ConnectError): AppUiErrorDetail[] {
+function normalizeDetails(connectError: ConnectError) {
   return connectError.details.map(normalizeDetail);
 }
 
@@ -299,9 +297,7 @@ function extractErrorInfo(details: AppUiErrorDetail[]) {
   return { domain: null, reason: null };
 }
 
-function extractPostgres(
-  details: AppUiErrorDetail[]
-): AppUiErrorPostgres | null {
+function extractPostgres(details: AppUiErrorDetail[]) {
   const typedDetail = details.find(
     (detail) => detail.type === POSTGRES_DETAIL_TYPE
   );
@@ -330,7 +326,7 @@ function extractPostgres(
 function normalizeConnectErrorState(
   connectError: ConnectError | null,
   rawMessage: string
-): NormalizedConnectErrorState {
+) {
   if (connectError === null) {
     return {
       code: null,
@@ -341,7 +337,7 @@ function normalizeConnectErrorState(
       metadata: {},
       postgres: null,
       reason: null,
-    };
+    } satisfies NormalizedConnectErrorState;
   }
 
   const details = normalizeDetails(connectError);
@@ -359,7 +355,7 @@ function normalizeConnectErrorState(
     metadata: normalizeMetadata(connectError.metadata),
     postgres: extractPostgres(details),
     reason,
-  };
+  } satisfies NormalizedConnectErrorState;
 }
 
 export { normalizeConnectErrorState };

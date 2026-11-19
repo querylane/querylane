@@ -89,7 +89,7 @@ function useSelectedDatabase({
   effectiveInstanceId?: string | undefined;
   hydrateSelectedDatabaseFromQuery: boolean;
   selectedInstanceResolved: boolean;
-}): PostgresDatabase | null {
+}) {
   const databaseQueryEnabled = shouldEnableDatabaseSelectionQuery({
     effectiveDatabaseId,
     effectiveInstanceId,
@@ -128,16 +128,11 @@ function useSelectedDatabase({
   return selectedDatabase;
 }
 
-// With no database in the URL or persisted selection, default to the first
-// non-system database (falling back to the first overall) so the database nav
-// and switcher are reachable. Otherwise the only way to pick a database is the
-// switcher, which itself renders only once a database is selected — a dead end
-// on a freshly opened instance.
 function resolveDatabaseCandidate(
   routeDatabaseId: string | undefined,
   persistedDatabaseId: string | undefined,
   databases: PostgresDatabase[]
-): string | undefined {
+) {
   return (
     routeDatabaseId ??
     persistedDatabaseId ??
@@ -146,16 +141,11 @@ function resolveDatabaseCandidate(
   );
 }
 
-// Only hydrate the selected database via GetDatabase when it isn't already
-// resolvable from the loaded list (e.g. a stale persisted id). A route db is
-// hydrated by its own loader; an auto-selected or persisted db that's in the
-// list needs no extra fetch — avoids a redundant GetDatabase on the instance
-// overview (which also tripped the e2e unmocked-RPC guard).
 function shouldHydrateSelectedDatabase(
   routeDatabaseId: string | undefined,
   effectiveDatabaseId: string | undefined,
   databases: PostgresDatabase[]
-): boolean {
+) {
   if ((routeDatabaseId ?? "") || !isNonEmptyString(effectiveDatabaseId)) {
     return false;
   }
@@ -190,7 +180,7 @@ function usePersistedNavigationSelections() {
 function getPersistedSelection(
   store: PersistedNavigationSelectionStore,
   instanceId: string | undefined
-): PersistedNavigationSelection {
+) {
   return isNonEmptyString(instanceId) ? (store[instanceId] ?? {}) : {};
 }
 
@@ -245,9 +235,6 @@ function useDbProviderValue() {
       refetchOnReconnect: true,
     }
   );
-  // TanStack Query retains the last successful response when a background
-  // refresh fails. Keep using that catalog as stale data while queryStates
-  // exposes the failure and retry path to the UI.
   const instances =
     instancesQuery.data?.instances.map(mapInstance) ?? EMPTY_INSTANCE_ARRAY;
 
@@ -307,11 +294,9 @@ function useDbProviderValue() {
     instanceId: effectiveInstanceId,
   };
   const persistSelectionRef = React.useRef(persistSelection);
-  // keep ref in sync with latest persistSelection
   React.useEffect(function syncPersistSelectionRef() {
     persistSelectionRef.current = persistSelection;
   });
-  // persist selection to URL on change
   React.useEffect(
     function persistEffectiveSelection() {
       persistSelectionRef.current({

@@ -2,10 +2,6 @@ import type { ComponentProps } from "react";
 import { Button } from "@/components/querylane-ui/button";
 import { cn } from "@/lib/utils";
 
-// Querylane-specific look for buttons that jump to another catalog resource
-// (e.g. foreign key values in the data grid): a dotted underline in the shared
-// --reference token. Lives outside components/ui so the vendored shadcn
-// button stays in sync with the registry.
 function ReferenceButton({
   className,
   ...props

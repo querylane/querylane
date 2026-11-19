@@ -18,10 +18,6 @@ import { splitSqlStatements } from "@/features/sql-workbench/sql-statements";
 import { useDatabaseCatalogQuery } from "@/hooks/api/database-catalog";
 
 const NO_RELATIONS: SqlRelation[] = [];
-/**
- * Before a statement names its tables, column suggestions come from the
- * default schema; this bounds how many of its tables are fetched for that.
- */
 const SCHEMA_COLUMN_TABLE_LIMIT = 12;
 const SELECT_START_PATTERN = /^\s*select\b/iu;
 const FROM_PATTERN = /\bfrom\b/iu;
@@ -33,8 +29,7 @@ interface CompletionScope {
   relations: readonly SqlRelation[];
 }
 
-/** True while some statement selects columns without naming a table yet. */
-function hasSelectWithoutFrom(text: string): boolean {
+function hasSelectWithoutFrom(text: string) {
   return splitSqlStatements(text).some(
     (statement) =>
       SELECT_START_PATTERN.test(statement.text) &&
@@ -58,12 +53,10 @@ function useSqlCompletionNamespace({
   defaultSchema?: string | undefined;
   instanceId: string;
   text: string;
-}): { namespace: SQLNamespace; scope: CompletionScope } {
+}) {
   const transport = useTransport();
   const catalog = useDatabaseCatalogQuery({ databaseId, instanceId });
   const relations = catalog.data?.objects.map(toSqlRelation) ?? NO_RELATIONS;
-  // ListTableColumns serves tables and materialized views only; plain views
-  // are completed by name without columns.
   const kindByKey = new Map(
     relations.flatMap((relation) =>
       relation.kind === "table" || relation.isMaterialized
@@ -71,8 +64,6 @@ function useSqlCompletionNamespace({
         : []
     )
   );
-  // Typing should never block on a catalog lookup; defer the text so column
-  // fetches trail the keystrokes.
   const deferredText = useDeferredValue(text);
   const referenced = extractReferencedRelations(
     deferredText,
@@ -117,7 +108,7 @@ function useSqlCompletionNamespace({
   return {
     namespace: buildCompletionNamespace({ columns, relations }),
     scope: { columnsByRelation: columns, defaultSchema: schema, relations },
-  };
+  } satisfies { namespace: SQLNamespace; scope: CompletionScope };
 }
 
 export type { CompletionScope };

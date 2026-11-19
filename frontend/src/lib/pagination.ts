@@ -1,4 +1,4 @@
-function pageIndexForPageSizeChange({
+const pageIndexForPageSizeChange: ({
   nextPageSize,
   pageIndex,
   pageSize,
@@ -6,9 +6,8 @@ function pageIndexForPageSizeChange({
   nextPageSize: number;
   pageIndex: number;
   pageSize: number;
-}>): number {
-  return Math.floor((pageIndex * pageSize) / nextPageSize);
-}
+}>) => number = ({ nextPageSize, pageIndex, pageSize }) =>
+  Math.floor((pageIndex * pageSize) / nextPageSize);
 
 const DEFAULT_PAGE_SIZE = 10;
 const MEDIUM_PAGE_SIZE = 25;

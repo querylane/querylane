@@ -75,27 +75,6 @@ interface AppUiError {
   unexpectedResponse: UnexpectedResponseInfo | null;
 }
 
-interface ReportAppUiErrorDependencies {
-  captureException: (
-    error: unknown,
-    context: {
-      extras: Record<string, unknown>;
-      tags: Record<string, string>;
-    }
-  ) => void;
-  logger: { error: (message: string, extra: Record<string, unknown>) => void };
-  toast: {
-    error: (
-      message: string,
-      options?: {
-        action?: { label: string; onClick: () => void };
-        description?: string;
-        id?: string;
-      }
-    ) => void;
-  };
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -108,6 +87,5 @@ export type {
   AppUiErrorDetail,
   AppUiErrorPostgres,
   BlockingErrorReason,
-  ReportAppUiErrorDependencies,
 };
 export { isRecord };

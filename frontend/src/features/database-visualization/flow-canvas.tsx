@@ -171,15 +171,15 @@ const NODE_KIND_LAYOUT_ORDER = {
   view: 4,
 } satisfies Record<VisualizationNode["kind"], number>;
 
-function flowSourcePosition(direction: VisualizationDirection): Position {
+function flowSourcePosition(direction: VisualizationDirection) {
   return direction === "LR" ? Position.Right : Position.Bottom;
 }
 
-function flowTargetPosition(direction: VisualizationDirection): Position {
+function flowTargetPosition(direction: VisualizationDirection) {
   return direction === "LR" ? Position.Left : Position.Top;
 }
 
-function layoutIdentityKey(value: object): string {
+function layoutIdentityKey(value: object) {
   const cached = layoutIdentityCache.get(value);
   if (isNonEmptyString(cached)) {
     return cached;
@@ -190,7 +190,7 @@ function layoutIdentityKey(value: object): string {
   return nextKey;
 }
 
-function rememberGraphLayout(key: string, value: GraphLayout): GraphLayout {
+function rememberGraphLayout(key: string, value: GraphLayout) {
   if (graphLayoutCache.size >= MAX_LAYOUT_CACHE_ENTRIES) {
     const oldestKey = graphLayoutCache.keys().next().value;
     if (oldestKey !== undefined) {
@@ -205,10 +205,7 @@ function flowDimensions(density: FlowCanvasDensity) {
   return FLOW_DIMENSIONS[density];
 }
 
-function nodeHeight(
-  node: VisualizationNode,
-  density: FlowCanvasDensity
-): number {
+function nodeHeight(node: VisualizationNode, density: FlowCanvasDensity) {
   const dimensions = flowDimensions(density);
   return (
     dimensions.baseNodeHeight +
@@ -362,11 +359,7 @@ function AutoFitView() {
   return null;
 }
 
-function childRank(
-  ranks: Map<string, number>,
-  source: string,
-  target: string
-): number {
+function childRank(ranks: Map<string, number>, source: string, target: string) {
   return Math.max(
     ranks.get(target) ?? FIRST_RANK,
     (ranks.get(source) ?? 0) + 1
@@ -379,7 +372,7 @@ function createRankGraph({
 }: {
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
-}): RankGraph {
+}) {
   const nodeIds = new Set(nodes.map((node) => node.id));
   const incomingCounts = new Map<string, number>();
   const outgoing = new Map<string, string[]>();
@@ -399,7 +392,7 @@ function createRankGraph({
     incomingCounts.set(edge.target, (incomingCounts.get(edge.target) ?? 0) + 1);
   }
 
-  return { incomingCounts, outgoing, ranks };
+  return { incomingCounts, outgoing, ranks } satisfies RankGraph;
 }
 
 function applyAcyclicRanks({
@@ -454,7 +447,7 @@ function computeNodeRanks({
 }: {
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
-}): Map<string, number> {
+}) {
   const graph = createRankGraph({ edges, nodes });
   applyAcyclicRanks({ ...graph, nodes });
   return graph.ranks;
@@ -503,7 +496,7 @@ function positionRankNodes({
   direction: VisualizationDirection;
   nodes: VisualizationNode[];
   rankOffset: number;
-}): PositionedVisualizationNode[] {
+}) {
   const dimensions = flowDimensions(density);
   const crossAxisSpan =
     nodes.reduce(
@@ -535,7 +528,7 @@ function rankAxisSize({
   density: FlowCanvasDensity;
   direction: VisualizationDirection;
   nodes: VisualizationNode[];
-}): number {
+}) {
   const dimensions = flowDimensions(density);
   if (direction === "LR") {
     return dimensions.nodeWidth;
@@ -556,7 +549,7 @@ function positionNodes({
   direction: VisualizationDirection;
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
-}): PositionedVisualizationNode[] {
+}) {
   const dimensions = flowDimensions(density);
   const ranks = computeNodeRanks({ edges, nodes });
   const orderById = new Map(nodes.map((node, index) => [node.id, index]));
@@ -613,7 +606,7 @@ function computeGraphLayout({
   direction: VisualizationDirection;
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
-}): GraphLayout {
+}) {
   const cacheKey = `${density}:${direction}:${layoutIdentityKey(nodes)}:${layoutIdentityKey(edges)}`;
   const cached = graphLayoutCache.get(cacheKey);
   if (cached) {
@@ -686,7 +679,7 @@ function layoutGraph({
   return { flowEdges, flowNodes };
 }
 
-function flowNodeAriaLabel(node: VisualizationNode): string {
+function flowNodeAriaLabel(node: VisualizationNode) {
   return [node.data.title, node.data.subtitle, `${node.kind} node`]
     .filter(Boolean)
     .join(", ");

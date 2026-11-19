@@ -23,8 +23,6 @@ function DataExplorerPage({
     search,
   });
   const { isMobile, setOpenMobile } = useSidebar();
-  // On phones the shared rail renders as a sheet; close it after a pick so
-  // the selected object's detail is visible immediately.
   const closeMobileSidebar = () => {
     if (isMobile) {
       setOpenMobile(false);
@@ -111,26 +109,16 @@ function DataExplorerPage({
     />
   );
 
-  // Schema listing failed with nothing cached: the detail area shows the
-  // retryable error, so an object browser claiming "No schemas" would lie.
   const schemasFailed =
     Boolean(explorer.schemaPageStateProps.error) &&
     !explorer.schemaPageStateProps.hasData;
 
-  // The object browser renders inside the shared sidebar rail via the slot
-  // portal, outside ResourcePageState on purpose: while schemas load the rail
-  // shows the tree's own skeletons instead of a blank panel.
   return (
     <>
       <ExplorerSidebarPortal>
         {schemasFailed ? null : <ExplorerSidebar {...sidebarProps} />}
       </ExplorerSidebarPortal>
       <ResourcePageState {...schemaPageStateProps} title="Loading explorer">
-        {/*
-          Full-bleed detail pane: the object header and tab bar stay pinned
-          while each tab panel scrolls on its own, so the section itself must
-          not scroll. Padding is owned by the individual panels.
-        */}
         <section
           aria-label="Data Explorer details"
           className="relative flex h-full min-w-0 flex-col overflow-hidden"

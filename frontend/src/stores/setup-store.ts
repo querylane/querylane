@@ -36,17 +36,7 @@ interface SetupState {
   warningCode: RoutingWarningCode | null;
 }
 
-interface SetupStoreDependencies {
-  onboardingClient: {
-    getOnboardingState: (
-      request: Record<string, never>
-    ) => Promise<GetOnboardingStateResponse>;
-  };
-}
-
-const defaultDependencies: SetupStoreDependencies = {
-  onboardingClient: createClient(OnboardingService, transport),
-};
+const onboardingClient = createClient(OnboardingService, transport);
 
 type SetupStoreCreator = StateCreator<SetupState>;
 type SetupStoreSet = Parameters<SetupStoreCreator>[0];
@@ -114,17 +104,14 @@ function applyOnboardingState(
 }
 
 function createRefreshOnboardingStateAction(
-  dependencies: SetupStoreDependencies,
   set: SetupStoreSet,
   requestSequence: { current: number }
-): SetupState["refreshOnboardingState"] {
-  return async () => {
+) {
+  return (async () => {
     requestSequence.current += 1;
     const requestId = requestSequence.current;
     try {
-      const response = await dependencies.onboardingClient.getOnboardingState(
-        {}
-      );
+      const response = await onboardingClient.getOnboardingState({});
       if (requestId !== requestSequence.current) {
         return;
       }
@@ -138,29 +125,25 @@ function createRefreshOnboardingStateAction(
         source: "boot",
       });
     }
-  };
+  }) satisfies SetupState["refreshOnboardingState"];
 }
 
-function createBootstrapAction(
-  set: SetupStoreSet,
-  get: SetupStoreGet
-): SetupState["bootstrap"] {
-  return async () => {
+function createBootstrapAction(set: SetupStoreSet, get: SetupStoreGet) {
+  return (async () => {
     set({
       bootError: null,
       status: "booting",
     });
 
     await get().refreshOnboardingState();
-  };
+  }) satisfies SetupState["bootstrap"];
 }
 
 function createVerifyAfterSetupAction(
-  dependencies: SetupStoreDependencies,
   set: SetupStoreSet,
   requestSequence: { current: number }
-): SetupState["verifyAfterSetup"] {
-  return async () => {
+) {
+  return (async () => {
     set({
       bootError: null,
       status: "verifying",
@@ -169,9 +152,7 @@ function createVerifyAfterSetupAction(
     requestSequence.current += 1;
     const requestId = requestSequence.current;
     try {
-      const response = await dependencies.onboardingClient.getOnboardingState(
-        {}
-      );
+      const response = await onboardingClient.getOnboardingState({});
       if (requestId !== requestSequence.current) {
         return;
       }
@@ -185,14 +166,11 @@ function createVerifyAfterSetupAction(
         source: "setup",
       });
     }
-  };
+  }) satisfies SetupState["verifyAfterSetup"];
 }
 
-function createSetSetupRequiredAction(
-  set: SetupStoreSet,
-  get: SetupStoreGet
-): SetupState["setSetupRequired"] {
-  return () => {
+function createSetSetupRequiredAction(set: SetupStoreSet, get: SetupStoreGet) {
+  return (() => {
     set({
       bootError: null,
       onboardingState: null,
@@ -206,12 +184,10 @@ function createSetSetupRequiredAction(
       .catch((error: unknown) => {
         captureException(error);
       });
-  };
+  }) satisfies SetupState["setSetupRequired"];
 }
 
-function createSetupStore(
-  dependencies: SetupStoreDependencies = defaultDependencies
-) {
+function createSetupStore() {
   const requestSequence = { current: 0 };
 
   return create<SetupState>()((set, get) => ({
@@ -219,7 +195,6 @@ function createSetupStore(
     bootstrap: createBootstrapAction(set, get),
     onboardingState: null,
     refreshOnboardingState: createRefreshOnboardingStateAction(
-      dependencies,
       set,
       requestSequence
     ),
@@ -227,11 +202,7 @@ function createSetupStore(
     showDegradedBanner: false,
     showWizardErrorBanner: false,
     status: "booting",
-    verifyAfterSetup: createVerifyAfterSetupAction(
-      dependencies,
-      set,
-      requestSequence
-    ),
+    verifyAfterSetup: createVerifyAfterSetupAction(set, requestSequence),
     warningCode: null,
   }));
 }
@@ -241,5 +212,4 @@ registerSetupRequiredHandler(() => {
   setupStore.getState().setSetupRequired();
 });
 
-export type { SetupStatus, SetupStoreDependencies };
-export { createSetupStore, setupStore as useSetupStore };
+export { setupStore as useSetupStore };

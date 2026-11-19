@@ -57,8 +57,6 @@ const IDENTITY_GENERATION_LABELS = {
   [IdentityGeneration.UNSPECIFIED]: "",
 } satisfies Record<IdentityGeneration, string>;
 interface TableDetailTabDefinition {
-  // Icons no longer render in the compact tab triggers, but the per-tab empty
-  // states still use them.
   icon: LucideIcon;
   label: string;
   value: TableDetailTab;
@@ -129,9 +127,7 @@ const TRIGGER_STATE_FILTER_LABELS: Record<TriggerStateFilter, string> = {
   disabled: "Disabled",
   enabled: "Enabled",
 };
-function uniqueSortedOptions<Value extends string>(
-  values: Value[]
-): ColumnFacetOption<Value>[] {
+function uniqueSortedOptions<Value extends string>(values: Value[]) {
   return [...new Set(values.filter(Boolean))]
     .toSorted((left, right) => left.localeCompare(right))
     .map((value) => ({ label: value, value }));
@@ -139,13 +135,11 @@ function uniqueSortedOptions<Value extends string>(
 function presentColumnOptions<Value extends string>(
   values: Value[],
   options: readonly ColumnFacetOption<Value>[]
-): FacetedFilterOption[] {
+) {
   const present = new Set(values);
   return options.filter((option) => present.has(option.value));
 }
-function presentConstraintKindOptions(
-  constraints: TableConstraint[]
-): FacetedFilterOption[] {
+function presentConstraintKindOptions(constraints: TableConstraint[]) {
   return [...new Set(constraints.map((constraint) => constraint.type))]
     .toSorted((left, right) =>
       CONSTRAINT_TYPE_LABELS[left].localeCompare(CONSTRAINT_TYPE_LABELS[right])
@@ -155,9 +149,7 @@ function presentConstraintKindOptions(
       value: String(type),
     }));
 }
-function presentIndexMethodOptions(
-  indexes: TableIndex[]
-): FacetedFilterOption[] {
+function presentIndexMethodOptions(indexes: TableIndex[]) {
   const options = new Map<string, string>();
   for (const index of indexes) {
     const value = normalizeIndexMethod(index.method);
@@ -167,18 +159,14 @@ function presentIndexMethodOptions(
     .toSorted((left, right) => left[1].localeCompare(right[1]))
     .map(([value, label]) => ({ label, value }));
 }
-function presentPolicyModeOptions(
-  policies: TablePolicy[]
-): FacetedFilterOption[] {
+function presentPolicyModeOptions(policies: TablePolicy[]) {
   return [...new Set(policies.map((policy) => policy.mode))]
     .toSorted((left, right) =>
       formatPolicyMode(left).localeCompare(formatPolicyMode(right))
     )
     .map((mode) => ({ label: formatPolicyMode(mode), value: String(mode) }));
 }
-function presentTriggerStateOptions(
-  triggers: TableTrigger[]
-): FacetedFilterOption[] {
+function presentTriggerStateOptions(triggers: TableTrigger[]) {
   const present = new Set<TriggerStateFilter>(
     triggers.map((trigger) => (trigger.enabled ? "enabled" : "disabled"))
   );
@@ -193,9 +181,6 @@ function presentTriggerStateOptions(
 function isTriggerStateFilter(value: string): value is TriggerStateFilter {
   return value === "disabled" || value === "enabled";
 }
-
-// Table-detail metadata RPCs currently expose parent-scoped lists only.
-// These facets intentionally narrow the loaded rows, matching DataTable search.
 
 export type { FacetFilterDefinition, PillTone };
 export {

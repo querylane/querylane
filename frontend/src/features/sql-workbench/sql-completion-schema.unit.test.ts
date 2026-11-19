@@ -90,7 +90,7 @@ describe("buildCompletionNamespace", () => {
         { boost: 3, detail: "integer", label: "id", type: "primary-key" },
         { boost: 3, detail: "text", label: "email", type: "column" },
       ],
-      // Loaded columns must not cost the relation its own completion.
+
       self: { detail: "table", label: "users", type: "table" },
     });
     expect(namespace["public"]?.children["orders"]).toMatchObject({

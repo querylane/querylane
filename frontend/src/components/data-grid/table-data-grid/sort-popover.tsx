@@ -22,8 +22,6 @@ import type { TableResultColumn } from "@/protogen/querylane/console/v1alpha1/ta
 const DRAG_DATA_KEY = "application/x-querylane-sort-index";
 const MIN_SORT_COLUMN_WIDTH_CH = 12;
 const MAX_SORT_COLUMN_WIDTH_CH = 26;
-// Covers the trigger's horizontal padding, value gap, and chevron, measured
-// in mono ch units so the longest sorted column name renders untruncated.
 const SORT_COLUMN_WIDTH_PADDING_CH = 5;
 
 type SortPopoverStyle = CSSProperties & {
@@ -184,9 +182,6 @@ function SortPopover({
         </div>
 
         {sortColumns.length === 0 ? (
-          // Capped at the popover's min content width (min-w-64 minus p-2) so
-          // the sentence wraps instead of stretching the empty popover wider
-          // than it renders once sort rows exist.
           <p className="max-w-60 px-1 text-xs text-muted-foreground">
             No sort applied. Add a column or click a header in the grid.
           </p>

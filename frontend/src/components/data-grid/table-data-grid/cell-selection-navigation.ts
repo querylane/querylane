@@ -5,13 +5,6 @@ import type {
 } from "@/components/data-grid/table-data-grid/cell-selection-state";
 import { isGridActionColumnKey } from "@/components/data-grid/table-data-grid/grid-row-model";
 
-/**
- * Keyboard movement and selection for the cell-selection grid. Column
- * indexes are RDG column indexes: the leading action columns (row checkbox,
- * expand, optional row number) come first, so data columns start at
- * `dataColumnStart`.
- */
-
 const DATA_GRID_HEADER_ROW_HEIGHT = 36;
 const DATA_GRID_ROW_HEIGHT = 32;
 const DEFAULT_PAGE_NAVIGATION_ROW_COUNT = 10;
@@ -22,7 +15,7 @@ const CELL_ARROW_MOVEMENT: Readonly<Partial<Record<string, CellCoordinate>>> = {
   ArrowUp: { columnIndex: 0, rowIndex: -1 },
 };
 
-function getPageNavigationRowCount(event: CellKeyboardEvent): number {
+function getPageNavigationRowCount(event: CellKeyboardEvent) {
   const grid = event.currentTarget.closest<HTMLElement>(".rdg");
   if (!grid || grid.clientHeight <= DATA_GRID_HEADER_ROW_HEIGHT) {
     return DEFAULT_PAGE_NAVIGATION_ROW_COUNT;
@@ -51,7 +44,7 @@ function getArrowNavigationDestination({
   lastRowIndex: number;
   moveToGridEdge: boolean;
   rowIndex: number;
-}): CellCoordinate {
+}) {
   const destination = {
     columnIndex: columnIndex + delta.columnIndex,
     rowIndex: rowIndex + delta.rowIndex,
@@ -79,7 +72,7 @@ function clampCellNavigationDestination(
     lastColumnIndex: number;
     lastRowIndex: number;
   }
-): CellCoordinate {
+) {
   const { dataColumnStart, lastColumnIndex, lastRowIndex } = bounds;
   return {
     columnIndex: Math.min(
@@ -87,7 +80,7 @@ function clampCellNavigationDestination(
       Math.max(dataColumnStart, coordinate.columnIndex)
     ),
     rowIndex: Math.min(lastRowIndex, Math.max(0, coordinate.rowIndex)),
-  };
+  } satisfies CellCoordinate;
 }
 
 function getCellKeyboardDestination({
@@ -104,7 +97,7 @@ function getCellKeyboardDestination({
   event: CellKeyboardEvent;
   rowCount: number;
   rowIndex: number;
-}): CellCoordinate | undefined {
+}) {
   if (event.altKey) {
     return undefined;
   }
@@ -163,7 +156,7 @@ function getCellKeyboardDestination({
   });
 }
 
-function isSelectableDataColumn(columnKey: string): boolean {
+function isSelectableDataColumn(columnKey: string) {
   return !isGridActionColumnKey(columnKey);
 }
 
@@ -179,7 +172,7 @@ function clearNativeTextSelection() {
 function clearCellSelectionWithKeyboard(
   cellSelectionStore: CellSelectionStore,
   event: CellKeyboardEvent
-): boolean {
+) {
   if (
     event.key !== "Escape" ||
     cellSelectionStore.getState().ranges.length === 0
@@ -203,7 +196,7 @@ function selectAllCellsWithKeyboard({
   dataColumnStart: number;
   event: CellKeyboardEvent;
   rowCount: number;
-}): boolean {
+}) {
   if (
     event.key.toLowerCase() !== "a" ||
     !(event.ctrlKey || event.metaKey) ||

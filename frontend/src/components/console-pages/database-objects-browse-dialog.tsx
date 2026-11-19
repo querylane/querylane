@@ -22,7 +22,7 @@ import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_
 const SEARCH_DEBOUNCE_MS = 250;
 const LOADING_ROW_KEYS = ["first", "second", "third", "fourth"] as const;
 
-function useDebouncedValue(value: string, delayMs: number): string {
+function useDebouncedValue(value: string, delayMs: number) {
   const [debounced, setDebounced] = useState(value);
   useEffect(
     function syncDebouncedValue() {

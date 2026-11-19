@@ -23,20 +23,12 @@ const FILES_SUMMARY_PATTERN =
   /^\s*(?:[├+|]\s*)?Files\s*\(\d+\)(?<summary>[^\n]*)$/mu;
 const OVERWRITE_SUMMARY_PATTERN = /~(?<count>\d+)\s+overwrite\b/u;
 const NO_CHANGES_PATTERN = /\bNo changes\./u;
-// A changed content line inside shadcn's boxed diff output ("│ │ +import ...",
-// "│ │ -"). The double bar matters: single-bar lines such as the dependency
-// summary ("│ + cn") are not file content.
+
 const DIFF_CHANGED_LINE_PATTERN =
   /^\s*[│┃|]\s*[│┃|]\s*(?<sign>[-+])(?<text>.*)$/u;
-// On 2026-09-06 the shadcn registry moved `cn` into its standalone `cn`
-// package, so every component now imports it from there instead of the
-// configured utils alias. That is registry churn, not a local customization,
-// so a diff made only of that import swap (and the blank lines it shuffles)
-// does not count as drift.
+
 const CN_IMPORT_PATTERN = /^import \{ cn \} from "(?:cn|@\/lib\/utils)"$/u;
-// Deliberate patches against shadcn output: card content leaves layout and
-// spacing to each usage, interactive items use the pointer cursor, and sonner
-// sanitizes the resolved theme before passing it to Sonner.
+
 const ALLOWED_REGISTRY_DRIFT_FILES = new Set([
   "src/components/ui/card.tsx",
   "src/components/ui/command.tsx",
@@ -49,10 +41,6 @@ interface CommandResult {
   status: number | null;
   stderr: string;
   stdout: string;
-}
-
-interface CommandRunner {
-  run: (command: string, args: readonly string[]) => CommandResult;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -88,43 +76,19 @@ function readPinnedShadcnPackageSpecifier() {
   return `${SHADCN_PACKAGE_NAME}@${version}`;
 }
 
-const childProcessRunner: CommandRunner = {
-  run: (command, args) => {
-    const result = spawnSync(command, [...args], {
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    return {
-      status: result.status,
-      stderr: result.stderr,
-      stdout: result.stdout,
-    };
-  },
-};
-
 function commandOutput(result: CommandResult) {
   return [result.stdout, result.stderr].filter(Boolean).join("\n");
 }
 
-function shadcnBaseArgs() {
-  return [SHADCN_BINARY_PATH] as const;
-}
-
-function runRequiredCommand({
-  runner,
-  command,
-  args,
-  label,
-}: {
-  runner: CommandRunner;
-  command: string;
-  args: readonly string[];
-  label: string;
-}) {
-  const result = runner.run(command, args);
+function runShadcnCommand(args: readonly string[], label: string) {
+  const result = spawnSync(SHADCN_COMMAND, [SHADCN_BINARY_PATH, ...args], {
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   if (result.status !== SUCCESS_EXIT_CODE) {
-    throw new Error(`${label} failed.\n${commandOutput(result)}`.trim());
+    throw new Error(`${label} failed.\n${commandOutput(result)}`.trim(), {
+      cause: result.error,
+    });
   }
   return result;
 }
@@ -191,7 +155,7 @@ function changedDiffLines(output: string) {
         return [];
       }
       const text = match.groups["text"] ?? "";
-      // "--- a/file" and "+++ b/file" headers are not content changes.
+
       if (text.startsWith("-- ") || text.startsWith("++ ")) {
         return [];
       }
@@ -207,26 +171,17 @@ function isCnImportOnlyShadcnDiff(output: string) {
   );
 }
 
-function confirmBlockingOverwriteFiles({
-  baseArgs,
-  blockingOverwriteFiles,
-  components,
-  runner,
-}: {
-  baseArgs: readonly string[];
-  blockingOverwriteFiles: string[];
-  components: string[];
-  runner: CommandRunner;
-}) {
+function confirmBlockingOverwriteFiles(
+  blockingOverwriteFiles: readonly string[],
+  components: readonly string[]
+) {
   const confirmedBlockingOverwriteFiles: string[] = [];
 
   for (const file of blockingOverwriteFiles) {
-    const diffResult = runRequiredCommand({
-      runner,
-      command: SHADCN_COMMAND,
-      args: [...baseArgs, "add", ...components, "--diff", file],
-      label: `shadcn registry diff for ${file}`,
-    });
+    const diffResult = runShadcnCommand(
+      ["add", ...components, "--diff", file],
+      `shadcn registry diff for ${file}`
+    );
     const diffOutput = commandOutput(diffResult);
     console.log(diffOutput);
 
@@ -242,22 +197,12 @@ function confirmBlockingOverwriteFiles({
   return confirmedBlockingOverwriteFiles;
 }
 
-function runShadcnRegistrySyncCheck({
-  runner = childProcessRunner,
-}: {
-  runner?: CommandRunner;
-} = {}) {
+function runShadcnRegistrySyncCheck() {
   const shadcnPackageSpecifier = readPinnedShadcnPackageSpecifier();
-  const baseArgs = shadcnBaseArgs();
   console.log(
     `Validating shadcn registry sync with ${shadcnPackageSpecifier}.`
   );
-  const infoResult = runRequiredCommand({
-    runner,
-    command: SHADCN_COMMAND,
-    args: [...baseArgs, "info", "--json"],
-    label: "shadcn info",
-  });
+  const infoResult = runShadcnCommand(["info", "--json"], "shadcn info");
   const components = normalizeShadcnComponents(
     parseShadcnInfoComponents(infoResult.stdout)
   );
@@ -269,12 +214,10 @@ function runShadcnRegistrySyncCheck({
     return FAILURE_EXIT_CODE;
   }
 
-  const dryRunResult = runRequiredCommand({
-    runner,
-    command: SHADCN_COMMAND,
-    args: [...baseArgs, "add", ...components, "--dry-run"],
-    label: "shadcn registry dry run",
-  });
+  const dryRunResult = runShadcnCommand(
+    ["add", ...components, "--dry-run"],
+    "shadcn registry dry run"
+  );
   const dryRunOutput = commandOutput(dryRunResult);
   console.log(dryRunOutput);
 
@@ -305,12 +248,10 @@ function runShadcnRegistrySyncCheck({
     }
   }
 
-  const confirmedBlockingOverwriteFiles = confirmBlockingOverwriteFiles({
-    baseArgs,
+  const confirmedBlockingOverwriteFiles = confirmBlockingOverwriteFiles(
     blockingOverwriteFiles,
-    components,
-    runner,
-  });
+    components
+  );
 
   if (confirmedBlockingOverwriteFiles.length === 0) {
     console.log("shadcn registry sync check passed.");
@@ -337,15 +278,3 @@ if (import.meta.main) {
     exit(FAILURE_EXIT_CODE);
   }
 }
-
-export {
-  confirmBlockingOverwriteFiles,
-  findExpectedShadcnOverwriteCount,
-  findShadcnOverwriteFiles,
-  isCnImportOnlyShadcnDiff,
-  isNoChangeShadcnDiff,
-  normalizeShadcnComponents,
-  parseShadcnInfoComponents,
-  readPinnedShadcnPackageSpecifier,
-  runShadcnRegistrySyncCheck,
-};

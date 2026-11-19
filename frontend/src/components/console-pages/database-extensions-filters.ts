@@ -80,8 +80,6 @@ const SOURCE_LABELS = {
 } satisfies Record<ExtensionSource, string>;
 const VERSION_PREFIX_PATTERN = /^v(?=\d)/iu;
 
-// Editorial notes for well-known extensions. This is an optional enrichment
-// layer: extensions without an entry render only what the server reports.
 const EXTENSION_METADATA: Record<string, CuratedExtensionDocs> = {
   hstore: {
     about: "Stores key-value pairs in a single column with index support.",
@@ -284,7 +282,7 @@ const EXTENSION_METADATA: Record<string, CuratedExtensionDocs> = {
   },
 } satisfies Record<string, CuratedExtensionDocs>;
 
-function extensionDisplayName(extension: Extension): string {
+function extensionDisplayName(extension: Extension) {
   const fromName = extension.name.split("/").at(-1);
   if (isNonEmptyString(extension.displayName)) {
     return extension.displayName;
@@ -292,23 +290,19 @@ function extensionDisplayName(extension: Extension): string {
   return isNonEmptyString(fromName) ? fromName : "unknown";
 }
 
-function extensionStatusFilterValue(
-  extension: Extension
-): Exclude<ExtensionStatusFilter, "All"> {
+function extensionStatusFilterValue(extension: Extension) {
   return extension.installed ? "installed" : "available";
 }
 
-function curatedDocsForExtension(
-  extension: Extension
-): CuratedExtensionDocs | undefined {
+function curatedDocsForExtension(extension: Extension) {
   return EXTENSION_METADATA[extensionDisplayName(extension).toLowerCase()];
 }
 
-function versionLabel(version: string): string {
+function versionLabel(version: string) {
   return version.replace(VERSION_PREFIX_PATTERN, "") || "";
 }
 
-function extensionVersionLabel(extension: Extension): string {
+function extensionVersionLabel(extension: Extension) {
   return (
     versionLabel(extension.installedVersion) ||
     versionLabel(extension.defaultVersion) ||
@@ -316,13 +310,13 @@ function extensionVersionLabel(extension: Extension): string {
   );
 }
 
-function extensionKey(extension: Extension): string {
+function extensionKey(extension: Extension) {
   return extension.name || extensionDisplayName(extension);
 }
 
 const UNQUOTED_EXTENSION_NAME_PATTERN = /^[a-z_][a-z0-9_]*$/u;
 
-function extensionInstallSql(displayName: string): string {
+function extensionInstallSql(displayName: string) {
   const identifier = UNQUOTED_EXTENSION_NAME_PATTERN.test(displayName)
     ? displayName
     : `"${displayName}"`;
@@ -332,10 +326,7 @@ function extensionInstallSql(displayName: string): string {
 function extensionFacts(
   extension: Extension,
   curated: CuratedExtensionDocs | undefined
-): {
-  label: string;
-  value: string;
-}[] {
+) {
   const facts: {
     label: string;
     value: string;
@@ -361,7 +352,7 @@ function extensionFacts(
   return facts;
 }
 
-function presentExtension(extension: Extension): PresentedExtension {
+function presentExtension(extension: Extension) {
   const displayName = extensionDisplayName(extension);
   const curated = curatedDocsForExtension(extension);
   const description = isNonEmptyString(extension.comment)
@@ -399,10 +390,10 @@ function presentExtension(extension: Extension): PresentedExtension {
     statusFilter: extensionStatusFilterValue(extension),
     statusLabel: extension.installed ? "Installed" : "Available",
     versionLabel: extensionVersionLabel(extension),
-  };
+  } satisfies PresentedExtension;
 }
 
-function presentExtensions(extensions: Extension[]): PresentedExtension[] {
+function presentExtensions(extensions: Extension[]) {
   return extensions.map((value) => presentExtension(value));
 }
 
@@ -423,7 +414,7 @@ function matchesCategory(
 function filterPresentedExtensions(
   extensions: PresentedExtension[],
   filters: ExtensionFilters
-): PresentedExtension[] {
+) {
   const search = filters.search.trim().toLowerCase();
   return extensions.filter(
     (extension) =>
@@ -433,7 +424,7 @@ function filterPresentedExtensions(
   );
 }
 
-function extensionInventorySummary(extensions: PresentedExtension[]): string {
+function extensionInventorySummary(extensions: PresentedExtension[]) {
   const installed = extensions.filter(
     (extension) => extension.statusFilter === "installed"
   ).length;
@@ -441,9 +432,7 @@ function extensionInventorySummary(extensions: PresentedExtension[]): string {
   return `${installed} installed \u00B7 ${available} available on this server`;
 }
 
-function extensionCategoryOptions(
-  extensions: PresentedExtension[]
-): ExtensionFilterOption<string>[] {
+function extensionCategoryOptions(extensions: PresentedExtension[]) {
   const categories = new Set<string>();
   for (const extension of extensions) {
     if (isNonEmptyString(extension.category)) {

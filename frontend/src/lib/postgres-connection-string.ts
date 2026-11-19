@@ -27,9 +27,7 @@ interface ParsedPostgresConnectionString {
   username: string;
 }
 
-function normalizePostgresSslMode(
-  value: string | null | undefined
-): PostgresSslModeValue | null {
+function normalizePostgresSslMode(value: string | null | undefined) {
   switch (value?.toLowerCase()) {
     case undefined:
     case "":
@@ -100,9 +98,7 @@ function formatUnsupportedPostgresConnectionParameters(
     : null;
 }
 
-function normalizePostgresSslNegotiation(
-  value: string | null | undefined
-): PostgresSslNegotiationValue | null {
+function normalizePostgresSslNegotiation(value: string | null | undefined) {
   switch (value?.toLowerCase()) {
     case undefined:
     case "":
@@ -115,17 +111,15 @@ function normalizePostgresSslNegotiation(
   }
 }
 
-function hasPostgresProtocol(value: string): boolean {
+function hasPostgresProtocol(value: string) {
   return value.startsWith("postgres://") || value.startsWith("postgresql://");
 }
 
-function isInvalidPostgresPort(port: number): boolean {
+function isInvalidPostgresPort(port: number) {
   return !Number.isInteger(port) || port <= 0 || port > MAX_POSTGRES_PORT;
 }
 
-export function parsePostgresConnectionString(
-  input: string
-): ParsedPostgresConnectionString | null {
+export function parsePostgresConnectionString(input: string) {
   const trimmed = input.trim();
   if (!hasPostgresProtocol(trimmed)) {
     return null;
@@ -170,7 +164,7 @@ export function parsePostgresConnectionString(
       sslNegotiation,
       unsupportedParameters: getUnsupportedParameters(url.searchParams),
       username,
-    };
+    } satisfies ParsedPostgresConnectionString | null;
   } catch {
     return null;
   }

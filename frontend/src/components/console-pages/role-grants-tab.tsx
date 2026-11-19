@@ -78,8 +78,6 @@ import {
   type RoleDefaultPrivilege,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// ───────── Default privileges (sentence list) ─────────
-
 function DefaultsBody({
   partial,
   rules,
@@ -153,8 +151,6 @@ function DefaultsBody({
   );
 }
 
-// ───────── Reach drill-in wrappers ─────────
-
 function DefaultsDrillView({
   partial,
   rules,
@@ -183,15 +179,14 @@ function DefaultsDrillView({
   );
 }
 
-function publicTableFilter(
-  activeKind: string,
-  search: string
-): RoleGrantsTableFilter | null {
+function publicTableFilter(activeKind: string, search: string) {
   const filter = buildGrantFilter({
     objectType: grantObjectTypeFilterTokenForSlug(activeKind),
     search,
   });
-  return isNonEmptyString(filter) ? { filter, source: "public" } : null;
+  return isNonEmptyString(filter)
+    ? ({ filter, source: "public" } satisfies RoleGrantsTableFilter)
+    : null;
 }
 
 function usePublicGrantTableState({
@@ -294,8 +289,6 @@ function PublicDrillView({
   );
 }
 
-// ───────── Access headline badge ─────────
-
 type HeadlineTone = "danger" | "info" | "rw" | "ro" | "usage";
 const HEADLINE_TONE_CLASS: Record<HeadlineTone, string> = {
   danger:
@@ -306,17 +299,10 @@ const HEADLINE_TONE_CLASS: Record<HeadlineTone, string> = {
   usage: "border-border bg-muted text-muted-foreground",
 };
 
-// The "Direct:" prefix keeps the badge from reading as a complete access
-// posture (ownership, PUBLIC, membership, and built-in roles can add access).
 const DIRECT_GRANT_TITLE =
   "Summarizes this role's direct grants only. Ownership, PUBLIC, role membership, and built-in roles can add access that isn't reflected here.";
 
-function grantsHeadline(
-  objects: GrantedObject[],
-  kind: RoleKind
-): { label: string; title: string; tone: HeadlineTone } | null {
-  // Superuser / replication have a dedicated banner above — don't duplicate the
-  // caveat as a badge too.
+function grantsHeadline(objects: GrantedObject[], kind: RoleKind) {
   if (kind === "super" || kind === "repl") {
     return null;
   }
@@ -328,8 +314,16 @@ function grantsHeadline(
   );
   if (tableObjects.length > 0) {
     return writes
-      ? { label: "Direct: read + write", title: DIRECT_GRANT_TITLE, tone: "rw" }
-      : { label: "Direct: read only", title: DIRECT_GRANT_TITLE, tone: "ro" };
+      ? {
+          label: "Direct: read + write",
+          title: DIRECT_GRANT_TITLE,
+          tone: "rw" as const,
+        }
+      : {
+          label: "Direct: read only",
+          title: DIRECT_GRANT_TITLE,
+          tone: "ro" as const,
+        };
   }
   const hasScope = objects.some(
     (object) =>
@@ -341,7 +335,7 @@ function grantsHeadline(
       label: "Direct: schema/database grants",
       title: DIRECT_GRANT_TITLE,
       tone: "usage",
-    };
+    } satisfies { label: string; title: string; tone: HeadlineTone } | null;
   }
   return null;
 }
@@ -384,8 +378,6 @@ function DatabaseSelect({
 }) {
   return (
     <Select
-      // Base UI's <Select.Value> needs an `items` map to render the selected
-      // item's label; without it the trigger shows the raw value (database id).
       items={databases.map((database) => ({
         label: database.name,
         value: database.id,
@@ -415,8 +407,6 @@ function DatabaseSelect({
     </Select>
   );
 }
-
-// ───────── Character banners (superuser / replication / built-in) ─────────
 
 function CharacterBanner({
   builtinInfo,
@@ -486,8 +476,6 @@ function CharacterBanner({
   return null;
 }
 
-// Resolves the non-data states (no databases / loading / error). Returns null
-// once grants are ready to render.
 function grantsLoadState({
   databaseName,
   databases,
@@ -501,7 +489,7 @@ function grantsLoadState({
   }[];
   error: unknown;
   isPending: boolean;
-}): ReactNode {
+}) {
   if (isPending) {
     return <p className="text-sm text-muted-foreground">Loading grants…</p>;
   }
@@ -525,11 +513,6 @@ function grantsLoadState({
   return null;
 }
 
-// ───────── Top-level Grants tab ─────────
-
-// Persistent header: the summary lede (overview) or back affordance (drill-in)
-// on the left, paired with the database picker on the right. Stays mounted
-// across every view so the database can always be changed.
 function GrantsTopBar({
   databases,
   grantsPartial,
@@ -571,8 +554,6 @@ function GrantsTopBar({
   );
 }
 
-// Header-left content: the summary lede on the overview, a back affordance on a
-// drill-in, nothing while loading.
 function GrantsHeaderLeft({
   defaultRules,
   grantsPartial,
@@ -615,7 +596,6 @@ function GrantsHeaderLeft({
   );
 }
 
-// Picks the view for the resolved drill-in selection.
 function GrantsViewBody({
   databaseName,
   defaultPrivilegesPartial,
@@ -785,8 +765,6 @@ function GrantsSectionView({
   const defaultRules = groupDefaultPrivileges(defaultPrivileges);
   const schemaIndex = buildSchemaIndex(objects);
 
-  // A missing schema is stale only when the result is complete. Partial results
-  // keep the deep link and explain that its rows may be beyond the first page.
   const requestedSchema =
     grantsView.kind === "schema" ? grantsView.schema : null;
   const schemaGroup =
@@ -873,9 +851,7 @@ type GrantsSectionProps = GrantsSectionViewProps & {
   queryScope?: RoleGrantsQueryScope | undefined;
 };
 
-function grantsTableSourceForView(
-  view: GrantsView
-): RoleGrantsTableSource | undefined {
+function grantsTableSourceForView(view: GrantsView) {
   if (view.kind === "schema") {
     return "direct";
   }
@@ -905,7 +881,7 @@ interface GrantsTableQueryResult {
 function buildRoleGrantsTableSlice(
   activeFilter: RoleGrantsTableFilter | undefined,
   queryResults: Record<RoleGrantsTableSource, GrantsTableQueryResult>
-): RoleGrantsTableSlice | undefined {
+) {
   if (!activeFilter) {
     return undefined;
   }
@@ -918,13 +894,13 @@ function buildRoleGrantsTableSlice(
     ownedObjects: result.ownedObjects,
     partial: Boolean(result.nextPageToken),
     source: activeFilter.source,
-  };
+  } satisfies RoleGrantsTableSlice | undefined;
 }
 
 function selectActiveTableFilter(
   tableFilter: RoleGrantsTableFilter | null,
   activeSource: RoleGrantsTableSource | undefined
-): RoleGrantsTableFilter | undefined {
+) {
   return tableFilter && tableFilter.source === activeSource
     ? tableFilter
     : undefined;
@@ -933,7 +909,7 @@ function selectActiveTableFilter(
 function settleTableFilter(
   tableFilter: RoleGrantsTableFilter | null,
   debouncedTableFilter: RoleGrantsTableFilter | null
-): RoleGrantsTableFilter | null {
+) {
   return tableFilter?.source === "direct" ? tableFilter : debouncedTableFilter;
 }
 

@@ -52,6 +52,6 @@ export function formatProtoformMessage({
   code: ProtoformMessageCode;
   params: ProtoformMessageParams;
   fallback: string;
-}): string {
+}) {
   return formatter?.(code, params, fallback) ?? fallback;
 }

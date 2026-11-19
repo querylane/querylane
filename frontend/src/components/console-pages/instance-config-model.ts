@@ -10,15 +10,15 @@ interface InstanceLabelEntry {
   value: string;
 }
 
-function createLabelEntry(key = "", value = ""): InstanceLabelEntry {
+function createLabelEntry(key = "", value = "") {
   return {
     id: crypto.randomUUID(),
     key,
     value,
-  };
+  } satisfies InstanceLabelEntry;
 }
 
-function labelsToEntries(labels: Record<string, string>): InstanceLabelEntry[] {
+function labelsToEntries(labels: Record<string, string>) {
   return Object.entries(labels).map(([key, value]) =>
     createLabelEntry(key, value)
   );
@@ -50,7 +50,7 @@ function labelsEqual(a: InstanceLabelEntry[], b: InstanceLabelEntry[]) {
   return true;
 }
 
-function labelsToMap(labels: InstanceLabelEntry[]): Record<string, string> {
+function labelsToMap(labels: InstanceLabelEntry[]) {
   return Object.fromEntries(
     labels.map((label) => [label.key.trim(), label.value])
   );

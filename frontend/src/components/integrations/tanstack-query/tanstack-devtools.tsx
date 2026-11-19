@@ -4,10 +4,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
 
-/**
- * Remembers, per browser tab, that devtools were opened so they survive dev
- * reloads. Session-scoped on purpose: a fresh tab starts without the panels.
- */
 const MOUNT_STORAGE_KEY = "querylane-devtools-mounted";
 
 function readPersistedMount() {
@@ -21,8 +17,9 @@ function readPersistedMount() {
 function persistMount() {
   try {
     globalThis.window.sessionStorage.setItem(MOUNT_STORAGE_KEY, "1");
+    return true;
   } catch {
-    // Storage being unavailable only loses reload persistence.
+    return false;
   }
 }
 

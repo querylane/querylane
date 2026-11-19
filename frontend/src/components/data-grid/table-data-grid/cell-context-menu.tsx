@@ -24,8 +24,6 @@ function CellContextMenu({
   returnFocusTo,
   top,
 }: CellContextMenuProps) {
-  // Point anchor at the right-click position; Base UI's positioner keeps the
-  // menu inside the viewport (flip/shift) near window edges.
   const anchor = {
     getBoundingClientRect: () => ({
       bottom: top,

@@ -12,19 +12,23 @@ import {
   CatalogSyncStatus,
 } from "@/protogen/querylane/console/v1alpha1/catalog_sync_pb";
 
-function parseCategory(value: string | undefined): CategoryKey | undefined {
+function parseCategory(value: string | undefined) {
   if (!isNonEmptyString(value)) {
     return undefined;
   }
   return isCategoryKey(value) ? value : undefined;
 }
 
-function selectionFromSearch(search: DataExplorerSearch): Selection {
+function selectionFromSearch(search: DataExplorerSearch) {
   const category = parseCategory(search.category);
   if (category && typeof search.name === "string" && search.name.length > 0) {
-    return { category, kind: "resource", name: search.name };
+    return {
+      category,
+      kind: "resource",
+      name: search.name,
+    } satisfies Selection;
   }
-  return { kind: "schema" };
+  return { kind: "schema" } satisfies Selection;
 }
 
 function buildExplorerSearch(
@@ -36,8 +40,8 @@ function buildExplorerSearch(
     schema?: string | undefined;
     tab?: string | undefined;
   }
-): DataExplorerSearch {
-  return { ...previous, ...patch };
+) {
+  return { ...previous, ...patch } satisfies DataExplorerSearch;
 }
 
 function normalizeExplorerDetailTab({
@@ -48,7 +52,7 @@ function normalizeExplorerDetailTab({
   hasResourceSelection: boolean;
   hasTableSelection: boolean;
   tab: DataExplorerSearch["tab"];
-}): DataExplorerSearch["tab"] {
+}) {
   if (hasTableSelection && isTableDetailTab(tab)) {
     return tab === "data" ? undefined : tab;
   }
@@ -58,9 +62,7 @@ function normalizeExplorerDetailTab({
   return undefined;
 }
 
-function normalizeExplorerSearch(
-  search: DataExplorerSearch
-): DataExplorerSearch {
+function normalizeExplorerSearch(search: DataExplorerSearch) {
   const category = parseCategory(search.category);
   const hasResourceSelection = Boolean(category && search.name);
   const hasTableSelection = Boolean(category === "tables" && search.name);
@@ -88,7 +90,7 @@ function normalizeExplorerSearch(
   });
   return normalized;
 }
-function isExplorerSearchNormalized(search: DataExplorerSearch): boolean {
+function isExplorerSearchNormalized(search: DataExplorerSearch) {
   const normalized = normalizeExplorerSearch(search);
   return (
     normalized.category === search.category &&
@@ -103,9 +105,7 @@ interface CatalogSyncNotice {
   tone: "info" | "warning";
 }
 
-function catalogSyncNotice(
-  metadata: CatalogSyncMetadata | undefined
-): CatalogSyncNotice | null {
+function catalogSyncNotice(metadata: CatalogSyncMetadata | undefined) {
   if (!metadata) {
     return null;
   }
@@ -114,21 +114,21 @@ function catalogSyncNotice(
     return {
       message: metadata.syncError || "Showing cached catalog. Refresh failed.",
       tone: "warning",
-    };
+    } satisfies CatalogSyncNotice | null;
   }
 
   if (metadata.syncStatus === CatalogSyncStatus.SYNCING && metadata.isStale) {
     return {
       message: "Refreshing catalog. Showing cached results.",
       tone: "info",
-    };
+    } satisfies CatalogSyncNotice | null;
   }
 
   if (metadata.syncStatus === CatalogSyncStatus.NEVER_SYNCED) {
     return {
       message: "Catalog sync has not completed yet.",
       tone: "info",
-    };
+    } satisfies CatalogSyncNotice | null;
   }
 
   return null;

@@ -27,7 +27,6 @@ function ResponsiveChart<
   return (
     <Chart
       ariaLabel={ariaLabel}
-      // Override the adapter's inline 320px fallback so the CSS slot owns height.
       className="h-full! min-h-0 w-full min-w-0"
       definition={definition}
       initialWidth={initialWidth}

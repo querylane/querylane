@@ -152,7 +152,7 @@ function buildConstraintInventoryColumns({
 }: {
   databaseId: string;
   instanceId: string;
-}): DataTableColumnDef<TableConstraint>[] {
+}) {
   return [
     {
       accessorFn: (row) => row.constraintName,
@@ -216,7 +216,7 @@ function buildConstraintInventoryColumns({
         cellClassName: "font-mono text-xs",
       },
     },
-  ];
+  ] satisfies DataTableColumnDef<TableConstraint>[];
 }
 
 function ConstraintsTab({

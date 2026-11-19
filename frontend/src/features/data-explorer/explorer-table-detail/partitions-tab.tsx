@@ -61,7 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { TablePartitionMetadata } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-function partitionShareToneClass(row: PartitionDisplayRow): string {
+function partitionShareToneClass(row: PartitionDisplayRow) {
   if (row.isDefault) {
     return "bg-warning-500";
   }

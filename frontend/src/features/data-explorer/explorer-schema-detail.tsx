@@ -16,7 +16,6 @@ import {
   type DataTableColumnDef,
   SortableHeader,
 } from "@/components/ui/data-table";
-import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
 import {
   type DataTableFilterFacet,
   DataTableFilterToolbar,
@@ -53,8 +52,6 @@ const ZERO_ROWS = 0n;
 const EM_DASH = "—";
 const NO_OWNER_FILTER_LABEL = "No owner";
 
-// A unified row for the schema inventory: tables and views projected onto one
-// shape so a single faceted, sortable table can present both kinds.
 interface SchemaObjectRow {
   comment: string;
   displayName: string;
@@ -69,7 +66,7 @@ interface SchemaObjectRow {
   tableType: Table_TableType;
 }
 
-function toTableRow(table: Table): SchemaObjectRow {
+function toTableRow(table: Table) {
   return {
     comment: table.comment,
     displayName: table.displayName,
@@ -78,16 +75,14 @@ function toTableRow(table: Table): SchemaObjectRow {
     isSystem: table.isSystemTable,
     kind: "table",
     owner: table.owner,
-    // Selection keys on the bare display name (see ExplorerDetailPane's
-    // selectedTable lookup), never the full resource path.
     resourceName: table.displayName || parseResourceLeafId(table.name),
     rowCount: table.rowCount,
     sizeBytes: table.sizeBytes,
     tableType: table.tableType,
-  };
+  } satisfies SchemaObjectRow;
 }
 
-function toViewRow(view: View): SchemaObjectRow {
+function toViewRow(view: View) {
   return {
     comment: view.comment,
     displayName: view.displayName,
@@ -100,14 +95,14 @@ function toViewRow(view: View): SchemaObjectRow {
     rowCount: view.rowCount,
     sizeBytes: view.sizeBytes,
     tableType: Table_TableType.UNSPECIFIED,
-  };
+  } satisfies SchemaObjectRow;
 }
 
-function countStat(count: number, hasMore: boolean): string {
+function countStat(count: number, hasMore: boolean) {
   return hasMore ? `${count.toLocaleString()}+` : count.toLocaleString();
 }
 
-function lowerBoundStat(formatted: string, hasMore: boolean): string {
+function lowerBoundStat(formatted: string, hasMore: boolean) {
   return hasMore ? `≥ ${formatted}` : formatted;
 }
 
@@ -135,7 +130,7 @@ function ObjectNameCell({ row }: { row: SchemaObjectRow }) {
   );
 }
 
-function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
+function schemaObjectColumns() {
   return [
     {
       accessorFn: (row) => row.displayName,
@@ -226,18 +221,18 @@ function schemaObjectColumns(): DataTableColumnDef<SchemaObjectRow>[] {
       id: "comment",
       meta: { cellClassName: "max-w-[20rem] truncate" },
     },
-  ];
+  ] satisfies DataTableColumnDef<SchemaObjectRow>[];
 }
 
-function presentKindOptions(rows: SchemaObjectRow[]): FacetedFilterOption[] {
+function presentKindOptions(rows: SchemaObjectRow[]) {
   return presentCatalogObjectKindOptions(rows);
 }
 
-function ownerFilterLabel(owner: string): string {
+function ownerFilterLabel(owner: string) {
   return owner || NO_OWNER_FILTER_LABEL;
 }
 
-function presentOwnerOptions(rows: SchemaObjectRow[]): FacetedFilterOption[] {
+function presentOwnerOptions(rows: SchemaObjectRow[]) {
   return [...new Set(rows.map((row) => row.owner))]
     .toSorted((left, right) =>
       ownerFilterLabel(left).localeCompare(ownerFilterLabel(right))
@@ -253,7 +248,7 @@ function filterSchemaObjectRows({
   kindFilters: string[];
   ownerFilters: string[];
   rows: SchemaObjectRow[];
-}): SchemaObjectRow[] {
+}) {
   const selectedKinds = new Set(kindFilters);
   const selectedOwners = new Set(ownerFilters);
   return rows.filter(
@@ -277,12 +272,7 @@ function SchemaObjectsTable({
 }) {
   const [kindFilters, setKindFilters] = useState<string[]>([]);
   const [ownerFilters, setOwnerFilters] = useState<string[]>([]);
-  // Schema overview search/facets are detail-scoped inventory controls, not
-  // resource identity. Keep them local so the Data Explorer URL stays focused
-  // on schema/category/name/q and header counts remain based on loaded pages.
   const [search, setSearch] = useState("");
-  // Keep the input urgent while deferring the table re-filter for responsive
-  // typing on large schemas.
   const deferredSearch = useDeferredValue(search);
 
   const rows = [
@@ -354,7 +344,7 @@ const LOADING_SKELETON_KEYS = Array.from(
 );
 const EMPTY_SCHEMA_SUMMARIES: SchemaSummary[] = [];
 
-function noopSchemaTabChange(_tab: SchemaDetailTab): null {
+function noopSchemaTabChange(_tab: SchemaDetailTab) {
   return null;
 }
 
@@ -387,7 +377,7 @@ function isSchemaDetailLoading({
   viewCount: number;
   viewsError: unknown;
   viewsLoading: boolean;
-}): boolean {
+}) {
   return (
     (tablesLoading || viewsLoading) &&
     tableCount === 0 &&
@@ -396,10 +386,7 @@ function isSchemaDetailLoading({
   );
 }
 
-function hasSchemaLoadError(
-  tablesError: unknown,
-  viewsError: unknown
-): boolean {
+function hasSchemaLoadError(tablesError: unknown, viewsError: unknown) {
   return Boolean(Boolean(tablesError) || viewsError);
 }
 
@@ -469,9 +456,6 @@ function SchemaDetail({
   viewsError: unknown;
   viewsLoading: boolean;
 }) {
-  // The API has no schema-level aggregates, so stats cover the loaded catalog
-  // pages only. When more pages exist they render as lower bounds ("12+",
-  // "≥ 1.2 GB") instead of pretending to be exact.
   const totalSizeBytes =
     tables.reduce((sum, table) => sum + table.sizeBytes, ZERO_BYTES) +
     views.reduce((sum, view) => sum + view.sizeBytes, ZERO_BYTES);

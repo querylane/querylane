@@ -205,7 +205,7 @@ function findSuppressionViolations({
   return violations;
 }
 
-function findCoverageViolations(path: string): SuppressionViolation[] {
+function findCoverageViolations(path: string) {
   const violations: SuppressionViolation[] = [];
   if (
     path.startsWith("src/components/ui/") &&
@@ -245,7 +245,7 @@ function findFileSuppressionViolations({
   absolutePath: string;
   path: string;
   readFile: (path: string, encoding: BufferEncoding) => string;
-}): SuppressionViolation[] {
+}) {
   const violations: SuppressionViolation[] = [];
   const lines = readFile(absolutePath, "utf8").split("\n");
   if (

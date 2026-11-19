@@ -10,7 +10,7 @@ function matchesNameFilter(name: string, query: string) {
   return !trimmed || name.toLowerCase().includes(trimmed.toLowerCase());
 }
 
-function buildNameContainsFilter(query: string): string | undefined {
+function buildNameContainsFilter(query: string) {
   return buildContainsFilter("name", query);
 }
 

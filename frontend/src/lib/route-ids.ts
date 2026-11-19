@@ -8,7 +8,7 @@ interface RouteIds {
   instanceId?: string;
 }
 
-function decodePathSegment(segment: string): string {
+function decodePathSegment(segment: string) {
   try {
     return decodeURIComponent(segment);
   } catch {
@@ -16,15 +16,15 @@ function decodePathSegment(segment: string): string {
   }
 }
 
-function parseRouteIdsFromPathname(pathname: string): RouteIds {
+function parseRouteIdsFromPathname(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
   if (segments[0] !== "instances") {
-    return {};
+    return {} satisfies RouteIds;
   }
 
   const [, instanceId] = segments;
   if (!isNonEmptyString(instanceId)) {
-    return {};
+    return {} satisfies RouteIds;
   }
 
   const routeIds: RouteIds = {
@@ -44,7 +44,7 @@ function parseRouteIdsFromPathname(pathname: string): RouteIds {
   return routeIds;
 }
 
-function useCurrentRouteIds(): RouteIds {
+function useCurrentRouteIds() {
   const pathname = useLocation({
     select: (location) => location.pathname,
   });

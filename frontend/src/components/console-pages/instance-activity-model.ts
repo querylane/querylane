@@ -32,8 +32,6 @@ interface ActivityStat {
   value: string;
 }
 
-// Plain-language explanations surfaced as tooltips on each stat, since the
-// pg_stat_activity vocabulary trips up anyone who isn't a Postgres operator.
 const ACTIVE_HINT = "Sessions running a query right now.";
 const IDLE_HINT =
   "Connected but sitting idle, waiting for the client to send its next command.";
@@ -77,18 +75,12 @@ interface SessionTimelineItem {
   value: string;
 }
 
-interface ActivityBlockingChain {
-  blocked: ActivitySessionRow[];
-  blocker: ActivitySessionRow | null;
-  blockerPid: number;
-}
-
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3600;
 const LONG_TRANSACTION_WARNING_SECONDS = 300;
 const EMPTY_FILTER_VALUE = null satisfies null;
 
-function safeCount(value: number | undefined): number {
+function safeCount(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : 0;
@@ -98,7 +90,7 @@ function formatCount(value: number | undefined) {
   return safeCount(value).toLocaleString();
 }
 
-function formatActivityDuration(value: bigint | number | undefined): string {
+function formatActivityDuration(value: bigint | number | undefined) {
   const totalSeconds = Math.max(0, Math.floor(Number(value ?? 0)));
   if (totalSeconds < SECONDS_PER_MINUTE) {
     return `${totalSeconds}s`;
@@ -121,9 +113,7 @@ function formatActivityDuration(value: bigint | number | undefined): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function presentActivityStats(
-  activity: ActivityLike | undefined
-): ActivityStat[] {
+function presentActivityStats(activity: ActivityLike | undefined) {
   if (!activity) {
     return [
       { hint: ACTIVE_HINT, label: "Active", tone: "default", value: "—" },
@@ -141,7 +131,7 @@ function presentActivityStats(
         tone: "default",
         value: "—",
       },
-    ];
+    ] satisfies ActivityStat[];
   }
 
   const idleInTransaction = safeCount(activity?.idleInTransactionConnections);
@@ -182,20 +172,20 @@ function presentActivityStats(
           : "default",
       value: formatActivityDuration(activity?.longestTransactionSeconds),
     },
-  ];
+  ] satisfies ActivityStat[];
 }
 
-function normalizeApplicationName(name: string): string {
+function normalizeApplicationName(name: string) {
   const trimmed = name.trim();
   return trimmed.length > 0 ? trimmed : "(unnamed)";
 }
 
-function normalizeActivityValue(value: string): string {
+function normalizeActivityValue(value: string) {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : "—";
 }
 
-function getSessionStateTone(state: string): ActivitySessionRow["stateTone"] {
+function getSessionStateTone(state: string) {
   if (state === "active") {
     return "success";
   }
@@ -205,9 +195,6 @@ function getSessionStateTone(state: string): ActivitySessionRow["stateTone"] {
   return "default";
 }
 
-// Plain-language explanations for pg_stat_activity wait_event_type values,
-// mirroring the tone of the stat-bar hints above. Keys are PostgreSQL's own
-// names, hence the Map instead of an object literal.
 const WAIT_EVENT_TYPE_HINTS = new Map<string, string>([
   ["Activity", "Idle and waiting for work — the normal resting state."],
   ["BufferPin", "Waiting for exclusive access to a shared data buffer."],
@@ -226,14 +213,14 @@ const WAIT_EVENT_TYPE_HINTS = new Map<string, string>([
   ],
 ]);
 
-function toOptionalSeconds(value: bigint | number | undefined): number | null {
+function toOptionalSeconds(value: bigint | number | undefined) {
   if (value === undefined) {
     return null;
   }
   return Math.max(0, Math.floor(Number(value)));
 }
 
-function formatSessionClient(session: ActivitySessionLike): string {
+function formatSessionClient(session: ActivitySessionLike) {
   const address = (session.clientAddress ?? "").trim();
   if (address.length === 0) {
     return "local socket";
@@ -242,7 +229,7 @@ function formatSessionClient(session: ActivitySessionLike): string {
   return port > 0 ? `${address}:${port}` : address;
 }
 
-function getSessionWait(session: ActivitySessionLike): string {
+function getSessionWait(session: ActivitySessionLike) {
   const waitEventType = normalizeActivityValue(session.waitEventType ?? "");
   const waitEvent = normalizeActivityValue(session.waitEvent ?? "");
   if (waitEventType === "—" && waitEvent === "—") {
@@ -257,9 +244,7 @@ function getSessionWait(session: ActivitySessionLike): string {
   return `${waitEventType} · ${waitEvent}`;
 }
 
-function presentActivitySessionRow(
-  session: ActivitySessionLike
-): ActivitySessionRow {
+function presentActivitySessionRow(session: ActivitySessionLike) {
   const durationSeconds = Math.max(
     0,
     Math.floor(Number(session.durationSeconds))
@@ -291,15 +276,10 @@ function presentActivitySessionRow(
       wait.length > 0
         ? (WAIT_EVENT_TYPE_HINTS.get(waitEventType) ?? null)
         : null,
-  };
+  } satisfies ActivitySessionRow;
 }
 
-// The three ages answer "how did this session get into its current state":
-// how long the client has been connected, how long its transaction has been
-// open, and how long the current (or most recent) query has been running.
-function presentSessionTimeline(
-  row: ActivitySessionRow
-): SessionTimelineItem[] {
+function presentSessionTimeline(row: ActivitySessionRow) {
   const transactionHot =
     row.transactionAgeSeconds !== null &&
     row.transactionAgeSeconds >= LONG_TRANSACTION_WARNING_SECONDS;
@@ -341,7 +321,7 @@ function presentSessionTimeline(
       muted: row.queryAgeSeconds === null,
       value: queryValue,
     },
-  ];
+  ] satisfies SessionTimelineItem[];
 }
 
 function matchesFilter(value: string, filterValue: string | null) {
@@ -351,7 +331,7 @@ function matchesFilter(value: string, filterValue: string | null) {
 function presentActivitySessionRows(
   activity: ActivityLike | undefined,
   filters: ActivitySessionFilters
-): ActivitySessionRow[] {
+) {
   const normalizedSearch = filters.search.trim().toLowerCase();
   const rows: ActivitySessionRow[] = [];
   const sessions = activity?.sessions ?? [];
@@ -382,7 +362,7 @@ function presentActivitySessionRows(
   return rows;
 }
 
-function uniqueSorted(values: Iterable<string>): string[] {
+function uniqueSorted(values: Iterable<string>) {
   return [...new Set(values)].toSorted((left, right) =>
     left.localeCompare(right)
   );
@@ -391,13 +371,11 @@ function uniqueSorted(values: Iterable<string>): string[] {
 function presentActivityFilterOptions(
   rows: readonly ActivitySessionRow[],
   key: "app" | "database" | "state"
-): string[] {
+) {
   return uniqueSorted(rows.map((row) => row[key]));
 }
 
-function getActivityBlockingChains(
-  rows: readonly ActivitySessionRow[]
-): ActivityBlockingChain[] {
+function getActivityBlockingChains(rows: readonly ActivitySessionRow[]) {
   const blocked = rows.filter((row) => row.blockedByPid > 0);
   const blockerPids = [...new Set(blocked.map((row) => row.blockedByPid))];
 

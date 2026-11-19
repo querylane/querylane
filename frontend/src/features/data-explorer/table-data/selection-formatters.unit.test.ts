@@ -51,9 +51,7 @@ function nameColumn(name: string) {
   });
 }
 
-function row(
-  cells: Record<string, ReturnType<typeof stringCell>>
-): SelectedRow {
+function row(cells: Record<string, ReturnType<typeof stringCell>>) {
   return { cells: new Map(Object.entries(cells)) };
 }
 

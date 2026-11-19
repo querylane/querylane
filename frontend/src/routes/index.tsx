@@ -23,7 +23,7 @@ function resolveHomeInstanceId({
 }: {
   instances: ReturnType<typeof useDb>["instances"];
   requestedInstanceId?: string | undefined;
-}): string | null {
+}) {
   if (instances.length === 0) {
     return null;
   }
@@ -68,13 +68,9 @@ function HomeRedirectPage() {
     instancesState.hasResolved &&
     !Boolean(instancesState.error) &&
     instances.length === 0;
-  // Only redirect to /new-instance once we know the management mode.
-  // Without this gate, a config-managed empty deployment would redirect
-  // before GetConsoleConfig resolves.
   const shouldRedirectToNewInstance =
     noInstances && isModeLoaded && !isConfigManaged;
 
-  // redirect to default instance
   useEffect(() => {
     if (!isNonEmptyString(targetInstanceId)) {
       if (!shouldRedirectToNewInstance) {

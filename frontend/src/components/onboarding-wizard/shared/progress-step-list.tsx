@@ -32,7 +32,7 @@ function getStepDescription(stepId: SetupStep) {
   }
   return "Processing this setup step.";
 }
-function getStepStateLabel(state: StepState): string {
+function getStepStateLabel(state: StepState) {
   if (state === StepState.SUCCEEDED) {
     return "Completed";
   }
@@ -99,12 +99,7 @@ function StepStateBadge({ state }: { state: StepState }) {
     </Badge>
   );
 }
-/**
- * Only the step you are waiting on (or one that failed) needs an explanation.
- * Repeating a description for every pending step makes the page scroll
- * without adding information.
- */
-function getStepDetail(event: SetupProgressEvent): string | null {
+function getStepDetail(event: SetupProgressEvent) {
   if (event.error) {
     return event.error;
   }

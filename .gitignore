@@ -10,6 +10,7 @@
 
 # Test binary, built with `go test -c`
 *.test
+!/frontend/e2e/visual/__screenshots__/*.e2e.test/
 
 # Delve / VS Code debug binaries
 __debug_bin*

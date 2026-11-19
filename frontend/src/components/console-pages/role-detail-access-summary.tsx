@@ -21,7 +21,7 @@ interface AccessSourceRow {
   tone: "danger" | "active";
 }
 
-function accessIconClassName(row: AccessSourceRow): string {
+function accessIconClassName(row: AccessSourceRow) {
   return cn(
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     row.active &&
@@ -87,9 +87,6 @@ function AccessSummaryRow({
     row.active ? "border-border bg-muted/30" : "border-dashed border-border/50"
   );
 
-  // Navigable rows are a single full-width click target (Linear/Vercel row
-  // pattern) — the count stays a passive value and a hover chevron signals the
-  // drill-in. Non-navigable rows render static.
   if (jump) {
     return (
       <Button
@@ -110,8 +107,6 @@ function AccessSummaryRow({
   return <div className={base}>{inner}</div>;
 }
 
-// A scope-labeled group of access rows (cluster-wide vs the selected database).
-// The muted sub-header names the database once, replacing per-row "in {db}".
 function ScopeGroup({
   label,
   onJump,
@@ -136,11 +131,6 @@ function ScopeGroup({
   );
 }
 
-// The "no grants != no access" spine: every path by which the role gains access,
-// each active or not, with a jump to the relevant detail. Rows are grouped by
-// scope — cluster-wide vs the selected database. Built-in pg_* roles get their
-// own dedicated layout (see BuiltinRoleBody), so this is only used for ordinary
-// roles.
 function AccessSummary({
   databaseName,
   databases,
@@ -209,12 +199,5 @@ function AccessSummary({
     </SectionCard>
   );
 }
-
-// ─── Built-in (predefined pg_*) role detail ──────────────────────────────────
-// A built-in role inverts the normal model: its powers are hard-coded and
-// cluster-wide (no catalog ACL to read, can't be revoked), while the only live,
-// queryable, security-relevant fact is who holds it. So the layout leads with
-// the doc-table powers, makes membership the primary data, and surfaces the
-// per-database grant machinery only for privileges an admin GRANTed on top.
 
 export { AccessSummary };

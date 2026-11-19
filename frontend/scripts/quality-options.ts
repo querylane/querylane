@@ -17,11 +17,11 @@ const entrypoints = [
   "dev:scan",
 ];
 
-function record(value: unknown): Record<string, unknown> {
+function record(value: unknown) {
   return isRecord(value) ? value : {};
 }
 
-function options(rules: Record<string, unknown>): Record<string, unknown> {
+function options(rules: Record<string, unknown>) {
   return Object.fromEntries(
     Object.entries(rules).flatMap(([name, value]) => {
       if (isUnknownArray(value) && value.length > 1) {
@@ -33,9 +33,7 @@ function options(rules: Record<string, unknown>): Record<string, unknown> {
   );
 }
 
-function biomeOptions(
-  config: Record<string, unknown>
-): Record<string, unknown> {
+function biomeOptions(config: Record<string, unknown>) {
   const groups = record(record(config["linter"])["rules"]);
   return Object.fromEntries(
     Object.entries(groups).flatMap(([group, rules]) =>
@@ -47,7 +45,7 @@ function biomeOptions(
   );
 }
 
-function overrides(config: Record<string, unknown>, biome: boolean): unknown[] {
+function overrides(config: Record<string, unknown>, biome: boolean) {
   const values = config["overrides"];
   return (isUnknownArray(values) ? values : []).flatMap((value) => {
     const role = record(value);
@@ -58,20 +56,17 @@ function overrides(config: Record<string, unknown>, biome: boolean): unknown[] {
   });
 }
 
-async function configuration(
-  root: string,
-  name: string
-): Promise<Record<string, unknown>> {
+async function configuration(root: string, name: string) {
   const loaded: unknown = await import(join(root, name));
   return record(record(loaded)["default"]);
 }
 
-function jsonFile(root: string, name: string): unknown {
+function jsonFile(root: string, name: string) {
   const parsed: unknown = JSON.parse(readFileSync(join(root, name), "utf8"));
   return parsed;
 }
 
-async function currentOptions(root: string): Promise<unknown> {
+async function currentOptions(root: string) {
   const [biome, oxlint, doctor] = await Promise.all([
     configuration(root, "biome.jsonc"),
     configuration(root, "oxlint.config.ts"),
@@ -99,7 +94,7 @@ async function currentOptions(root: string): Promise<unknown> {
   return snapshot;
 }
 
-async function assertReviewedQualityOptions(root: string): Promise<void> {
+async function assertReviewedQualityOptions(root: string) {
   const expected = jsonFile(root, "quality/rule-options.json");
   if (!isDeepStrictEqual(expected, await currentOptions(root))) {
     throw new Error(

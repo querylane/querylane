@@ -258,8 +258,7 @@ describe("instance activity model", () => {
       { hot: false, label: "Transaction", muted: false, value: "open for 38s" },
       { hot: false, label: "Query", muted: false, value: "running for 38s" },
     ]);
-    // A long-open transaction heats up; an idle session's last query reads
-    // as history rather than live work.
+
     expect(presentSessionTimeline(idleInTransactionRow)).toEqual([
       { hot: false, label: "Connected", muted: false, value: "2h 0m ago" },
       {

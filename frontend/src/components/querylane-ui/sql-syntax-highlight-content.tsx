@@ -28,13 +28,12 @@ const SQL_THEMES = {
 const MAX_CACHED_SQL_QUERIES = 500;
 const SQL_TOKEN_CACHE = new Map<string, ThemedTokenWithVariants[][]>();
 
-function highlightSql(sqlText: string): ThemedTokenWithVariants[][] {
+function highlightSql(sqlText: string) {
   const cachedTokenLines = SQL_TOKEN_CACHE.get(sqlText);
   if (cachedTokenLines) {
     return cachedTokenLines;
   }
 
-  // Route preloads import SQL-only tabs before their contents are mounted.
   sqlHighlighter ??= createHighlighterCoreSync({
     engine: createJavaScriptRegexEngine(),
     langs: [sql],

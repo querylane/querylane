@@ -1,6 +1,7 @@
 import type { RstestConfig } from "@rstest/core";
 import {
   createQuerylaneRstestBuildConfig,
+  RSTEST_DOM_ENVIRONMENT,
   RSTEST_MAX_WORKERS,
   RSTEST_PROJECT_NAMES,
   RSTEST_SETUP_FILE,
@@ -11,10 +12,7 @@ import {
 export default {
   ...createQuerylaneRstestBuildConfig(),
   clearMocks: true,
-  include: [
-    "scripts/**/*.unit.{test,spec}.{ts,tsx}",
-    "src/**/*.unit.{test,spec}.{ts,tsx}",
-  ],
+  include: ["scripts/**/*.unit.test.{ts,tsx}", "src/**/*.unit.test.{ts,tsx}"],
   name: RSTEST_PROJECT_NAMES.unit,
   passWithNoTests: false,
   pool: {
@@ -24,9 +22,6 @@ export default {
   },
   setupFiles: [RSTEST_SETUP_FILE],
   slowTestThreshold: RSTEST_SLOW_TEST_THRESHOLDS.unit,
-  testEnvironment: {
-    name: "happy-dom",
-    prebundle: "auto",
-  },
+  testEnvironment: RSTEST_DOM_ENVIRONMENT,
   testTimeout: RSTEST_TIMEOUTS.unit,
 } satisfies RstestConfig;

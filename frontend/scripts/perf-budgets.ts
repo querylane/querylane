@@ -5,8 +5,7 @@ import { isNonEmptyString } from "../src/lib/value-guards";
 
 const BYTES_PER_KIB = 1024;
 const BUILD_REAL_TIME_BUDGET_MS = 5500;
-// Latest grid dependencies: measured 161.4 KiB for the deferred overview click.
-// This is not the initial-load budget; keep the approved refresh tightly bounded.
+
 const DATA_EXPLORER_COLD_PAYLOAD_BUDGET_KIB = 164;
 const DATA_EXPLORER_DIRECT_READY_BUDGET_MS = 1200;
 const DATA_EXPLORER_OVERVIEW_CLICK_BUDGET_MS = 1000;
@@ -65,7 +64,7 @@ function isPerformanceMetricName(
 function evaluatePerformanceBudget(
   metric: PerformanceMetricName,
   actual: number
-): PerformanceBudgetResult {
+) {
   const budget = FRONTEND_PERF_BUDGETS[metric];
   return {
     actual,
@@ -73,10 +72,10 @@ function evaluatePerformanceBudget(
     label: FRONTEND_PERF_LABELS[metric],
     ok: actual <= budget,
     unit: FRONTEND_PERF_UNITS[metric],
-  };
+  } satisfies PerformanceBudgetResult;
 }
 
-function formatBudgetValue(value: number, unit: PerformanceMetricUnit): string {
+function formatBudgetValue(value: number, unit: PerformanceMetricUnit) {
   if (unit === "bytes") {
     return `${(value / BYTES_PER_KIB).toFixed(1)} KiB`;
   }
@@ -84,14 +83,12 @@ function formatBudgetValue(value: number, unit: PerformanceMetricUnit): string {
   return `${value.toFixed(0)} ms`;
 }
 
-function formatPerformanceBudgetResult(
-  result: PerformanceBudgetResult
-): string {
+function formatPerformanceBudgetResult(result: PerformanceBudgetResult) {
   const comparison = result.ok ? "<=" : ">";
   return `${result.label}: ${formatBudgetValue(result.actual, result.unit)} ${comparison} ${formatBudgetValue(result.budget, result.unit)}`;
 }
 
-function parseActual(value: string | undefined): number | null {
+function parseActual(value: string | undefined) {
   if (!isNonEmptyString(value)) {
     return null;
   }
@@ -99,9 +96,7 @@ function parseActual(value: string | undefined): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function performanceBudgetArgs(
-  argv: readonly string[]
-): readonly [string | undefined, string | undefined] {
+function performanceBudgetArgs(argv: readonly string[]) {
   const [firstArg, secondArg, thirdArg, fourthArg] = argv;
   if (isNonEmptyString(firstArg) && isPerformanceMetricName(firstArg)) {
     return [firstArg, secondArg];
@@ -114,7 +109,7 @@ function runPerformanceBudgetCli({
   argv,
   stderr,
   stdout,
-}: PerformanceBudgetCliOptions): number {
+}: PerformanceBudgetCliOptions) {
   const [metricArg, actualArg] = performanceBudgetArgs(argv);
   const actual = parseActual(actualArg);
 
@@ -152,14 +147,4 @@ if (import.meta.main) {
   );
 }
 
-export type {
-  PerformanceBudgetCliOptions,
-  PerformanceBudgetResult,
-  PerformanceMetricName,
-};
-export {
-  evaluatePerformanceBudget,
-  FRONTEND_PERF_BUDGETS,
-  formatPerformanceBudgetResult,
-  runPerformanceBudgetCli,
-};
+export { FRONTEND_PERF_BUDGETS };

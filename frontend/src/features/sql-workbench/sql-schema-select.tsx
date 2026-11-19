@@ -28,9 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { listSchemas } from "@/protogen/querylane/console/v1alpha1/schema-SchemaService_connectquery";
 
-/** Server page size: enough to browse; beyond that, people type to narrow. */
 const SCHEMA_RESULT_LIMIT = 50;
-/** PostgreSQL-internal namespaces nobody resolves table names against. */
 const INTERNAL_SCHEMA_PATTERN = /^pg_(?<capture1>toast|temp)/u;
 
 function SchemaOption({

@@ -11,10 +11,7 @@ type PersistedNavigationSelectionStore = Record<
   PersistedNavigationSelection
 >;
 
-function readSearchString(
-  search: Record<string, unknown>,
-  key: string
-): string | undefined {
+function readSearchString(search: Record<string, unknown>, key: string) {
   const value = search[key];
   if (typeof value !== "string") {
     return undefined;
@@ -23,23 +20,21 @@ function readSearchString(
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function normalizePersistedNavigationSelection(
-  value: unknown
-): PersistedNavigationSelection {
+function normalizePersistedNavigationSelection(value: unknown) {
   if (!isRecord(value)) {
-    return {};
+    return {} satisfies PersistedNavigationSelection;
   }
 
   const databaseId = readSearchString(value, "databaseId");
 
   return {
     databaseId,
-  };
+  } satisfies PersistedNavigationSelection;
 }
 
-function readPersistedNavigationSelectionStore(): PersistedNavigationSelectionStore {
+function readPersistedNavigationSelectionStore() {
   if (globalThis.window === undefined) {
-    return {};
+    return {} satisfies PersistedNavigationSelectionStore;
   }
 
   try {
@@ -47,12 +42,12 @@ function readPersistedNavigationSelectionStore(): PersistedNavigationSelectionSt
       NAVIGATION_SELECTION_STORAGE_KEY
     );
     if (!isNonEmptyString(rawValue)) {
-      return {};
+      return {} satisfies PersistedNavigationSelectionStore;
     }
 
     const parsed: unknown = JSON.parse(rawValue);
     if (!isRecord(parsed)) {
-      return {};
+      return {} satisfies PersistedNavigationSelectionStore;
     }
 
     return Object.fromEntries(
@@ -62,7 +57,7 @@ function readPersistedNavigationSelectionStore(): PersistedNavigationSelectionSt
       ])
     );
   } catch {
-    return {};
+    return {} satisfies PersistedNavigationSelectionStore;
   }
 }
 
@@ -70,7 +65,7 @@ function writePersistedNavigationSelectionStore(
   store: PersistedNavigationSelectionStore
 ) {
   if (globalThis.window === undefined) {
-    return;
+    return false;
   }
 
   try {
@@ -78,15 +73,16 @@ function writePersistedNavigationSelectionStore(
       NAVIGATION_SELECTION_STORAGE_KEY,
       JSON.stringify(store)
     );
+    return true;
   } catch {
-    // Ignore storage write failures.
+    return false;
   }
 }
 
 function arePersistedSelectionsEqual(
   left: PersistedNavigationSelection,
   right: PersistedNavigationSelection
-): boolean {
+) {
   return left.databaseId === right.databaseId;
 }
 

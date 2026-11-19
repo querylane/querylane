@@ -75,7 +75,6 @@ function TableDetailHeader({
     ? `≈${formatRows(normalizeEstimatedRowCount(table.rowCount))}`
     : "—";
   const sizeLabel = formatBytes(table?.sizeBytes);
-  // The old uppercase "Table" eyebrow lives on as the kind in the subtitle.
   const headerDetails: string[] = [typeLabel || "table"];
   if (columnCount !== undefined) {
     headerDetails.push(`${columnCount.toLocaleString()} columns`);
@@ -119,10 +118,6 @@ function TableDetail({
   tableName: string;
 }) {
   const resolvedUrlTab = isTableDetailTab(initialTab) ? initialTab : "data";
-  // The tab selection is owned locally so a click re-renders the tab bar
-  // immediately; the URL write and the heavy panel mount follow. deferredTab
-  // gates the data grid so the active-tab indicator paints before
-  // react-data-grid mounts instead of blocking on it.
   const [activeTab, setActiveTab] = useState<TableDetailTab>(resolvedUrlTab);
   const deferredTab = useDeferredValue(activeTab);
 
@@ -146,8 +141,6 @@ function TableDetail({
     tableId: tableName,
   });
 
-  // Fetch table metadata up front so tabs can show stable resource counts.
-  // The same queries back the tab panels, so counts cannot drift from content.
   const tableResourceInput = { parent: tableResourceName };
   const columnsQuery = useListTableColumnsQuery(
     tableResourceInput,
@@ -258,15 +251,6 @@ function TableDetail({
             </ObjectDetailTabsBar>
 
             <TabsContent presentation="object-fill" value="data">
-              {/*
-                Key on the table identity so switching tables remounts the grid:
-                a fresh query observer drops the previous table's placeholder rows
-                and shows the loading skeleton, instead of lingering on stale data.
-                Same-table paging/sort/filter keeps the observer, so placeholderData
-                still holds the prior page while the next loads.
-                deferredTab briefly shows a skeleton so the tab switch paints
-                before the grid mounts.
-              */}
               {deferredTab === "data" ? (
                 grid
               ) : (

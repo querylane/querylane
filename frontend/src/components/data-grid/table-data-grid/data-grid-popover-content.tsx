@@ -22,8 +22,6 @@ function DataGridPopoverContent({
   sideOffset = 4,
   ...props
 }: DataGridPopoverContentProps) {
-  // Data-grid popovers need a grid-local collision boundary. Keep this helper
-  // out of components/ui so the vendored shadcn popover stays unchanged.
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner

@@ -17,7 +17,7 @@ import type {
 const rowCountFormatter = new Intl.NumberFormat("en-US");
 const SECONDS_PER_DAY = 86_400n;
 
-function formatEstimatedRows(estimatedRowCount: bigint): string {
+function formatEstimatedRows(estimatedRowCount: bigint) {
   if (estimatedRowCount < 0n) {
     return "not analyzed yet";
   }
@@ -26,7 +26,7 @@ function formatEstimatedRows(estimatedRowCount: bigint): string {
 
 function formatRetention(
   retention: GetMetricsStorageStatsResponse["retentionPeriod"]
-): string {
+) {
   if (!retention) {
     return "—";
   }

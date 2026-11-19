@@ -46,14 +46,7 @@ const EXPRESSION_CLAUSES = new Set([
 ]);
 const RELATION_CLAUSES = new Set(["from", "into", "join", "update"]);
 
-/**
- * Collapses what cannot affect the clause at the cursor: string literals,
- * quoted identifiers and comments (which may contain keywords), and
- * parenthesised groups that are already closed (a finished sub-query).
- * Groups still open around the cursor stay, so a sub-query in progress is
- * read on its own.
- */
-function normalizeBeforeCursor(textBefore: string): string {
+function normalizeBeforeCursor(textBefore: string) {
   let text = textBefore.replaceAll(STRING_OR_COMMENT_PATTERN, " x ");
   let previous = "";
   while (previous !== text) {
@@ -65,7 +58,9 @@ function normalizeBeforeCursor(textBefore: string): string {
 }
 
 /** Classifies the cursor position from the statement text before it. */
-function completionClause(statementBefore: string): CompletionClause {
+const completionClause: (statementBefore: string) => CompletionClause = (
+  statementBefore
+) => {
   const text = normalizeBeforeCursor(statementBefore);
   const withoutPartial = text.replace(PARTIAL_WORD_PATTERN, "");
   let last: string | undefined;
@@ -88,10 +83,8 @@ function completionClause(statementBefore: string): CompletionClause {
     return "relation";
   }
   return "other";
-}
+};
 
-// Ranking among equally good matches, highest first. lang-sql's own table
-// and schema entries carry boosts 2 and 1 (see sql-completion-schema.ts).
 const IN_SCOPE_COLUMN_BOOST = 10;
 const SCHEMA_COLUMN_BOOST = 6;
 const FUNCTION_BOOST = 4;
@@ -161,7 +154,6 @@ const EXPRESSION_KEYWORDS = [
   "NULLS FIRST",
   "NULLS LAST",
 ];
-/** The functions people reach for in day-to-day reads, not the full catalog. */
 const COMMON_FUNCTIONS = [
   "count",
   "sum",
@@ -202,8 +194,8 @@ const COMMON_FUNCTIONS = [
   "pg_size_pretty",
 ];
 
-function keywordCompletions(keywords: readonly string[]): Completion[] {
-  return keywords.map((label) => ({
+function keywordCompletions(keywords: readonly string[]) {
+  return keywords.map<Completion>((label) => ({
     boost: KEYWORD_BOOST,
     label,
     type: "keyword",
@@ -237,11 +229,8 @@ interface ScopedColumns {
   }[];
 }
 
-function columnOptions(
-  entries: ScopedColumns["inScope"],
-  boost: number
-): Completion[] {
-  return entries.map(({ column, relation }) => ({
+function columnOptions(entries: ScopedColumns["inScope"], boost: number) {
+  return entries.map<Completion>(({ column, relation }) => ({
     boost,
     detail: `${column.type} · ${relation}`,
     label: column.name,
@@ -250,10 +239,7 @@ function columnOptions(
 }
 
 /** The options our source contributes for a clause (lang-sql adds tables). */
-function contextOptions(
-  clause: CompletionClause,
-  columns: ScopedColumns
-): Completion[] {
+function contextOptions(clause: CompletionClause, columns: ScopedColumns) {
   switch (clause) {
     case "statement":
       return STATEMENT_OPTIONS;
@@ -290,7 +276,7 @@ function scopedColumns({
   defaultSchema: string;
   referenced: readonly ReferencedRelation[];
   relations: readonly SqlRelation[];
-}): ScopedColumns {
+}) {
   const label = (schema: string, name: string) =>
     schema === defaultSchema ? name : `${schema}.${name}`;
   const inScope = referenced.flatMap((relation) =>
@@ -309,7 +295,7 @@ function scopedColumns({
               )
             : []
         );
-  return { fromSchema, inScope };
+  return { fromSchema, inScope } satisfies ScopedColumns;
 }
 
 /**
@@ -318,10 +304,7 @@ function scopedColumns({
  * `SELECT st| FROM orders`). Between a `;` and the next statement the cursor
  * starts a new, empty statement.
  */
-function statementAround(
-  doc: string,
-  pos: number
-): { before: string; full: string } {
+function statementAround(doc: string, pos: number) {
   const statements = splitSqlStatements(doc);
   const containing = statements.find(
     (statement) => pos >= statement.from && pos <= statement.to
@@ -330,15 +313,21 @@ function statementAround(
     return {
       before: doc.slice(containing.from, pos),
       full: containing.text,
-    };
+    } satisfies { before: string; full: string };
   }
   const previous = statements.findLast((statement) => statement.to < pos);
   const start = previous ? previous.from : 0;
   const terminator = previous ? doc.indexOf(";", previous.to) : -1;
   if (terminator !== -1 && terminator < pos) {
-    return { before: doc.slice(terminator + 1, pos), full: "" };
+    return { before: doc.slice(terminator + 1, pos), full: "" } satisfies {
+      before: string;
+      full: string;
+    };
   }
-  return { before: doc.slice(start, pos), full: doc.slice(start, pos) };
+  return {
+    before: doc.slice(start, pos),
+    full: doc.slice(start, pos),
+  } satisfies { before: string; full: string };
 }
 
 export type { CompletionClause, ScopedColumns };

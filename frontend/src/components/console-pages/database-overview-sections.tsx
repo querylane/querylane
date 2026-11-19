@@ -45,9 +45,6 @@ interface ExplorerParams {
   instanceId: string;
 }
 
-// ————————————————————————————————————————————————————————————————
-// Small pieces
-
 function Eyebrow({
   children,
   right,
@@ -78,22 +75,19 @@ function CardLoadingRows({ label }: { label: string }) {
   );
 }
 
-// ————————————————————————————————————————————————————————————————
-// Stat strip
-
-function lastFiniteValue(values: number[]): number | null {
+function lastFiniteValue(values: number[]) {
   return values.length > 0 ? (values.at(-1) ?? null) : null;
 }
 
-function formatCatalogCount(count: number, partial: boolean): string {
+function formatCatalogCount(count: number, partial: boolean) {
   return `${count.toLocaleString()}${partial ? "+" : ""}`;
 }
 
-function formatCatalogMeasure(value: string, partial: boolean): string {
+function formatCatalogMeasure(value: string, partial: boolean) {
   return partial ? `≥ ${value}` : value;
 }
 
-function loadingStatValue(isPending: boolean): string | undefined {
+function loadingStatValue(isPending: boolean) {
   return isPending ? "Loading" : undefined;
 }
 
@@ -165,9 +159,6 @@ function DatabaseStatStrip({
     </StatStrip>
   );
 }
-
-// ————————————————————————————————————————————————————————————————
-// Slowest queries
 
 function SlowQueriesEmptyState() {
   return (
@@ -292,9 +283,6 @@ function SlowQueriesCard({
   );
 }
 
-// ————————————————————————————————————————————————————————————————
-// Top tables by size
-
 const OBJECT_KIND_ICONS: Record<
   CatalogObject["kind"],
   ComponentType<{ className?: string }>
@@ -406,9 +394,6 @@ function TopTablesCard({
     </Card>
   );
 }
-
-// ————————————————————————————————————————————————————————————————
-// Schemas
 
 function SchemaCardRow({
   params,
@@ -557,9 +542,6 @@ function SchemasCard({
     </Card>
   );
 }
-
-// ————————————————————————————————————————————————————————————————
-// Other databases on the instance
 
 function OtherDatabaseRow({
   database,

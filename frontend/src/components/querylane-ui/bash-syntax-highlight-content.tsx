@@ -31,7 +31,7 @@ const THEMES = {
 const MAX_CACHED_CODE_SNIPPETS = 500;
 const TOKEN_CACHE = new Map<string, ThemedTokenWithVariants[][]>();
 
-function highlightBash(code: string): ThemedTokenWithVariants[][] {
+function highlightBash(code: string) {
   const cachedTokenLines = TOKEN_CACHE.get(code);
   if (cachedTokenLines) {
     return cachedTokenLines;

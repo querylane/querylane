@@ -117,8 +117,6 @@ function ConnectionTestButton({
   );
 }
 
-// useWatch returns a deep-partial view of the values; fall back to proto
-// zero values so the fingerprint input stays a complete message init.
 function toPostgresConfig(values: {
   database?: string | undefined;
   host?: string | undefined;

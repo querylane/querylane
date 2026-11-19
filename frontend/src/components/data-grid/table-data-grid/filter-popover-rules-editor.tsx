@@ -33,8 +33,6 @@ function RulesEditor({
     );
   }
   return (
-    // The negative margin + matching padding keep the 3px focus rings of the
-    // row controls visible inside this scroll container instead of clipping.
     <ul className="-m-1 flex max-h-[min(48vh,22rem)] flex-col gap-1.5 overflow-auto p-1">
       {rules.map((rule, index) => (
         <li

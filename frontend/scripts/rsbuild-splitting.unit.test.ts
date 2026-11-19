@@ -12,6 +12,7 @@ import { afterEach, expect, test } from "@rstest/core";
 import { z } from "zod";
 import { managedSplitChunksConfig } from "../rsbuild.performance";
 
+const splitPageContent = "shared-page-content-".repeat(1000);
 const sourceMapSchema = z.object({ sources: z.array(z.string()) });
 const temporaryDirectories: string[] = [];
 
@@ -32,11 +33,10 @@ test("shares a lazy page with its small route wrapper without duplicating it", a
     join(cwd, "route.js"),
     'import { renderPage } from "./page.js"; export const renderRoute = () => renderPage();'
   );
-  // Larger than minSize but smaller than enforceSizeThreshold, like a page
-  // reached both through the admin renderer and a small split route wrapper.
+
   writeFileSync(
     join(cwd, "page.js"),
-    `export const renderPage = () => ${JSON.stringify("shared-page-content-".repeat(1000))};`
+    `export const renderPage = () => ${JSON.stringify(splitPageContent)};`
   );
   const rsbuild = await createRsbuild({
     cwd,

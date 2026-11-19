@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/querylane-ui/card";
 import { SetupFlowExplainer } from "@/components/setup-flow-explainer";
-import type { CreateInstanceWorkflowState } from "@/features/new-instance-workflow";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
 import { useCreateInstancePageController } from "@/hooks/use-create-instance-page-controller";
 import {
@@ -21,18 +20,14 @@ import {
   CreateInstancePageHeader,
 } from "@/routes/new-instance-page-ui";
 
-export function CreateInstancePage() {
+function CreateInstancePage() {
   const isConfigManaged = useIsConfigManagedInstances();
   if (isConfigManaged) {
     return <Navigate replace={true} to="/" />;
   }
   return <CreateInstancePageInner />;
 }
-export function CreateInstancePageInner({
-  initialState,
-}: {
-  initialState?: Partial<CreateInstanceWorkflowState> | undefined;
-} = {}) {
+function CreateInstancePageInner() {
   const {
     canCreate,
     formErrors,
@@ -48,7 +43,7 @@ export function CreateInstancePageInner({
     testResult,
     toggleAdvanced,
     updateField,
-  } = useCreateInstancePageController(initialState);
+  } = useCreateInstancePageController();
   return (
     <div className="flex min-h-dvh items-start justify-center p-6 lg:p-8">
       <div
@@ -99,4 +94,4 @@ export function CreateInstancePageInner({
   );
 }
 
-export type { CreateInstanceWorkflowState as CreateInstancePageState } from "@/features/new-instance-workflow";
+export { CreateInstancePage };

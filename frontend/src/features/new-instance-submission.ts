@@ -28,14 +28,12 @@ interface CreateInstanceSubmissionOutcome {
 
 const CREATE_INSTANCE_DISCOVERY_GRACE_MS = 50;
 
-function successOutcome(
-  notice: InlineNotice | null
-): CreateInstanceSubmissionOutcome {
-  return { error: null, notice };
+function successOutcome(notice: InlineNotice | null) {
+  return { error: null, notice } satisfies CreateInstanceSubmissionOutcome;
 }
 
-function errorOutcome(error: unknown): CreateInstanceSubmissionOutcome {
-  return { error, notice: null };
+function errorOutcome(error: unknown) {
+  return { error, notice: null } satisfies CreateInstanceSubmissionOutcome;
 }
 
 async function testInstanceConnection({
@@ -46,7 +44,7 @@ async function testInstanceConnection({
   mutateAsync: ReturnType<
     typeof useTestInstanceConnectionMutation
   >["mutateAsync"];
-}): Promise<CreateInstanceSubmissionOutcome> {
+}) {
   try {
     await mutateAsync(buildTestConnectionRequest(formState));
     return successOutcome({
@@ -101,7 +99,6 @@ async function fetchCreatedInstanceDatabases({
         input: databasesForInstanceQueryInput(instanceId),
         transport,
       }),
-      // a newly created instance must bypass cached discovery.
       staleTime: 0,
     });
     return response.databases;
@@ -111,7 +108,7 @@ async function fetchCreatedInstanceDatabases({
   }
 }
 
-function settleImmediate<T>(promise: Promise<T>, fallback: T): Promise<T> {
+function settleImmediate<T>(promise: Promise<T>, fallback: T) {
   return Promise.race([
     promise,
     new Promise<T>((resolve) => {
@@ -128,7 +125,7 @@ async function navigateAfterCreate({
 }: {
   navigate: ReturnType<typeof useNavigate>;
   target: ReturnType<typeof resolveCreateInstanceSuccessTarget>;
-}): Promise<InlineNotice | null> {
+}) {
   try {
     await navigate({
       ...target,
@@ -148,7 +145,7 @@ async function navigateAfterCreate({
       message:
         "Instance created, but Querylane could not open it automatically. Use the instance list to open it.",
       variant: "error",
-    };
+    } satisfies InlineNotice | null;
   }
 }
 
@@ -164,7 +161,7 @@ async function createInstanceAndNavigate({
   navigate: ReturnType<typeof useNavigate>;
   queryClient: ReturnType<typeof useQueryClient>;
   transport: ReturnType<typeof useTransport>;
-}): Promise<CreateInstanceSubmissionOutcome> {
+}) {
   try {
     const response = await mutateAsync(
       buildCreateInstanceRequest(formState, false)

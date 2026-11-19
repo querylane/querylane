@@ -10,7 +10,7 @@ const INTERACTIVE_CELL_ROLES = new Set(["button", "link"]);
 function isCellSelectionInteractiveTarget(
   target: EventTarget | null,
   cell: HTMLElement
-): boolean {
+) {
   if (!(target instanceof Element)) {
     return false;
   }

@@ -110,13 +110,7 @@ type LoadingPhase = "idle" | "pending" | "skeleton";
 const SKELETON_APPEAR_DELAY_MS = 300;
 const SKELETON_MIN_VISIBLE_MS = 400;
 
-/**
- * Paces the loading skeleton so schema expansion never flickers: nothing is
- * shown for the first 300ms (fast loads render content directly), and once
- * the skeleton appears it stays for at least 400ms so it is never yanked
- * out after a frame or two ("pending" = loading but skeleton suppressed).
- */
-function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
+function useCalmLoadingPhase(isLoading: boolean) {
   const [phase, setPhase] = useState<LoadingPhase>("idle");
   const shownAtRef = useRef(0);
   const [previousLoading, setPreviousLoading] = useState(isLoading);
@@ -154,8 +148,6 @@ function useCalmLoadingPhase(isLoading: boolean): LoadingPhase {
     [isLoading]
   );
 
-  // The effect lags the first paint by a frame; never let that frame render
-  // the "No objects" row (or content) while a load is already in flight.
   if (isLoading && phase === "idle") {
     return "pending";
   }
@@ -173,10 +165,7 @@ const RESOURCE_LIST_INITIAL_RECT = { height: 420, width: 300 } satisfies Rect;
 const useIsomorphicLayoutEffect =
   typeof document === "undefined" ? useEffect : useLayoutEffect;
 
-function anySchemaNameMatches(
-  schemas: SchemaSummary[],
-  query: string
-): boolean {
+function anySchemaNameMatches(schemas: SchemaSummary[], query: string) {
   return (
     query.trim().length > 0 &&
     schemas.some((schema) => matchesQuery(schema.name, query))
@@ -189,7 +178,7 @@ function schemaEmptyMessage({
 }: {
   schemaSelectionError: unknown;
   schemasLoading: boolean;
-}): string {
+}) {
   if (schemasLoading) {
     return "Loading schemas…";
   }
@@ -205,7 +194,7 @@ function hasVisibleCategoryResource({
 }: {
   categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
   itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
-}): boolean {
+}) {
   if (itemsByCategory === null) {
     return false;
   }
@@ -221,7 +210,7 @@ function hasVisibleCategoryResource({
 
 function hasResourceLoadingState(
   categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>
-): boolean {
+) {
   return CATEGORY_ORDER.some(
     (category) => categoryPagination[category].isLoading === true
   );
@@ -241,7 +230,7 @@ function shouldShowSearchEmptyState({
   hasVisibleResource: boolean;
   itemsByCategory: Record<CategoryKey, ResourceItem[]> | null;
   query: string;
-}): boolean {
+}) {
   return (
     activeSchema !== null &&
     itemsByCategory !== null &&
@@ -266,13 +255,8 @@ function CategoryInfiniteScrollSentinel({
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(
-    function loadMoreWhenVisible(): (() => void) | undefined {
+    function loadMoreWhenVisible() {
       const element = ref.current;
-      // No observer while a page is in flight: another onLoadMore would
-      // cancel and restart the active fetchNextPage request. When the fetch
-      // finishes, this effect re-runs and the fresh observer's initial
-      // notification re-triggers the load if a short page left the sentinel
-      // inside the viewport.
       if (!(element && hasNextPage) || isFetchingNextPage) {
         return undefined;
       }
@@ -288,9 +272,9 @@ function CategoryInfiniteScrollSentinel({
         { root: scrollRoot ?? null }
       );
       observer.observe(element);
-      return () => {
+      return (() => {
         observer.disconnect();
-      };
+      }) satisfies (() => void) | undefined;
     },
     [hasNextPage, isFetchingNextPage, onLoadMore, scrollRoot]
   );
@@ -343,8 +327,6 @@ function ObjectTreeList({
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null
   );
-  // Accordion: the active schema is the only one with loaded objects, and it
-  // can be collapsed without switching schemas.
   const [collapsedSchemaId, setCollapsedSchemaId] = useState<string | null>(
     null
   );
@@ -432,25 +414,13 @@ function ObjectTreeList({
   );
 }
 
-/**
- * All reads of the mutable Virtualizer instance live in this hook, and only
- * plain data (totalSize, virtualItems) crosses into compiled components. The
- * instance mutates internally on scroll without any prop or state changing,
- * so the React Compiler must not cache anything derived from it: a compiled
- * caller that invoked getVirtualItems() itself would key the result on the
- * stable instance identity and serve a frozen row range on every
- * scroll-triggered re-render (unreachable tail, whitespace, stale gaps).
- */
 function useResourceListVirtualizer({
   items,
   scrollElement,
 }: {
   items: VirtualResourceListItem[];
   scrollElement: HTMLDivElement | null;
-}): {
-  totalSize: number;
-  virtualItems: VirtualItem[];
-} {
+}) {
   const [virtualizerState, rerender] = useReducer(
     (state: { virtualizer: Virtualizer<HTMLDivElement, Element> }) => ({
       ...state,
@@ -476,10 +446,6 @@ function useResourceListVirtualizer({
     initialRect: RESOURCE_LIST_INITIAL_RECT,
     observeElementOffset,
     observeElementRect: observeResourceListRect,
-    // Always re-render asynchronously: React 19 batches the update within the
-    // same frame, and the synchronous flushSync path (virtual-core sets sync
-    // while scrolling) forced layout-blocking renders that also dirtied
-    // layout for every other ResizeObserver callback in the page.
     onChange: () => {
       rerender();
     },
@@ -487,10 +453,6 @@ function useResourceListVirtualizer({
     scrollToFn: elementScroll,
   });
 
-  // The container height comes from the current items, not
-  // virtualizer.getTotalSize(): the sum over the estimates is consistent with
-  // this render by construction, even if the instance's internal measurements
-  // lag a frame behind an item-set change.
   const totalSize = items.reduce(
     (sum, item) => sum + estimateResourceListItemSize(item),
     0
@@ -500,12 +462,6 @@ function useResourceListVirtualizer({
   useIsomorphicLayoutEffect(() => {
     virtualizer._willUpdate();
   });
-  // Force a full re-measure whenever the item set changes shape (schemas
-  // loading in, a schema expanding, categories toggling). setOptions alone
-  // does not reliably invalidate the internal measurement cache for the
-  // render that commits, and a stale range renders blank rows or an
-  // unreachable tail. Keyed on primitives so the follow-up notify cannot
-  // re-trigger the effect.
   useIsomorphicLayoutEffect(() => {
     virtualizer.measure();
   }, [virtualizer, items.length, totalSize]);
@@ -513,6 +469,9 @@ function useResourceListVirtualizer({
   return {
     totalSize,
     virtualItems: readResourceVirtualItems(virtualizerState, items),
+  } satisfies {
+    totalSize: number;
+    virtualItems: VirtualItem[];
   };
 }
 
@@ -520,8 +479,6 @@ function readResourceVirtualItems(
   state: { virtualizer: Virtualizer<HTMLDivElement, Element> },
   items: readonly VirtualResourceListItem[]
 ) {
-  // The reducer's new state identity invalidates compiler caching after an
-  // imperative virtualizer notification; items also invalidate on filtering.
   return state.virtualizer
     .getVirtualItems()
     .filter((item) => items[item.index] !== undefined);
@@ -531,10 +488,6 @@ function observeResourceListRect(
   instance: Virtualizer<HTMLDivElement, Element>,
   callback: (rect: Rect) => void
 ) {
-  // The list is vertical, so only height changes affect virtualization.
-  // Forward a constant width and skip width-only rect changes: without this,
-  // dragging the panel handle or resizing the window re-rendered the whole
-  // sidebar on every frame.
   let lastHeight: number | null = null;
   return observeElementRect(instance, (rect) => {
     const height =
@@ -550,14 +503,14 @@ function observeResourceListRect(
   });
 }
 
-function hasMoreCategoryItems(pagination: CategoryPaginationState): boolean {
+function hasMoreCategoryItems(pagination: CategoryPaginationState) {
   return pagination.hasNextPage || pagination.isFetchingNextPage;
 }
 
 function shouldSkipCategory(
   items: ResourceItem[],
   pagination: CategoryPaginationState
-): boolean {
+) {
   return items.length === 0 && !hasMoreCategoryItems(pagination);
 }
 
@@ -569,7 +522,7 @@ function flattenActiveSchemaItems({
   categoryPagination: Record<CategoryKey | "schemas", CategoryPaginationState>;
   expandedCategories: Set<CategoryKey>;
   itemsByCategory: Record<CategoryKey, ResourceItem[]>;
-}): VirtualResourceListItem[] {
+}) {
   const flatItems: VirtualResourceListItem[] = [];
   for (const category of CATEGORY_ORDER) {
     const allItems = itemsByCategory[category];
@@ -620,14 +573,14 @@ function expandedSchemaChildren({
   loadingPhase: LoadingPhase;
   query: string;
   schemaId: string;
-}): VirtualResourceListItem[] {
+}) {
   if (loadingPhase === "pending") {
-    // Loading but within the skeleton delay: keep the area empty so a fast
-    // response swaps straight to content without an intermediate flash.
-    return [];
+    return [] satisfies VirtualResourceListItem[];
   }
   if (loadingPhase === "skeleton") {
-    return [{ key: `schema:${schemaId}:loading`, kind: "loading" }];
+    return [
+      { key: `schema:${schemaId}:loading`, kind: "loading" },
+    ] satisfies VirtualResourceListItem[];
   }
   const children = itemsByCategory
     ? flattenActiveSchemaItems({
@@ -637,7 +590,9 @@ function expandedSchemaChildren({
       })
     : [];
   if (children.length === 0 && query.trim().length === 0) {
-    return [{ key: `schema:${schemaId}:empty`, kind: "empty" }];
+    return [
+      { key: `schema:${schemaId}:empty`, kind: "empty" },
+    ] satisfies VirtualResourceListItem[];
   }
   return children;
 }
@@ -660,12 +615,10 @@ function flattenObjectTreeItems({
   loadingPhase: LoadingPhase;
   query: string;
   schemas: SchemaSummary[];
-}): VirtualResourceListItem[] {
+}) {
   const flatItems: VirtualResourceListItem[] = [];
   for (const schema of schemas) {
     const isActive = schema.id === activeSchemaId;
-    // The filter always keeps the active schema visible: its objects are
-    // filtered server-side, so hiding the node would orphan the matches.
     if (!(isActive || matchesQuery(schema.name, query))) {
       continue;
     }
@@ -697,7 +650,7 @@ function flattenObjectTreeItems({
 
 function estimateResourceListItemSize(
   item: VirtualResourceListItem | undefined
-): number {
+) {
   if (!item) {
     return RESOURCE_LIST_FALLBACK_ITEM_SIZE;
   }
@@ -727,7 +680,7 @@ function assertNeverVirtualResourceListItem(_item: never): never {
 function getResourceListItemKey(
   items: VirtualResourceListItem[],
   index: number
-): string {
+) {
   const item = items[index];
   if (!item) {
     throw new Error("Expected virtual resource list item");
@@ -735,11 +688,6 @@ function getResourceListItemKey(
   return item.key;
 }
 
-/**
- * Indent guide for rows nested under a schema node, mirroring the design's
- * tree-sub style: rows sit flush vertically, so the per-row left border
- * reads as one continuous guide line.
- */
 function NestedTreeRow({
   children,
   indented,
@@ -751,8 +699,6 @@ function NestedTreeRow({
     <div
       className={cn(
         "ml-4 h-full border-l border-border",
-        // Resource rows sit one level deeper than their Kind header so the
-        // tree reads as objects nested under the group, not siblings of it.
         indented === true ? "pl-5" : "pl-1"
       )}
     >
@@ -813,11 +759,6 @@ const SCHEMA_SKELETON_ROWS = [
   { id: "fifth", width: "50%" },
 ];
 
-/**
- * Placeholder rows shaped like schema tree buttons (chevron + folder + label),
- * shown while the first schema page loads on a cold cache. Keeping the rail's
- * shape stable avoids the "text → whole tree pops in" flash on entry.
- */
 function SchemaLoadingRows() {
   return (
     <div
@@ -841,8 +782,6 @@ function SchemaLoadingRows() {
 }
 
 function NestedLoadingRows() {
-  // Appearance pacing (delay + minimum visible time) lives in
-  // useCalmLoadingPhase; this only softens the skeleton's entrance.
   return (
     <div
       className="animate-in space-y-1 py-1 animation-duration-200 fade-in motion-reduce:animate-none"
@@ -920,9 +859,6 @@ function CategoryListItem({
       return (
         <Button
           aria-expanded={isOpen}
-          // Kind headers are labels, not rows: hover brightens the text only
-          // (per the concept design), so they read differently from the
-          // background-highlighted object rows around them.
           className="h-6 w-full justify-start"
           onClick={() => {
             controls.toggleCategory(item.category);
@@ -998,7 +934,7 @@ function SchemaEmptyPanel({
 function hasExplorerResourceLoadError(
   tablesError: unknown,
   viewsError: unknown
-): boolean {
+) {
   return tablesError !== null || viewsError !== null;
 }
 
@@ -1103,9 +1039,6 @@ function ExplorerSidebar({
       query,
     }) && !hasSchemaNameMatch;
   const showObjectTree = schemas.length > 0 && !showSearchEmptyState;
-  // Object browser thresholds shed chrome in stages: below 18rem stacks search
-  // controls, below 15rem hides row sizes, below 14rem hides icons and tightens
-  // spacing.
   return (
     <aside
       aria-label="Database objects"

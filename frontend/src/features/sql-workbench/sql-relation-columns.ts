@@ -20,7 +20,7 @@ interface RelationRef {
   schema: string;
 }
 
-function relationResourceName(relation: RelationRef): string {
+function relationResourceName(relation: RelationRef) {
   return relation.kind === "view"
     ? buildViewName({
         databaseId: relation.databaseId,
@@ -36,9 +36,7 @@ function relationResourceName(relation: RelationRef): string {
       });
 }
 
-function toRelationColumns(
-  response: ListTableColumnsResponse
-): RelationColumn[] {
+function toRelationColumns(response: ListTableColumnsResponse) {
   return response.columns.map((column) => ({
     isPrimaryKey: column.isPrimaryKey,
     name: column.columnName,

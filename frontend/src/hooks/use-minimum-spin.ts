@@ -10,7 +10,7 @@ const MIN_SPIN_DURATION_MS = 500;
  * to suppress flashes of short-lived loading states — this shows immediately
  * and holds.
  */
-function useMinimumSpin(active: boolean): boolean {
+function useMinimumSpin(active: boolean) {
   const [cycle, setCycle] = useState({
     active,
     holding: active,
@@ -25,16 +25,16 @@ function useMinimumSpin(active: boolean): boolean {
   }
   const { sequence } = cycle;
   useEffect(
-    function expireMinimumSpin(): (() => void) | undefined {
+    function expireMinimumSpin() {
       if (sequence === 0) {
         return undefined;
       }
       const timer = globalThis.setTimeout(() => {
         setCycle((current) => ({ ...current, holding: false }));
       }, MIN_SPIN_DURATION_MS);
-      return () => {
+      return (() => {
         globalThis.clearTimeout(timer);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [sequence]
   );

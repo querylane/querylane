@@ -1,9 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { FieldMaskSchema } from "@bufbuild/protobuf/wkt";
 
-// These lists also feed navigation, facet options, maps and summary totals.
-// Their union of dependencies must remain available even when a cell is hidden.
-// Keep masks in the shared input builders so preload and observer keys agree.
 const DATABASE_LIST_READ_MASK = create(FieldMaskSchema, {
   paths: [
     "character_set",

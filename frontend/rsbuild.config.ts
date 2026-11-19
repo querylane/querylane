@@ -19,8 +19,6 @@ import { resolveReactPerformanceMode } from "./scripts/react-performance-mode.ts
 import { bundleContractRules } from "./scripts/rsdoctor-bundle-contracts.ts";
 
 const RSPACK_BUILD_CACHE_DIRECTORY = "node_modules/.cache/rsbuild";
-// Rsbuild tracks this config and its static imports automatically. Keep only
-// additional build inputs here so cache invalidation has one source of truth.
 const RSPACK_BUILD_DEPENDENCIES = [
   path.resolve(import.meta.dirname, ".browserslistrc"),
   path.resolve(import.meta.dirname, "bun.lock"),
@@ -46,14 +44,11 @@ const buildEnv = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production", "test"]).optional(),
     PUBLIC_API_BASE_URL: z.string().optional(),
-    QUERYLANE_VISUAL_HARNESS: z.enum(["0", "1"]).optional(),
     RSDOCTOR: z.string().optional(),
   },
 });
 
 const enableRsdoctor = Boolean(buildEnv.RSDOCTOR);
-// Playwright visual specs render isolated scenarios from this test-only entry.
-const enableVisualHarness = buildEnv.QUERYLANE_VISUAL_HARNESS === "1";
 const isProduction =
   buildEnv.NODE_ENV === "production" || process.argv.includes("build");
 const reactPerformanceMode = resolveReactPerformanceMode({
@@ -67,7 +62,6 @@ const buildCacheDigest = [
     rsdoctorEnabled: enableRsdoctor,
   }),
   reactPerformanceMode.buildCacheKey,
-  `visual-harness:${String(enableVisualHarness)}`,
 ];
 const preconnectOrigins = createPreconnectOrigins({
   apiBaseUrl: buildEnv.PUBLIC_API_BASE_URL,
@@ -77,36 +71,18 @@ const preconnectOrigins = createPreconnectOrigins({
 const rsdoctorPluginOptions = {
   disableClientServer: true,
   features: {
-    // Show which dependency or route group grows Querylane's JS payload.
     bundle: true,
-    // Surface expensive loader transforms when frontend build time regresses.
     loader: true,
-    // Attribute bundle changes to router, Tailwind, and React plugins.
     plugins: true,
-    // Catch slow or CJS-fallback module resolution before it hits CI.
     resolver: true,
-    // Verify Rspack's production tree-shaking actually removes unused
-    // UI/runtime code.
     treeShaking: true,
   },
   linter: {
     extends: bundleContractRules,
     rules: {
-      // The app itself is intentionally split by TanStack Router route chunks;
-      // Rsdoctor models local src files as the Querylane frontend package and
-      // reports expected route CSS duplication as cross-package duplication.
-      // The rule's ignore option is currently not applied by Rsdoctor, so disable it.
       "cross-chunks-package": "off",
-      // Ignore patch-level transitive duplicates; those are package manager
-      // resolution noise, while minor/major duplicates remain visible.
       "duplicate-package": ["Warn", { checkVersion: "prepatch", ignore: [] }],
-      // Keep E1009 enabled without package suppressions. Rsdoctor 1.5.12
-      // fixed known subpath false positives, so new findings should expose
-      // real resolution or package export regressions.
       "esm-resolved-to-cjs": ["Warn", { ignore: [] }],
-      // TanStack Router's code-splitter proxy can make a used component import
-      // look side-effect-only in Rsdoctor's graph. Keep third-party checking on,
-      // but ignore this known local false positive.
       "tree-shaking-side-effects-only": [
         "Warn",
         { ignore: ["src/components/ui/textarea.tsx"], include: [] },
@@ -116,8 +92,6 @@ const rsdoctorPluginOptions = {
   output: {
     mode: "brief",
     options: {
-      // Keep machine-readable stats and add the self-contained report so local
-      // profiling benefits from Rsdoctor's current visualization client.
       type: ["html", "json"],
     },
   },
@@ -125,17 +99,11 @@ const rsdoctorPluginOptions = {
 
 export default defineConfig({
   dev: {
-    // Compile the whole app up front so navigating between routes never triggers
-    // an on-demand compile mid-session. Costs a couple of extra seconds at
-    // `bun run dev` startup in exchange for no per-navigation "fresh compile"
-    // stalls. Flip back to true if cold-start time becomes the bigger annoyance.
     lazyCompilation: false,
   },
   html: {
     tags: [
       {
-        // Intentionally parser-blocking: resolve the saved theme before body
-        // paint. Same-origin external JS needs no unsafe-inline CSP exception.
         append: false,
         attrs: { src: "/theme-init.js" },
         head: true,
@@ -157,10 +125,7 @@ export default defineConfig({
     template: "./index.html",
   },
   output: {
-    // Extended subsets must stay on demand, not become base64 in the global CSS.
     dataUriLimit: { font: 0 },
-    // The explicit Scan command serves the pinned local asset before React.
-    // Normal development and every production build omit it.
     ...(reactPerformanceMode.reactScanEnabled
       ? {
           copy: [
@@ -175,8 +140,6 @@ export default defineConfig({
         }
       : {}),
     sourceMap: {
-      // Bundle budgets classify deferred feature chunks from source maps. Keep
-      // maps hidden in production without restoring Sentry upload plumbing.
       js:
         buildEnv.NODE_ENV === "production"
           ? "hidden-source-map"
@@ -185,8 +148,6 @@ export default defineConfig({
   },
   performance: {
     ...(preconnectOrigins.length > 0 ? { preconnect: preconnectOrigins } : {}),
-    // Only the immediately used UI face; leave mono and other subsets on demand.
-    // Match emitted assets so the hint reuses CSS's content-hashed font URL.
     preload: {
       include: /\/sans-core(?:\.[\w]+)?\.woff2$/u,
       type: "all-assets",
@@ -196,14 +157,10 @@ export default defineConfig({
       cacheDigest: buildCacheDigest,
       cacheDirectory: RSPACK_BUILD_CACHE_DIRECTORY,
     },
-    // Strip direct ad hoc diagnostics from production bundles while thrown
-    // errors and explicit error handling stay intact.
     removeConsole: ["log", "info", "warn", "table", "group"],
   },
   plugins: [
     pluginReact({
-      // Global infer compilation is the default. Annotation exists only as a
-      // local measurement control and uses an isolated persistent cache.
       reactCompiler: reactPerformanceMode.compiler,
     }),
     pluginTailwindcss(),
@@ -215,14 +172,8 @@ export default defineConfig({
     },
   },
   source: {
-    // PUBLIC_-prefixed env vars are exposed on import.meta.env automatically by
-    // rsbuild (see rsbuild env-vars docs); src/env.ts reads them and defaults
-    // PUBLIC_API_BASE_URL to "" via zod, so no manual `define` is needed.
     entry: {
       index: "./src/main.tsx",
-      ...(enableVisualHarness
-        ? { visual: "./src/visual-harness/main.tsx" }
-        : {}),
     },
     tsconfigPath: "./tsconfig.json",
   },
@@ -234,10 +185,6 @@ export default defineConfig({
         tanstackRouter({
           autoCodeSplitting: true,
           codeSplittingOptions: {
-            // Keep tiny fallback wrappers with their UI, not in extra requests.
-            // Loaders stay available immediately; defer heavy dependencies inside
-            // them deliberately. Pending UI stays eager so it can render at once.
-            // Use per-route codeSplitGroupings for unusually heavy fallback UI.
             defaultBehavior: [
               ["component", "errorComponent", "notFoundComponent"],
             ],
@@ -245,13 +192,6 @@ export default defineConfig({
           target: "react",
         })
       );
-      // Rspack's native watcher gives faster local invalidation on large
-      // frontend trees. It is a no-op for one-shot production builds. Everything
-      // else about bundle optimization is left to Rspack's mode-aware defaults:
-      // `rsbuild build` runs `mode: 'production'`, which already enables
-      // tree-shaking, module concatenation, deterministic ids, etc., and
-      // `rsbuild dev` disables them — so we don't hand-force (and previously
-      // mis-force) those into dev.
 
       if (config.mode === "production") {
         config.optimization = {
@@ -261,19 +201,10 @@ export default defineConfig({
       }
 
       config.experiments ??= {};
-      // Rsbuild 2.2 reverted its planned native-watcher default before GA, so
-      // opt in explicitly while exercising upcoming defaults in CI.
       config.experiments.asyncWebAssembly = true;
       config.experiments.futureDefaults = true;
       config.experiments.nativeWatcher = true;
       config.experiments.pureFunctions = config.mode === "production";
-      // Rsbuild 2.2 owns sourceImport; the config contract pins its effective
-      // value. Leave buildHttp unset because Querylane has no remote URL
-      // imports and network-backed builds would expand the supply-chain
-      // surface. Leave deferImport unset because its proposal syntax is unused.
-      // Keep runtimeMode on the webpack-compatible default while Rspack's
-      // runtime is under development and aimed at ESM modern-module output.
-      // Leave useInputFileSystem unset because Querylane does not replace it.
 
       if (enableRsdoctor) {
         config.plugins.push(new RsdoctorRspackPlugin(rsdoctorPluginOptions));

@@ -2,8 +2,6 @@ import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "@/lib/utils";
 import styles from "./drawer.module.css";
 
-// Navigation is a full-height, horizontal swipe drawer. Keep its layout and
-// reduced-motion behavior separate from the registry's snap-point drawer.
 function Drawer(
   props: Omit<DrawerPrimitive.Root.Props, "swipeDirection"> & {
     swipeDirection: "left" | "right";

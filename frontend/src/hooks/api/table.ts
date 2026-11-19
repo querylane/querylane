@@ -152,9 +152,7 @@ export function tableDetailQueryOptions({
   ] as const;
 }
 
-export function assertNoUnhandledTableDetailQueries(
-  queries: readonly []
-): void {
+export function assertNoUnhandledTableDetailQueries(queries: readonly []) {
   if (queries.length > 0) {
     throw new Error("Unhandled table detail query options");
   }

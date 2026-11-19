@@ -22,9 +22,7 @@ const defaultReactRootErrorReporterDependencies: ReactRootErrorReporterDependenc
     reportAppUiError,
   };
 
-function getComponentStack(errorInfo: {
-  componentStack?: string | undefined;
-}): string | null {
+function getComponentStack(errorInfo: { componentStack?: string | undefined }) {
   const componentStack = errorInfo.componentStack?.trim();
   return isNonEmptyString(componentStack) && componentStack.length > 0
     ? componentStack
@@ -63,10 +61,7 @@ function reportReactRootError({
 
 function createReactRootErrorHandlers(
   dependencies?: ReactRootErrorReporterDependencies
-): Pick<
-  RootOptions,
-  "onCaughtError" | "onRecoverableError" | "onUncaughtError"
-> {
+) {
   const dependencyOptions = dependencies === undefined ? {} : { dependencies };
   return {
     onCaughtError(error: unknown, errorInfo: ReactRootErrorInfo) {
@@ -93,7 +88,10 @@ function createReactRootErrorHandlers(
         ...dependencyOptions,
       });
     },
-  };
+  } satisfies Pick<
+    RootOptions,
+    "onCaughtError" | "onRecoverableError" | "onUncaughtError"
+  >;
 }
 
 export { createReactRootErrorHandlers, reportReactRootError };

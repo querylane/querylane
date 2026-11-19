@@ -5,17 +5,13 @@ interface DelayedFlagOptions {
   minDurationMs?: number | undefined;
 }
 
-function useDelayedFlag(
-  active: boolean,
-  options: DelayedFlagOptions = {}
-): boolean {
+function useDelayedFlag(active: boolean, options: DelayedFlagOptions = {}) {
   const { delayMs = 200, minDurationMs = 400 } = options;
   const [visible, setVisible] = useState(false);
   const shownAtRef = useRef<number | undefined>(undefined);
 
-  // sync visible state to an intentionally delayed flag
   useEffect(
-    function syncDelayedFlagVisibility(): (() => void) | undefined {
+    function syncDelayedFlagVisibility() {
       if (active) {
         if (visible) {
           return undefined;
@@ -26,9 +22,9 @@ function useDelayedFlag(
           setVisible(true);
         }, delayMs);
 
-        return () => {
+        return (() => {
           globalThis.clearTimeout(showTimer);
-        };
+        }) satisfies (() => void) | undefined;
       }
 
       if (!visible) {
@@ -49,9 +45,9 @@ function useDelayedFlag(
         setVisible(false);
       }, remaining);
 
-      return () => {
+      return (() => {
         globalThis.clearTimeout(hideTimer);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [active, delayMs, minDurationMs, visible]
   );

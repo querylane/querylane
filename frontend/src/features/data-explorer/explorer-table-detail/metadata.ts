@@ -11,9 +11,7 @@ interface MetadataToolbar {
   isRefreshing: boolean;
   lastFetchedLabel: string;
 }
-function deriveMetadataToolbar(
-  queries: RefreshableMetadataQuery[]
-): MetadataToolbar {
+function deriveMetadataToolbar(queries: RefreshableMetadataQuery[]) {
   const updatedTimes = queries.map((query) => query.dataUpdatedAt || 0);
   const dataUpdatedAt = updatedTimes.includes(0)
     ? 0
@@ -23,7 +21,7 @@ function deriveMetadataToolbar(
     handleRetry: () => Promise.all(queries.map((query) => query.refetch())),
     isRefreshing: queries.some((query) => query.isFetching),
     lastFetchedLabel: formatLastFetchedLabel(dataUpdatedAt),
-  };
+  } satisfies MetadataToolbar;
 }
 
 export type { MetadataToolbar };

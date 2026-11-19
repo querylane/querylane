@@ -7,8 +7,6 @@ function Toaster({ theme: toastTheme, ...props }: ToasterProps) {
   const { theme } = useTheme();
 
   useEffect(function replayPreMountNotifications() {
-    // Sonner 2.0 does not replay notifications published before subscription.
-    // Updating the same ids also deduplicates notifications already received.
     for (const notification of toast.getToasts()) {
       if ("title" in notification) {
         toast(notification.title, notification);

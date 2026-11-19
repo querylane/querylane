@@ -2,35 +2,46 @@ import { create } from "@bufbuild/protobuf";
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
-import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import { SqlResultsGrid } from "@/features/sql-workbench/sql-results-grid";
-import { TableResultRowSchema } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
+import {
+  TableCellSchema,
+  TableResultColumnSchema,
+  TableResultRowSchema,
+} from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 import { DataType } from "@/protogen/querylane/console/v1alpha1/table_pb";
-import { gridCell, gridColumn } from "@/visual-harness/data-grid-scenario-data";
+import { BrowserSurface } from "@/test/browser-surface.test-utils";
 import "@/components/data-grid/table-data-grid/data-grid-theme.css";
+
+function textColumn(columnName: string) {
+  return create(TableResultColumnSchema, {
+    columnName,
+    dataType: DataType.STRING,
+    rawType: "text",
+  });
+}
+
+function textCell(value: string) {
+  return create(TableCellSchema, {
+    value: { kind: { case: "stringValue", value } },
+  });
+}
 
 test("query columns are display-only and duplicate names remain independently selectable", async () => {
   await render(
-    <ScreenshotFrame>
+    <BrowserSurface>
       <div className="flex h-[400px] w-[800px] flex-col">
         <SqlResultsGrid
-          columns={[
-            gridColumn("id", "text", DataType.STRING),
-            gridColumn("id", "text", DataType.STRING),
-          ]}
+          columns={[textColumn("id"), textColumn("id")]}
           resultKey="run-1"
           rows={[
             create(TableResultRowSchema, {
               rowKey: "one",
-              values: [
-                gridCell({ case: "stringValue", value: "left" }),
-                gridCell({ case: "stringValue", value: "right" }),
-              ],
+              values: [textCell("left"), textCell("right")],
             }),
           ]}
         />
       </div>
-    </ScreenshotFrame>
+    </BrowserSurface>
   );
   await page.getByRole("button", { name: "Columns", exact: true }).click();
   await page
@@ -50,33 +61,24 @@ test("query columns are display-only and duplicate names remain independently se
 
 test("query rows sort by received values independently of column visibility", async () => {
   await render(
-    <ScreenshotFrame>
+    <BrowserSurface>
       <div className="flex h-[400px] w-[800px] flex-col">
         <SqlResultsGrid
-          columns={[
-            gridColumn("id", "text", DataType.STRING),
-            gridColumn("owner", "text", DataType.STRING),
-          ]}
+          columns={[textColumn("id"), textColumn("owner")]}
           resultKey="run-sort"
           rows={[
             create(TableResultRowSchema, {
               rowKey: "one",
-              values: [
-                gridCell({ case: "stringValue", value: "alpha" }),
-                gridCell({ case: "stringValue", value: "first owner" }),
-              ],
+              values: [textCell("alpha"), textCell("first owner")],
             }),
             create(TableResultRowSchema, {
               rowKey: "two",
-              values: [
-                gridCell({ case: "stringValue", value: "zebra" }),
-                gridCell({ case: "stringValue", value: "last owner" }),
-              ],
+              values: [textCell("zebra"), textCell("last owner")],
             }),
           ]}
         />
       </div>
-    </ScreenshotFrame>
+    </BrowserSurface>
   );
   const grid = page.getByRole("grid");
   await expect

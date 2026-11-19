@@ -4,11 +4,6 @@ import { cn } from "@/lib/utils";
 
 const SELECT_ALL_ARIA_LABEL = "Select All";
 
-// Visual clone of the shadcn checkbox (see components/ui/checkbox.tsx) built
-// around the data grid's native input renderer. The grid deliberately avoids
-// mounting the headless ui/checkbox tree per row (PR #251 measured the churn);
-// the native input keeps behavior (shift ranges, indeterminate, focus) and is
-// stretched invisibly over the styled box in data-grid-theme.css.
 function DataGridCheckbox(props: RenderCheckboxProps) {
   let selectAllTitle: string | undefined;
   if (props["aria-label"] === SELECT_ALL_ARIA_LABEL) {

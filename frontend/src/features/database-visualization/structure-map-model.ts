@@ -153,7 +153,7 @@ function schemaNodeId(schemaName: string) {
   return `schema:${schemaName}`;
 }
 
-function columnBadges(column: StructureMapColumn): string[] {
+function columnBadges(column: StructureMapColumn) {
   const badges = ["COLUMN"];
   if (column.isPrimaryKey) {
     badges.push("PK");
@@ -167,21 +167,19 @@ function columnBadges(column: StructureMapColumn): string[] {
   return badges;
 }
 
-function constraintTypeLabel(type: StructureConstraintKind): string {
+function constraintTypeLabel(type: StructureConstraintKind) {
   return type.toUpperCase().replaceAll("_", " ");
 }
 
-function keyConstraint(type: StructureConstraintKind): boolean {
+function keyConstraint(type: StructureConstraintKind) {
   return type === "primary_key" || type === "unique" || type === "foreign_key";
 }
 
-function viewBadge(view: StructureMapView): string {
+function viewBadge(view: StructureMapView) {
   return view.viewType === "materialized" ? "MATERIALIZED VIEW" : "VIEW";
 }
 
-function referencedTableIdentity(
-  resourceName: string
-): { schemaName: string; tableName: string } | null {
+function referencedTableIdentity(resourceName: string) {
   const match = REFERENCED_TABLE_PATTERN.exec(resourceName);
   if (!match) {
     return null;
@@ -196,12 +194,13 @@ function referencedTableIdentity(
   ) {
     return null;
   }
-  return { schemaName, tableName };
+  return { schemaName, tableName } satisfies {
+    schemaName: string;
+    tableName: string;
+  } | null;
 }
 
-function buildForeignKeyRelationshipLabel(
-  constraint: StructureMapConstraint
-): string {
+function buildForeignKeyRelationshipLabel(constraint: StructureMapConstraint) {
   const source = constraint.columnNames.join(", ");
   const target = constraint.referencedColumnNames.join(", ");
   if (source && target) {
@@ -210,7 +209,7 @@ function buildForeignKeyRelationshipLabel(
   return "references";
 }
 
-function databaseNode(input: StructureMapModelInput): VisualizationNode {
+function databaseNode(input: StructureMapModelInput) {
   return {
     data: {
       badges: ["DATABASE"],
@@ -223,7 +222,7 @@ function databaseNode(input: StructureMapModelInput): VisualizationNode {
     },
     id: `database:${input.databaseName}`,
     kind: "database",
-  };
+  } satisfies VisualizationNode;
 }
 
 function appendViewNodes(
@@ -359,7 +358,7 @@ function appendMissingReferencedTable(
   referenced: { schemaName: string; tableName: string },
   nodes: VisualizationNode[],
   tableIds: Set<string>
-): string {
+) {
   const target = tableNodeId(referenced.schemaName, referenced.tableName);
   if (tableIds.has(target)) {
     return target;
@@ -592,7 +591,7 @@ function appendTableResourceNodes({
   appendKeyAndConstraintNodes({ tables, nodes, edges, tableIds });
 }
 
-function buildSummary(input: StructureMapModelInput): StructureMapSummary {
+function buildSummary(input: StructureMapModelInput) {
   return {
     foreignKeyCount: input.tables.reduce(
       (count, table) =>
@@ -613,12 +612,10 @@ function buildSummary(input: StructureMapModelInput): StructureMapSummary {
       0
     ),
     viewCount: input.views.length,
-  };
+  } satisfies StructureMapSummary;
 }
 
-function buildStructureMapModel(
-  input: StructureMapModelInput
-): StructureMapModel {
+function buildStructureMapModel(input: StructureMapModelInput) {
   const nodes: VisualizationNode[] = [databaseNode(input)];
   const edges: VisualizationEdge[] = [];
   const tableIds = new Set<string>();
@@ -628,7 +625,11 @@ function buildStructureMapModel(
   appendTableResourceNodes({ tables: input.tables, nodes, edges, tableIds });
   appendViewNodes(input.views, nodes, edges);
 
-  return { edges, nodes, summary: buildSummary(input) };
+  return {
+    edges,
+    nodes,
+    summary: buildSummary(input),
+  } satisfies StructureMapModel;
 }
 
 export type {

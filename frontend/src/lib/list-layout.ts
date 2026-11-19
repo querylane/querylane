@@ -7,17 +7,17 @@ type ListSortValue = string | number | bigint | boolean | null | undefined;
 function resolveListColumnOrder(
   order: readonly string[] | undefined,
   available: readonly string[]
-): string[] {
+) {
   const known = new Set(available);
   return [
     ...new Set([...(order ?? []).filter((id) => known.has(id)), ...available]),
-  ];
+  ] satisfies string[];
 }
 
 function resolveListSorting(
   sorting: readonly ListSort[],
   available: readonly string[]
-): ListSort[] {
+) {
   const known = new Set(available);
   const seen = new Set<string>();
   return sorting.filter(({ id }) => {
@@ -29,10 +29,7 @@ function resolveListSorting(
   });
 }
 
-function listSortDirection(
-  id: string,
-  sorting: readonly ListSort[]
-): "ascending" | "descending" | undefined {
+function listSortDirection(id: string, sorting: readonly ListSort[]) {
   const current = sorting.find((sort) => sort.id === id);
   if (!current) {
     return undefined;
@@ -81,7 +78,7 @@ function isPrimitiveValue(
     typeof value === "boolean"
   );
 }
-function compareListCellValues(a: unknown, b: unknown): number {
+function compareListCellValues(a: unknown, b: unknown) {
   if (isTimestampParts(a) && isTimestampParts(b)) {
     return (
       comparePrimitive(a.seconds, b.seconds) ||
@@ -119,12 +116,11 @@ function compareSortValues(
   return descending ? -compared : compared;
 }
 
-// Raw values, missing values last in both directions, stable ties, no mutation.
 function sortListRows<T>(
   rows: readonly T[],
   sorting: readonly ListSort[],
   accessors: Record<string, (row: T) => ListSortValue>
-): T[] {
+) {
   const comparisons = sorting.flatMap((sort) => {
     const accessor = Object.hasOwn(accessors, sort.id)
       ? accessors[sort.id]

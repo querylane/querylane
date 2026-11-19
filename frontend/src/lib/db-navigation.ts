@@ -19,7 +19,7 @@ interface RouteSelectionIds {
   instanceId?: string | undefined;
 }
 
-function resolveScopeLevel(ids: RouteSelectionIds): ScopeLevel {
+function resolveScopeLevel(ids: RouteSelectionIds) {
   if (isNonEmptyString(ids.databaseId)) {
     return "database";
   }

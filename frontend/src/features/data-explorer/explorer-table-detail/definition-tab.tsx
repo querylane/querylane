@@ -299,8 +299,6 @@ function shellSingleQuote(value: string) {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
 }
 
-// For values interpolated inside a double-quoted shell word, where $, ", \
-// and backticks keep their special meaning.
 function shellDoubleQuoteEscape(value: string) {
   return value.replaceAll(/(?<capture1>[\\"$`])/gu, "\\$1");
 }

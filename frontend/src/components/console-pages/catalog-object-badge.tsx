@@ -4,7 +4,7 @@ import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb"
 function shouldShowUnpopulatedStatus(
   isMaterialized: boolean,
   isPopulated: boolean
-): boolean {
+) {
   return isMaterialized && !isPopulated;
 }
 

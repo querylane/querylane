@@ -2,7 +2,7 @@ import { get } from "react-hook-form";
 import { mapEntryCriteriaPrefix } from "@/lib/protobuf-provider/map-error-target";
 
 /** Read all messages, including resolver/server criteria, without walking DOM refs. */
-function formErrorMessages(error: unknown): string[] {
+const formErrorMessages: (error: unknown) => string[] = (error) => {
   if (error === null || typeof error !== "object") {
     return [];
   }
@@ -24,7 +24,7 @@ function formErrorMessages(error: unknown): string[] {
       Object.values(error).flatMap((child) => formErrorMessages(child))
     ),
   ];
-}
+};
 
 function labelRowErrors(
   error: unknown,
@@ -33,7 +33,7 @@ function labelRowErrors(
     key: string;
   }[],
   blankKeyError?: string
-): Record<string, string[]> {
+) {
   return Object.fromEntries(
     labels.flatMap((label) => {
       const key = label.key.trim();
@@ -50,7 +50,7 @@ function labelRowErrors(
   );
 }
 
-function labelEntryMessages(error: unknown, key: string): string[] {
+function labelEntryMessages(error: unknown, key: string) {
   if (
     error !== null &&
     typeof error === "object" &&
@@ -69,21 +69,21 @@ function labelEntryMessages(error: unknown, key: string): string[] {
 function unassignedLabelMessages(
   error: string | undefined,
   rows: Record<string, string[]>
-): string[] {
+) {
   const displayed = new Set(Object.values(rows).flat());
   return error?.split("\n").filter((message) => !displayed.has(message)) ?? [];
 }
 
-function errorCriteriaMessages(value: unknown): string[] {
+function errorCriteriaMessages(value: unknown) {
   if (typeof value === "string") {
-    return [value];
+    return [value] satisfies string[];
   }
   if (Array.isArray(value)) {
     return value.filter(
       (item: unknown): item is string => typeof item === "string"
     );
   }
-  return [];
+  return [] satisfies string[];
 }
 
 export { formErrorMessages, labelRowErrors, unassignedLabelMessages };

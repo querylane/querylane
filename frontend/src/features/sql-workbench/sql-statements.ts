@@ -26,7 +26,7 @@ const DOLLAR_TAG_PATTERN = /^\$(?<capture1>[A-Za-z_][A-Za-z0-9_]*)?\$/u;
 const IDENTIFIER_CHAR_PATTERN = /[A-Za-z0-9_]/u;
 const WHITESPACE_PATTERN = /\s/u;
 
-function skipQuoted(text: string, start: number, quote: string): number {
+function skipQuoted(text: string, start: number, quote: string) {
   let index = start + 1;
   while (index < text.length) {
     if (text.charAt(index) === quote) {
@@ -41,8 +41,7 @@ function skipQuoted(text: string, start: number, quote: string): number {
   return text.length;
 }
 
-function skipEscapeString(text: string, start: number): number {
-  // start points at the opening quote of an E'...' literal.
+function skipEscapeString(text: string, start: number) {
   let index = start + 1;
   while (index < text.length) {
     const char = text.charAt(index);
@@ -62,12 +61,12 @@ function skipEscapeString(text: string, start: number): number {
   return text.length;
 }
 
-function skipLineComment(text: string, start: number): number {
+function skipLineComment(text: string, start: number) {
   const newline = text.indexOf("\n", start);
   return newline === -1 ? text.length : newline + 1;
 }
 
-function skipBlockComment(text: string, start: number): number {
+function skipBlockComment(text: string, start: number) {
   let depth = 1;
   let index = start + 2;
   while (index < text.length && depth > 0) {
@@ -86,16 +85,16 @@ function skipBlockComment(text: string, start: number): number {
   return index;
 }
 
-function skipDollarQuoted(text: string, start: number, tag: string): number {
+function skipDollarQuoted(text: string, start: number, tag: string) {
   const end = text.indexOf(tag, start + tag.length);
   return end === -1 ? text.length : end + tag.length;
 }
 
-function precededByIdentifierChar(text: string, index: number): boolean {
+function precededByIdentifierChar(text: string, index: number) {
   return index > 0 && IDENTIFIER_CHAR_PATTERN.test(text.charAt(index - 1));
 }
 
-function isEscapeStringStart(text: string, index: number): boolean {
+function isEscapeStringStart(text: string, index: number) {
   const char = text.charAt(index);
   if (!(char === "E" || char === "e") || text.charAt(index + 1) !== "'") {
     return false;
@@ -103,12 +102,11 @@ function isEscapeStringStart(text: string, index: number): boolean {
   return !precededByIdentifierChar(text, index);
 }
 
-function isDollarQuoteStart(text: string, index: number): boolean {
-  // `$1` style parameters and identifiers containing `$` are not quotes.
+function isDollarQuoteStart(text: string, index: number) {
   return text.charAt(index) === "$" && !precededByIdentifierChar(text, index);
 }
 
-function isCommentStart(text: string, index: number): "block" | "line" | null {
+function isCommentStart(text: string, index: number) {
   const char = text.charAt(index);
   const next = text.charAt(index + 1);
   if (char === "-" && next === "-") {
@@ -120,11 +118,7 @@ function isCommentStart(text: string, index: number): "block" | "line" | null {
   return null;
 }
 
-/**
- * Returns the index just past the lexical token starting at `index`, or
- * `null` when the character at `index` is plain statement text.
- */
-function skipToken(text: string, index: number): number | null {
+function skipToken(text: string, index: number) {
   const char = text.charAt(index);
   if (char === "'" || char === '"') {
     return skipQuoted(text, index, char);
@@ -148,7 +142,7 @@ function skipToken(text: string, index: number): number | null {
   return null;
 }
 
-function trimmedRange(text: string, range: TextRange): TextRange | null {
+function trimmedRange(text: string, range: TextRange) {
   let { from, to } = range;
   while (from < to && WHITESPACE_PATTERN.test(text.charAt(from))) {
     from += 1;
@@ -159,7 +153,7 @@ function trimmedRange(text: string, range: TextRange): TextRange | null {
   return from < to ? { from, to } : null;
 }
 
-function isCommentOnly(text: string): boolean {
+function isCommentOnly(text: string) {
   let index = 0;
   while (index < text.length) {
     if (WHITESPACE_PATTERN.test(text.charAt(index))) {
@@ -180,7 +174,7 @@ function isCommentOnly(text: string): boolean {
   return true;
 }
 
-function statementInRange(text: string, range: TextRange): SqlStatement | null {
+function statementInRange(text: string, range: TextRange) {
   const trimmed = trimmedRange(text, range);
   if (!trimmed) {
     return null;
@@ -189,11 +183,15 @@ function statementInRange(text: string, range: TextRange): SqlStatement | null {
   if (isCommentOnly(statementText)) {
     return null;
   }
-  return { from: trimmed.from, text: statementText, to: trimmed.to };
+  return {
+    from: trimmed.from,
+    text: statementText,
+    to: trimmed.to,
+  } satisfies SqlStatement | null;
 }
 
 /** Splits `text` into statements at top-level semicolons. */
-function splitSqlStatements(text: string): SqlStatement[] {
+function splitSqlStatements(text: string) {
   const statements: SqlStatement[] = [];
   let statementStart = 0;
   let index = 0;
@@ -226,7 +224,7 @@ function splitSqlStatements(text: string): SqlStatement[] {
 function statementAtCursor(
   statements: readonly SqlStatement[],
   cursor: number
-): SqlStatement | undefined {
+) {
   let candidate: SqlStatement | undefined;
   for (const statement of statements) {
     if (cursor >= statement.from && cursor <= statement.to) {
@@ -255,7 +253,7 @@ function resolveRunnableStatements({
   cursor: number;
   selection?: TextRange | undefined;
   text: string;
-}): SqlStatement[] {
+}) {
   if (selection && selection.from !== selection.to) {
     return splitSqlStatements(text.slice(selection.from, selection.to)).map(
       (selected) => ({

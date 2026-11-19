@@ -54,7 +54,6 @@ function GrantRowName({ object }: { object: GrantedObject }) {
   );
 }
 
-// One object in an expanded schema — names-only, click to reveal its detail.
 function ObjectRow({
   columns,
   object,
@@ -119,7 +118,6 @@ function ObjectRow({
   );
 }
 
-// Inline filter bar for a large schema: scoped search + privilege chips.
 function SchemaFilterBar({
   columns,
   counts,
@@ -273,10 +271,7 @@ function SchemaSectionHeader({
   );
 }
 
-function shouldShowHiddenObjectCount(
-  showAll: boolean,
-  overflow: number
-): boolean {
+function shouldShowHiddenObjectCount(showAll: boolean, overflow: number) {
   return !showAll && overflow > 0;
 }
 
@@ -376,9 +371,6 @@ function SchemaSectionBody({
   );
 }
 
-// All of a schema section's view state lives in one reducer: its
-// expand/filter/search controls move together, so a single dispatch keeps
-// updates consistent (and avoids stale-closure spreads on the privilege map).
 interface SchemaSectionState {
   grantOnly: boolean;
   open: boolean;
@@ -398,12 +390,12 @@ type SchemaSectionAction =
 function schemaSectionReducer(
   state: SchemaSectionState,
   action: SchemaSectionAction
-): SchemaSectionState {
+) {
   switch (action.type) {
     case "toggleOpen":
-      return { ...state, open: !state.open };
+      return { ...state, open: !state.open } satisfies SchemaSectionState;
     case "setSearch":
-      return { ...state, search: action.value };
+      return { ...state, search: action.value } satisfies SchemaSectionState;
     case "togglePriv":
       return {
         ...state,
@@ -411,20 +403,26 @@ function schemaSectionReducer(
           ...state.privFilter,
           [action.name]: !(state.privFilter[action.name] === true),
         },
-      };
+      } satisfies SchemaSectionState;
     case "toggleGrantOnly":
-      return { ...state, grantOnly: !state.grantOnly };
+      return {
+        ...state,
+        grantOnly: !state.grantOnly,
+      } satisfies SchemaSectionState;
     case "setShowAll":
-      return { ...state, showAll: action.value };
+      return { ...state, showAll: action.value } satisfies SchemaSectionState;
     case "clearFilters":
-      return { ...state, grantOnly: false, privFilter: {}, search: "" };
+      return {
+        ...state,
+        grantOnly: false,
+        privFilter: {},
+        search: "",
+      } satisfies SchemaSectionState;
     default:
       return state;
   }
 }
 
-// One schema within a schema-grouped object type. Header carries the density
-// rollup; the body reveals object rows (with an inline filter bar when large).
 function SchemaSection({
   columns,
   defaultOpen,
@@ -554,7 +552,6 @@ function GroupHeader({
   );
 }
 
-// Schema-grouped object type (tables / views / sequences / functions …).
 function SchemaGroupedGroup({
   objects,
   title,
@@ -606,7 +603,6 @@ function SchemaGroupedGroup({
   );
 }
 
-// Flat object type (database / schemas) — rows are the objects themselves.
 function FlatGroup({
   objects,
   title,
@@ -674,7 +670,6 @@ function FlatGroup({
   );
 }
 
-// The hairline-separated list of object-type groups. Assumes objects.length > 0.
 export function GrantGroups({ objects }: { objects: GrantedObject[] }) {
   const byType = new Map<GrantObjectType, GrantedObject[]>();
   for (const object of objects) {

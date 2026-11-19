@@ -20,10 +20,7 @@ interface BlockingAppRouteFacts {
   setupStatus: "boot_error" | "booting" | "onboarding" | "ready" | "verifying";
 }
 
-function decideBlockingAppState({
-  currentHref,
-  error,
-}: BlockingAppStateFacts): BlockingAppStateDecision {
+function decideBlockingAppState({ currentHref, error }: BlockingAppStateFacts) {
   const redirectTo = getBlockingRoutePath(error.blockingReason);
 
   return {
@@ -31,7 +28,7 @@ function decideBlockingAppState({
     redirectTo,
     returnTo: redirectTo ? (currentHref ?? null) : null,
     setupRequired: error.blockingReason === "setup_required",
-  };
+  } satisfies BlockingAppStateDecision;
 }
 
 interface BlockingAppNavigateOptions {
@@ -47,7 +44,7 @@ function decideBlockingAppRedirect({
   currentHref,
   returnTo,
   setupStatus,
-}: BlockingAppRouteFacts): BlockingAppNavigateOptions | null {
+}: BlockingAppRouteFacts) {
   const blockingRoutePath = getBlockingRoutePath(blockingReason ?? null);
   const targetPath =
     blockingRoutePath ?? (setupStatus === "onboarding" ? "/setup" : null);
@@ -62,7 +59,7 @@ function decideBlockingAppRedirect({
       returnTo: returnTo ?? currentHref,
     },
     to: targetPath,
-  };
+  } satisfies BlockingAppNavigateOptions | null;
 }
 
 export type { BlockingAppNavigateOptions, BlockingAppStateDecision };

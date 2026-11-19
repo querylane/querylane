@@ -1,21 +1,7 @@
 import type { Interceptor } from "@connectrpc/connect";
 
-/**
- * Caps concurrent unary RPCs per user-managed PostgreSQL instance.
- *
- * The browser allows only ~6 concurrent HTTP/1.1 connections per origin. A
- * single unreachable instance (e.g. a serverless database still waking up)
- * can otherwise occupy every slot with hanging requests, starving RPCs for
- * healthy instances and the meta database and making the whole app appear
- * frozen. Capping at 4 always leaves slots free for everything else.
- */
 const INSTANCE_RPC_CONCURRENCY_LIMIT = 4;
 
-/**
- * Services whose requests are executed against a user-managed instance.
- * Meta-database-only services (InstanceService, OnboardingService,
- * ConsoleService) bypass the limiter.
- */
 const INSTANCE_SCOPED_SERVICE_TYPE_NAMES: ReadonlySet<string> = new Set([
   "querylane.console.v1alpha1.DatabaseService",
   "querylane.console.v1alpha1.ExtensionService",
@@ -29,7 +15,7 @@ const INSTANCE_SCOPED_SERVICE_TYPE_NAMES: ReadonlySet<string> = new Set([
 
 const INSTANCE_RESOURCE_NAME_PATTERN = /^instances\/[^/]+/u;
 
-function extractInstanceScopeKey(message: unknown): string | null {
+function extractInstanceScopeKey(message: unknown) {
   if (typeof message !== "object" || message === null) {
     return null;
   }
@@ -56,7 +42,7 @@ interface KeyedRpcSemaphore {
   acquire: (key: string, signal?: AbortSignal) => Promise<() => void>;
 }
 
-function abortError(reason: unknown): Error {
+function abortError(reason: unknown) {
   if (reason instanceof Error) {
     return reason;
   }
@@ -68,7 +54,7 @@ function abortError(reason: unknown): Error {
   return error;
 }
 
-function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
+function createKeyedRpcSemaphore(limit: number) {
   const activeCounts = new Map<string, number>();
   const queues = new Map<string, QueuedAcquire[]>();
 
@@ -117,7 +103,7 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
     queues.set(key, [waiter]);
   }
 
-  function acquire(key: string, signal?: AbortSignal): Promise<() => void> {
+  function acquire(key: string, signal?: AbortSignal) {
     if (signal?.aborted === true) {
       return Promise.reject(abortError(signal.reason));
     }
@@ -129,7 +115,7 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
       });
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise<() => void>((resolve, reject) => {
       const waiter: QueuedAcquire = {
         onDispatch: () => {
           signal?.removeEventListener("abort", onAbort);
@@ -151,17 +137,13 @@ function createKeyedRpcSemaphore(limit: number): KeyedRpcSemaphore {
     });
   }
 
-  return { acquire };
+  return { acquire } satisfies KeyedRpcSemaphore;
 }
 
-function createInstanceRpcConcurrencyInterceptor(
-  limit: number = INSTANCE_RPC_CONCURRENCY_LIMIT
-): Interceptor {
-  // UX-only backpressure for browser fan-out. The backend live-query limiter
-  // is the security boundary because callers can bypass this interceptor.
-  const semaphore = createKeyedRpcSemaphore(limit);
+function createInstanceRpcConcurrencyInterceptor() {
+  const semaphore = createKeyedRpcSemaphore(INSTANCE_RPC_CONCURRENCY_LIMIT);
 
-  return (next) => async (req) => {
+  return ((next) => async (req) => {
     if (req.stream) {
       return await next(req);
     }
@@ -180,13 +162,7 @@ function createInstanceRpcConcurrencyInterceptor(
     } finally {
       release();
     }
-  };
+  }) satisfies Interceptor;
 }
 
-export {
-  createInstanceRpcConcurrencyInterceptor,
-  createKeyedRpcSemaphore,
-  extractInstanceScopeKey,
-  INSTANCE_RPC_CONCURRENCY_LIMIT,
-  INSTANCE_SCOPED_SERVICE_TYPE_NAMES,
-};
+export { createInstanceRpcConcurrencyInterceptor };

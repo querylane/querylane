@@ -24,16 +24,16 @@ export function ConfigManagedEmptyState({
   );
   const snippet = buildConfigManagedInstanceSnippet(configFilePath);
   useEffect(
-    function resetCopyStateFeedback(): (() => void) | undefined {
+    function resetCopyStateFeedback() {
       if (copyState === "idle") {
         return undefined;
       }
       const resetTimer = globalThis.window.setTimeout(() => {
         setCopyState("idle");
       }, COPY_FEEDBACK_RESET_MS);
-      return () => {
+      return (() => {
         globalThis.window.clearTimeout(resetTimer);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [copyState]
   );

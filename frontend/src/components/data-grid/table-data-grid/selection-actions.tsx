@@ -20,9 +20,6 @@ const FORMAT_ITEMS: {
   label: string;
 }[] = [
   { format: "csv", label: "CSV" },
-  // jsonb/bytea/timestamp values are emitted as quoted strings without
-  // type casts, so the INSERT statements won't round-trip for those types.
-  // Surface that caveat in the label until proper casting lands.
   { format: "sql", label: "SQL (plain literals)" },
   { format: "json", label: "JSON" },
 ];
@@ -33,8 +30,6 @@ function SelectionActions({
   onCopy,
   onExport,
 }: SelectionActionsProps) {
-  // Selection remains read-only until row update/delete RPCs exist. Keep this
-  // toolbar to copy/export only.
   return (
     <div className="flex items-center gap-1">
       <FormatDropdown

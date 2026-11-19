@@ -27,9 +27,6 @@ const AppSidebar = lazy(() =>
 );
 
 function SidebarFallback({ isExplorerRoute }: { isExplorerRoute: boolean }) {
-  // On the explorer route the rail mounts a database button + filter + object
-  // tree. Match that shape here so the lazy-chunk hand-off doesn't morph the
-  // nav skeleton into a different layout as it swaps to the real rail.
   if (isExplorerRoute) {
     return (
       <aside
@@ -64,11 +61,6 @@ function SidebarFallback({ isExplorerRoute }: { isExplorerRoute: boolean }) {
   );
 }
 
-/**
- * Last-resort boundary between the shell and page content: whatever a page
- * throws during render, the header and sidebar stay mounted and interactive.
- * Resets on navigation so moving to another page recovers automatically.
- */
 function ShellContentBoundary({ children }: { children: React.ReactNode }) {
   const locationKey = useLocation({ select: (location) => location.href });
   return (
@@ -102,12 +94,6 @@ export function DatabaseLayout({
       (state.onboardingState?.configFilePath ?? "") || DEFAULT_CONFIG_FILE_PATH
   );
 
-  // Data Explorer renders its own full-bleed layout with an internal sidebar.
-  // Use the committed page match from the parent route so pending navigations
-  // keep the current page until the next route is ready.
-  // The SQL workbench is an editor surface: it owns its own scrolling panes,
-  // fills the main area edge to edge, and hosts an object browser in the rail
-  // like the explorer does.
   const isExplorerRoute =
     page === "database.explorer" ||
     page === "database.sql" ||
@@ -124,8 +110,6 @@ export function DatabaseLayout({
         <SidebarProvider
           className={cn(
             "!h-svh !max-h-svh",
-            // With the object tree living in the single rail, give the
-            // explorer a wider rail than the workspace default.
             isExplorerRoute && "[--sidebar-width:19rem]"
           )}
         >
@@ -153,9 +137,6 @@ export function DatabaseLayout({
                 ) : null}
                 <div
                   className={cn(
-                    // `relative` keeps absolutely-positioned descendants (e.g.
-                    // sr-only labels) anchored inside this scroll container
-                    // instead of escaping it and stretching the document.
                     "relative min-w-0 flex-1 [:root:active-view-transition-type(page-navigation)_&]:[view-transition-name:page-content]",
                     mainOverflowClass,
                     mainPaddingClass

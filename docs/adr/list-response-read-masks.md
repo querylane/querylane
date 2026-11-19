@@ -58,18 +58,10 @@ while its local projection preference is unchanged.
 
 ## Tabular view coverage
 
-`frontend/e2e/tests/list-column-selection.spec.ts` drives the real routes through
-selection, URL persistence, reload and reset. It covers:
-
-- Instance databases, application connections, live sessions, and roles.
-- Schema objects; table columns, keys, indexes, constraints and partitions.
-- Table data and materialized-view data.
-- Role object grants and owned objects.
-- Extensions (including explicit Description visibility on narrow screens).
-- Query insights (reopen the inspector after reload; dialog state is not shared).
-- Admin replicas, job queue, catalog synchronization and storage.
-- SQL and SQL workbench results. Reload restores a draft and column preferences,
-  never execution; the test explicitly runs the query again.
+The Playwright journey in `frontend/e2e/journeys/instance-detail.e2e.test.ts`
+checks the shared column picker on the roles route: selection narrows the
+`ListRoles` read mask, survives reload via the URL, and resets to the default
+columns. Other tables share the picker and URL-state implementation.
 
 SQL result visibility is presentation-only. It preserves the original statement,
 complete backing result, copy/export data and server work. Duplicate column names

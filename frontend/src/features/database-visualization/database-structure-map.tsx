@@ -189,13 +189,13 @@ function StatCard({
   );
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "An unknown error occurred.";
 }
 
 function databaseMapTargetNodeId(
   targetResource: DatabaseStructureMapTargetResource | undefined
-): string | null {
+) {
   if (!targetResource) {
     return null;
   }
@@ -416,7 +416,7 @@ function isDatabaseMapVisibleNodeKind(
 function isDatabaseMapNodeVisible(
   node: VisualizationNode,
   visibleNodeKinds: DatabaseMapNodeVisibility
-): boolean {
+) {
   if (!isDatabaseMapVisibleNodeKind(node.kind)) {
     return true;
   }
@@ -431,7 +431,7 @@ function filterStructureMapModel({
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
   visibleNodeKinds: DatabaseMapNodeVisibility;
-}): { edges: VisualizationEdge[]; nodes: VisualizationNode[] } {
+}) {
   const visibleNodes = nodes.filter((node) =>
     isDatabaseMapNodeVisible(node, visibleNodeKinds)
   );
@@ -442,7 +442,7 @@ function filterStructureMapModel({
         visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
     ),
     nodes: visibleNodes,
-  };
+  } satisfies { edges: VisualizationEdge[]; nodes: VisualizationNode[] };
 }
 
 function focusedMapResources({
@@ -457,11 +457,7 @@ function focusedMapResources({
   tables: StructureMapTable[];
   targetResource: DatabaseStructureMapTargetResource | undefined;
   views: StructureMapView[];
-}): {
-  focusedResourceLabel: string | null;
-  tables: StructureMapTable[];
-  views: StructureMapView[];
-} {
+}) {
   if (
     !(
       isResourceFocusEnabled &&
@@ -471,7 +467,11 @@ function focusedMapResources({
       targetResource.name.length > 0
     )
   ) {
-    return { focusedResourceLabel: null, tables, views };
+    return { focusedResourceLabel: null, tables, views } satisfies {
+      focusedResourceLabel: string | null;
+      tables: StructureMapTable[];
+      views: StructureMapView[];
+    };
   }
 
   if (targetResource.category === "tables") {
@@ -483,6 +483,10 @@ function focusedMapResources({
           table.tableName === targetResource.name
       ),
       views: [],
+    } satisfies {
+      focusedResourceLabel: string | null;
+      tables: StructureMapTable[];
+      views: StructureMapView[];
     };
   }
 
@@ -494,6 +498,10 @@ function focusedMapResources({
         view.schemaName === targetResource.schemaName &&
         view.viewName === targetResource.name
     ),
+  } satisfies {
+    focusedResourceLabel: string | null;
+    tables: StructureMapTable[];
+    views: StructureMapView[];
   };
 }
 

@@ -65,9 +65,6 @@ function useDataExplorerPageController({
   const [tableListSort, setTableListSort] = useState<TableListSort>(
     DEFAULT_TABLE_LIST_SORT
   );
-  // Category expansion and infinite-page cursors are transient object-browser
-  // mechanics. The URL carries stable resource identity + simple `q`, not a
-  // full replay log of sidebar expansion or paging state.
   const debouncedQuery = useDebouncedValue(query, EXPLORER_SEARCH_DEBOUNCE_MS);
   const [expandedCategories, setExpandedCategories] = useState<
     Set<CategoryKey>
@@ -116,8 +113,6 @@ function useDataExplorerPageController({
     handleNavigationResult(
       navigate({
         params: { databaseId, instanceId },
-        // Filter tweaks replace the current entry so Back leaves the table
-        // instead of stepping through every keystroke's search state.
         replace: options?.replace === true,
         search: (previous) => buildExplorerSearch(previous, patch),
         to: "/instances/$instanceId/databases/$databaseId/explorer",

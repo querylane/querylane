@@ -24,8 +24,6 @@ interface FilterRowProps {
   rule: TableFilterRule;
 }
 
-// Matches the sidebar search debounce so value edits commit one rule change
-// (one server query + one history entry) per typing pause, not per keystroke.
 const FILTER_VALUE_DEBOUNCE_MS = 200;
 
 const DATA_TYPE_PLACEHOLDERS: Partial<Record<DataType, string>> = {
@@ -41,7 +39,7 @@ const DATA_TYPE_PLACEHOLDERS: Partial<Record<DataType, string>> = {
 function getValuePlaceholder(
   rule: TableFilterRule,
   column: TableResultColumn | undefined
-): string {
+) {
   if (FILTER_OPERATOR_META[rule.operator].valueCount === "list") {
     return "pending, failed";
   }
@@ -64,7 +62,7 @@ function useDebouncedRuleValue(
   committedValue: string,
   commit: (next: string) => void,
   resetKey: string
-): [string, (next: string) => void] {
+) {
   const [draft, setDraft] = useState(committedValue);
   const commitDraft = useEffectEvent(commit);
   const [previousState, setPreviousState] = useState(() => ({
@@ -75,29 +73,26 @@ function useDebouncedRuleValue(
     previousState.committedValue !== committedValue ||
     previousState.resetKey !== resetKey
   ) {
-    // Adjust during render: external rule updates (operator reset, chip
-    // removal, URL normalization) replace the local draft. resetKey covers
-    // branch changes where the committed value stays empty.
     setPreviousState({ committedValue, resetKey });
     setDraft(committedValue);
   }
 
   useEffect(
-    function commitDraftAfterTypingPause(): (() => void) | undefined {
+    function commitDraftAfterTypingPause() {
       if (draft === committedValue) {
         return undefined;
       }
       const timeoutId = globalThis.window.setTimeout(() => {
         commitDraft(draft);
       }, FILTER_VALUE_DEBOUNCE_MS);
-      return () => {
+      return (() => {
         globalThis.window.clearTimeout(timeoutId);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [committedValue, draft]
   );
 
-  return [draft, setDraft];
+  return [draft, setDraft] satisfies [string, (next: string) => void];
 }
 
 function BooleanValueSelect({
@@ -148,9 +143,6 @@ function FilterRow({
   );
   const operatorMeta = FILTER_OPERATOR_META[rule.operator];
   const operators = getOperatorsForColumn(column);
-  // Base UI's <Select.Value> only renders the item label (e.g. "!=") when the
-  // root is given an `items` map; otherwise it falls back to the raw value
-  // (e.g. "ne"). The SelectItem `label` prop only drives keyboard typeahead.
   const operatorItems = operators.map((operator) => ({
     label: FILTER_OPERATOR_META[operator].label,
     value: operator,
@@ -219,8 +211,6 @@ function FilterRow({
     if (event.key !== "Enter") {
       return;
     }
-    // Commit the local draft ahead of the debounce so the apply that follows
-    // sees the freshly typed value instead of the last committed one.
     commitDraft();
     onApplyRequest();
   }

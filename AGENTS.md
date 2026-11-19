@@ -23,3 +23,5 @@ task backend:test:integration task proto:generate
 - API follows Google AIP guidelines (AIP-132 pagination, AIP-161 field masks).
 - Review guidance lives in `REVIEW.md`.
 - Visual recaps must apply `.agents/visual-recap-querylane.md`.
+
+- For frontend work, follow [frontend/AGENTS.md](frontend/AGENTS.md). Its test policy is enforced by the shared CI lint gate.

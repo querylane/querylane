@@ -5,7 +5,7 @@ type Context = Parameters<Rule["create"]>[0];
 type Node = Parameters<Context["sourceCode"]["getScope"]>[0];
 const memoNames = new Set(["memo", "useMemo", "useCallback"]);
 
-function propertyName(node: Node): string | undefined {
+function propertyName(node: Node) {
   if (node.type === "Identifier") {
     return node.name;
   }
@@ -14,20 +14,16 @@ function propertyName(node: Node): string | undefined {
     : undefined;
 }
 
-function accessedName(node: Node, computed: boolean): string | undefined {
+function accessedName(node: Node, computed: boolean) {
   return computed && node.type !== "Literal" ? undefined : propertyName(node);
 }
 
-function isMemoAccess(node: Node, computed: boolean): boolean {
+function isMemoAccess(node: Node, computed: boolean) {
   const name = accessedName(node, computed);
   return (computed && name === undefined) || memoNames.has(name ?? "");
 }
 
-function namespaceDefinition(
-  node: Node,
-  context: Context,
-  seen: Set<Node>
-): boolean {
+function namespaceDefinition(node: Node, context: Context, seen: Set<Node>) {
   if (node.type !== "Identifier") {
     return false;
   }
@@ -58,11 +54,11 @@ function namespaceDefinition(
   return false;
 }
 
-function isReactNamespace(
+const isReactNamespace: (
   node: Node,
   context: Context,
-  seen = new Set<Node>()
-): boolean {
+  seen?: Set<Node>
+) => boolean = (node, context, seen = new Set<Node>()) => {
   let current = node;
   while (current.type === "AwaitExpression") {
     current = current.argument;
@@ -77,7 +73,7 @@ function isReactNamespace(
     );
   }
   return namespaceDefinition(current, context, seen);
-}
+};
 
 const noManualMemoization: Rule = {
   meta: {

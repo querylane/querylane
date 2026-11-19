@@ -6,15 +6,15 @@ const PLAN_MS_WITH_TWO_DECIMALS = 10;
 const PLAN_MS_ZERO_THRESHOLD = 0.01;
 const DEFAULT_SUMMARY_LENGTH = 120;
 
-function formatRowCount(count: number): string {
+function formatRowCount(count: number) {
   return `${NUMBER_FORMAT.format(count)} ${count === 1 ? "row" : "rows"}`;
 }
 
-function formatCount(count: number): string {
+function formatCount(count: number) {
   return NUMBER_FORMAT.format(count);
 }
 
-function formatDurationMs(ms: number): string {
+function formatDurationMs(ms: number) {
   if (ms < 1) {
     return "<1 ms";
   }
@@ -30,7 +30,7 @@ function formatDurationMs(ms: number): string {
   return `${minutes}m ${remainder}s`;
 }
 
-function formatPlanMs(ms: number): string {
+function formatPlanMs(ms: number) {
   if (ms < PLAN_MS_ZERO_THRESHOLD) {
     return "0.00 ms";
   }
@@ -44,7 +44,7 @@ function formatPlanMs(ms: number): string {
 function summarizeStatement(
   statement: string,
   maxLength = DEFAULT_SUMMARY_LENGTH
-): string {
+) {
   const collapsed = statement
     .replaceAll(/--[^\n]*/gu, " ")
     .replaceAll(/\/\*[\s\S]*?\*\//gu, " ")

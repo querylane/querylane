@@ -1,6 +1,6 @@
 type ResultsTab = "messages" | "plan" | "results";
 
-function parseResultsTab(value: unknown): ResultsTab {
+function parseResultsTab(value: unknown) {
   return value === "messages" || value === "plan" ? value : "results";
 }
 

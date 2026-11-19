@@ -1,14 +1,11 @@
 import { defineRule } from "@rsdoctor/core";
 import { Err, type Linter, type SDK } from "@rsdoctor/shared/types";
 
-// Keep this list limited to intentionally deferred feature dependencies, not
-// every vendor package. oniguruma-to-es/parser power Shiki's allowed JS engine.
 const HEAVY_PACKAGE =
   /\/node_modules\/(?<capture1>@tanstack\/charts|@xyflow\/[^/]+|d3-[^/]+|react-data-grid|chrono-node|shiki|@shikijs\/[^/]+|oniguruma-to-es|oniguruma-parser)\//u;
 const SHIKI_ONIGURUMA =
   /\/node_modules\/(?:@shikijs\/engine-oniguruma\/|shiki\/dist\/(?:engine\/oniguruma\.mjs|wasm\.mjs|onig\.wasm)(?:$|[?#]))/u;
-// Representative landing, form, overview, and explorer boundaries. Deliberate
-// sentinels: unrelated async vendor chunks cannot satisfy route splitting.
+
 const REQUIRED_ROUTE_SPLITS = [
   "index.tsx",
   "new-instance.tsx",
@@ -27,8 +24,7 @@ function* emittedModules(chunkGraph: SDK.ChunkGraphInstance) {
       }
       visited.add(module);
       yield { chunk, module };
-      // Concatenated children have no direct chunks of their own. Traversing
-      // from emitted chunks also excludes modules removed by tree-shaking.
+
       pending.push(...module.getNormalModules());
     }
   }
@@ -36,9 +32,7 @@ function* emittedModules(chunkGraph: SDK.ChunkGraphInstance) {
 
 function enforceBundleContracts({
   validateResult,
-}: Pick<Linter.RuleCheckerContextForCheckEnd, "validateResult">): void {
-  // Rsdoctor 1.6.4 forwards even Error findings to compilation.warnings.
-  // Fail only our contracts, after every rule has reported its diagnostics.
+}: Pick<Linter.RuleCheckerContextForCheckEnd, "validateResult">) {
   const titles = new Set(
     bundleContractRules.map((rule) => rule.meta.title.toUpperCase())
   );
@@ -57,7 +51,7 @@ function enforceBundleContracts({
 
 function routeComponentPath(modulePath: string) {
   const [path = "", query] = modulePath.replaceAll("\\", "/").split("?");
-  // TanStack encodes grouped split targets with `---` separators.
+
   const targets = new URLSearchParams(query).get("tsr-split")?.split("---");
   return targets?.includes("component") === true ? path : "";
 }

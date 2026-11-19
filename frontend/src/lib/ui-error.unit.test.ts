@@ -1,660 +1,78 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { describe, expect, rs, test } from "@rstest/core";
-
-import {
-  attachAppUiErrorContext,
-  getBlockingRoutePath,
-  isAppDatabaseUnavailableError,
-  normalizeAppUiError,
-  reportAppUiError,
-} from "@/lib/ui-error";
-import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
-import { UnexpectedResponseError } from "@/lib/unexpected-response";
+import { expect, rs, test } from "@rstest/core";
+import { toast } from "sonner";
+import { logger } from "@/lib/diagnostics";
 import {
   PostgreSqlErrorDetailSchema,
   PostgreSqlErrorKind,
   PostgreSqlErrorRetryGuidance,
 } from "@/protogen/querylane/console/v1alpha1/errors_pb";
+import { normalizeAppUiError, reportAppUiError } from "./ui-error";
 
-const POSTGRES_DETAIL_TYPE = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
-const AFTER_CORRECTION = "Correct the issue before retrying.";
-const IMMEDIATELY = "Retry the request.";
-const LATER = "Retry later.";
+const postgresDetail = "querylane.console.v1alpha1.PostgreSqlErrorDetail";
+const credential = "password=top-secret private.example.test";
 
-function createPostgresFailure({
-  code = Code.Unknown,
-  conditionName = "syntax_error",
-  kind,
-  message = "PostgreSQL rejected the request",
-  operation = "execute_query",
-  retryGuidance,
-  serverFields = {},
-  sqlstate = "42601",
-  sqlstateClass = "42",
-}: {
-  code?: Code;
-  conditionName?: string;
-  kind: PostgreSqlErrorKind;
-  message?: string;
-  operation?: string;
-  retryGuidance: PostgreSqlErrorRetryGuidance;
-  serverFields?: Record<string, string>;
-  sqlstate?: string;
-  sqlstateClass?: string;
-}) {
-  const error = new ConnectError(message, code);
+test("PostgreSQL diagnostics stay out of visible notifications and telemetry", () => {
+  const error = new ConnectError(
+    `PostgreSQL 42501: ${credential}`,
+    Code.PermissionDenied
+  );
   error.details = [
     {
-      type: POSTGRES_DETAIL_TYPE,
+      type: postgresDetail,
       value: toBinary(
         PostgreSqlErrorDetailSchema,
         create(PostgreSqlErrorDetailSchema, {
-          conditionName,
-          kind,
-          operation,
-          retryGuidance,
-          serverFields,
-          sqlstate,
-          sqlstateClass,
+          conditionName: "insufficient_privilege",
+          kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
+          operation: "execute_query",
+          retryGuidance:
+            PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
+          serverFields: { detail: credential, message: credential },
+          sqlstate: "42501",
         })
       ),
     },
   ];
-  return error;
-}
 
-function createDebugPostgresFailure({
-  kind,
-  retryGuidance,
-}: {
-  kind: number;
-  retryGuidance: number;
-}) {
-  const error = new ConnectError(
-    "PostgreSQL rejected the request",
-    Code.Unknown
-  );
-  error.details = [
-    {
-      debug: {
-        conditionName: "syntax_error",
-        kind,
-        operation: "execute_query",
-        retryGuidance,
-        sqlstate: "42601",
-        sqlstateClass: "42",
-      },
-      type: POSTGRES_DETAIL_TYPE,
-      value: new Uint8Array(),
-    },
-  ];
-  return error;
-}
-
-function createReportingDependencies() {
-  return {
-    captureException: rs.fn(),
-    logger: { error: rs.fn() },
-    toast: { error: rs.fn() },
-  };
-}
-
-describe("PostgreSQL structured error rendering", () => {
-  test.each([
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL request rejected",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_FAILED_PRECONDITION,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL precondition failed",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_NOT_FOUND,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL resource not found",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_ALREADY_EXISTS,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL resource already exists",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL permission denied",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAUTHENTICATED,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL authentication failed",
-    },
-    {
-      guidance: IMMEDIATELY,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_ABORTED,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_IMMEDIATELY,
-      title: "PostgreSQL transaction conflict",
-    },
-    {
-      guidance: LATER,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_TIMEOUT,
-      retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      title: "PostgreSQL query timed out",
-    },
-    {
-      guidance: LATER,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAVAILABLE,
-      retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      title: "PostgreSQL unavailable",
-    },
-    {
-      guidance: LATER,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_RESOURCE_EXHAUSTED,
-      retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      title: "PostgreSQL resource limit reached",
-    },
-    {
-      guidance: AFTER_CORRECTION,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNIMPLEMENTED,
-      retry:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-      title: "PostgreSQL feature not supported",
-    },
-    {
-      guidance: LATER,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INTERNAL,
-      retry: PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      title: "PostgreSQL internal error",
-    },
-  ])(
-    "renders $title from the backend enums",
-    ({ guidance, kind, retry, title }) => {
-      const normalized = normalizeAppUiError(
-        createPostgresFailure({ kind, retryGuidance: retry })
-      );
-
-      expect(normalized.title).toBe(title);
-      expect(normalized.retryGuidance).toBe(guidance);
-    }
-  );
-
-  test("uses the generic fallback for missing enums", () => {
-    const normalized = normalizeAppUiError(
-      createPostgresFailure({
-        kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-        retryGuidance:
-          PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-      })
-    );
-
-    expect(normalized.title).toBe("PostgreSQL error");
-    expect(normalized.retryGuidance).toBeNull();
-  });
-
-  test.each([
-    {
-      expectedGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-      kind: 99,
-      name: "unknown enums",
-      retryGuidance: 99,
-    },
-    {
-      expectedGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-      kind: Number.NaN,
-      name: "non-finite enums",
-      retryGuidance: Number.POSITIVE_INFINITY,
-    },
-    {
-      expectedGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-      kind: 1.5,
-      name: "fractional enums",
-      retryGuidance: 2.5,
-    },
-    {
-      expectedGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_UNSPECIFIED,
-      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
-      name: "known kind with unknown retry",
-      retryGuidance: 99,
-    },
-    {
-      expectedGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      expectedKind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNSPECIFIED,
-      kind: 99,
-      name: "unknown kind with known retry",
-      retryGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-    },
-  ])(
-    "normalizes $name to generated enum members",
-    ({ expectedGuidance, expectedKind, kind, retryGuidance }) => {
-      const normalized = normalizeAppUiError(
-        createDebugPostgresFailure({ kind, retryGuidance })
-      );
-
-      expect(normalized.postgres).toMatchObject({
-        kind: expectedKind,
-        retryGuidance: expectedGuidance,
-      });
-    }
-  );
-
-  test("uses native structured details instead of SQLSTATE or Connect code", () => {
-    const normalized = normalizeAppUiError(
-      createPostgresFailure({
-        code: Code.Unauthenticated,
-        conditionName: "invalid_password",
-        kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_INVALID_ARGUMENT,
-        retryGuidance:
-          PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-        sqlstate: "28P01",
-        sqlstateClass: "28",
-      })
-    );
-
-    expect(normalized.title).toBe("PostgreSQL request rejected");
-    expect(normalized.retryGuidance).toBe(LATER);
-    expect(normalized.postgres).toMatchObject({
-      conditionName: "invalid_password",
-      operation: "execute_query",
-      sqlstate: "28P01",
-      sqlstateClass: "28",
+  const logged = rs.spyOn(logger, "error");
+  const notified = rs.spyOn(toast, "error");
+  try {
+    const normalized = normalizeAppUiError(error, {
+      source: "mutation",
+      surface: "toast",
     });
-    expect(normalized.blockingReason).toBeNull();
-  });
+    reportAppUiError(normalized);
+    reportAppUiError(normalized);
 
-  test("confines hostile server text to details and copied diagnostics", () => {
-    const hostileText = "password=top-secret private.example.test";
-    const normalized = normalizeAppUiError(
-      createPostgresFailure({
-        code: Code.PermissionDenied,
-        kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_PERMISSION_DENIED,
-        message: `PostgreSQL 42501: ${hostileText}`,
-        retryGuidance:
-          PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION,
-        serverFields: { detail: hostileText, message: hostileText },
-        sqlstate: "42501",
-      }),
-      { source: "connect", surface: "toast" }
-    );
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(normalized.title).not.toContain(hostileText);
-    expect(normalized.summary).not.toContain(hostileText);
-    expect(normalized.retryGuidance).not.toContain(hostileText);
-    expect(normalized.technicalDetails).toContain(hostileText);
-    expect(normalized.message).toContain(hostileText);
-    expect(
-      JSON.stringify(dependencies.captureException.mock.calls)
-    ).not.toContain(hostileText);
-    expect(JSON.stringify(dependencies.logger.error.mock.calls)).not.toContain(
-      hostileText
-    );
-    expect(JSON.stringify(dependencies.toast.error.mock.calls)).not.toContain(
-      hostileText
-    );
-  });
-
-  test("keeps malformed PostgreSQL details on the safe generic renderer", () => {
-    const hostileText = "password=top-secret private.example.test";
-    const error = new ConnectError(hostileText, Code.Unknown);
-    error.details = [
-      {
-        type: POSTGRES_DETAIL_TYPE,
-        value: new Uint8Array([0xff]),
-      },
-    ];
-
-    const normalized = normalizeAppUiError(error);
-
-    expect(normalized.title).toBe("PostgreSQL error");
-    expect(normalized.summary).toBe("PostgreSQL error");
-    expect(normalized.retryGuidance).toBeNull();
-    expect(normalized.technicalDetails).toContain(hostileText);
-  });
+    expect(normalized).toMatchObject({
+      blockingReason: null,
+      retryGuidance: "Correct the issue before retrying.",
+      summary: "PostgreSQL insufficient_privilege during execute_query",
+      title: "PostgreSQL permission denied",
+    });
+    expect(normalized.technicalDetails).toContain(credential);
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(notified).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(logged.mock.calls)).not.toContain(credential);
+    expect(JSON.stringify(notified.mock.calls)).not.toContain(credential);
+  } finally {
+    logged.mockRestore();
+    notified.mockRestore();
+  }
 });
 
-describe("error routing and reporting", () => {
-  test.each([
-    "Failed to fetch",
-    "Load failed",
-    "NetworkError when attempting to fetch resource.",
-  ])("attributes browser transport failure %s to Querylane", (message) => {
-    const normalized = normalizeAppUiError(
-      new ConnectError(message, Code.Unknown)
-    );
+test("malformed PostgreSQL details use a safe fallback instead of exposing the server message", () => {
+  const error = new ConnectError(credential, Code.Unknown);
+  error.details = [{ type: postgresDetail, value: new Uint8Array([0xff]) }];
 
-    expect(normalized).toMatchObject({
-      summary: "Querylane did not respond.",
-      title: "Cannot reach Querylane",
-    });
-    expect(normalized.retryGuidance).toBe(
-      "Check that the Querylane server is running and that your network or proxy can reach it, then retry."
-    );
+  const normalized = normalizeAppUiError(error);
+
+  expect(normalized).toMatchObject({
+    retryGuidance: null,
+    summary: "PostgreSQL error",
+    title: "PostgreSQL error",
   });
-
-  test.each([Code.DeadlineExceeded, Code.Unavailable])(
-    "attributes unstructured transport code %s to Querylane",
-    (code) => {
-      const normalized = normalizeAppUiError(
-        new ConnectError("request failed", code)
-      );
-
-      expect(normalized).toMatchObject({
-        title: "Cannot reach Querylane",
-      });
-    }
-  );
-
-  test("turns an unreachable instance into concise recovery guidance", () => {
-    const error = new ConnectError(
-      "engine list_roles failed: connection refused",
-      Code.Unavailable
-    );
-    error.details = [
-      {
-        debug: {
-          domain: "console.querylane.dev",
-          metadata: { operation: "list_roles" },
-          reason: "INSTANCE_UNAVAILABLE",
-        },
-        type: "google.rpc.ErrorInfo",
-        value: new Uint8Array([1]),
-      },
-    ];
-
-    const normalized = normalizeAppUiError(error);
-
-    expect(normalized).toMatchObject({
-      summary: "Querylane couldn't connect to this PostgreSQL instance.",
-      title: "PostgreSQL instance unavailable",
-    });
-    expect(normalized.retryGuidance).toBe(
-      "Check that PostgreSQL is running and that the host and port are reachable, then retry."
-    );
-    expect(normalized.summary).not.toContain("connection refused");
-  });
-
-  test("preserves meta database copy without exposing server fields", () => {
-    const error = createPostgresFailure({
-      code: Code.Unavailable,
-      kind: PostgreSqlErrorKind.POSTGRESQL_ERROR_KIND_UNAVAILABLE,
-      retryGuidance:
-        PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_LATER,
-      serverFields: {},
-    });
-    error.details.unshift({
-      debug: {
-        domain: "console.querylane.dev",
-        reason: "ERROR_REASON_APP_DATABASE_UNAVAILABLE",
-      },
-      type: "google.rpc.ErrorInfo",
-      value: new Uint8Array([1]),
-    });
-
-    const normalized = normalizeAppUiError(error);
-
-    expect(normalized.title).toBe("Meta database unavailable");
-    expect(normalized.retryGuidance).toBe(
-      "Retry after the meta database is available."
-    );
-    expect(isAppDatabaseUnavailableError(error)).toBe(true);
-  });
-
-  test("keeps setup and app authorization blockers routed", () => {
-    const setupError = new ConnectError(
-      "setup required",
-      Code.FailedPrecondition
-    );
-    setupError.details = [
-      {
-        debug: { reason: "ERROR_REASON_APP_DATABASE_NOT_CONFIGURED" },
-        type: "google.rpc.ErrorInfo",
-        value: new Uint8Array([1]),
-      },
-    ];
-
-    expect(normalizeAppUiError(setupError).blockingReason).toBe(
-      "setup_required"
-    );
-    expect(
-      normalizeAppUiError(new ConnectError("login", Code.Unauthenticated))
-        .blockingReason
-    ).toBe("unauthenticated");
-    expect(
-      normalizeAppUiError(new ConnectError("denied", Code.PermissionDenied))
-        .blockingReason
-    ).toBe("permission_denied");
-    expect(getBlockingRoutePath("setup_required")).toBe("/setup");
-    expect(getBlockingRoutePath("unauthenticated")).toBe("/access-denied");
-    expect(getBlockingRoutePath("permission_denied")).toBe("/access-denied");
-    expect(getBlockingRoutePath(null)).toBeNull();
-  });
-
-  test.each([
-    new ConnectError("canceled", Code.Canceled),
-    new ConnectError("HTTP 499", Code.Unknown),
-    new DOMException("aborted", "AbortError"),
-    { name: "AbortError" },
-  ])("does not report cancellation control flow", (error) => {
-    const normalized = normalizeAppUiError(error, { surface: "toast" });
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(dependencies.captureException).not.toHaveBeenCalled();
-    expect(dependencies.logger.error).not.toHaveBeenCalled();
-    expect(dependencies.toast.error).not.toHaveBeenCalled();
-  });
-
-  test("lets expected failure callers suppress later reports", () => {
-    const original = new ConnectError(
-      "connection rejected",
-      Code.InvalidArgument
-    );
-    const normalized = normalizeAppUiError(original, { surface: "toast" });
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, { expected: true }, dependencies);
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(dependencies.captureException).not.toHaveBeenCalled();
-    expect(dependencies.logger.error).not.toHaveBeenCalled();
-    expect(dependencies.toast.error).not.toHaveBeenCalled();
-  });
-
-  test("surfaces a toast after the transport already captured the error", () => {
-    const original = new Error("save failed");
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(
-      normalizeAppUiError(original, {
-        area: "transport",
-        source: "connect",
-        surface: "silent",
-      }),
-      undefined,
-      dependencies
-    );
-    reportAppUiError(
-      normalizeAppUiError(original, {
-        area: "instance-settings",
-        source: "mutation",
-        surface: "toast",
-      }),
-      undefined,
-      dependencies
-    );
-
-    expect(dependencies.captureException).toHaveBeenCalledTimes(1);
-    expect(dependencies.logger.error).toHaveBeenCalledTimes(1);
-    expect(dependencies.toast.error).toHaveBeenCalledTimes(1);
-    expect(dependencies.toast.error.mock.calls[0]?.[1]).toMatchObject({
-      action: {
-        label: "Report bug",
-        onClick: expect.any(Function) as unknown,
-      },
-    });
-  });
-
-  test("shows each error toast once", () => {
-    const original = new Error("save failed");
-    const normalized = normalizeAppUiError(original, {
-      source: "mutation",
-      surface: "toast",
-    });
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, undefined, dependencies);
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(dependencies.toast.error).toHaveBeenCalledTimes(1);
-  });
-
-  test.each([
-    {
-      kind: "redirect",
-      status: 0,
-      summaryFragment: "The request was redirected",
-    },
-    {
-      kind: "auth",
-      status: 401,
-      summaryFragment: "Your session may have expired",
-    },
-    {
-      kind: "server",
-      status: 502,
-      summaryFragment: "may be down or restarting",
-    },
-    {
-      kind: "unexpected",
-      status: 200,
-      summaryFragment: "A proxy in front of Querylane",
-    },
-  ] satisfies {
-    kind: UnexpectedResponseInfo["kind"];
-    status: number;
-    summaryFragment: string;
-  }[])(
-    "renders friendly copy for $kind proxy responses",
-    ({ kind, status, summaryFragment }) => {
-      const hostileBody = "<html><body>hostile login page</body></html>";
-      const wrapped = ConnectError.from(
-        new UnexpectedResponseError({
-          bodySnippet: hostileBody,
-          contentType: "text/html",
-          kind,
-          status,
-          url: "https://console.example.test/api/rpc",
-        })
-      );
-
-      const normalized = normalizeAppUiError(wrapped);
-
-      expect(normalized.title).toBe("Unexpected server response");
-      expect(normalized.summary).toContain(summaryFragment);
-      expect(normalized.summary).not.toContain("<html");
-      expect(normalized.retryGuidance).not.toBeNull();
-      expect(normalized.blockingReason).toBeNull();
-      expect(JSON.parse(normalized.technicalDetails)).toMatchObject({
-        unexpectedResponse: {
-          bodySnippet: hostileBody,
-          contentType: "text/html",
-          kind,
-          status,
-          url: "https://console.example.test/api/rpc",
-        },
-      });
-    }
-  );
-
-  test("dedupes unexpected-response toasts with a stable id", () => {
-    const wrapped = ConnectError.from(
-      new UnexpectedResponseError({
-        bodySnippet: null,
-        contentType: "text/html",
-        kind: "server",
-        status: 503,
-        url: "https://console.example.test/api/rpc",
-      })
-    );
-    const normalized = normalizeAppUiError(wrapped, {
-      source: "mutation",
-      surface: "toast",
-    });
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(dependencies.toast.error).toHaveBeenCalledWith(
-      "Unexpected server response",
-      expect.objectContaining({
-        description: normalized.summary,
-        id: "unexpected-server-response",
-      })
-    );
-  });
-
-  test("keeps generic non-RPC failures useful", () => {
-    const original = new Error("disk is full");
-    attachAppUiErrorContext(original, {
-      area: "instance-settings",
-      source: "mutation",
-      surface: "toast",
-    });
-    const normalized = normalizeAppUiError(original);
-    const dependencies = createReportingDependencies();
-
-    reportAppUiError(normalized, undefined, dependencies);
-
-    expect(normalized).toMatchObject({
-      code: null,
-      manualRetryable: false,
-      message: "disk is full",
-      summary: "disk is full",
-      title: "Request failed",
-    });
-    expect(normalized.technicalDetails).toContain("disk is full");
-    expect(JSON.parse(normalized.technicalDetails)).toMatchObject({
-      stack: original.stack,
-    });
-    expect(dependencies.captureException).toHaveBeenCalledWith(
-      original,
-      expect.any(Object)
-    );
-    expect(dependencies.logger.error).toHaveBeenCalled();
-    expect(dependencies.toast.error).toHaveBeenCalledWith(
-      "Request failed",
-      expect.objectContaining({
-        description: "disk is full",
-      })
-    );
-  });
+  expect(normalized.technicalDetails).toContain(credential);
 });

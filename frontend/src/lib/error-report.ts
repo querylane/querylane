@@ -12,7 +12,7 @@ const POSTGRES_URL_PROTOCOLS = new Set(["postgres:", "postgresql:"]);
 const STACK_FRAME_PATTERN = /^\s*at\s/u;
 const STACK_URL_PATTERN = /[a-z][a-z0-9+.-]*:\/\/[^\s)]+/giu;
 
-function redactStackUrl(value: string): string {
+function redactStackUrl(value: string) {
   try {
     const url = new URL(value);
     if (POSTGRES_URL_PROTOCOLS.has(url.protocol)) {
@@ -28,10 +28,7 @@ function redactStackUrl(value: string): string {
   }
 }
 
-function sanitizeStack(
-  stack: string | null | undefined,
-  maxLength: number
-): string | null {
+function sanitizeStack(stack: string | null | undefined, maxLength: number) {
   if (!isNonEmptyString(stack)) {
     return null;
   }
@@ -45,7 +42,7 @@ function sanitizeStack(
   return frames.length > 0 ? frames.slice(0, maxLength) : null;
 }
 
-function resolveGitHubRepository(repository: string | undefined): string {
+function resolveGitHubRepository(repository: string | undefined) {
   const candidate = repository?.trim() ?? "";
   return GITHUB_REPOSITORY_PATTERN.test(candidate)
     ? candidate
@@ -98,7 +95,7 @@ function buildSupportDiagnostics(error: AppUiError) {
 function buildGitHubBugReportUrl(
   error: AppUiError,
   repository = env.PUBLIC_GITHUB_REPO
-): string {
+) {
   const resolvedRepository = resolveGitHubRepository(repository);
   const url = new URL(`https://github.com/${resolvedRepository}/issues/new`);
   url.searchParams.set("template", BUG_REPORT_TEMPLATE);

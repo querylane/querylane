@@ -30,7 +30,6 @@ const COLUMN = 232;
 const ROW = 142;
 const PADDING = 32;
 
-/** Leaves occupy distinct rows; parents sit between their inputs. X is depth, never time. */
 function layoutPlan(root: PlanNode) {
   const positions: {
     node: PlanNode;
@@ -40,7 +39,7 @@ function layoutPlan(root: PlanNode) {
   }[] = [];
   let leaves = 0;
   let maxDepth = 0;
-  function visit(node: PlanNode, depth: number): number {
+  const visit: (node: PlanNode, depth: number) => number = (node, depth) => {
     maxDepth = Math.max(maxDepth, depth);
     const childRows = node.children.map((child) => visit(child, depth + 1));
     const y =
@@ -52,7 +51,7 @@ function layoutPlan(root: PlanNode) {
     }
     positions.push({ node, depth, x: 0, y });
     return y;
-  }
+  };
   visit(root, 0);
   for (const position of positions) {
     position.x = PADDING + (maxDepth - position.depth) * COLUMN;
@@ -219,7 +218,7 @@ function PlanMap({
   const viewportRef = useRef<HTMLElement>(null);
   const [bounds, setBounds] = useState({ width: 800, height: 400 });
   const [zoom, setZoom] = useState<number | null>(null);
-  useEffect(function measureMap(): (() => void) | undefined {
+  useEffect(function measureMap() {
     const element = viewportRef.current;
     if (!element || typeof ResizeObserver === "undefined") {
       return undefined;
@@ -233,9 +232,9 @@ function PlanMap({
       }
     });
     observer.observe(element);
-    return () => {
+    return (() => {
       observer.disconnect();
-    };
+    }) satisfies (() => void) | undefined;
   }, []);
   const fittedScale = Math.min(
     1,

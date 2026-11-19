@@ -65,34 +65,27 @@ const CELL_SELECTION_LEFT = "left";
 const CLIPBOARD_FORMULA_PREFIX_PATTERN = /^\s*[=+@-]/u;
 const CLIPBOARD_QUOTE_REQUIRED_PATTERN = /[\t\n\r"]/u;
 
-function coordinatesEqual(
-  first: CellCoordinate,
-  second: CellCoordinate
-): boolean {
+function coordinatesEqual(first: CellCoordinate, second: CellCoordinate) {
   return (
     first.columnIndex === second.columnIndex &&
     first.rowIndex === second.rowIndex
   );
 }
 
-function getCellSelectionBounds(
-  range: CellSelectionRange
-): CellSelectionBounds {
+function getCellSelectionBounds(range: CellSelectionRange) {
   return {
     bottom: Math.max(range.anchor.rowIndex, range.focus.rowIndex),
     left: Math.min(range.anchor.columnIndex, range.focus.columnIndex),
     right: Math.max(range.anchor.columnIndex, range.focus.columnIndex),
     top: Math.min(range.anchor.rowIndex, range.focus.rowIndex),
-  };
+  } satisfies CellSelectionBounds;
 }
 
-function cellSelectionBoundsArea(bounds: CellSelectionBounds): number {
+function cellSelectionBoundsArea(bounds: CellSelectionBounds) {
   return (bounds.right - bounds.left + 1) * (bounds.bottom - bounds.top + 1);
 }
 
-function cellSelectionRangeFromBounds(
-  bounds: CellSelectionBounds
-): CellSelectionRange {
+function cellSelectionRangeFromBounds(bounds: CellSelectionBounds) {
   return {
     anchor: {
       columnIndex: bounds.left,
@@ -102,13 +95,13 @@ function cellSelectionRangeFromBounds(
       columnIndex: bounds.right,
       rowIndex: bounds.bottom,
     },
-  };
+  } satisfies CellSelectionRange;
 }
 
 function intersectCellSelectionBounds(
   first: CellSelectionBounds,
   second: CellSelectionBounds
-): CellSelectionBounds | undefined {
+) {
   const intersection = {
     bottom: Math.min(first.bottom, second.bottom),
     left: Math.max(first.left, second.left),
@@ -124,14 +117,14 @@ function intersectCellSelectionBounds(
 function subtractCellSelectionRange(
   range: CellSelectionRange,
   excludedRange: CellSelectionRange
-): CellSelectionRange[] {
+) {
   const bounds = getCellSelectionBounds(range);
   const intersection = intersectCellSelectionBounds(
     bounds,
     getCellSelectionBounds(excludedRange)
   );
   if (!intersection) {
-    return [range];
+    return [range] satisfies CellSelectionRange[];
   }
 
   const remainingBounds = [
@@ -170,7 +163,7 @@ function subtractCellSelectionRange(
 function mergeCellSelectionRanges(
   first: CellSelectionRange,
   second: CellSelectionRange
-): CellSelectionRange | undefined {
+) {
   const firstBounds = getCellSelectionBounds(first);
   const secondBounds = getCellSelectionBounds(second);
   const mergedBounds = {
@@ -203,10 +196,10 @@ function mergeCellSelectionRanges(
 
 function normalizeLatestCellSelectionRange(
   ranges: readonly CellSelectionRange[]
-): CellSelectionRange[] {
+) {
   const latestRange = ranges.at(-1);
   if (!latestRange) {
-    return [];
+    return [] satisfies CellSelectionRange[];
   }
   const normalized = ranges
     .slice(0, -1)
@@ -232,10 +225,7 @@ function normalizeLatestCellSelectionRange(
   return normalized;
 }
 
-function isCellSelected(
-  state: CellSelectionState,
-  coordinate: CellCoordinate
-): boolean {
+function isCellSelected(state: CellSelectionState, coordinate: CellCoordinate) {
   return state.ranges.some((range) => {
     const bounds = getCellSelectionBounds(range);
     return (
@@ -247,9 +237,7 @@ function isCellSelected(
   });
 }
 
-function getCellSelectionSummary(
-  state: CellSelectionState
-): CellSelectionSummary {
+function getCellSelectionSummary(state: CellSelectionState) {
   const bounds = state.ranges.map(getCellSelectionBounds);
   const activeBounds = bounds.length === 1 ? bounds[0] : undefined;
   return {
@@ -269,13 +257,13 @@ function getCellSelectionSummary(
       activeBounds === undefined
         ? undefined
         : activeBounds.bottom - activeBounds.top + 1,
-  };
+  } satisfies CellSelectionSummary;
 }
 
 function getCellSelectionAppearance(
   state: CellSelectionState,
   coordinate: CellCoordinate
-): string {
+) {
   if (!isCellSelected(state, coordinate)) {
     return "";
   }
@@ -316,7 +304,7 @@ function getCellSelectionAppearance(
   return appearance.join(" ");
 }
 
-function createCellSelectionStore(): CellSelectionStore {
+function createCellSelectionStore() {
   let state = EMPTY_CELL_SELECTION_STATE;
   const listeners = new Set<() => void>();
 
@@ -421,10 +409,10 @@ function createCellSelectionStore(): CellSelectionStore {
         listeners.delete(listener);
       };
     },
-  };
+  } satisfies CellSelectionStore;
 }
 
-function escapeClipboardField(field: CellSelectionClipboardField): string {
+function escapeClipboardField(field: CellSelectionClipboardField) {
   const { neutralizeFormula, text } =
     typeof field === "string"
       ? { neutralizeFormula: true, text: field }
@@ -441,7 +429,7 @@ function escapeClipboardField(field: CellSelectionClipboardField): string {
 
 function formatCellSelectionForClipboard(
   blocks: readonly (readonly (readonly CellSelectionClipboardField[])[])[]
-): string {
+) {
   return blocks
     .map((rows) =>
       rows

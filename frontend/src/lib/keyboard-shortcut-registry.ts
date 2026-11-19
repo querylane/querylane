@@ -14,12 +14,6 @@ interface KeyboardShortcutConflictCandidate {
   scope: KeyboardShortcutScope;
 }
 
-interface KeyboardShortcutConflict {
-  binding: string;
-  ids: string[];
-  scope: KeyboardShortcutScope;
-}
-
 type KeyboardShortcutGroup =
   | "Data grid"
   | "General"
@@ -33,7 +27,7 @@ interface KeyboardShortcutDefinition extends KeyboardShortcutConflictCandidate {
   kind: "handled" | "native";
 }
 
-function keyboardShortcutBindingKey(binding: KeyboardShortcutBinding): string {
+function keyboardShortcutBindingKey(binding: KeyboardShortcutBinding) {
   return binding
     .map((stroke) => {
       const modifiers = [
@@ -47,7 +41,7 @@ function keyboardShortcutBindingKey(binding: KeyboardShortcutBinding): string {
 
 function findKeyboardShortcutConflicts(
   candidates: readonly KeyboardShortcutConflictCandidate[]
-): KeyboardShortcutConflict[] {
+) {
   const bindings = new Map<
     string,
     { binding: string; ids: string[]; scope: KeyboardShortcutScope }
@@ -342,15 +336,10 @@ type KeyboardShortcutId = (typeof KEYBOARD_SHORTCUTS)[number]["id"];
 
 export type {
   KeyboardShortcutBinding,
-  KeyboardShortcutConflictCandidate,
   KeyboardShortcutDefinition,
   KeyboardShortcutGroup,
   KeyboardShortcutId,
   KeyboardShortcutScope,
   KeyboardShortcutStroke,
 };
-export {
-  findKeyboardShortcutConflicts,
-  KEYBOARD_SHORTCUTS,
-  keyboardShortcutBindingKey,
-};
+export { KEYBOARD_SHORTCUTS, keyboardShortcutBindingKey };

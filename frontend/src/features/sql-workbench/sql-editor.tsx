@@ -94,7 +94,6 @@ interface EditorCallbacks {
   onRunCurrent: () => void;
 }
 
-/** What completion reads at the moment it runs, kept current through a ref. */
 interface CompletionCatalog {
   defaultSchema: string;
   namespace: SQLNamespace;
@@ -118,8 +117,7 @@ function clauseAt(context: CompletionContext) {
   return { before, clause: completionClause(before), full };
 }
 
-/** True where our source should stay quiet and leave the field to lang-sql. */
-function leavesToCatalog(clause: CompletionClause, before: string): boolean {
+function leavesToCatalog(clause: CompletionClause, before: string) {
   if (clause === "alias") {
     return true;
   }
@@ -129,15 +127,8 @@ function leavesToCatalog(clause: CompletionClause, before: string): boolean {
   );
 }
 
-/**
- * Columns, functions and the keywords that fit the clause at the cursor,
- * ranked columns > functions > (lang-sql's tables and schemas) > keywords.
- * Qualified paths (`alias.`, `schema.table.`) are left to lang-sql.
- */
-function contextualSource(catalogRef: {
-  readonly current: CompletionCatalog;
-}): CompletionSource {
-  return (context) => {
+function contextualSource(catalogRef: { readonly current: CompletionCatalog }) {
+  return ((context) => {
     const word = context.matchBefore(WORD_BEFORE_PATTERN);
     const idle = !word || (word.from === word.to && !context.explicit);
     if (idle || context.state.sliceDoc(word.from - 1, word.from) === ".") {
@@ -161,19 +152,10 @@ function contextualSource(catalogRef: {
       options: contextOptions(clause, columns),
       validFor: WORD_PATTERN,
     };
-  };
+  }) satisfies CompletionSource;
 }
 
-/**
- * lang-sql's catalog source (tables, schemas, `alias.column` paths), muted
- * where no table belongs: the first word of a statement and alias names.
- * lang-sql builds its lookup tree when the source is created, so the source
- * is rebuilt only when completion runs against a changed namespace or
- * schema, never on a keystroke that does not ask for completion.
- */
-function catalogSource(catalogRef: {
-  readonly current: CompletionCatalog;
-}): CompletionSource {
+function catalogSource(catalogRef: { readonly current: CompletionCatalog }) {
   let built:
     | {
         defaultSchema: string;
@@ -181,7 +163,7 @@ function catalogSource(catalogRef: {
         source: CompletionSource;
       }
     | undefined;
-  return (context) => {
+  return ((context) => {
     const { clause } = clauseAt(context);
     if (clause === "statement" || clause === "alias") {
       return null;
@@ -202,7 +184,7 @@ function catalogSource(catalogRef: {
       };
     }
     return built.source(context);
-  };
+  }) satisfies CompletionSource;
 }
 
 function createCompartments() {
@@ -221,10 +203,6 @@ function contentAttributes(ariaLabel: string) {
   });
 }
 
-// Mirrors lang-sql's `sql()`, but completion is contextual: the full
-// PostgreSQL keyword list is replaced by clause-aware columns, functions and
-// keywords. Both sources read the catalog through the ref, so the language
-// is built once per editor.
 function sqlLanguage(catalogRef: { readonly current: CompletionCatalog }) {
   const { language } = PostgreSQL;
   return new LanguageSupport(language, [
@@ -256,17 +234,12 @@ function SqlEditor({
     onRunCurrent,
   });
   const validateRef = useRef(validate);
-  // Read through a ref so new tables and columns complete immediately
-  // without rebuilding the language extension.
   const catalogRef = useRef<CompletionCatalog>({
     defaultSchema,
     namespace: schema,
     scope: completionScope ?? EMPTY_SCOPE,
   });
   const [compartments] = useState(createCompartments);
-  // The view is created once per mount; props that can change afterwards are
-  // applied through compartments so the document and its undo history survive
-  // (a tab rename must not reset the SQL).
   const initialPropsRef = useRef({ ariaLabel, placeholder, value });
 
   useEffect(function keepCallbacksCurrent() {
@@ -306,7 +279,6 @@ function SqlEditor({
       view.dispatch({
         changes: { from, insert, to },
         scrollIntoView: true,
-        // Land after the name itself, before any separator space we added.
         selection: { anchor: from + insert.trimEnd().length },
       });
       view.focus();
@@ -326,7 +298,7 @@ function SqlEditor({
   }));
 
   useEffect(
-    function mountEditor(): (() => void) | undefined {
+    function mountEditor() {
       const host = hostRef.current;
       if (!host) {
         return undefined;
@@ -407,10 +379,10 @@ function SqlEditor({
       });
       const view = new EditorView({ parent: host, state });
       viewRef.current = view;
-      return () => {
+      return (() => {
         view.destroy();
         viewRef.current = null;
-      };
+      }) satisfies (() => void) | undefined;
     },
     [compartments]
   );
@@ -440,9 +412,6 @@ function SqlEditor({
   const lintScope = validate?.scopeKey;
   useEffect(
     function relintOnScopeChange() {
-      // The linter re-runs on edits only. When the validator's scope (the
-      // tab's default schema) changes, the same text can resolve differently,
-      // so ask for a fresh check; with no validator there is nothing to redo.
       if (lintScope === undefined) {
         return;
       }

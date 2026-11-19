@@ -14,8 +14,8 @@ function reportActionError(error: unknown) {
 /** Adapt async UI callbacks without discarding failures or exposing raw errors. */
 function handleAsyncAction<Args extends unknown[]>(
   action: (...args: Args) => Promise<unknown> | undefined
-): (...args: Args) => undefined {
-  return (...args) => {
+) {
+  return ((...args) => {
     try {
       const result = action(...args);
       if (result !== undefined) {
@@ -26,7 +26,7 @@ function handleAsyncAction<Args extends unknown[]>(
     }
 
     return undefined;
-  };
+  }) satisfies (...args: Args) => undefined;
 }
 
 export { handleAsyncAction };

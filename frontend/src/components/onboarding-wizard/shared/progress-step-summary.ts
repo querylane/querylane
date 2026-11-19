@@ -7,11 +7,6 @@ import {
 const PERCENT_SCALE = 100;
 const MAX_IN_FLIGHT_PERCENT = 99;
 
-/**
- * Step weights reflect relative duration. Heavier steps (like migration or
- * starting embedded PG) get more weight so the progress bar moves more
- * evenly instead of jumping in equal increments.
- */
 const STEP_WEIGHTS: Partial<Record<SetupStep, number>> = {
   [SetupStep.STARTING_EMBEDDED]: 30,
   [SetupStep.CONNECTING]: 15,
@@ -24,14 +19,10 @@ const STEP_WEIGHTS: Partial<Record<SetupStep, number>> = {
 
 const DEFAULT_STEP_WEIGHT = 10;
 
-function getStepWeight(stepId: SetupStep): number {
+function getStepWeight(stepId: SetupStep) {
   return STEP_WEIGHTS[stepId] ?? DEFAULT_STEP_WEIGHT;
 }
 
-/**
- * For in-progress steps, count them as partially complete so the bar
- * doesn't sit at 0% while the first step is running.
- */
 const IN_PROGRESS_FRACTION = 0.35;
 
 export function getProgressSummary(events: SetupProgressEvent[]) {

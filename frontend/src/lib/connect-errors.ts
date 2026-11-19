@@ -1,6 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 
-export function toConnectError(error: unknown): ConnectError {
+export function toConnectError(error: unknown) {
   return ConnectError.from(error);
 }
 
@@ -10,7 +10,7 @@ export function toConnectError(error: unknown): ConnectError {
  * flows that means: setup already finished (possibly in the background),
  * which callers should treat as success, not as an error.
  */
-export function isAlreadyConfigured(connectError: ConnectError): boolean {
+export function isAlreadyConfigured(connectError: ConnectError) {
   return (
     connectError.code === Code.FailedPrecondition &&
     connectError.rawMessage.toLowerCase().includes("already configured")

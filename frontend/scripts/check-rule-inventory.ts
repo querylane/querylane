@@ -2,6 +2,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import landminesStructure from "@interfere/landmines/structure";
+import landminesStyle from "@interfere/landmines/style";
+import landminesTesting from "@interfere/landmines/testing";
+import landminesTypes from "@interfere/landmines/types";
 import shadcn from "@shadcn/lint";
 import { z } from "zod";
 import oxlintConfig from "../oxlint.config";
@@ -18,6 +22,7 @@ const RULE_TOOLS = [
   "reactDoctor",
   "shadcn",
   "querylane",
+  "landmines",
 ] as const;
 const ruleEntry = z
   .object({
@@ -33,6 +38,7 @@ const ruleEntry = z
           "reactDoctor",
           "shadcn",
           "querylane",
+          "landmines",
           "typescript",
         ]),
         rule: z.string().min(1),
@@ -59,12 +65,36 @@ const inventorySchema = z.object({
   reactDoctor: z.array(ruleEntry),
   shadcn: z.array(ruleEntry),
   querylane: z.array(ruleEntry),
+  landmines: z.array(ruleEntry),
 });
+
+const landminesPlugins = [
+  {
+    alias: "landmines-structure",
+    specifier: "@interfere/landmines/structure",
+    rules: landminesStructure.rules,
+  },
+  {
+    alias: "landmines-style",
+    specifier: "@interfere/landmines/style",
+    rules: landminesStyle.rules,
+  },
+  {
+    alias: "landmines-testing",
+    specifier: "@interfere/landmines/testing",
+    rules: landminesTesting.rules,
+  },
+  {
+    alias: "landmines-types",
+    specifier: "@interfere/landmines/types",
+    rules: landminesTypes.rules,
+  },
+];
 
 function assertReviewedRuleIds(
   reviewed: readonly string[],
   actual: readonly string[]
-): void {
+) {
   const known = new Set(reviewed);
   if (known.size !== reviewed.length) {
     throw new Error("Duplicate rule inventory entries");
@@ -79,12 +109,12 @@ function assertReviewedRuleIds(
   }
 }
 
-function readJson(path: string): unknown {
+function readJson(path: string) {
   const value: unknown = JSON.parse(readFileSync(path, "utf8"));
   return value;
 }
 
-function toolJson(tool: string, args: readonly string[]): unknown {
+function toolJson(tool: string, args: readonly string[]) {
   const result = spawnSync(join(ROOT, "node_modules/.bin", tool), args, {
     cwd: ROOT,
     encoding: "utf8",
@@ -99,7 +129,7 @@ function toolJson(tool: string, args: readonly string[]): unknown {
   return value;
 }
 
-function biomeRuleIds(): string[] {
+function biomeRuleIds() {
   const schema = z
     .record(z.string(), z.unknown())
     .parse(
@@ -207,8 +237,6 @@ function assertReviewedLevel(
 }
 
 async function assertBiomeRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
-  // Bun's JSONC loader preserves the actual commented configuration without
-  // inventing a second JSON parser or inheriting a preset's default severity.
   const module: unknown = await import(join(ROOT, "biome.jsonc"));
   const config = z
     .object({
@@ -313,34 +341,44 @@ async function assertDoctorRuleLevels(
   }
 }
 
-function assertShadcnRuleLevels(entries: z.infer<typeof ruleEntry>[]) {
-  const plugins = z
-    .array(
-      z.union([
-        z.string(),
-        z.object({ name: z.string(), specifier: z.string() }),
-      ])
-    )
-    .parse(oxlintConfig.jsPlugins ?? []);
-  const reviewed = resolvedPluginPath("@shadcn/lint");
-  const bindings = plugins.flatMap((plugin) => {
-    const path = resolvedPluginPath(
-      typeof plugin === "string" ? plugin : plugin.specifier
-    );
-    const matches =
-      typeof plugin === "string" ? path === reviewed : plugin.name === "shadcn";
-    return matches ? [path] : [];
+function assertPluginBinding(alias: string, specifier: string) {
+  const reviewed = resolvedPluginPath(specifier);
+  const bindings = (oxlintConfig.jsPlugins ?? []).flatMap((plugin) => {
+    if (typeof plugin === "string") {
+      const path = resolvedPluginPath(plugin);
+      return alias === "shadcn" && path === reviewed ? [path] : [];
+    }
+    return plugin.name === alias ? [resolvedPluginPath(plugin.specifier)] : [];
   });
   if (bindings.length !== 1 || bindings[0] !== reviewed) {
-    throw new Error("Reviewed shadcn plugin is not enforced");
-  }
-  const rules = new Map(Object.entries(oxlintConfig.rules));
-  for (const entry of entries) {
-    assertReviewedLevel(entry, rules.get(entry.rule));
+    throw new Error(`Reviewed ${alias} plugin is not enforced`);
   }
 }
 
-function resolvedPluginPath(specifier: string): string {
+function assertPluginRules(
+  entries: z.infer<typeof ruleEntry>[],
+  plugins: readonly {
+    alias: string;
+    specifier: string;
+    rules: Readonly<Record<string, unknown>>;
+  }[]
+) {
+  for (const { alias, specifier } of plugins) {
+    assertPluginBinding(alias, specifier);
+  }
+  assertReviewedRuleIds(
+    entries.map((entry) => entry.rule),
+    plugins.flatMap(({ alias, rules }) =>
+      Object.keys(rules).map((rule) => `${alias}/${rule}`)
+    )
+  );
+  const configuredRules = new Map(Object.entries(oxlintConfig.rules));
+  for (const entry of entries) {
+    assertReviewedLevel(entry, configuredRules.get(entry.rule));
+  }
+}
+
+function resolvedPluginPath(specifier: string) {
   return realpathSync(
     fileURLToPath(
       import.meta.resolve(specifier, join(ROOT, "oxlint.config.ts"))
@@ -415,36 +453,20 @@ async function checkRuleInventory() {
     inventory.biome.map((entry) => entry.rule),
     biomeRuleIds()
   );
-  assertReviewedRuleIds(
-    inventory.shadcn.map((entry) => entry.rule),
-    Object.keys(shadcn.rules).map((rule) => `shadcn/${rule}`)
-  );
-  assertReviewedRuleIds(
-    inventory.querylane.map((entry) => entry.rule),
-    Object.keys(querylanePlugin.rules).map((rule) => `querylane/${rule}`)
-  );
-  const querylaneBindings = (oxlintConfig.jsPlugins ?? []).filter(
-    (plugin) => typeof plugin !== "string" && plugin.name === "querylane"
-  );
-  if (
-    querylaneBindings.length !== 1 ||
-    querylaneBindings[0] === undefined ||
-    typeof querylaneBindings[0] === "string" ||
-    resolvedPluginPath(querylaneBindings[0].specifier) !==
-      resolvedPluginPath("./scripts/querylane-lint.config.ts")
-  ) {
-    throw new Error("Reviewed Querylane plugin is not enforced");
-  }
-  for (const entry of inventory.querylane) {
-    assertReviewedLevel(
-      entry,
-      new Map(Object.entries(oxlintConfig.rules)).get(entry.rule)
-    );
-  }
+  assertPluginRules(inventory.shadcn, [
+    { alias: "shadcn", specifier: "@shadcn/lint", rules: shadcn.rules },
+  ]);
+  assertPluginRules(inventory.querylane, [
+    {
+      alias: "querylane",
+      specifier: "./scripts/querylane-lint.config.ts",
+      rules: querylanePlugin.rules,
+    },
+  ]);
+  assertPluginRules(inventory.landmines, landminesPlugins);
   await assertBiomeRuleLevels(inventory.biome);
   assertNativeRuleLevels(inventory.oxlint);
   await assertDoctorRuleLevels(inventory.reactDoctor, doctor);
-  assertShadcnRuleLevels(inventory.shadcn);
   await assertDelegatedOwners(inventory, compiler);
   const manifest = z
     .object({
@@ -477,5 +499,3 @@ async function checkRuleInventory() {
 if (import.meta.main) {
   await checkRuleInventory();
 }
-
-export { assertReviewedRuleIds };

@@ -5,9 +5,9 @@ Two runners, one job each:
 - **Rstest browser mode** (`src/**/*.browser.test.tsx`) checks component and route
   behavior in real Chromium: interactions, layout measurements, and accessibility
   state. It has no screenshot assertions.
-- **Playwright** (`e2e/visual/*.spec.ts`) owns pixel comparisons with
+- **Playwright** (`e2e/visual/*.e2e.test.ts`) owns pixel comparisons with
   `toHaveScreenshot`, in the `visual-light` and `visual-dark` projects. Full user
-  journeys stay in `e2e/tests/*.spec.ts`.
+  journeys stay in `e2e/journeys/*.e2e.test.ts`.
 
 ## Commands
 
@@ -22,15 +22,7 @@ bun run test:visual:update       # rewrite baselines inside the CI Playwright im
 
 ## Where a visual state lives
 
-1. If a route reaches the state, open the real route with `page.goto()` and mock
-   RPCs with `page.route()` (helpers in `e2e/tests/helpers.ts`).
-2. Otherwise add a scenario component under `src/visual-harness/`, register it in
-   `scenarios.tsx`, and open `/visual.html?scenario=<name>`. Use `HarnessProviders`
-   with a `createRouterTransport` transport when the component reads server state.
-   The entry only exists when `QUERYLANE_VISUAL_HARNESS=1`, so production builds
-   never include it.
-3. Render the same scenario component from the matching rstest browser test, so
-   behavior checks and pixels cover identical markup.
+Open the real app route and serve the necessary RPCs through MSW fixtures. Keep one representative capture for each materially different layout or recovery state. Leave event handling and nonvisual variants to the behavior tests.
 
 ## Stability rules
 
@@ -45,7 +37,7 @@ bun run test:visual:update       # rewrite baselines inside the CI Playwright im
   and animation durations for rstest.
 - Assert visible UI before capturing, and capture the smallest stable region
   (page `main`, a dialog, or a section).
-- Mock network and timers; no real backend.
+- Use MSW for RPCs and Playwright’s clock for timestamps; no real backend.
 
 ## Agent capabilities and limitations
 

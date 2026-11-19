@@ -45,7 +45,7 @@ type OtherObjectsRowExecutor = (input: {
   statement: string;
 }) => Promise<QueryRow[]>;
 
-function tableValueToText(value: TableValue | undefined): string {
+function tableValueToText(value: TableValue | undefined) {
   const kind = value?.kind;
   if (!kind || kind.case === undefined || kind.case === "nullValue") {
     return "";
@@ -76,7 +76,7 @@ function assertNeverTableValueKind(_kind: never): never {
   throw new Error("Unexpected table value kind");
 }
 
-function rowToRecord(columns: string[], row: TableResultRow): QueryRow {
+function rowToRecord(columns: string[], row: TableResultRow) {
   const record: QueryRow = {};
   for (const [index, cell] of row.values.entries()) {
     const column = columns[index];
@@ -98,7 +98,7 @@ async function executeRows({
   rowLimit: number;
   statement: string;
   transport: Transport;
-}): Promise<QueryRow[]> {
+}) {
   const client = createClient(SQLService, transport);
   const rows: QueryRow[] = [];
   let columns: string[] = [];
@@ -139,7 +139,7 @@ function assertNeverExecuteResult(_result: never): never {
   throw new Error("Unexpected execute query result");
 }
 
-function queryRowToObject(row: QueryRow): OtherDatabaseObject | null {
+function queryRowToObject(row: QueryRow) {
   const { category } = row;
   if (!isOtherDatabaseObjectCategory(category)) {
     return null;
@@ -153,12 +153,10 @@ function queryRowToObject(row: QueryRow): OtherDatabaseObject | null {
     sortKey: row["sort_key"] ?? row["name"] ?? "",
     status: parseObjectStatus(row["status"]),
     summary: row["summary"] ?? "",
-  };
+  } satisfies OtherDatabaseObject | null;
 }
 
-function parseObjectStatus(
-  status: string | undefined
-): "failed" | "ok" | "warning" | undefined {
+function parseObjectStatus(status: string | undefined) {
   switch (status) {
     case "failed":
     case "ok":
@@ -207,7 +205,7 @@ async function hasCronJobsTable({
 }: {
   execute: OtherObjectsRowExecutor;
   parent: string;
-}): Promise<boolean> {
+}) {
   const rows = await execute({
     parent,
     rowLimit: 1,
@@ -226,9 +224,7 @@ async function fetchOtherDatabaseObjectsSummary({
 }: {
   execute: OtherObjectsRowExecutor;
   parent: string;
-}): Promise<OtherObjectsSummary> {
-  // The cron probe (and, when present, the cron summary) runs alongside the
-  // combined summary statement instead of serially after it.
+}) {
   const [summaryRows, cronRows] = await Promise.all([
     execute({
       parent,
@@ -249,9 +245,9 @@ async function fetchCronJobsSummaryRows({
 }: {
   execute: OtherObjectsRowExecutor;
   parent: string;
-}): Promise<QueryRow[]> {
+}) {
   if (!(await hasCronJobsTable({ execute, parent }))) {
-    return [];
+    return [] satisfies QueryRow[];
   }
   return await execute({
     parent,
@@ -275,12 +271,12 @@ async function fetchOtherObjectsBrowsePage({
   execute: OtherObjectsRowExecutor;
   parent: string;
   search?: string | undefined;
-}): Promise<OtherObjectsBrowsePage> {
+}) {
   if (
     category === "cronJobs" &&
     !(cronJobsAvailable ?? (await hasCronJobsTable({ execute, parent })))
   ) {
-    return { hasMore: false, objects: [] };
+    return { hasMore: false, objects: [] } satisfies OtherObjectsBrowsePage;
   }
   const rows = await execute({
     parent,
@@ -296,8 +292,8 @@ async function fetchOtherObjectsBrowsePage({
     objects: rows
       .slice(0, BROWSE_PAGE_SIZE)
       .map((value) => queryRowToObject(value))
-      .filter((object): object is OtherDatabaseObject => object !== null),
-  };
+      .filter((object) => object !== null),
+  } satisfies OtherObjectsBrowsePage;
 }
 
 interface DatabaseScopeInput {
@@ -305,10 +301,15 @@ interface DatabaseScopeInput {
   instanceId: string;
 }
 
-function useRowExecutor(): OtherObjectsRowExecutor {
+function useRowExecutor() {
   const transport = useTransport();
-  return ({ parent, rowLimit, statement }) =>
-    executeRows({ parent, rowLimit, statement, transport });
+  return (({ parent, rowLimit, statement }) =>
+    executeRows({
+      parent,
+      rowLimit,
+      statement,
+      transport,
+    })) satisfies OtherObjectsRowExecutor;
 }
 
 function useOtherDatabaseObjectsSummaryQuery({
@@ -339,10 +340,6 @@ function useOtherObjectsBrowseQuery({
   const parent = buildDatabaseName(instanceId, databaseId);
   const enabled = Boolean(databaseId && instanceId);
 
-  // Whether `cron.job` exists is fixed for the lifetime of a database
-  // connection, so probe it once per database here instead of before every
-  // page fetch and search change. On probe errors the page fetch falls back
-  // to probing itself so the failure still surfaces through the browse query.
   const cronProbe = useQuery({
     enabled: enabled && category === "cronJobs",
     queryFn: () => hasCronJobsTable({ execute, parent }),

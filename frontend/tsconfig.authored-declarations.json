@@ -11,5 +11,5 @@
   },
   "include": [],
   "exclude": [],
-  "files": ["src/env.d.ts", "src/import-meta-env.d.ts", "src/types/css.d.ts"]
+  "files": ["src/import-meta-env.d.ts", "src/types/css.d.ts"]
 }

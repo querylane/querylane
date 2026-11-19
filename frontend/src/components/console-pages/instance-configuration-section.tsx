@@ -114,7 +114,7 @@ function getInstanceSaveDisabledReason({
   hasUnsavedChanges: boolean;
   needsReplacementPassword: boolean;
   pending: boolean;
-}): string | null {
+}) {
   if (credentialKeyMissing) {
     return "Configure QUERYLANE_INSTANCE_SECRET_KEY and restart Querylane before saving.";
   }
@@ -166,10 +166,7 @@ function InstanceCredentialAlert({
   );
 }
 
-function localErrorMessage(
-  error: unknown,
-  fallback: string
-): string | undefined {
+function localErrorMessage(error: unknown, fallback: string) {
   if (
     error === null ||
     error === undefined ||
@@ -457,8 +454,6 @@ function InstanceConfigurationSection({
     validationScope: "modified-fields",
   });
   const values = useWatch({ control: form.control });
-  // protobuf maps cannot represent a blank
-  // key while the user is composing a new row; valid rows are synced below.
   const [labels, setLabels] = useState<InstanceLabelEntry[]>(() =>
     labelsToEntries(instance.labels)
   );

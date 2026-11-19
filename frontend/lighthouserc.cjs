@@ -47,26 +47,36 @@ function readUploadConfig() {
   };
 }
 
-/** @param {{ minScore?: number, maxNumericValue?: number }} options Assertion threshold. */
-const required = (options) => [
-  "error",
-  { aggregationMethod: "median-run", ...options },
-];
+function required(thresholdName = "minScore", threshold = 1) {
+  return [
+    "error",
+    { aggregationMethod: "median-run", [thresholdName]: threshold },
+  ];
+}
+
+const MAXIMUM_NUMERIC_VALUES = {
+  "cumulative-layout-shift": 0.01,
+  "first-contentful-paint": 500,
+  interactive: 1000,
+  "largest-contentful-paint": 1200,
+  "speed-index": 700,
+  "total-blocking-time": 50,
+};
 
 module.exports = {
   ci: {
     assert: {
       assertions: {
-        "categories:accessibility": required({ minScore: 1 }),
-        "categories:best-practices": required({ minScore: 1 }),
-        "categories:performance": required({ minScore: 1 }),
-        "categories:seo": required({ minScore: 1 }),
-        "cumulative-layout-shift": required({ maxNumericValue: 0.01 }),
-        "first-contentful-paint": required({ maxNumericValue: 500 }),
-        interactive: required({ maxNumericValue: 1000 }),
-        "largest-contentful-paint": required({ maxNumericValue: 1200 }),
-        "speed-index": required({ maxNumericValue: 700 }),
-        "total-blocking-time": required({ maxNumericValue: 50 }),
+        "categories:accessibility": required(),
+        "categories:best-practices": required(),
+        "categories:performance": required(),
+        "categories:seo": required(),
+        ...Object.fromEntries(
+          Object.entries(MAXIMUM_NUMERIC_VALUES).map(([metric, value]) => [
+            metric,
+            required("maxNumericValue", value),
+          ])
+        ),
       },
     },
     collect: {

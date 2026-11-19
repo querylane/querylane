@@ -78,8 +78,6 @@ function DatabaseOverviewHeader({
   instanceId: string;
   onViewQueryInsights: () => void;
 }) {
-  // Schema/table/view counts live in the stat strip below; the subtitle only
-  // carries properties no card repeats.
   const insightsButton = (
     <Button
       disabled={insightsUnavailable}
@@ -196,14 +194,11 @@ function catalogIsPartial(
 
 function catalogObjectsArePartial(
   catalog: ReturnType<typeof useDatabaseCatalogQuery>["data"]
-): boolean {
+) {
   return Boolean(catalog?.coverage.objectsPartial);
 }
 
-function seriesFor(
-  series: MetricSeries[] | undefined,
-  metric: MetricId
-): MetricSeries | undefined {
+function seriesFor(series: MetricSeries[] | undefined, metric: MetricId) {
   return series?.find((candidate) => candidate.metric === metric);
 }
 
@@ -235,9 +230,6 @@ function BackendDatabasePage({
   const [queryInsightsDatabaseName, setQueryInsightsDatabaseName] = useState<
     string | null
   >(null);
-  // The sparklines cover a trailing 24h window anchored at page load;
-  // mirroring the instance page, an explicit catalog retry advances the
-  // window so recovered charts show the newest data.
   const [metricsAnchorMs, setMetricsAnchorMs] = useState(
     quantizedMetricsAnchor
   );

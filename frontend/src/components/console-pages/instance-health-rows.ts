@@ -65,9 +65,7 @@ function isHealthCheckKey(value: string | undefined): value is HealthCheckKey {
   return HEALTH_CHECK_KEYS.some((key) => key === value);
 }
 
-function getHealthCheckKeyFromDetail(
-  detail: Status["details"][number]
-): HealthCheckKey | undefined {
+function getHealthCheckKeyFromDetail(detail: Status["details"][number]) {
   try {
     const errorInfo = anyUnpack(detail, ErrorInfoSchema);
     const check = errorInfo?.metadata["check"];
@@ -80,7 +78,7 @@ function getHealthCheckKeyFromDetail(
 function resolveReportedReplicationRole(
   healthRole: ServerInfo_ReplicationRole,
   serverRole: ServerInfo_ReplicationRole | undefined
-): ServerInfo_ReplicationRole {
+) {
   return serverRole === undefined ||
     serverRole === ServerInfo_ReplicationRole.UNSPECIFIED
     ? healthRole
@@ -91,9 +89,7 @@ function resolveReportedReplicationRole(
  * Maps CheckInstanceHealth partial errors to their category via the
  * google.rpc.ErrorInfo "check" metadata key, keeping the human message.
  */
-function getHealthCheckPartialReasons(
-  partialErrors: Status[] | undefined
-): HealthCheckPartialReasons {
+function getHealthCheckPartialReasons(partialErrors: Status[] | undefined) {
   const reasons: HealthCheckPartialReasons = {};
 
   const errors = partialErrors ?? [];
@@ -109,7 +105,7 @@ function getHealthCheckPartialReasons(
   return reasons;
 }
 
-function toneFromHealthCheckStatus(status: HealthCheckStatus): HealthRowTone {
+function toneFromHealthCheckStatus(status: HealthCheckStatus) {
   switch (status) {
     case HealthCheckStatus.OK:
       return "ok";
@@ -131,7 +127,7 @@ const SECONDS_PER_HOUR = 3600;
 const SECONDS_PER_DAY = 86_400;
 const MS_PER_SECOND = 1000;
 
-function formatShortDuration(totalSeconds: number): string {
+function formatShortDuration(totalSeconds: number) {
   if (totalSeconds < SECONDS_PER_MINUTE) {
     return `${totalSeconds}s`;
   }
@@ -144,10 +140,9 @@ function formatShortDuration(totalSeconds: number): string {
   return `${Math.floor(totalSeconds / SECONDS_PER_DAY)}d`;
 }
 
-/** Formats a protobuf timestamp as a coarse "18m ago" style label. */
 function formatTimeAgo(
   timestamp: Parameters<typeof timestampDate>[0] | undefined
-): string | null {
+) {
   if (!timestamp) {
     return null;
   }
@@ -167,7 +162,7 @@ function formatTimeAgo(
   }
 }
 
-function formatYesNo(value: boolean): string {
+function formatYesNo(value: boolean) {
   return value ? "Yes" : "No";
 }
 
@@ -179,7 +174,7 @@ function unavailableRow({
   id: string;
   label: string;
   reason: string | undefined;
-}): HealthRowModel {
+}) {
   const value = isNonEmptyString(reason?.trim())
     ? reason?.trim()
     : "Not reported by the latest health check.";
@@ -189,13 +184,13 @@ function unavailableRow({
     label,
     summary: isNonEmptyString(reason?.trim()) ? reason?.trim() : "No data",
     tone: isNonEmptyString(reason?.trim()) ? "error" : "muted",
-  };
+  } satisfies HealthRowModel;
 }
 
 function buildConnectionActivityRow(
   activity: ConnectionActivityHealth | undefined,
   reason: string | undefined
-): HealthRowModel {
+) {
   if (!activity) {
     return unavailableRow({ id: "connections", label: "Connections", reason });
   }
@@ -234,14 +229,14 @@ function buildConnectionActivityRow(
     label: "Connections",
     summary,
     tone: toneFromHealthCheckStatus(activity.status),
-  };
+  } satisfies HealthRowModel;
 }
 
 function buildReplicationRow(
   replication: ReplicationHealth | undefined,
   reason: string | undefined,
   serverReplicationRole: ServerInfo_ReplicationRole | undefined
-): HealthRowModel {
+) {
   if (!replication) {
     return unavailableRow({ id: "replication", label: "Replication", reason });
   }
@@ -300,10 +295,10 @@ function buildReplicationRow(
       rolesDisagree && replication.status !== HealthCheckStatus.ERROR
         ? "warning"
         : toneFromHealthCheckStatus(replication.status),
-  };
+  } satisfies HealthRowModel;
 }
 
-function statsAccessLevelLabel(statsAccess: StatsAccessHealth): string {
+function statsAccessLevelLabel(statsAccess: StatsAccessHealth) {
   if (statsAccess.superuser) {
     return "superuser";
   }
@@ -319,7 +314,7 @@ function statsAccessLevelLabel(statsAccess: StatsAccessHealth): string {
 function buildStatsAccessRow(
   statsAccess: StatsAccessHealth | undefined,
   reason: string | undefined
-): HealthRowModel {
+) {
   if (!statsAccess) {
     return unavailableRow({
       id: "stats-access",
@@ -356,10 +351,10 @@ function buildStatsAccessRow(
     label: "Stats access",
     summary,
     tone: toneFromHealthCheckStatus(statsAccess.status),
-  };
+  } satisfies HealthRowModel;
 }
 
-function pgStatStatementsSummary(pgss: PgStatStatementsHealth): string {
+function pgStatStatementsSummary(pgss: PgStatStatementsHealth) {
   if (pgss.summary.trim()) {
     return pgss.summary.trim();
   }
@@ -378,7 +373,7 @@ function pgStatStatementsSummary(pgss: PgStatStatementsHealth): string {
 function buildPgStatStatementsRow(
   pgss: PgStatStatementsHealth | undefined,
   reason: string | undefined
-): HealthRowModel {
+) {
   if (!pgss) {
     return unavailableRow({
       id: "pg-stat-statements",
@@ -417,13 +412,13 @@ function buildPgStatStatementsRow(
     label: "pg_stat_statements",
     summary: pgStatStatementsSummary(pgss),
     tone: toneFromHealthCheckStatus(pgss.status),
-  };
+  } satisfies HealthRowModel;
 }
 
 function buildAutovacuumRow(
   autovacuum: AutovacuumHealth | undefined,
   reason: string | undefined
-): HealthRowModel {
+) {
   if (!autovacuum) {
     return unavailableRow({ id: "autovacuum", label: "Autovacuum", reason });
   }
@@ -452,7 +447,7 @@ function buildAutovacuumRow(
     label: "Autovacuum",
     summary,
     tone: toneFromHealthCheckStatus(autovacuum.status),
-  };
+  } satisfies HealthRowModel;
 }
 
 /**
@@ -464,7 +459,7 @@ function buildLiveHealthRows(
   health: InstanceHealth | undefined,
   partialErrors: Status[] | undefined,
   serverReplicationRole?: ServerInfo_ReplicationRole
-): HealthRowModel[] {
+) {
   const reasons = getHealthCheckPartialReasons(partialErrors);
   return [
     buildConnectionActivityRow(
@@ -482,10 +477,10 @@ function buildLiveHealthRows(
       reasons.pg_stat_statements
     ),
     buildAutovacuumRow(health?.autovacuum, reasons.autovacuum),
-  ];
+  ] satisfies HealthRowModel[];
 }
 
-function instanceEndpoint(instance: InstanceRecord): string {
+function instanceEndpoint(instance: InstanceRecord) {
   const host = instance.config?.host ?? instance.displayName;
   const port = instance.config?.port ?? DEFAULT_POSTGRES_PORT;
   return `${host}:${port}`;
@@ -495,15 +490,13 @@ function instanceEndpoint(instance: InstanceRecord): string {
  * Single compact confirmation row for a connected instance folding TCP,
  * TLS, and authentication into one line.
  */
-function buildConnectedEndpointRow(instance: InstanceRecord): HealthRowModel {
+function buildConnectedEndpointRow(instance: InstanceRecord) {
   const rawSslMode =
     instance.config?.sslMode ?? PostgresConfig_SslMode.UNSPECIFIED;
   const sslMode = formatSslMode(rawSslMode);
   const sslNegotiation = formatSslNegotiation(
     instance.config?.sslNegotiation ?? PostgresConfig_SslNegotiation.UNSPECIFIED
   );
-  // TLS off means credentials and data travel in plaintext — a connected
-  // instance must still read as a security warning, not a green check.
   const tlsDisabled = rawSslMode === PostgresConfig_SslMode.DISABLED;
   return {
     detail: [
@@ -518,10 +511,10 @@ function buildConnectedEndpointRow(instance: InstanceRecord): HealthRowModel {
       ? `${instanceEndpoint(instance)} · TLS disabled (plaintext) · credentials accepted`
       : `${instanceEndpoint(instance)} · TLS ${sslMode} · credentials accepted`,
     tone: tlsDisabled ? "warning" : "ok",
-  };
+  } satisfies HealthRowModel;
 }
 
-function buildTlsConfigRow(config: PostgresConfig | undefined): HealthRowModel {
+function buildTlsConfigRow(config: PostgresConfig | undefined) {
   const sslMode = config?.sslMode ?? PostgresConfig_SslMode.UNSPECIFIED;
   const mode = formatSslMode(sslMode);
   const negotiation = formatSslNegotiation(
@@ -539,7 +532,7 @@ function buildTlsConfigRow(config: PostgresConfig | undefined): HealthRowModel {
       label: "TLS",
       summary: "Disabled in the saved configuration",
       tone: "warning",
-    };
+    } satisfies HealthRowModel;
   }
   if (sslMode === PostgresConfig_SslMode.REQUIRE) {
     return {
@@ -548,7 +541,7 @@ function buildTlsConfigRow(config: PostgresConfig | undefined): HealthRowModel {
       label: "TLS",
       summary: `${mode} · encrypted transport required`,
       tone: "ok",
-    };
+    } satisfies HealthRowModel;
   }
   if (
     sslMode === PostgresConfig_SslMode.VERIFY_CA ||
@@ -560,7 +553,7 @@ function buildTlsConfigRow(config: PostgresConfig | undefined): HealthRowModel {
       label: "TLS",
       summary: `${mode} · certificate verification required`,
       tone: "ok",
-    };
+    } satisfies HealthRowModel;
   }
   return {
     detail,
@@ -568,7 +561,7 @@ function buildTlsConfigRow(config: PostgresConfig | undefined): HealthRowModel {
     label: "TLS",
     summary: `${mode} · may fall back to plaintext`,
     tone: "muted",
-  };
+  } satisfies HealthRowModel;
 }
 
 /**
@@ -582,7 +575,7 @@ function buildDisconnectedDiagnosticRows({
 }: {
   connectionStatus: DbConnectionStatus;
   instance: InstanceRecord;
-}): HealthRowModel[] {
+}) {
   const endpoint = instanceEndpoint(instance);
   const connectionError = instance.connectionError.trim();
 
@@ -612,7 +605,7 @@ function buildDisconnectedDiagnosticRows({
         tone: "error",
       },
       buildTlsConfigRow(instance.config),
-    ];
+    ] satisfies HealthRowModel[];
   }
 
   return [
@@ -639,7 +632,7 @@ function buildDisconnectedDiagnosticRows({
       tone: "muted",
     },
     buildTlsConfigRow(instance.config),
-  ];
+  ] satisfies HealthRowModel[];
 }
 
 /**
@@ -653,9 +646,9 @@ function buildInstanceFacts({
 }: {
   extensionsInstalledCount: number | undefined;
   serverInfo: ServerInfo | undefined;
-}): string[] {
+}) {
   if (!serverInfo) {
-    return [];
+    return [] satisfies string[];
   }
 
   const facts: string[] = [];

@@ -187,9 +187,6 @@ function useSchemaGrantTableState({
   };
 }
 
-// A schema (or the synthetic database row) drill-in: one unified, sortable
-// object table with kind tabs. The active tab is encoded in the URL via
-// `grantsType` so the drill-in stays deep-linkable.
 export function SchemaGrantsView({
   databaseName,
   group,

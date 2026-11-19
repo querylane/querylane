@@ -93,11 +93,11 @@ const COMMAND_GROUP_CLASS_NAME =
 const COMMAND_ITEM_CLASS_NAME =
   "rounded-none! px-4 py-2 [&>svg:last-child]:hidden";
 
-function matchesQuery(value: string, query: string): boolean {
+function matchesQuery(value: string, query: string) {
   return query.length === 0 || value.toLowerCase().includes(query);
 }
 
-function canRunCatalogSearch(query: string): boolean {
+function canRunCatalogSearch(query: string) {
   return query.length === 0 || query.length >= MIN_SERVER_SUBSTRING_LENGTH;
 }
 
@@ -179,7 +179,7 @@ function NavigationTargetGroup({
   );
 }
 
-function databaseObjectRowCount(object: CatalogObject): string {
+function databaseObjectRowCount(object: CatalogObject) {
   const rowCount = normalizeEstimatedRowCount(object.rowCount);
   return object.kind === "view" && rowCount === 0
     ? "— rows"

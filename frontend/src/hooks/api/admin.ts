@@ -19,11 +19,6 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/admin-AdminService_connectquery";
 
 const JOB_QUEUE_PAGE_SIZE = 50;
-/**
- * Catalog scopes and replicas are small sets (scopes scale with browsed
- * catalog objects, replicas with deployment size); a single max-size page is
- * plenty for the admin panel v1.
- */
 const SINGLE_PAGE_SIZE = 1000;
 
 function fetchRunnerExecutionsPage(

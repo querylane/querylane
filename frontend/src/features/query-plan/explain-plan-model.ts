@@ -1,11 +1,5 @@
-import { isNonEmptyString, isUnknownArray } from "@/lib/value-guards";
-/**
- * Turns PostgreSQL's `EXPLAIN (FORMAT JSON)` output into a tree the plan view
- * can render. Reported metadata is retained for the inspector; timing
- * attribution is approximate and disabled when execution can overlap.
- */
-
 import { formatCount } from "@/features/sql-workbench/sql-workbench-format";
+import { isNonEmptyString, isUnknownArray } from "@/lib/value-guards";
 
 interface PlanNode {
   actualLoops?: number | undefined;
@@ -57,19 +51,19 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !isUnknownArray(value);
 }
 
-function numberField(record: JsonRecord, key: string): number | undefined {
+function numberField(record: JsonRecord, key: string) {
   const value = record[key];
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
 }
 
-function stringField(record: JsonRecord, key: string): string | undefined {
+function stringField(record: JsonRecord, key: string) {
   const value = record[key];
   return isNonEmptyString(value) ? value : undefined;
 }
 
-function formatDetailValue(value: unknown): string {
+function formatDetailValue(value: unknown) {
   if (typeof value === "string") {
     return value;
   }
@@ -79,7 +73,7 @@ function formatDetailValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function buildDetails(record: JsonRecord): PlanNode["details"] {
+function buildDetails(record: JsonRecord) {
   return Object.entries(record).flatMap(([label, value]) =>
     DETAIL_KEYS_TO_SKIP.has(label)
       ? []
@@ -87,9 +81,9 @@ function buildDetails(record: JsonRecord): PlanNode["details"] {
   );
 }
 
-function buildNode(record: JsonRecord, id: string): PlanNode {
+function buildNode(record: JsonRecord, id: string) {
   const rawChildren = record["Plans"];
-  const children = isUnknownArray(rawChildren)
+  const children: PlanNode[] = isUnknownArray(rawChildren)
     ? rawChildren.flatMap((child, index) =>
         isRecord(child) ? [buildNode(child, `${id}.${index}`)] : []
       )
@@ -140,11 +134,11 @@ function buildNode(record: JsonRecord, id: string): PlanNode {
     planRows: numberField(record, "Plan Rows"),
     relationName: stringField(record, "Relation Name"),
     totalCost: numberField(record, "Total Cost"),
-  };
+  } satisfies PlanNode;
 }
 
 /** Parses the JSON text PostgreSQL returns for `EXPLAIN (FORMAT JSON)`. */
-function parseExplainPlan(planJson: string): ExplainPlan | null {
+function parseExplainPlan(planJson: string) {
   let parsed: unknown;
   try {
     parsed = JSON.parse(planJson);
@@ -160,8 +154,7 @@ function parseExplainPlan(planJson: string): ExplainPlan | null {
     return null;
   }
   const root = buildNode(planRecord, "0");
-  // Worker times overlap; subtracting child totals cannot attribute self time.
-  if (root.parallel === true) {
+  if (root.parallel) {
     for (const node of flattenPlan(root)) {
       node.exclusiveMs = undefined;
     }
@@ -170,19 +163,17 @@ function parseExplainPlan(planJson: string): ExplainPlan | null {
     executionTimeMs: numberField(first, "Execution Time"),
     planningTimeMs: numberField(first, "Planning Time"),
     root,
-  };
+  } satisfies ExplainPlan | null;
 }
 
-function flattenPlan(node: PlanNode): PlanNode[] {
-  return [node, ...node.children.flatMap(flattenPlan)];
-}
+const flattenPlan: (node: PlanNode) => PlanNode[] = (node) => [
+  node,
+  ...node.children.flatMap(flattenPlan),
+];
 
 type PlanMetric = "self" | "time" | "rows" | "buffers" | "cost";
 
-function planMetricValue(
-  node: PlanNode,
-  metric: PlanMetric
-): number | undefined {
+function planMetricValue(node: PlanNode, metric: PlanMetric) {
   switch (metric) {
     case "self":
       return node.exclusiveMs;
@@ -202,7 +193,7 @@ function planMetricValue(
   }
 }
 
-function planNodeTitle(node: PlanNode): string {
+function planNodeTitle(node: PlanNode) {
   return (
     node.nodeType +
     (isNonEmptyString(node.relationName) ? ` on ${node.relationName}` : "") +
@@ -215,10 +206,7 @@ const HEAVY_FILTER_MIN_ROWS = 1000;
 const HEAVY_FILTER_RATIO = 0.9;
 const PERCENT = 100;
 
-function rowEstimateLabel(
-  actual: number,
-  estimated: number
-): string | undefined {
+function rowEstimateLabel(actual: number, estimated: number) {
   if (actual === estimated) {
     return undefined;
   }
@@ -245,9 +233,8 @@ interface PlanInsight {
   label: string;
 }
 
-function rowEstimateInsights(node: PlanNode): PlanInsight[] {
+function rowEstimateInsights(node: PlanNode) {
   const { actualRows: actual, planRows: estimated } = node;
-  // Both counts are per execution, not totals across loops.
   if (
     node.nodeType !== "BitmapAnd" &&
     node.nodeType !== "BitmapOr" &&
@@ -261,13 +248,13 @@ function rowEstimateInsights(node: PlanNode): PlanInsight[] {
           label,
           detail: `${formatCount(actual)} actual / ${formatCount(estimated)} estimated per loop. Check statistics and predicates.`,
         },
-      ];
+      ] satisfies PlanInsight[];
     }
   }
-  return [];
+  return [] satisfies PlanInsight[];
 }
 
-function filterInsights(node: PlanNode): PlanInsight[] {
+function filterInsights(node: PlanNode) {
   const removed = Number(
     node.details.find((detail) => detail.label === "Rows Removed by Filter")
       ?.value ?? 0
@@ -283,14 +270,14 @@ function filterInsights(node: PlanNode): PlanInsight[] {
         label: `${((PERCENT * removed) / inspected).toFixed(1)}% filtered`,
         detail: `${formatCount(removed)} rows removed per loop. Inspect the filter and scan conditions.`,
       },
-    ];
+    ] satisfies PlanInsight[];
   }
-  return [];
+  return [] satisfies PlanInsight[];
 }
 
-function planNodeInsights(node: PlanNode): PlanInsight[] {
+function planNodeInsights(node: PlanNode) {
   if (node.actualLoops === 0) {
-    return [];
+    return [] satisfies PlanInsight[];
   }
   const insights: PlanInsight[] = [];
   const diskSort = node.details.some(
@@ -307,7 +294,11 @@ function planNodeInsights(node: PlanNode): PlanInsight[] {
         : "The hash table used multiple batches. Inspect memory usage and temporary blocks below.",
     });
   }
-  return [...rowEstimateInsights(node), ...insights, ...filterInsights(node)];
+  return [
+    ...rowEstimateInsights(node),
+    ...insights,
+    ...filterInsights(node),
+  ] satisfies PlanInsight[];
 }
 
 export type { ExplainPlan, PlanMetric, PlanNode };

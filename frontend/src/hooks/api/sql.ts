@@ -19,7 +19,6 @@ function useExplainQuery(
     ...RESOURCE_QUERY_OPTIONS.explainPlan,
     ...options,
     enabled: Boolean(options?.enabled ?? true) && Boolean(parent && statement),
-    // EXPLAIN ANALYZE may legitimately run up to the backend's 60s cap.
     transport: longRunningTransport,
   });
 }

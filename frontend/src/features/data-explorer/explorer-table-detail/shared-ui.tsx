@@ -179,9 +179,6 @@ const EMPTY_RESOURCE_COPY: Record<
     title: "No triggers",
   },
 };
-// One or more catalog queries back a single tab (Columns and Keys merge a few).
-// The toolbar refreshes them together and reports the oldest fetch time so the
-// "Last fetched" label never overstates how current the rows are.
 
 function TableResourceEmptyState({
   category,

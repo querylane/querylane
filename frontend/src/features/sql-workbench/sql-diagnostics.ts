@@ -18,10 +18,7 @@ interface SqlProblemRange {
   to: number;
 }
 
-// Code points from here up take two UTF-16 units.
 const ASTRAL_PLANE_START = 0x1_00_00;
-// The token under the server's position: a possibly qualified identifier
-// such as crm."Customer", a string literal, a number, or a single symbol.
 const IDENTIFIER_PART = String.raw`(?:"(?:[^"]|"")+"|[\p{L}_][\p{L}\p{N}_$]*)`;
 const STRING_LITERAL = "'(?:[^']|'')*'";
 const TOKEN_PATTERN = new RegExp(
@@ -29,12 +26,7 @@ const TOKEN_PATTERN = new RegExp(
   "u"
 );
 
-/**
- * PostgreSQL counts positions in characters (code points); JavaScript
- * offsets are UTF-16 code units. They differ only past the first astral
- * character, but a wrong underline is worse than none.
- */
-function codePointOffsetToIndex(text: string, codePoints: number): number {
+function codePointOffsetToIndex(text: string, codePoints: number) {
   let index = 0;
   let remaining = codePoints;
   while (remaining > 0 && index < text.length) {
@@ -49,23 +41,20 @@ function codePointOffsetToIndex(text: string, codePoints: number): number {
  * Maps a problem onto the document: the token PostgreSQL pointed at, or the
  * whole statement when it gave no position.
  */
-function problemRange(
-  statement: SqlStatement,
-  problem: SqlProblem
-): SqlProblemRange {
+function problemRange(statement: SqlStatement, problem: SqlProblem) {
   if (problem.position <= 0) {
-    return { from: statement.from, to: statement.to };
+    return { from: statement.from, to: statement.to } satisfies SqlProblemRange;
   }
   const offset = codePointOffsetToIndex(statement.text, problem.position - 1);
   if (offset >= statement.text.length) {
-    return { from: statement.from, to: statement.to };
+    return { from: statement.from, to: statement.to } satisfies SqlProblemRange;
   }
   const token = TOKEN_PATTERN.exec(statement.text.slice(offset));
   const length = token ? token[0].length : 1;
   return {
     from: statement.from + offset,
     to: statement.from + offset + length,
-  };
+  } satisfies SqlProblemRange;
 }
 
 export type { SqlProblem, SqlProblemRange };

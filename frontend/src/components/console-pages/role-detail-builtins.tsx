@@ -323,9 +323,6 @@ function BuiltinAttributesCard({ role }: { role: Role }) {
   );
 }
 
-// Built-in roles render as a single scroll (no tabs), so their GRANT/REVOKE
-// definition lives in an inline card rather than the Definition tab that ordinary
-// roles get.
 function BuiltinManageCard({ role }: { role: Role }) {
   const sql = `GRANT ${role.roleName} TO your_role;\nREVOKE ${role.roleName} FROM your_role;`;
   return (
@@ -412,7 +409,5 @@ function BuiltinRoleBody({
     </>
   );
 }
-
-// KPI sub-label for the Direct-grants tile: a load/empty state, or the schema
 
 export { BuiltinRoleBody };

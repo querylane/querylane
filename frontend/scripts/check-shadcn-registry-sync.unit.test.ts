@@ -1,150 +1,79 @@
-import { describe, expect, rs, test } from "@rstest/core";
-import {
-  isCnImportOnlyShadcnDiff,
-  readPinnedShadcnPackageSpecifier,
-  runShadcnRegistrySyncCheck,
-} from "./check-shadcn-registry-sync";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, test } from "@rstest/core";
 
-const PINNED_SHADCN_SPECIFIER_PATTERN = /^shadcn@\d+\.\d+\.\d+/u;
-
-function mockExpectedConsoleError() {
-  return rs.spyOn(console, "error").mockImplementation(() => undefined);
-}
-
-describe("shadcn registry sync check", () => {
-  test("runs the package-pinned shadcn version", () => {
-    let infoCommand = "";
-    let infoArgs: readonly string[] = [];
-    const runner = {
-      run: (command: string, args: readonly string[]) => {
-        if (args.includes("info")) {
-          infoCommand = command;
-          infoArgs = args;
-          return {
-            status: 0,
-            stderr: "",
-            stdout: JSON.stringify({ components: ["button"] }),
-          };
-        }
-
-        return {
-          status: 0,
-          stderr: "",
-          stdout: "├ Files (1) =1 skip",
-        };
-      },
-    };
-
-    expect(runShadcnRegistrySyncCheck({ runner })).toBe(0);
-    expect(infoCommand).toBe("bun");
-    expect(infoArgs).toContain("node_modules/.bin/shadcn");
-    expect(readPinnedShadcnPackageSpecifier()).toMatch(
-      PINNED_SHADCN_SPECIFIER_PATTERN
-    );
-    expect(infoArgs).not.toContain("shadcn@latest");
-  });
-
-  test("treats the registry's cn package import swap as no drift", () => {
-    expect(
-      isCnImportOnlyShadcnDiff(`├ src/components/ui/input-group.tsx (overwrite)
-│ ┌──────────────────────────────────────────────
-│ │ --- a/src/components/ui/input-group.tsx
-│ │ +++ b/src/components/ui/input-group.tsx
-│ │ @@ -2,8 +2,8 @@
-│ │  
-│ │  import * as React from "react"
-│ │  import { cva, type VariantProps } from "class-variance-authority"
-│ │ +import { cn } from "cn"
-│ │  
-│ │ -import { cn } from "@/lib/utils"
-│ │  import { Button } from "@/components/ui/button"
-│ └──────────────────────────────────────────────`)
-    ).toBe(true);
-    expect(
-      isCnImportOnlyShadcnDiff(`├ src/components/ui/accordion.tsx (overwrite)
-│ │ @@ -1,6 +1,5 @@
-│ │  import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
-│ │ -
-│ │ +import { cn } from "cn"
-│ │ -import { cn } from "@/lib/utils"
-│ │  import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-│ └──────────────────────────────────────────────
-│
-├ Dependencies (1)
-│ + cn
-│
-└ Run without --dry-run to apply.`)
-    ).toBe(true);
-  });
-
-  test("fails when allowlisted and non-allowlisted drift are mixed", () => {
-    const consoleError = mockExpectedConsoleError();
-    const runner = {
-      run: (_command: string, args: readonly string[]) => {
-        if (args.includes("info")) {
-          return {
-            status: 0,
-            stderr: "",
-            stdout: JSON.stringify({ components: ["sonner", "button"] }),
-          };
-        }
-
-        return {
-          status: 0,
-          stderr: "",
-          stdout: `├ Files (2) ~2 overwrite
+const changedComponents = `├ Files (2) ~2 overwrite
 │ ~ src/components/ui/sonner.tsx overwrite
-│ ~ src/components/ui/button.tsx overwrite`,
-        };
-      },
-    };
+│ ~ src/components/ui/button.tsx overwrite`;
 
-    expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
-    expect(consoleError).toHaveBeenCalled();
-  });
-
-  test("fails when shadcn info returns no registry components", () => {
-    const consoleError = mockExpectedConsoleError();
-    const runner = {
-      run: (_command: string, args: readonly string[]) => {
-        if (args.includes("info")) {
-          return {
-            status: 0,
-            stderr: "",
-            stdout: JSON.stringify({ components: [] }),
-          };
-        }
-
-        throw new Error("dry run should not execute");
-      },
-    };
-
-    expect(runShadcnRegistrySyncCheck({ runner })).toBe(1);
-    expect(consoleError).toHaveBeenCalled();
-  });
-
-  test("fails closed when dry-run summary and parsed overwrites disagree", () => {
-    const runner = {
-      run: (_command: string, args: readonly string[]) => {
-        if (args.includes("info")) {
-          return {
-            status: 0,
-            stderr: "",
-            stdout: JSON.stringify({ components: ["button"] }),
-          };
-        }
-
-        return {
-          status: 0,
-          stderr: "",
-          stdout: `├ Files (1) ~1 overwrite
-│ ? src/components/ui/button.tsx overwrite`,
-        };
-      },
-    };
-
-    expect(() => runShadcnRegistrySyncCheck({ runner })).toThrow(
-      "Parsed 0 overwrite file(s), but shadcn reported 1"
-    );
-  });
-});
+test.each([
+  {
+    name: "allows the registry's cn package migration",
+    summary: changedComponents,
+    diff: `│ │ -import { cn } from "@/lib/utils"
+│ │ +import { cn } from "cn"
+│ + cn`,
+    status: 0,
+    message: "shadcn registry sync check passed",
+  },
+  {
+    name: "rejects real drift mixed with allowlisted files",
+    summary: changedComponents,
+    diff: '│ │ +const display = "changed";',
+    status: 1,
+    message: "- src/components/ui/button.tsx",
+  },
+  {
+    name: "fails closed when registry output can't be parsed",
+    summary:
+      "├ Files (1) ~1 overwrite\n│ ? src/components/ui/button.tsx overwrite",
+    diff: "",
+    status: 1,
+    message: "Parsed 0 overwrite file(s), but shadcn reported 1",
+  },
+  {
+    name: "fails closed when discovery returns no components",
+    components: [],
+    summary: "",
+    diff: "",
+    status: 1,
+    message: "shadcn info returned zero components",
+  },
+])(
+  "registry preflight $name",
+  ({ components, summary, diff, status, message }) => {
+    const root = mkdtempSync(join(tmpdir(), "querylane-registry-"));
+    try {
+      const bin = join(root, "node_modules/.bin");
+      mkdirSync(bin, { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ devDependencies: { shadcn: "1.0.0" } })
+      );
+      writeFileSync(
+        join(bin, "shadcn"),
+        `const args = process.argv.slice(2);
+if (args.join(" ") === "info --json") {
+  console.log(JSON.stringify({ components: ${JSON.stringify(components ?? ["sonner", "button"])} }));
+} else if (args.join(" ") === "add button sonner --dry-run") {
+  console.log(${JSON.stringify(summary)});
+} else if (args.join(" ") === "add button sonner --diff src/components/ui/button.tsx") {
+  console.log(${JSON.stringify(diff)});
+} else {
+  process.exitCode = 1;
+}`
+      );
+      const result = spawnSync(
+        "bun",
+        [join(import.meta.dirname, "check-shadcn-registry-sync.ts")],
+        { cwd: root, encoding: "utf8" }
+      );
+      expect(result.status, result.stdout + result.stderr).toBe(status);
+      expect(result.stdout + result.stderr).toContain(message);
+    } finally {
+      rmSync(root, { recursive: true });
+    }
+  }
+);

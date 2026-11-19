@@ -22,8 +22,6 @@ function TableDetailLoadingFallback({
   schemaName: string;
   tableName: string;
 }) {
-  // Mirrors the loaded TableDetailHeader so the header doesn't jump when the
-  // lazy chunk resolves.
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <ObjectDetailHeader

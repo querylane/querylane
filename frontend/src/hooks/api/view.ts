@@ -91,20 +91,21 @@ function useListViewDependenciesQuery(parent: string | undefined) {
   });
 }
 
-function queryKeyContainsResourceName(value: unknown, name: string): boolean {
-  if (value === name) {
-    return true;
-  }
-  if (Array.isArray(value)) {
-    return value.some((item) => queryKeyContainsResourceName(item, name));
-  }
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).some((item) =>
-      queryKeyContainsResourceName(item, name)
-    );
-  }
-  return false;
-}
+const queryKeyContainsResourceName: (value: unknown, name: string) => boolean =
+  (value, name) => {
+    if (value === name) {
+      return true;
+    }
+    if (Array.isArray(value)) {
+      return value.some((item) => queryKeyContainsResourceName(item, name));
+    }
+    if (typeof value === "object" && value !== null) {
+      return Object.values(value).some((item) =>
+        queryKeyContainsResourceName(item, name)
+      );
+    }
+    return false;
+  };
 
 interface RefreshMaterializedViewInput {
   mode: RefreshMaterializedViewMode;

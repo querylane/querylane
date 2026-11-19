@@ -64,10 +64,6 @@ function ObjectDetailHeader({
 }
 
 function ObjectDetailTabsBar({ children }: { children: ReactNode }) {
-  // The border lives on an inner min-w-max div (so it spans the full
-  // scrollable width) and the list is pulled down 1px over it: the active
-  // trigger's 2px underline then paints on top of the border as one line,
-  // like the mock — instead of floating 1px above it.
   return (
     <div className="shrink-0 overflow-x-auto">
       <div className="min-w-max border-b px-3 sm:px-4">

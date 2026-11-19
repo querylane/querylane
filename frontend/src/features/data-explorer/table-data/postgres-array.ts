@@ -3,12 +3,6 @@ interface PostgresArrayItem {
   isNull: boolean;
 }
 
-interface KeyedPostgresArrayItem {
-  item: PostgresArrayItem;
-  key: string;
-  position: number;
-}
-
 type PostgresArrayParseResult =
   | { items: PostgresArrayItem[]; ok: true }
   | { items?: undefined; ok: false };
@@ -21,14 +15,11 @@ interface ArrayScanState {
   itemWasQuoted: boolean;
 }
 
-function normalizeArrayItem(
-  rawItem: string,
-  wasQuoted: boolean
-): PostgresArrayItem {
+function normalizeArrayItem(rawItem: string, wasQuoted: boolean) {
   if (!wasQuoted && rawItem === "NULL") {
-    return { display: "NULL", isNull: true };
+    return { display: "NULL", isNull: true } satisfies PostgresArrayItem;
   }
-  return { display: rawItem, isNull: false };
+  return { display: rawItem, isNull: false } satisfies PostgresArrayItem;
 }
 
 function pushArrayItem(state: ArrayScanState) {
@@ -41,7 +32,7 @@ function consumeEscapedCharacter(
   input: string,
   index: number,
   state: ArrayScanState
-): number | undefined {
+) {
   if (!(state.inQuotes && input.charAt(index) === "\\")) {
     return undefined;
   }
@@ -53,7 +44,7 @@ function consumeEscapedCharacter(
   return index;
 }
 
-function consumeQuote(char: string, state: ArrayScanState): boolean {
+function consumeQuote(char: string, state: ArrayScanState) {
   if (char !== '"') {
     return false;
   }
@@ -62,7 +53,7 @@ function consumeQuote(char: string, state: ArrayScanState): boolean {
   return true;
 }
 
-function updateNestedArrayDepth(char: string, state: ArrayScanState): boolean {
+function updateNestedArrayDepth(char: string, state: ArrayScanState) {
   if (state.inQuotes) {
     return true;
   }
@@ -77,15 +68,15 @@ function updateNestedArrayDepth(char: string, state: ArrayScanState): boolean {
   return state.depth >= 0;
 }
 
-function isArrayItemSeparator(char: string, state: ArrayScanState): boolean {
+function isArrayItemSeparator(char: string, state: ArrayScanState) {
   return !state.inQuotes && state.depth === 0 && char === ",";
 }
 
-function hasUnclosedArrayItem(state: ArrayScanState): boolean {
+function hasUnclosedArrayItem(state: ArrayScanState) {
   return state.inQuotes || state.depth !== 0;
 }
 
-function scanArrayItems(inner: string): PostgresArrayParseResult {
+function scanArrayItems(inner: string) {
   const state: ArrayScanState = {
     buffer: "",
     depth: 0,
@@ -106,7 +97,7 @@ function scanArrayItems(inner: string): PostgresArrayParseResult {
       continue;
     }
     if (!updateNestedArrayDepth(char, state)) {
-      return { ok: false };
+      return { ok: false } satisfies PostgresArrayParseResult;
     }
     if (isArrayItemSeparator(char, state)) {
       pushArrayItem(state);
@@ -116,29 +107,27 @@ function scanArrayItems(inner: string): PostgresArrayParseResult {
   }
 
   if (hasUnclosedArrayItem(state)) {
-    return { ok: false };
+    return { ok: false } satisfies PostgresArrayParseResult;
   }
 
   pushArrayItem(state);
-  return { items: state.items, ok: true };
+  return { items: state.items, ok: true } satisfies PostgresArrayParseResult;
 }
 
-function parsePostgresArrayLiteral(raw: string): PostgresArrayParseResult {
+function parsePostgresArrayLiteral(raw: string) {
   if (!(raw.startsWith("{") && raw.endsWith("}"))) {
-    return { ok: false };
+    return { ok: false } satisfies PostgresArrayParseResult;
   }
 
   const inner = raw.slice(1, -1);
   if (inner === "") {
-    return { items: [], ok: true };
+    return { items: [], ok: true } satisfies PostgresArrayParseResult;
   }
 
   return scanArrayItems(inner);
 }
 
-function keyPostgresArrayItems(
-  items: PostgresArrayItem[]
-): KeyedPostgresArrayItem[] {
+function keyPostgresArrayItems(items: PostgresArrayItem[]) {
   const countsByIdentity = new Map<string, number>();
   return items.map((item, zeroBasedPosition) => {
     const identity = `${item.isNull ? "null" : "value"}:${item.display}`;

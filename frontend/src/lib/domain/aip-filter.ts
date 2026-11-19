@@ -12,44 +12,42 @@ type RoleFilterKind = "builtin" | "group" | "login" | "repl" | "super";
 const MIN_SERVER_SUBSTRING_LENGTH = 2;
 const SERVER_FILTER_DEBOUNCE_MS = 200;
 
-function quoteFilterValue(value: string): string {
-  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
-}
+const quoteFilterValue: (value: string) => string = (value) =>
+  `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 
-function buildContainsFilter(
+const buildContainsFilter: (
   field: ContainsFilterField,
   value: string
-): string | undefined {
+) => string | undefined = (field, value) => {
   const trimmed = value.trim();
   if (trimmed.length < MIN_SERVER_SUBSTRING_LENGTH) {
     return undefined;
   }
   return `${field}:${quoteFilterValue(trimmed)}`;
-}
+};
 
-function joinFilterConditions(
+const joinFilterConditions: (
   conditions: readonly (string | undefined)[]
-): string | undefined {
+) => string | undefined = (conditions) => {
   const present = conditions.filter((condition) => condition !== undefined);
   return present.length === 0 ? undefined : present.join(" AND ");
-}
+};
 
-function buildOwnedFilter({
+const buildOwnedFilter: ({
   objectType,
   search,
 }: Readonly<{
   objectType?: string | undefined;
   search: string;
-}>): string | undefined {
-  return joinFilterConditions([
+}>) => string | undefined = ({ objectType, search }) =>
+  joinFilterConditions([
     isNonEmptyString(objectType)
       ? `object_type = ${quoteFilterValue(objectType)}`
       : undefined,
     buildGrantSearchFilter(search),
   ]);
-}
 
-function buildGrantSearchFilter(search: string): string | undefined {
+function buildGrantSearchFilter(search: string) {
   const objectName = buildContainsFilter("object_name", search);
   if (!isNonEmptyString(objectName)) {
     return undefined;
@@ -61,7 +59,7 @@ function buildGrantSearchFilter(search: string): string | undefined {
   return `(${objectName} OR ${schemaName})`;
 }
 
-function buildGrantFilter({
+const buildGrantFilter: ({
   objectType,
   schemaName,
   search,
@@ -69,8 +67,8 @@ function buildGrantFilter({
   objectType?: string | undefined;
   schemaName?: string | undefined;
   search: string;
-}>): string | undefined {
-  return joinFilterConditions([
+}>) => string | undefined = ({ objectType, schemaName, search }) =>
+  joinFilterConditions([
     schemaName === undefined
       ? undefined
       : `schema_name = ${quoteFilterValue(schemaName)}`,
@@ -79,9 +77,8 @@ function buildGrantFilter({
       : undefined,
     buildGrantSearchFilter(search),
   ]);
-}
 
-function roleTypeFilter(type: RoleFilterKind | undefined): string | undefined {
+function roleTypeFilter(type: RoleFilterKind | undefined) {
   switch (type) {
     case undefined:
       return undefined;
@@ -100,18 +97,17 @@ function roleTypeFilter(type: RoleFilterKind | undefined): string | undefined {
   }
 }
 
-function buildRoleFilter({
+const buildRoleFilter: ({
   query,
   type,
 }: Readonly<{
   query: string;
   type?: RoleFilterKind | undefined;
-}>): string | undefined {
-  return joinFilterConditions([
+}>) => string | undefined = ({ query, type }) =>
+  joinFilterConditions([
     buildContainsFilter("role_name", query),
     roleTypeFilter(type),
   ]);
-}
 
 export type { ContainsFilterField, RoleFilterKind };
 export {

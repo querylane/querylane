@@ -89,7 +89,6 @@ const compilerProjects = [
     name: "tsconfig.json",
     includes: [
       "src",
-      "test/setup-globals.ts",
       ...toolConfigIncludes,
       "e2e",
       "scripts",
@@ -138,11 +137,7 @@ const compilerProjects = [
     includes: [],
     excludes: [],
     checkJs: false,
-    requiredFiles: [
-      "src/env.d.ts",
-      "src/import-meta-env.d.ts",
-      "src/types/css.d.ts",
-    ],
+    requiredFiles: ["src/import-meta-env.d.ts", "src/types/css.d.ts"],
   },
 ];
 const recordSchema = z.record(z.string(), z.unknown());
@@ -153,6 +148,7 @@ const exceptionSchema = z.object({
 const boundaryInventorySchema = z.object({
   biome: z.array(z.object({ rule: z.string(), decision: z.string() })),
   oxlint: z.array(z.object({ rule: z.string(), decision: z.string() })),
+  landmines: z.array(z.object({ rule: z.string(), decision: z.string() })),
   overrideExceptions: z.object({
     biome: z.array(exceptionSchema),
     oxlint: z.array(exceptionSchema),
@@ -160,42 +156,36 @@ const boundaryInventorySchema = z.object({
 });
 type OverrideException = z.infer<typeof exceptionSchema>;
 
-function ruleSeverity(configured: unknown): unknown {
+function ruleSeverity(configured: unknown) {
   const level = isUnknownArray(configured) ? configured[0] : configured;
   return isRecord(level) ? level["level"] : level;
 }
 
-function isErrorLevel(configured: unknown): boolean {
+function isErrorLevel(configured: unknown) {
   const level = ruleSeverity(configured);
   return level === "error" || level === "deny" || level === 2;
 }
 
-function isOffLevel(configured: unknown): boolean {
+function isOffLevel(configured: unknown) {
   const level = ruleSeverity(configured);
   return level === "off" || level === "allow" || level === 0;
 }
 
-function recordAt(
-  record: Record<string, unknown>,
-  key: string
-): Record<string, unknown> {
+function recordAt(record: Record<string, unknown>, key: string) {
   const value = record[key];
   return value === undefined ? {} : recordSchema.parse(value);
 }
 
-function strings(value: unknown): string[] {
+function strings(value: unknown) {
   return z.array(z.string()).parse(value ?? []);
 }
 
-async function loadConfig(
-  root: string,
-  file: string
-): Promise<Record<string, unknown>> {
+async function loadConfig(root: string, file: string) {
   const module: unknown = await import(join(root, file));
   return z.object({ default: recordSchema }).parse(module).default;
 }
 
-function readConfig(root: string, file: string): Record<string, unknown> {
+function readConfig(root: string, file: string) {
   const parsed: unknown = JSON.parse(readFileSync(join(root, file), "utf8"));
   return recordSchema.parse(parsed);
 }
@@ -204,7 +194,7 @@ function assertExclusions(
   tool: string,
   values: readonly string[],
   approved: ReadonlySet<string>
-): void {
+) {
   for (const value of values) {
     if (!approved.has(value)) {
       throw new Error(`Unreviewed ${tool} exclusion: ${value}`);
@@ -216,7 +206,7 @@ function assertEngineSwitches(
   config: Record<string, unknown>,
   prefix = "",
   generated = false
-): void {
+) {
   for (const engine of engines) {
     assertEngine(recordAt(config, engine), prefix + engine, generated);
   }
@@ -235,7 +225,7 @@ function assertEngine(
   settings: Record<string, unknown>,
   role: string,
   generated: boolean
-): void {
+) {
   if (
     settings["enabled"] === false &&
     !generated &&
@@ -255,7 +245,7 @@ function reviewedException(
   scope: readonly string[],
   rule: string,
   exceptions: readonly OverrideException[]
-): boolean {
+) {
   const key = JSON.stringify(scope.toSorted());
   return exceptions.some(
     (exception) =>
@@ -278,7 +268,7 @@ function assertOverrideLevel({
   value: unknown;
   policies: ReadonlyMap<string, string>;
   exceptions: readonly OverrideException[];
-}): void {
+}) {
   const decision = policies.get(rule);
   const errorExpected = decision === "error" || decision === "scoped-error";
   if (
@@ -295,9 +285,7 @@ function assertOverrideLevel({
   );
 }
 
-function biomeRuleEntries(
-  groups: Record<string, unknown>
-): { rule: string; value: unknown }[] {
+function biomeRuleEntries(groups: Record<string, unknown>) {
   return Object.entries(groups).flatMap(([group, rules]) =>
     Object.entries(recordSchema.parse(rules)).flatMap(([name, value]) =>
       name === "preset" || name === "recommended"
@@ -311,7 +299,7 @@ function assertBiomeOverrides(
   config: Record<string, unknown>,
   policies: ReadonlyMap<string, string>,
   exceptions: readonly OverrideException[]
-): void {
+) {
   const overrides = z.array(recordSchema).parse(config["overrides"] ?? []);
   for (const override of overrides) {
     assertBiomeScannerCoverage(recordAt(override, "files"));
@@ -339,7 +327,7 @@ function assertBiome(
   config: Record<string, unknown>,
   policies: ReadonlyMap<string, string>,
   exceptions: readonly OverrideException[]
-): void {
+) {
   const presets = strings(config["extends"]);
   if (presets.length !== 1 || presets[0] !== "ultracite/biome/playwright") {
     throw new Error("Unreviewed Biome preset inheritance");
@@ -362,7 +350,7 @@ function assertBiome(
   assertBiomeOverrides(config, policies, exceptions);
 }
 
-function assertBiomeScannerCoverage(files: Record<string, unknown>): void {
+function assertBiomeScannerCoverage(files: Record<string, unknown>) {
   if (strings(files["experimentalScannerIgnores"]).length > 0) {
     throw new Error("Biome scanner exclusions are not permitted");
   }
@@ -380,7 +368,7 @@ function assertOxlint(
   config: Record<string, unknown>,
   policies: ReadonlyMap<string, string>,
   exceptions: readonly OverrideException[]
-): void {
+) {
   if (strings(config["extends"]).length > 0) {
     throw new Error(
       "Oxlint presets must remain materialized without inherited overrides"
@@ -405,7 +393,7 @@ function assertOxlintOverride(
   override: Record<string, unknown>,
   policies: ReadonlyMap<string, string>,
   exceptions: readonly OverrideException[]
-): void {
+) {
   if (Object.keys(override).some((key) => key !== "files" && key !== "rules")) {
     throw new Error(
       "Oxlint overrides cannot alter engine or coverage settings"
@@ -426,7 +414,7 @@ function assertOxlintOverride(
   }
 }
 
-function assertDoctor(config: Record<string, unknown>): void {
+function assertDoctor(config: Record<string, unknown>) {
   if (
     config["lint"] !== true ||
     config["warnings"] !== true ||
@@ -455,7 +443,7 @@ function assertDoctor(config: Record<string, unknown>): void {
 function assertCompilerCoverage(
   project: (typeof compilerProjects)[number],
   config: Record<string, unknown>
-): void {
+) {
   const includes = new Set(strings(config["include"]));
   const approved = new Set(project.excludes);
   const files = new Set(
@@ -474,7 +462,7 @@ function assertCompilerCoverage(
 function assertCompiler(
   root: string,
   project: (typeof compilerProjects)[number]
-): void {
+) {
   const result = spawnSync(
     join(root, "node_modules/.bin/tsc"),
     ["-p", join(root, project.name), "--showConfig"],
@@ -515,7 +503,7 @@ function assertCompiler(
 function assertAuthoredDeclarationCoverage(
   root: string,
   config: Record<string, unknown>
-): void {
+) {
   const roots = new Set(
     strings(config["files"]).map((file) => file.replace(SCOPED_PATTERN, ""))
   );
@@ -536,7 +524,7 @@ function assertAuthoredDeclarationCoverage(
 function assertDeclarationCompleteness(
   projectName: string,
   options: Record<string, unknown>
-): void {
+) {
   if (
     (projectName === "tsconfig.authored-declarations.json" ||
       projectName === "tsconfig.browser-js.json") &&
@@ -546,9 +534,7 @@ function assertDeclarationCompleteness(
   }
 }
 
-async function assertQualityBoundaries(
-  root: string
-): Promise<ReadonlySet<string>> {
+async function assertQualityBoundaries(root: string) {
   const inventory = boundaryInventorySchema.parse(
     readConfig(root, "quality/rule-inventory.json")
   );
@@ -564,7 +550,12 @@ async function assertQualityBoundaries(
   );
   assertOxlint(
     oxlint,
-    new Map(inventory.oxlint.map((entry) => [entry.rule, entry.decision])),
+    new Map(
+      [...inventory.oxlint, ...inventory.landmines].map((entry) => [
+        entry.rule,
+        entry.decision,
+      ])
+    ),
     inventory.overrideExceptions.oxlint
   );
   assertDoctor(doctor);

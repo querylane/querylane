@@ -13,7 +13,6 @@ import { isNonEmptyString } from "@/lib/value-guards";
 import {
   CellValueMode,
   type ReadRowsRequest,
-  type StreamRowsRequest,
   StreamRowsRequestSchema,
   type StreamRowsResponse,
   TableDataService,
@@ -75,9 +74,7 @@ interface WindowWithSaveFilePicker {
   }) => Promise<FileSystemFileHandleLike>;
 }
 
-function buildStreamRowsExportRequest(
-  request: ReadRowsRequest
-): StreamRowsRequest {
+function buildStreamRowsExportRequest(request: ReadRowsRequest) {
   return create(StreamRowsRequestSchema, {
     batchSize: STREAM_ROWS_EXPORT_BATCH_SIZE,
     cellValueMode: CellValueMode.FULL,
@@ -88,20 +85,15 @@ function buildStreamRowsExportRequest(
   });
 }
 
-function rowToSelectedRow(
-  row: TableResultRow,
-  columns: TableResultColumn[]
-): SelectedRow {
+function rowToSelectedRow(row: TableResultRow, columns: TableResultColumn[]) {
   return {
     cells: new Map(
       columns.map((column, index) => [column.columnName, row.values[index]])
     ),
-  };
+  } satisfies SelectedRow;
 }
 
-async function buildStreamRowsExportPayload(
-  args: StreamRowsExportPayloadArgs
-): Promise<StreamRowsExportPayloadResult> {
+async function buildStreamRowsExportPayload(args: StreamRowsExportPayloadArgs) {
   try {
     return await buildStreamRowsExportPayloadUnsafe(args);
   } catch (error) {
@@ -112,10 +104,9 @@ async function buildStreamRowsExportPayload(
 
 async function abortFileSink(fileSink: ExportFileSink | undefined) {
   try {
-    await fileSink?.abort?.();
+    return await fileSink?.abort?.();
   } catch {
-    // Keep the original stream/export error. Writable abort failures are
-    // cleanup failures and should not replace the user-visible cause.
+    return undefined;
   }
 }
 
@@ -202,7 +193,7 @@ async function buildStreamRowsExportPayloadUnsafe({
   onProgress,
   resourceName,
   stream,
-}: StreamRowsExportPayloadArgs): Promise<StreamRowsExportPayloadResult> {
+}: StreamRowsExportPayloadArgs) {
   const state: StreamExportState = {
     builder: undefined,
     columns: undefined,
@@ -245,7 +236,7 @@ async function buildStreamRowsExportPayloadUnsafe({
       rowCount: state.rowCount,
       savedToFile: true,
       truncated: state.truncated,
-    };
+    } satisfies StreamRowsExportPayloadResult;
   }
 
   return {
@@ -253,12 +244,10 @@ async function buildStreamRowsExportPayloadUnsafe({
     rowCount: state.rowCount,
     savedToFile: false,
     truncated: state.truncated,
-  };
+  } satisfies StreamRowsExportPayloadResult;
 }
 
-async function createBrowserFileSink(
-  details: ExportFileDetails
-): Promise<ExportFileSink | undefined> {
+async function createBrowserFileSink(details: ExportFileDetails) {
   if (globalThis.window === undefined) {
     return undefined;
   }
@@ -284,10 +273,7 @@ async function createBrowserFileSink(
   });
   const writable = await handle.createWritable();
 
-  async function writeChunks(
-    chunks: readonly BlobPart[],
-    index = 0
-  ): Promise<void> {
+  async function writeChunks(chunks: readonly BlobPart[], index = 0) {
     const chunk = chunks[index];
     if (chunk === undefined) {
       return;
@@ -300,7 +286,7 @@ async function createBrowserFileSink(
     abort: () => writable.abort?.(),
     close: () => writable.close(),
     write: writeChunks,
-  };
+  } satisfies ExportFileSink | undefined;
 }
 
 async function exportStreamRows({
@@ -315,13 +301,11 @@ async function exportStreamRows({
   request: ReadRowsRequest;
   signal?: AbortSignal | undefined;
   transport: Transport;
-}): Promise<StreamRowsExportPayloadResult> {
+}) {
   const streamRequest = buildStreamRowsExportRequest(request);
   const fileSink = await createBrowserFileSink(
     getExportFileDetails(exportFormat, streamRequest.name)
   );
-  // timeoutMs: 0 disables the transport's default deadline: an export can
-  // legitimately stream for minutes and is user-cancellable via the signal.
   const callOptions = signal ? { signal, timeoutMs: 0 } : { timeoutMs: 0 };
   const stream = createClient(TableDataService, transport).streamRows(
     streamRequest,
@@ -338,8 +322,4 @@ async function exportStreamRows({
 }
 
 export type { StreamRowsExportPayloadResult, StreamRowsExportProgress };
-export {
-  buildStreamRowsExportPayload,
-  buildStreamRowsExportRequest,
-  exportStreamRows,
-};
+export { exportStreamRows };

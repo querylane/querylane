@@ -1,11 +1,3 @@
-/**
- * Time-axis helpers for the chart kit: calendar-aligned "nice" tick generation
- * and range-adaptive label formatting. Numeric tick generators can pick
- * multiples of powers of ten, which are ugly as times (e.g. 13:47, 15:23);
- * these helpers snap ticks to whole minutes/hours/days instead, the way d3's
- * time scales do, without pulling in d3 directly.
- */
-
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
@@ -21,7 +13,6 @@ interface TickStep {
   unit: keyof typeof UNIT_MS;
 }
 
-/** Candidate tick intervals, smallest first: whole minutes, hours, then days. */
 const TICK_STEPS: TickStep[] = [
   { count: 1, unit: "minute" },
   { count: 2, unit: "minute" },
@@ -39,23 +30,14 @@ const TICK_STEPS: TickStep[] = [
   { count: 7, unit: "day" },
 ];
 
-function stepToMs(step: TickStep): number {
+function stepToMs(step: TickStep) {
   return step.count * UNIT_MS[step.unit];
 }
 
-/** Default upper bound on generated ticks; tuned for card-width charts. */
 const DEFAULT_MAX_TICKS = 7;
 
-/** Spans at or below this render tick labels as clock times, above as dates. */
 const CLOCK_LABEL_MAX_SPAN_MS = 2 * MS_PER_DAY;
 
-/**
- * One pinned locale + 24h clock for every chart label, matching the pinned
- * en-US number formatters in lib/metrics.ts. A floating locale renders
- * "48,8 KB/s" next to "1.2K" on the same screen, and en-US's default 12-hour
- * cycle turns axis ticks into "02:30 PM" — triple-width labels that violate
- * the monitoring convention (Grafana always renders HH:mm).
- */
 const CHART_LOCALE = "en-US";
 
 const clockFormatter = new Intl.DateTimeFormat(CHART_LOCALE, {
@@ -77,8 +59,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(CHART_LOCALE, {
   month: "short",
 });
 
-/** The local midnight at or after `ms` (DST-safe via Date arithmetic). */
-function nextLocalMidnight(ms: number): number {
+function nextLocalMidnight(ms: number) {
   const date = new Date(ms);
   date.setHours(0, 0, 0, 0);
   if (date.getTime() < ms) {
@@ -88,27 +69,20 @@ function nextLocalMidnight(ms: number): number {
   return date.getTime();
 }
 
-function dayAlignedTicks(
-  minMs: number,
-  maxMs: number,
-  stepMs: number
-): number[] {
+function dayAlignedTicks(minMs: number, maxMs: number, stepMs: number) {
   const strideDays = Math.max(1, Math.round(stepMs / MS_PER_DAY));
   const ticks: number[] = [];
   const cursor = new Date(nextLocalMidnight(minMs));
   while (cursor.getTime() <= maxMs) {
     ticks.push(cursor.getTime());
     cursor.setDate(cursor.getDate() + strideDays);
-    // Re-floor after each stride: when DST removes midnight (e.g. Santiago's
-    // spring-forward at 24:00), setDate normalizes to 01:00 and would
-    // otherwise stay there for every following day.
     cursor.setHours(0, 0, 0, 0);
   }
 
   return ticks;
 }
 
-function createSubdayCursor(minMs: number, unit: TickStep["unit"]): Date {
+function createSubdayCursor(minMs: number, unit: TickStep["unit"]) {
   const cursor = new Date(minMs);
   if (unit === "minute") {
     cursor.setSeconds(0, 0);
@@ -124,7 +98,7 @@ function createSubdayCursor(minMs: number, unit: TickStep["unit"]): Date {
   return cursor;
 }
 
-function advanceSubdayCursor(cursor: Date, unit: TickStep["unit"]): void {
+function advanceSubdayCursor(cursor: Date, unit: TickStep["unit"]) {
   if (unit === "minute") {
     cursor.setMinutes(cursor.getMinutes() + 1);
     return;
@@ -132,17 +106,7 @@ function advanceSubdayCursor(cursor: Date, unit: TickStep["unit"]): void {
   cursor.setHours(cursor.getHours() + 1);
 }
 
-/**
- * Sub-day ticks aligned to the LOCAL calendar: walk whole local minutes or
- * hours and keep multiples of the step (d3-time's filter semantics). Epoch
- * multiples would label ":45" in offset timezones like Asia/Kathmandu
- * (+05:45) and jump 3 hours across DST transitions; wall-clock fields don't.
- */
-function localAlignedTicks(
-  minMs: number,
-  maxMs: number,
-  step: TickStep
-): number[] {
+function localAlignedTicks(minMs: number, maxMs: number, step: TickStep) {
   const cursor = createSubdayCursor(minMs, step.unit);
 
   const ticks: number[] = [];
@@ -168,14 +132,12 @@ export function buildTimeTicks(
   minMs: number,
   maxMs: number,
   maxTicks: number = DEFAULT_MAX_TICKS
-): number[] {
+) {
   const spanMs = maxMs - minMs;
   if (!(Number.isFinite(spanMs) && spanMs > 0 && maxTicks > 0)) {
-    return [];
+    return [] satisfies number[];
   }
 
-  // A grid-aligned window fits floor(span/step) + 1 ticks, so the budget
-  // check must use maxTicks - 1 segments, not maxTicks.
   const fittingStep = TICK_STEPS.find(
     (step) => spanMs / stepToMs(step) <= maxTicks - 1
   );
@@ -195,7 +157,7 @@ export function buildTimeTicks(
  * every label on an axis reads uniformly: clock times ("14:30") for intraday
  * spans, dates ("Jul 3") beyond two days.
  */
-export function formatTimeTick(ms: number, spanMs: number): string {
+export function formatTimeTick(ms: number, spanMs: number) {
   if (spanMs <= CLOCK_LABEL_MAX_SPAN_MS) {
     return clockFormatter.format(new Date(ms));
   }
@@ -204,6 +166,6 @@ export function formatTimeTick(ms: number, spanMs: number): string {
 }
 
 /** The full, unambiguous timestamp for tooltips, e.g. "Jul 5, 14:32". */
-export function formatTooltipTime(ms: number): string {
+export function formatTooltipTime(ms: number) {
   return dateTimeFormatter.format(new Date(ms));
 }

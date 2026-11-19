@@ -126,7 +126,6 @@ const MEAN_FILTER_OPTIONS = [
   threshold: number;
   value: Exclude<MeanFilterValue, "any">;
 }[];
-type QueryClassification = "read" | "write" | "other";
 type QueryInsightMetric = "query_stats" | "table_stats";
 type QueryInsightPartialErrors = Partial<Record<QueryInsightMetric, Status>>;
 
@@ -141,7 +140,7 @@ interface QuerySelection {
   snapshotSource: QueryRuntimeInsight[] | null;
 }
 
-function queryKindFromSelectedValues(values: string[]): QueryKindFilter {
+function queryKindFromSelectedValues(values: string[]) {
   const value = values.at(-1);
   switch (value) {
     case "reads":
@@ -153,7 +152,7 @@ function queryKindFromSelectedValues(values: string[]): QueryKindFilter {
   }
 }
 
-function meanFilterFromSelectedValues(values: string[]): MeanFilterValue {
+function meanFilterFromSelectedValues(values: string[]) {
   switch (values.at(-1)) {
     case "5":
       return "5";
@@ -180,7 +179,7 @@ function queryPageCount(totalRows: number, pageSize: number) {
   return Math.max(1, Math.ceil(totalRows / pageSize));
 }
 
-function queryPageSizeFromValue(value: string): QueryPageSize | null {
+function queryPageSizeFromValue(value: string) {
   const pageSize = Number.parseInt(value, 10);
   return isPageSize(pageSize) ? pageSize : null;
 }
@@ -308,14 +307,22 @@ function scanCopySegment(
   statement: string,
   index: number,
   parenthesesDepth: number
-): CopyScanState {
+) {
   const protectedSqlEnd = skipProtectedSql(statement, index);
   if (protectedSqlEnd !== null) {
-    return { direction: null, index: protectedSqlEnd, parenthesesDepth };
+    return {
+      direction: null,
+      index: protectedSqlEnd,
+      parenthesesDepth,
+    } satisfies CopyScanState;
   }
   const character = statement[index];
   if (character === undefined) {
-    return { direction: null, index: statement.length, parenthesesDepth };
+    return {
+      direction: null,
+      index: statement.length,
+      parenthesesDepth,
+    } satisfies CopyScanState;
   }
   const nextDepth = updateParenthesesDepth(character, parenthesesDepth);
   const wordMatch =
@@ -323,7 +330,11 @@ function scanCopySegment(
       ? SQL_WORD_RE.exec(statement.slice(index))
       : null;
   if (!wordMatch) {
-    return { direction: null, index: index + 1, parenthesesDepth: nextDepth };
+    return {
+      direction: null,
+      index: index + 1,
+      parenthesesDepth: nextDepth,
+    } satisfies CopyScanState;
   }
   const word = wordMatch[0].toLowerCase();
   const previousNonSpace = statement.slice(0, index).trimEnd().at(-1);
@@ -335,10 +346,10 @@ function scanCopySegment(
     direction,
     index: index + wordMatch[0].length,
     parenthesesDepth: nextDepth,
-  };
+  } satisfies CopyScanState;
 }
 
-function copyDirection(statement: string): "from" | "to" | null {
+function copyDirection(statement: string) {
   const copyKeyword = COPY_KEYWORD_RE.exec(statement);
   if (!copyKeyword) {
     return null;
@@ -357,13 +368,12 @@ function copyDirection(statement: string): "from" | "to" | null {
   return null;
 }
 
-function classifyQuery(query: QueryRuntimeInsight): QueryClassification {
+function classifyQuery(query: QueryRuntimeInsight) {
   const queryText = query.query.trim();
   if (!queryText) {
     return "other";
   }
 
-  // Best effort from pg_stat_statements text until the backend returns a statement kind.
   const statement = stripLeadingSqlComments(
     stripLeadingExplain(stripLeadingSqlComments(queryText))
   );
@@ -425,11 +435,11 @@ function indexQueries(queries: QueryRuntimeInsight[]) {
 function createQuerySelection(
   entry: IndexedQueryRuntimeInsight,
   queries: QueryRuntimeInsight[]
-): QuerySelection {
+) {
   return {
     selectionKey: entry.selectionKey,
     snapshotSource: entry.selectionKey.startsWith("snapshot:") ? queries : null,
-  };
+  } satisfies QuerySelection;
 }
 
 function findSelectedQuery({

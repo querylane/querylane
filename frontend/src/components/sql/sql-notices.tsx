@@ -14,9 +14,7 @@ interface VisibleSqlNotice {
   text: string;
 }
 
-function buildVisibleSqlNotices(
-  notices: readonly string[]
-): VisibleSqlNotice[] {
+function buildVisibleSqlNotices(notices: readonly string[]) {
   const visibleNotices: VisibleSqlNotice[] = [];
 
   for (const notice of notices) {

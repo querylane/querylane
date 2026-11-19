@@ -98,7 +98,6 @@ function temporalParts(value: string) {
   } else if (TIME.test(value)) {
     timestamp = `1970-01-01T${value}`;
   }
-  // Zone-free SQL values are wall-clock values, independent of the browser zone.
   if (!TIME_ZONE.test(timestamp)) {
     timestamp += "Z";
   }
@@ -117,8 +116,6 @@ function compareTemporal(left: string, right: string) {
       comparePrimitive(a.nanos, b.nanos)
     );
   }
-  // Unsupported formats/ranges form a separate text-sorted bucket, keeping a
-  // total order even when valid timestamps use different timezone offsets.
   if (a || b) {
     return a ? -1 : 1;
   }
@@ -171,8 +168,6 @@ function compareCells(
   return descending ? -compared : compared;
 }
 
-// Presentation sort of the received result only; never wraps or executes SQL.
-// This is not a promise to reproduce PostgreSQL collations or hidden full values.
 function sortSqlResultRows(
   rows: readonly TableResultRow[],
   columns: readonly TableResultColumn[],

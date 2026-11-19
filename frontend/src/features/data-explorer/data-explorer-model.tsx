@@ -1,6 +1,5 @@
 "use client";
 
-import type React from "react";
 import type {
   CategoryKey,
   ResourceItem,
@@ -29,22 +28,20 @@ export interface ViewSummary {
   type: View_ViewType;
 }
 
-export function pickDefaultSchema(
-  schemas: SchemaSummary[]
-): SchemaSummary | null {
+export function pickDefaultSchema(schemas: SchemaSummary[]) {
   if (schemas.length === 0) {
     return null;
   }
   const publicSchema = schemas.find((schema) => schema.name === "public");
   return publicSchema ?? schemas[0] ?? null;
 }
-export function matchesQuery(name: string, query: string): boolean {
+export function matchesQuery(name: string, query: string) {
   if (!query) {
     return true;
   }
   return name.toLowerCase().includes(query.toLowerCase());
 }
-export function highlightMatch(text: string, query: string): React.ReactNode {
+export function highlightMatch(text: string, query: string) {
   if (!query) {
     return text;
   }
@@ -66,10 +63,10 @@ export function getItemsForCategory(
   category: CategoryKey,
   tables: TableSummary[],
   views: ViewSummary[]
-): ResourceItem[] {
+) {
   switch (category) {
     case "tables":
-      return tables.map((table) => {
+      return tables.map<ResourceItem>((table) => {
         const isPartitioned = table.type === Table_TableType.PARTITIONED;
         return {
           badge: isPartitioned
@@ -81,7 +78,7 @@ export function getItemsForCategory(
         };
       });
     case "views":
-      return views.map((view) => {
+      return views.map<ResourceItem>((view) => {
         const isMaterialized = view.type === View_ViewType.MATERIALIZED;
         return {
           badge: isMaterialized
@@ -92,6 +89,6 @@ export function getItemsForCategory(
         };
       });
     default:
-      return [];
+      return [] satisfies ResourceItem[];
   }
 }

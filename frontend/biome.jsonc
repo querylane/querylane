@@ -37,7 +37,6 @@
       "trailingCommas": "es5"
     },
     "globals": [
-      "__API_BASE_URL__",
       "describe",
       "test",
       "expect",
@@ -274,7 +273,7 @@
           "options": {
             "devDependencies": [
               "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
-              "**/__tests__/**",
+              "**/*.test-utils.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
               "**/e2e/**",
               "**/tests/**",
               "**/scripts/**",

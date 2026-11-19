@@ -671,9 +671,6 @@ function ActivitySessionSheet({
         className="overflow-hidden"
         presentation="detail"
         side="right"
-        // Registry sheets cap at sm:max-w-sm; the session inspector needs a
-        // wide drawer, and `ui/` must stay native shadcn output, so the width
-        // override lives here.
         width="detail"
       >
         <SessionSheetContent
@@ -776,9 +773,6 @@ function InstanceActivityPage({
   });
   const blockingChains = getActivityBlockingChains(allRows);
   const hasActivity = connectionStatus === "connected" && Boolean(activity);
-  // Resolve the open drawer's session from the freshest snapshot instead of
-  // capturing the row at click time, so a refresh updates the drawer in place
-  // and a vanished session gets an explicit "ended" state.
   const selectedSession =
     selectedPid === null
       ? null

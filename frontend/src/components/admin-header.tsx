@@ -55,7 +55,7 @@ import { useTheme } from "@/theme-context";
 
 type ConnectionStatus = "connected" | "disconnected" | "error";
 
-function getConnectionStatusClass(status: ConnectionStatus): string {
+function getConnectionStatusClass(status: ConnectionStatus) {
   if (status === "connected") {
     return "bg-success";
   }
@@ -64,7 +64,7 @@ function getConnectionStatusClass(status: ConnectionStatus): string {
   }
   return "bg-muted-foreground/50";
 }
-function getDisabledReason(status?: ConnectionStatus): string | null {
+function getDisabledReason(status?: ConnectionStatus) {
   if (status === "connected") {
     return null;
   }
@@ -81,7 +81,7 @@ function getBreadcrumbQueryState(
     refreshing: queryState.isFetching && queryState.hasResolved,
   };
 }
-function getConnectionStatusLabel(status: ConnectionStatus): string {
+function getConnectionStatusLabel(status: ConnectionStatus) {
   if (status === "connected") {
     return "Connected";
   }
@@ -174,25 +174,16 @@ function BreadcrumbDropdownList({
   );
 }
 
-function shouldShowBreadcrumbSpinner(
-  loading: boolean,
-  refreshing: boolean
-): boolean {
+function shouldShowBreadcrumbSpinner(loading: boolean, refreshing: boolean) {
   return loading || refreshing;
 }
 
-function breadcrumbTriggerAriaLabel(
-  label: string,
-  value: string | null
-): string {
+function breadcrumbTriggerAriaLabel(label: string, value: string | null) {
   return value === null
     ? `Select ${label.toLowerCase()}`
     : `${label}: ${value}`;
 }
 
-// Single-row breadcrumb chip content: status dot + value + chevron. The label
-// lives in the trigger's accessible name rather than a stacked eyebrow, keeping
-// the topbar to one slim row.
 function BreadcrumbTriggerBody({
   disabled,
   hasValue,
@@ -583,9 +574,6 @@ function DatabaseSelector({
   selectedInstance: ReturnType<typeof useDb>["selectedInstance"];
 }) {
   const { databaseId } = useCurrentRouteIds();
-  // The database selector is only part of the path inside database scope.
-  // Instance-scoped pages (overview, roles, configuration) have no database in
-  // their route, so it would otherwise show a misleading "Select database".
   if (
     !(
       selectedInstance &&
@@ -663,9 +651,6 @@ function PathSeparator({ className }: { className?: string | undefined }) {
   );
 }
 
-// Role detail breadcrumb tail: a "Roles" link back to the list, a separator,
-// then the current role name + kind badge — all on one line to match the slim
-// single-row breadcrumb. No dropdown; the role isn't a switchable selection.
 function RoleBreadcrumbSegment({
   instanceId,
   roleId,
@@ -702,8 +687,6 @@ function RoleBreadcrumbSegment({
   );
 }
 
-// Page-location tail of the header breadcrumb, appended after the instance and
-// (when present) database selectors. See resolveBreadcrumbTail.
 function PageBreadcrumb() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const tail = resolveBreadcrumbTail(pathname);
@@ -818,10 +801,7 @@ export function AdminHeader() {
             selectedInstance={selectedInstance}
           />
         </div>
-        {/* The database switcher stays in the topbar at every breakpoint so it
-            is always reachable, including in the data explorer where the
-            sidebar rail is swapped for the schema tree. The sidebar's own
-            database switcher mirrors it on lg+ for the non-explorer nav. */}
+
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <DatabaseSelector
             databases={databases}

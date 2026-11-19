@@ -88,9 +88,6 @@ const buttonPresentations = cva("", {
         "text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 group-data-[active=true]:opacity-100",
       "sql-list-row": "gap-1 rounded-md px-3 py-2",
       "sql-plan-node": "px-0 py-1.5 font-normal hover:bg-transparent",
-      // A filled button that leads a ButtonGroup: registry buttons carry a
-      // transparent 1px border with a padding-box background, so at the
-      // join the page shows through as a white line. Drop that edge.
       "group-lead": "border-r-0",
       "sql-relation-row":
         "gap-2 px-1.5 py-0 font-normal text-(length:--text-caption) hover:bg-accent/60",

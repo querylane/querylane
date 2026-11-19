@@ -38,20 +38,18 @@ const TIMEOUT_ERROR_PATTERNS = [
   /postgresql connection timed out/iu,
 ];
 
-function matchesAny(value: string, patterns: RegExp[]): boolean {
+function matchesAny(value: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(value));
 }
 
-function describeInstanceConnectionError(
-  rawError: string
-): InstanceConnectionErrorPresentation {
+function describeInstanceConnectionError(rawError: string) {
   if (matchesAny(rawError, AUTHENTICATION_ERROR_PATTERNS)) {
     return {
       kind: "authentication",
       retryGuidance: "Update the saved credentials, then refresh.",
       summary: "PostgreSQL rejected the saved credentials.",
       title: "PostgreSQL authentication failed",
-    };
+    } satisfies InstanceConnectionErrorPresentation;
   }
   if (matchesAny(rawError, TIMEOUT_ERROR_PATTERNS)) {
     return {
@@ -60,7 +58,7 @@ function describeInstanceConnectionError(
         "Check that PostgreSQL is running and reachable, then refresh.",
       summary: "The PostgreSQL connection attempt timed out.",
       title: "PostgreSQL instance unavailable",
-    };
+    } satisfies InstanceConnectionErrorPresentation;
   }
   if (matchesAny(rawError, REACHABILITY_ERROR_PATTERNS)) {
     return {
@@ -69,7 +67,7 @@ function describeInstanceConnectionError(
         "Check that PostgreSQL is running and reachable, then refresh.",
       summary: "Querylane could not reach the PostgreSQL instance.",
       title: "PostgreSQL instance unavailable",
-    };
+    } satisfies InstanceConnectionErrorPresentation;
   }
   return {
     kind: "unknown",
@@ -77,10 +75,10 @@ function describeInstanceConnectionError(
       "Check the saved connection settings and PostgreSQL server, then refresh.",
     summary: "Querylane could not connect to the PostgreSQL instance.",
     title: "PostgreSQL connection failed",
-  };
+  } satisfies InstanceConnectionErrorPresentation;
 }
 
-function createInstanceConnectionUiError(rawError: string): AppUiError {
+function createInstanceConnectionUiError(rawError: string) {
   const normalized = normalizeAppUiError(new Error(rawError), {
     area: "console.instance.connection",
     source: "query",
@@ -92,7 +90,7 @@ function createInstanceConnectionUiError(rawError: string): AppUiError {
     retryGuidance: presentation.retryGuidance,
     summary: presentation.summary,
     title: presentation.title,
-  };
+  } satisfies AppUiError;
 }
 
 export type {

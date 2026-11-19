@@ -25,7 +25,6 @@ export function useRetainedRetryError<Value>({
     })
   );
 
-  // keep retry handlers synced with latest error prop
   useEffect(
     function syncLatestRetryError() {
       latestErrorRef.current = latestError;
@@ -43,15 +42,17 @@ export function useRetainedRetryError<Value>({
       retryInFlight: true,
     }));
 
+    function finishRetry() {
+      setRetryState({ retainedError: null, retryInFlight: false });
+    }
+
     try {
       await onRetry();
     } catch {
-      // The owning surface will expose the refreshed error state.
+      finishRetry();
+      return;
     }
-    setRetryState({
-      retainedError: null,
-      retryInFlight: false,
-    });
+    finishRetry();
   };
 
   return {

@@ -6,10 +6,6 @@ import type {
   CreateInstanceInvalidFieldName,
 } from "@/routes/new-instance-validation";
 
-/**
- * Focus order for server-reported violations. Mirrors the client-side focus
- * order and appends the fields only the server validates.
- */
 const SERVER_FIELD_FOCUS_ORDER = [
   "displayName",
   "host",
@@ -23,8 +19,6 @@ const SERVER_FIELD_FOCUS_ORDER = [
   "labels",
 ] as const satisfies readonly CreateInstanceInvalidFieldName[];
 
-// CreateInstanceRequest wraps client-settable fields in `spec` (or the legacy
-// `instance` body). Violations point at the request shape, the form does not.
 const RESOURCE_BODY_PREFIX_PATTERN = /^(?:spec|instance)\./u;
 
 type ConnectionConfigFieldName =
@@ -87,7 +81,7 @@ function extractBadRequestFieldViolations<FieldName extends string>({
   error: unknown;
   focusOrder: readonly FieldName[];
   mapField: (field: string) => FieldName | null;
-}): FieldViolationExtractionResult<FieldName> {
+}) {
   const fieldErrors: Partial<Record<FieldName, string>> = {};
   const generalErrors: string[] = [];
   const connectError = ConnectError.from(error);
@@ -102,12 +96,10 @@ function extractBadRequestFieldViolations<FieldName extends string>({
     firstInvalidField:
       focusOrder.find((field) => Boolean(fieldErrors[field])) ?? null,
     generalErrors,
-  };
+  } satisfies FieldViolationExtractionResult<FieldName>;
 }
 
-function mapViolationFieldToFormField(
-  field: string
-): CreateInstanceInvalidFieldName | null {
+function mapViolationFieldToFormField(field: string) {
   const path = field.replace(RESOURCE_BODY_PREFIX_PATTERN, "");
   if (path === "display_name" || path === "displayName") {
     return "displayName";
@@ -136,9 +128,7 @@ interface CreateInstanceFieldViolationResult {
  * onto per-field form errors. Violations that do not correspond to a form
  * field are left for the caller's inline notice.
  */
-function extractCreateInstanceFieldViolations(
-  error: unknown
-): CreateInstanceFieldViolationResult {
+function extractCreateInstanceFieldViolations(error: unknown) {
   const result =
     extractBadRequestFieldViolations<CreateInstanceInvalidFieldName>({
       error,
@@ -150,7 +140,7 @@ function extractCreateInstanceFieldViolations(
     fieldErrors: result.fieldErrors,
     firstInvalidField: result.firstInvalidField,
     generalErrors: result.generalErrors,
-  };
+  } satisfies CreateInstanceFieldViolationResult;
 }
 
 export type { CreateInstanceFieldViolationResult };

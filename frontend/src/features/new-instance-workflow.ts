@@ -60,7 +60,7 @@ interface CreateInstanceWorkflowState {
   testResult: InlineNotice | null;
 }
 
-function createEmptyFormState(): CreateInstanceFormState {
+function createEmptyFormState() {
   return {
     database: "postgres",
     displayName: "",
@@ -72,7 +72,7 @@ function createEmptyFormState(): CreateInstanceFormState {
     sslMode: "prefer",
     sslNegotiation: "postgres",
     username: "postgres",
-  };
+  } satisfies CreateInstanceFormState;
 }
 
 type CreateInstanceWorkflowInitialState = Partial<
@@ -81,7 +81,7 @@ type CreateInstanceWorkflowInitialState = Partial<
 
 function createCreateInstanceWorkflowState(
   initialState?: CreateInstanceWorkflowInitialState
-): CreateInstanceWorkflowState {
+) {
   const emptyState = {
     firstInvalidField: null,
     formErrors: {},
@@ -101,7 +101,7 @@ function createCreateInstanceWorkflowState(
     : emptyState;
 }
 
-function toSslMode(value: SslModeOptionValue): PostgresConfig_SslMode {
+function toSslMode(value: SslModeOptionValue) {
   switch (value) {
     case "disable":
       return PostgresConfig_SslMode.DISABLED;
@@ -120,9 +120,7 @@ function toSslMode(value: SslModeOptionValue): PostgresConfig_SslMode {
   }
 }
 
-function toSslNegotiation(
-  value: SslNegotiationOptionValue
-): PostgresConfig_SslNegotiation {
+function toSslNegotiation(value: SslNegotiationOptionValue) {
   switch (value) {
     case "direct":
       return PostgresConfig_SslNegotiation.DIRECT;
@@ -216,8 +214,12 @@ function getCreateInstanceNavigationTarget(instanceName?: string) {
     : ({ replace: true, to: "/" } as const);
 }
 
-function createInstanceLabel(): CreateInstanceLabel {
-  return { id: crypto.randomUUID(), key: "", value: "" };
+function createInstanceLabel() {
+  return {
+    id: crypto.randomUUID(),
+    key: "",
+    value: "",
+  } satisfies CreateInstanceLabel;
 }
 
 export type {

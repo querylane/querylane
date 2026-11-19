@@ -43,8 +43,8 @@ interface FilterPopoverState {
 function mergeFilterPopoverState(
   state: FilterPopoverState,
   patch: Partial<FilterPopoverState>
-): FilterPopoverState {
-  return { ...state, ...patch };
+) {
+  return { ...state, ...patch } satisfies FilterPopoverState;
 }
 
 function FilterPopover({
@@ -69,8 +69,6 @@ function FilterPopover({
     columns.length === 0
       ? "No columns are available to filter."
       : `You can add up to ${MAX_FILTER_RULES} filter rules.`;
-  // Validated live against the committed drafts (which trail typing by the
-  // row debounce) so guidance appears as values settle, not per keystroke.
   const invalidMessages = new Map(
     getInvalidFilterRules(draftRules, columns).map((rule) => [
       rule.id,
@@ -136,15 +134,10 @@ function FilterPopover({
   }
 
   function applyRules() {
-    // Freshly added rows that never got a value are dropped, but a committed
-    // rule whose value was emptied mid-edit is kept (it contributes no
-    // predicate until refilled) instead of being silently deleted.
     const committedIds = new Set(rules.map((rule) => rule.id));
     const nextRules = draftRules.filter(
       (rule) => !isIncompleteFilterRule(rule) || committedIds.has(rule.id)
     );
-    // Inline row messages already explain the problem; keep the popover open
-    // until every complete rule parses.
     if (getInvalidFilterRules(nextRules, columns).length > 0) {
       return;
     }
@@ -152,8 +145,6 @@ function FilterPopover({
     updateState({ open: false });
   }
 
-  // Apply runs one render after it is requested so that row value drafts
-  // committed in the same event (Enter in a value input) are visible here.
   const runRequestedApply = useEffectEvent(applyRules);
   useEffect(
     function applyAfterDraftCommit() {

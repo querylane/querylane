@@ -14,9 +14,7 @@ interface QueryErrorResult {
   label: string;
 }
 
-export function collectQueryErrors(
-  ...queries: QueryErrorDescriptor[]
-): QueryErrorResult[] {
+export function collectQueryErrors(...queries: QueryErrorDescriptor[]) {
   return queries.flatMap(({ endpoint, label, query }) =>
     Boolean(query.error) ? [{ endpoint, error: query.error, label }] : []
   );

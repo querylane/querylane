@@ -10,12 +10,10 @@ import { z } from "zod";
  * older deep links and redirects back to the canonical route.
  */
 type AdminPageId =
-  // Instance-level pages
   | "instance.overview"
   | "instance.activity"
   | "instance.roles"
   | "instance.configuration"
-  // Database-level pages
   | "database.overview"
   | "database.extensions"
   | "database.explorer"
@@ -55,7 +53,7 @@ function isValidAdminPageId(value: string): value is AdminPageId {
   return (ADMIN_PAGE_IDS as readonly string[]).includes(value);
 }
 
-function parseAdminPageId(value: unknown): AdminPageId | undefined {
+function parseAdminPageId(value: unknown) {
   return typeof value === "string" && isValidAdminPageId(value)
     ? value
     : undefined;
@@ -66,20 +64,18 @@ const SCOPE_RANKS: Record<string, number> = {
   instance: 1,
 };
 
-function getScopeRank(scope: AdminSelectionScope): number {
+function getScopeRank(scope: AdminSelectionScope) {
   return SCOPE_RANKS[scope] ?? 0;
 }
 
 function canRenderAdminPageAtScope(
   page: AdminPageId,
   scope: AdminSelectionScope
-): boolean {
+) {
   return getScopeRank(scope) >= getScopeRank(ADMIN_PAGE_MIN_SCOPE[page]);
 }
 
-function getDefaultAdminPageForScope(
-  scope: AdminSelectionScope
-): AdminPageId | undefined {
+function getDefaultAdminPageForScope(scope: AdminSelectionScope) {
   switch (scope) {
     case "instance":
       return "instance.overview";
@@ -94,7 +90,7 @@ function getDefaultAdminPageForScope(
 function resolveRequestedAdminPageForScope(
   value: unknown,
   scope: AdminSelectionScope
-): AdminPageId | undefined {
+) {
   const requestedPage = parseAdminPageId(value);
   if (!requestedPage) {
     return undefined;
@@ -105,15 +101,15 @@ function resolveRequestedAdminPageForScope(
     : getDefaultAdminPageForScope(scope);
 }
 
-function isRolesPath(pathname: string): boolean {
+function isRolesPath(pathname: string) {
   return pathname.endsWith("/roles") || pathname.includes("/roles/");
 }
 
-function isDatabasePath(segments: string[]): boolean {
+function isDatabasePath(segments: string[]) {
   return segments[2] === "databases" && segments[3] !== undefined;
 }
 
-function isInstanceAdminRoot(segments: string[]): boolean {
+function isInstanceAdminRoot(segments: string[]) {
   return segments[2] === "admin" && segments[3] === undefined;
 }
 
@@ -124,17 +120,13 @@ const DATABASE_PAGE_BY_SEGMENT: Record<string, AdminPageId> = {
   workbench: "database.workbench",
 };
 
-function resolveDatabasePageFromSegment(
-  segment: string | undefined
-): AdminPageId {
+function resolveDatabasePageFromSegment(segment: string | undefined) {
   return segment === undefined
     ? "database.overview"
     : (DATABASE_PAGE_BY_SEGMENT[segment] ?? "database.overview");
 }
 
-function resolveImplicitAdminPageFromPathname(
-  pathname: string
-): AdminPageId | undefined {
+function resolveImplicitAdminPageFromPathname(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
 
   if (pathname.endsWith("/configuration")) {
@@ -150,17 +142,13 @@ function resolveImplicitAdminPageFromPathname(
   if (isDatabasePath(segments)) {
     return resolveDatabasePageFromSegment(segments[4]);
   }
-  // The instance-scoped admin panel is not an AdminPageId page: it renders
-  // app-global backend state and must not resolve to instance.overview.
   if (isInstanceAdminRoot(segments)) {
     return undefined;
   }
   return pathname.includes("/instances/") ? "instance.overview" : undefined;
 }
 
-function resolveImplicitAdminPageFromRouteId(
-  routeId: string | undefined
-): AdminPageId | undefined {
+function resolveImplicitAdminPageFromRouteId(routeId: string | undefined) {
   switch (routeId) {
     case "/instances/$instanceId/activity":
       return "instance.activity";
@@ -197,7 +185,7 @@ function resolveCurrentAdminPage({
   pathname: string;
   scope: AdminSelectionScope;
   value: unknown;
-}): AdminPageId | undefined {
+}) {
   const requestedPage = resolveRequestedAdminPageForScope(value, scope);
   if (requestedPage) {
     return requestedPage;
@@ -214,9 +202,7 @@ function resolveCurrentAdminPage({
 /** All search param keys used by any page (for retainSearchParams). */
 const PAGE_SEARCH_KEYS = [
   "page",
-  // Page-local table/search controls
   "q",
-  // Data explorer
   "schema",
   "category",
   "name",
@@ -232,8 +218,6 @@ const instanceLayoutSearchSchema = z.object({
   q: z.optional(z.string()),
   schema: z.optional(z.string()),
   sort: z.optional(z.string()),
-  // Page selected tab. Registered here so cross-page navigation clears it
-  // (see CLEARED_PAGE_SEARCH); validated strictly on each tabbed route.
   tab: z.optional(z.string()),
 });
 

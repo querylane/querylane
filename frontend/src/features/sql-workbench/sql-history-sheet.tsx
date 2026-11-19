@@ -35,7 +35,7 @@ const STATUS_LABEL: Record<SqlHistoryEntry["status"], string> = {
   ok: "OK",
 };
 
-function statusTone(status: SqlHistoryEntry["status"]): string {
+function statusTone(status: SqlHistoryEntry["status"]) {
   switch (status) {
     case "ok":
       return "text-success";
@@ -47,7 +47,7 @@ function statusTone(status: SqlHistoryEntry["status"]): string {
   }
 }
 
-function historyMeta(entry: SqlHistoryEntry): string[] {
+function historyMeta(entry: SqlHistoryEntry) {
   const meta = [
     formatDistanceToNowStrict(entry.startedAt, { addSuffix: true }),
     formatDurationMs(entry.durationMs),

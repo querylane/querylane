@@ -29,8 +29,6 @@ import {
   ViewView,
 } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-// The catalog APIs expose no database-level aggregates. Keep overview work
-// bounded because this query also runs during route prefetch.
 const CATALOG_PAGE_SIZE = 200;
 const CATALOG_OBJECT_LIMIT = 1000;
 const CATALOG_SCHEMA_LIMIT = 100;
@@ -96,7 +94,7 @@ interface DatabaseCatalogResult {
   totals: CatalogTotals;
 }
 
-function tableToObject(table: Table, schemaId: string): CatalogObject {
+function tableToObject(table: Table, schemaId: string) {
   return {
     comment: table.comment,
     isMaterialized: false,
@@ -111,10 +109,10 @@ function tableToObject(table: Table, schemaId: string): CatalogObject {
     schemaId,
     sizeBytes: table.sizeBytes,
     tableType: table.tableType,
-  };
+  } satisfies CatalogObject;
 }
 
-function viewToObject(view: View, schemaId: string): CatalogObject {
+function viewToObject(view: View, schemaId: string) {
   return {
     comment: view.comment,
     isMaterialized: view.viewType === View_ViewType.MATERIALIZED,
@@ -129,7 +127,7 @@ function viewToObject(view: View, schemaId: string): CatalogObject {
     schemaId,
     sizeBytes: view.sizeBytes,
     tableType: Table_TableType.UNSPECIFIED,
-  };
+  } satisfies CatalogObject;
 }
 
 function fetchSchemasPage(transport: Transport, parent: string) {
@@ -170,11 +168,11 @@ function fetchViewsPage(
   });
 }
 
-function sumSizeBytes(objects: CatalogObject[]): bigint {
+function sumSizeBytes(objects: CatalogObject[]) {
   return objects.reduce((sum, object) => sum + object.sizeBytes, ZERO_BYTES);
 }
 
-function sumTableRows(objects: CatalogObject[]): number {
+function sumTableRows(objects: CatalogObject[]) {
   return objects.reduce((sum, object) => {
     if (object.kind !== "table") {
       return sum;
@@ -191,11 +189,7 @@ async function fetchSchemaCatalog(
     maxObjects: number;
     schema: Schema;
   }
-): Promise<{
-  aggregate: CatalogSchema;
-  isPartial: boolean;
-  objects: CatalogObject[];
-}> {
+) {
   const schemaId = input.schema.displayName;
   const parent = buildSchemaName(input.instanceId, input.databaseId, schemaId);
   const [tablesResponse, viewsResponse] = await Promise.all([
@@ -228,13 +222,17 @@ async function fetchSchemaCatalog(
         tables.length + views.length > input.maxObjects
     ),
     objects,
+  } satisfies {
+    aggregate: CatalogSchema;
+    isPartial: boolean;
+    objects: CatalogObject[];
   };
 }
 
 async function fetchDatabaseCatalog(
   transport: Transport,
   input: { databaseId: string; instanceId: string }
-): Promise<DatabaseCatalogResult> {
+) {
   const schemasResponse = await fetchSchemasPage(
     transport,
     buildDatabaseName(input.instanceId, input.databaseId)
@@ -252,7 +250,7 @@ async function fetchDatabaseCatalog(
   let nextSchemaIndex = 0;
   let remainingObjectCount = CATALOG_OBJECT_LIMIT;
 
-  async function fetchNextSchema(): Promise<void> {
+  async function fetchNextSchema() {
     const schema = availableSchemas[nextSchemaIndex];
     if (!schema || remainingObjectCount === 0) {
       return;
@@ -307,7 +305,7 @@ async function fetchDatabaseCatalog(
       totalSizeBytes: sumSizeBytes(objects),
       viewCount: objects.filter((object) => object.kind === "view").length,
     },
-  };
+  } satisfies DatabaseCatalogResult;
 }
 
 function useDatabaseCatalogQuery(input: {
@@ -337,7 +335,7 @@ function useDatabaseCatalogQuery(input: {
 async function fetchDatabaseCatalogSearch(
   transport: Transport,
   input: { databaseId: string; instanceId: string; query: string }
-): Promise<{ objects: CatalogObject[] }> {
+) {
   const databaseName = buildDatabaseName(input.instanceId, input.databaseId);
   const schemasResponse = await fetchSchemasPage(transport, databaseName);
   const filter = buildContainsFilter("name", input.query);
@@ -348,7 +346,7 @@ async function fetchDatabaseCatalogSearch(
   const viewClient = createClient(ViewService, transport);
   const objects: CatalogObject[] = [];
 
-  async function collectSchema(schemaIndex: number): Promise<void> {
+  async function collectSchema(schemaIndex: number) {
     const schema = schemasResponse.schemas[schemaIndex];
     if (!schema || objects.length >= limit) {
       return;
@@ -378,7 +376,9 @@ async function fetchDatabaseCatalogSearch(
 
   await collectSchema(0);
 
-  return { objects: objects.slice(0, limit) };
+  return { objects: objects.slice(0, limit) } satisfies {
+    objects: CatalogObject[];
+  };
 }
 
 function useDatabaseCatalogSearchQuery(input: {

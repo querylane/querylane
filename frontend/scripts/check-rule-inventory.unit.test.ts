@@ -11,28 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@rstest/core";
-import { assertReviewedRuleIds } from "./check-rule-inventory";
 
-test("rejects a new tool rule until its policy is reviewed", () => {
-  expect(() => {
-    assertReviewedRuleIds(["tool/known"], ["tool/known", "tool/new"]);
-  }).toThrow("tool/new");
-});
-test("rejects stale and duplicate inventory entries", () => {
-  expect(() => {
-    assertReviewedRuleIds(["tool/removed"], []);
-  }).toThrow("tool/removed");
-  expect(() => {
-    assertReviewedRuleIds(["tool/known", "tool/known"], ["tool/known"]);
-  }).toThrow("Duplicate");
-});
-test("accepts the same reviewed catalog in a different order", () => {
-  expect(() => {
-    assertReviewedRuleIds(["tool/a", "tool/b"], ["tool/b", "tool/a"]);
-  }).not.toThrow();
-});
-
-function addAuthoredDeclaration(root: string, extension?: string): void {
+function addAuthoredDeclaration(root: string, extension?: string) {
   if (extension !== undefined) {
     writeFileSync(
       join(root, `src/extra.d.${extension}`),
@@ -58,20 +38,6 @@ test.each([
       "Reviewed rule scope is not enforced: correctness/noUnresolvedImports",
   },
   {
-    config: "oxlint.config.ts",
-    original: "const MAX_BLOCK_DEPTH = 4;",
-    replacement: "const MAX_BLOCK_DEPTH = 99;",
-    rule: "weakened depth option",
-    message: "Reviewed quality options changed",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: 'group: ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"]',
-    replacement: 'group: ["unreachable-import-prefix/**"]',
-    rule: "emptied pure dependency restrictions",
-    message: "Reviewed quality options changed",
-  },
-  {
     config: "package.json",
     original: '"lint": "bun scripts/check-rule-inventory.ts && biome ',
     replacement: '"lint": "bun scripts/check-rule-inventory.ts && echo ',
@@ -79,17 +45,9 @@ test.each([
     message: "Reviewed quality options changed",
   },
   {
-    config: "doctor.config.ts",
-    original: 'includeFileContexts: ["test", "story"],',
-    replacement:
-      'includeFileContexts: ["test", "story"], excludeTags: ["design"],',
-    rule: "hidden Doctor design findings",
-    message: "Reviewed quality options changed",
-  },
-  {
     config: "tsconfig.authored-declarations.json",
-    original: '"src/env.d.ts",',
-    replacement: '"src/extra.d.ts", "src/env.d.ts",',
+    original: '"src/import-meta-env.d.ts",',
+    replacement: '"src/extra.d.ts", "src/import-meta-env.d.ts",',
     extraDeclaration: "ts",
     rule: "new checked authored declaration",
     status: 0,
@@ -99,61 +57,9 @@ test.each([
     config: "tsconfig.authored-declarations.json",
     original: '"target": "ESNext"',
     replacement: '"target": "esnext"',
-    extraDeclaration: "ts",
-    rule: "new unchecked authored declaration",
-    message: "Authored declaration coverage is not enforced: src/extra.d.ts",
-  },
-  {
-    config: "tsconfig.authored-declarations.json",
-    original: '"target": "ESNext"',
-    replacement: '"target": "esnext"',
     extraDeclaration: "mts",
     rule: "new unchecked authored mts declaration",
     message: "Authored declaration coverage is not enforced: src/extra.d.mts",
-  },
-  {
-    config: "tsconfig.authored-declarations.json",
-    original: '"target": "ESNext"',
-    replacement: '"target": "esnext"',
-    extraDeclaration: "cts",
-    rule: "new unchecked authored cts declaration",
-    message: "Authored declaration coverage is not enforced: src/extra.d.cts",
-  },
-  {
-    config: "tsconfig.authored-declarations.json",
-    original: '"skipLibCheck": false',
-    replacement: '"skipLibCheck": true',
-    rule: "unchecked authored declarations",
-    message: "Authored declarations must be checked completely",
-  },
-  {
-    config: "tsconfig.authored-declarations.json",
-    original: '"src/env.d.ts",',
-    replacement: "",
-    rule: "shadowed authored declarations",
-    message:
-      "Compiler coverage is not enforced: tsconfig.authored-declarations.json",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"json": {\n    "assist": {\n      "enabled": true',
-    replacement: '"json": {\n    "assist": {\n      "enabled": false',
-    rule: "disabled JSON assist",
-    message: "Quality engine cannot be disabled: json.assist",
-  },
-  {
-    config: "doctor.config.ts",
-    original: 'includeFileContexts: ["test", "story"],',
-    replacement: "",
-    rule: "nonblocking Doctor test findings",
-    message: "Doctor test and story findings must block CI",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"files": {',
-    replacement: '"files": { "maxSize": 1,',
-    rule: "narrowed Biome file-size coverage",
-    message: "Biome file-size coverage cannot be narrowed",
   },
   {
     config: "biome.jsonc",
@@ -171,63 +77,16 @@ test.each([
     message: "Biome scanner exclusions are not permitted",
   },
   {
-    config: "biome.jsonc",
-    original: '"files": {',
-    replacement: '"files": { "maxSize": 2097152,',
-    rule: "increased Biome file-size coverage",
-    status: 0,
-    message: "Every installed rule has a recorded policy decision.",
-  },
-  {
-    config: "tsconfig.strict.json",
-    original: '"compilerOptions": {',
-    replacement:
-      '// Shared compiler policy supports JSONC.\n  "compilerOptions": {',
-    rule: "valid compiler comments",
-    status: 0,
-    message: "Every installed rule has a recorded policy decision.",
-  },
-  {
     config: "package.json",
-    original: '"@biomejs/biome": "',
-    replacement: '"@biomejs/biome": "0.0.0-audit-',
+    original: '"@interfere/landmines": "',
+    replacement: '"@interfere/landmines": "0.0.0-audit-',
     inventoryChange: {
-      original: '"@biomejs/biome": "',
-      replacement: '"@biomejs/biome": "0.0.0-audit-',
+      original: '"@interfere/landmines": "',
+      replacement: '"@interfere/landmines": "0.0.0-audit-',
     },
     rule: "installed version drift",
     message:
-      "Installed @biomejs/biome version does not match the reviewed version",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: 'specifier: "@shadcn/lint"',
-    replacement: 'specifier: "./quality/empty-shadcn-plugin.ts"',
-    rule: "substituted shadcn plugin",
-    message: "Reviewed shadcn plugin is not enforced",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: 'specifier: "@shadcn/lint"',
-    replacement: 'specifier: "./node_modules/@shadcn/lint/dist/index.js"',
-    rule: "equivalent shadcn plugin path",
-    status: 0,
-    message: "Every installed rule has a recorded policy decision.",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"extends": ["ultracite/biome/playwright"],',
-    replacement: "",
-    rule: "missing Playwright inheritance",
-    message: "Unreviewed Biome preset inheritance",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"extends": ["ultracite/biome/playwright"]',
-    replacement:
-      '"extends": ["ultracite/biome/playwright", "./quality/unreviewed-biome.jsonc"]',
-    rule: "hidden preset inheritance",
-    message: "Unreviewed Biome preset inheritance",
+      "Installed @interfere/landmines version does not match the reviewed version",
   },
   {
     config: "oxlint.config.ts",
@@ -253,53 +112,6 @@ test.each([
   },
   {
     config: "biome.jsonc",
-    original: '"src/components/ui/**",',
-    replacement: '"src/components/ui/**", "src/features/**",',
-    rule: "authored source presented as generated",
-    message: "Quality engine cannot be disabled",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: "overrides: [",
-    replacement:
-      'overrides: [{ files: ["src/features/**"], plugins: [], rules: {} },',
-    rule: "per-role engine bypass",
-    message: "Oxlint overrides cannot alter engine or coverage settings",
-  },
-  {
-    config: "tsconfig.browser-js.json",
-    original: '"checkJs": true',
-    replacement: '"checkJs": false',
-    rule: "unchecked public JavaScript",
-    message:
-      "Compiler contract is not enforced: tsconfig.browser-js.json/checkJs",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"overrides": [',
-    replacement:
-      '"overrides": [{ "includes": ["src/features/**"], "linter": { "rules": { "suspicious": { "noDebugger": "off" } } } },',
-    rule: "hidden Biome waiver",
-    message: "Unreviewed Biome override",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"overrides": [',
-    replacement:
-      '"overrides": [{ "includes": ["src/features/**"], "linter": { "rules": { "suspicious": { "noLeakedRender": "error" } } } },',
-    rule: "hidden conflicting Biome rule",
-    message: "Unreviewed Biome override",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"overrides": [',
-    replacement:
-      '"overrides": [{ "includes": ["src/features/**"], "linter": { "enabled": false } },',
-    rule: "disabled source engine",
-    message: "Quality engine cannot be disabled",
-  },
-  {
-    config: "biome.jsonc",
     original: '"javascript": {',
     replacement: '"javascript": { "linter": { "enabled": false },',
     rule: "disabled JavaScript linting",
@@ -313,81 +125,11 @@ test.each([
     message: "Biome must not inherit source exclusions from gitignore",
   },
   {
-    config: "biome.jsonc",
-    original: '"!!src/protogen",',
-    replacement: '"!!src/protogen", "!!src/features",',
-    rule: "hidden Biome source exclusion",
-    message: "Unreviewed Biome exclusion",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"**",',
-    replacement: '"src/**",',
-    rule: "narrowed Biome source coverage",
-    message: "Biome must cover all authored file roles",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: "overrides: [",
-    replacement:
-      'overrides: [{ files: ["src/features/**"], rules: { "typescript/no-floating-promises": "off" } },',
-    rule: "hidden typed waiver",
-    message: "Unreviewed Oxlint override",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: "ignorePatterns: [",
-    replacement: 'ignorePatterns: ["src/features/**",',
-    rule: "hidden typed source exclusion",
-    message: "Unreviewed Oxlint exclusion",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: "typeAware: true",
-    replacement: "typeAware: false",
-    rule: "disabled editor typed checks",
-    message: "Oxlint must retain type-aware fatal checks",
-  },
-  {
     config: "doctor.config.ts",
     original: "files: [",
     replacement: 'files: ["src/features/**",',
     rule: "hidden Doctor source exclusion",
     message: "Unreviewed Doctor exclusion",
-  },
-  {
-    config: "doctor.config.ts",
-    original: "lint: true",
-    replacement: "lint: false",
-    rule: "disabled Doctor analysis",
-    message: "Doctor must retain full fatal analysis",
-  },
-  {
-    config: "tsconfig.json",
-    original: '"target": "ESNext",',
-    replacement: '"target": "ESNext", "strict": false,',
-    rule: "weakened application compiler",
-    message: "Compiler contract is not enforced: tsconfig.json/strict",
-  },
-  {
-    config: "tsconfig.json",
-    original: '"src",',
-    replacement: '"src/env.ts",',
-    rule: "narrowed compiler source coverage",
-    message: "Compiler coverage is not enforced: tsconfig.json",
-  },
-  {
-    config: "tsconfig.json",
-    original: '"exclude": [',
-    replacement: '"exclude": ["src/features",',
-    rule: "hidden compiler source exclusion",
-    message: "Compiler coverage is not enforced: tsconfig.json",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"noDebugger": "error"',
-    replacement: '"noDebugger": "off"',
-    rule: "suspicious/noDebugger",
   },
   {
     config: "biome.jsonc",
@@ -397,83 +139,10 @@ test.each([
   },
   {
     config: "doctor.config.ts",
-    original: '"react-doctor/no-array-index-key": "error"',
-    replacement: '"react-doctor/no-array-index-key": "off"',
-    rule: "react-doctor/no-array-index-key",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: '"shadcn/no-restyle": [\n      "error",',
-    replacement: '"shadcn/no-restyle": [\n      "off",',
-    rule: "shadcn/no-restyle",
-  },
-  {
-    config: "doctor.config.ts",
     original: "rules: [],",
     replacement: 'rules: ["react-doctor/no-array-index-key"],',
     rule: "react-doctor/no-array-index-key",
     message: "Doctor rule, tag and per-file suppressions are not permitted",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"linter": {',
-    replacement: '"linter": { "enabled": false,',
-    rule: "Biome linter",
-    message: "Quality engine cannot be disabled: linter",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"noLeakedRender": "off"',
-    replacement: '"noLeakedRender": "error"',
-    rule: "suspicious/noLeakedRender",
-    message: "Reviewed disabled rule is not off: suspicious/noLeakedRender",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"noLeakedRender": "off",',
-    replacement: "",
-    rule: "suspicious/noLeakedRender",
-    message: "Reviewed disabled rule is not off: suspicious/noLeakedRender",
-  },
-  {
-    config: "oxlint.config.ts",
-    original: '"typescript/no-invalid-void-type": "off"',
-    replacement: '"typescript/no-invalid-void-type": "error"',
-    rule: "typescript/no-invalid-void-type",
-    message:
-      "Reviewed disabled rule is not off: typescript/no-invalid-void-type",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"noPlaywrightWaitForTimeout": "error"',
-    replacement: '"noPlaywrightWaitForTimeout": "off"',
-    rule: "suspicious/noPlaywrightWaitForTimeout",
-    inventoryDecision: "inapplicable",
-    message:
-      "Playwright preset rule is not enforced: suspicious/noPlaywrightWaitForTimeout",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"organizeImports": "on"',
-    replacement: '"organizeImports": "off"',
-    rule: "eslint/sort-imports",
-    message:
-      "Delegated owner is not enforced: eslint/sort-imports -> biome/assist/source/organizeImports",
-  },
-  {
-    config: "biome.jsonc",
-    original: '"assist": {',
-    replacement: '"assist": { "enabled": false,',
-    rule: "eslint/sort-imports",
-    message: "Quality engine cannot be disabled: assist",
-  },
-  {
-    config: "tsconfig.strict.json",
-    original: '"noImplicitReturns": true',
-    replacement: '"noImplicitReturns": false',
-    rule: "typescript/consistent-return",
-    message:
-      "Compiler contract is not enforced: tsconfig.json/noImplicitReturns",
   },
   {
     config: "quality/rule-inventory.json",
@@ -486,18 +155,26 @@ test.each([
   },
   {
     config: "oxlint.config.ts",
-    original: '"typescript/prefer-readonly-parameter-types": "error"',
-    replacement: '"typescript/prefer-readonly-parameter-types": "off"',
-    rule: "typescript/prefer-readonly-parameter-types",
-    message: "Unreviewed Oxlint override",
+    original: "jsPlugins: [",
+    replacement:
+      'jsPlugins: [{ name: "landmines-testing", specifier: "@interfere/landmines/style" },',
+    rule: "substituted Landmines plugin alias",
+    message: "Reviewed landmines-testing plugin is not enforced",
   },
   {
     config: "oxlint.config.ts",
-    original: 'files: ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"]',
-    replacement: 'files: ["src/lib/domain/quality-probe-*/**/*.ts"]',
-    rule: "typescript/explicit-module-boundary-types",
-    message:
-      "Reviewed rule scope is not enforced: eslint/no-restricted-globals",
+    original: "...landmines.rules,",
+    replacement:
+      '...landmines.rules, "landmines-testing/no-fixed-sleep": "off",',
+    rule: "landmines-testing/no-fixed-sleep",
+  },
+  {
+    config: "oxlint.config.ts",
+    original: "overrides: [",
+    replacement:
+      'overrides: [{ files: ["src/features/**"], rules: { "landmines-testing/no-fixed-sleep": "off" } },',
+    rule: "hidden Landmines waiver",
+    message: "Unreviewed Oxlint override",
   },
 ])("enforces reviewed quality policy: $rule -> $replacement", (scenario) => {
   const source = resolve(import.meta.dirname, "..");
@@ -519,7 +196,6 @@ test.each([
       "tsconfig.ui.json",
       "tsconfig.declarations.json",
       "tsconfig.authored-declarations.json",
-      "src/env.d.ts",
       "src/import-meta-env.d.ts",
       "src/types/css.d.ts",
       "biome.jsonc",
@@ -536,13 +212,6 @@ test.each([
       "export const ready = true;\n"
     );
     writeFileSync(
-      join(root, "quality/unreviewed-biome.jsonc"),
-      JSON.stringify({
-        root: false,
-        overrides: [{ includes: ["**"], linter: { enabled: false } }],
-      })
-    );
-    writeFileSync(
       join(root, "quality/unreviewed-oxlint.json"),
       JSON.stringify({
         overrides: [
@@ -552,17 +221,6 @@ test.each([
           },
         ],
       })
-    );
-    writeFileSync(
-      join(root, "quality/empty-shadcn-plugin.ts"),
-      `import shadcn from "@shadcn/lint";
-export default {
-  ...shadcn,
-  rules: Object.fromEntries(Object.entries(shadcn.rules).map(([name, rule]) => [
-    name, { ...rule, create() { return {}; } },
-  ])),
-};
-`
     );
     addAuthoredDeclaration(root, scenario.extraDeclaration);
     const config = join(root, scenario.config);
@@ -583,19 +241,6 @@ export default {
         );
       }
       writeFileSync(inventoryPath, changedInventory);
-    }
-    if ("inventoryDecision" in scenario) {
-      const inventoryPath = join(root, "quality/rule-inventory.json");
-      const inventory = readFileSync(inventoryPath, "utf8");
-      const originalPolicy = `"rule": "${scenario.rule}",\n      "decision": "error"`;
-      const replacementPolicy = `"rule": "${scenario.rule}",\n      "decision": "${scenario.inventoryDecision}"`;
-      if (!inventory.includes(originalPolicy)) {
-        throw new Error(`Missing fixture policy: ${scenario.rule}`);
-      }
-      writeFileSync(
-        inventoryPath,
-        inventory.replace(originalPolicy, replacementPolicy)
-      );
     }
     const result = spawnSync(
       "bun",

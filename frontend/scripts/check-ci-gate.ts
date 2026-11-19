@@ -11,7 +11,7 @@ const REQUIRED_JOBS = [
   "build",
 ];
 
-function frontendChanged(changes: unknown): boolean {
+function frontendChanged(changes: unknown) {
   if (!isRecord(changes)) {
     throw new Error("Missing frontend change detection");
   }
@@ -26,7 +26,7 @@ function frontendChanged(changes: unknown): boolean {
   return frontend === "true";
 }
 
-function assertFrontendCiGate(input: unknown): void {
+function assertFrontendCiGate(input: unknown) {
   if (!isRecord(input)) {
     throw new Error("Missing frontend CI results");
   }

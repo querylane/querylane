@@ -144,7 +144,7 @@ function buildSchemaMapModel({
   schemas,
   tables,
   views,
-}: BuildSchemaMapModelInput): SchemaMapModel {
+}: BuildSchemaMapModelInput) {
   const schemaOrder = buildSchemaOrder(schemas, tables, views);
   const schemaTone = new Map(
     schemaOrder.map((schemaName, index) => [schemaName, schemaToneAt(index)])
@@ -191,10 +191,10 @@ function buildSchemaMapModel({
     viewNodes: layout.viewNodes,
     worldHeight: layout.worldHeight,
     worldWidth: layout.worldWidth,
-  };
+  } satisfies SchemaMapModel;
 }
 
-function schemaToneAt(index: number): SchemaMapTone {
+function schemaToneAt(index: number) {
   return SCHEMA_TONES[index % SCHEMA_TONES.length] ?? "chart-1";
 }
 
@@ -202,7 +202,7 @@ function buildSchemaOrder(
   schemas: SchemaSummary[],
   tables: Table[],
   views: View[]
-): string[] {
+) {
   const ordered = new Set(schemas.map((schema) => schema.name));
   for (const table of tables) {
     ordered.add(schemaNameForTable(table));
@@ -210,13 +210,13 @@ function buildSchemaOrder(
   for (const view of views) {
     ordered.add(viewSchemaName(view));
   }
-  return [...ordered];
+  return [...ordered] satisfies string[];
 }
 
 function buildSchemaOptions(
   schemaOrder: string[],
   tableInfos: ReturnType<typeof tableInfo>[]
-): SchemaMapSchemaOption[] {
+) {
   const counts = new Map(schemaOrder.map((schema) => [schema, 0]));
   for (const table of tableInfos) {
     counts.set(table.schemaName, (counts.get(table.schemaName) ?? 0) + 1);
@@ -272,11 +272,11 @@ function viewInfo(view: View) {
   };
 }
 
-function schemaNameForTable(table: Table): string {
+function schemaNameForTable(table: Table) {
   return tableSafeQualifiedName(table.name).schema;
 }
 
-function viewSchemaName(view: View): string {
+function viewSchemaName(view: View) {
   const segments = view.name.split("/");
   const schemaIndex = segments.indexOf("schemas");
   const schemaSegment = segments[schemaIndex + 1];
@@ -298,23 +298,23 @@ function tableSafeQualifiedName(name: string) {
   }
 }
 
-function decodeResourceSegment(segment: string): string {
+function decodeResourceSegment(segment: string) {
   return segment.replaceAll("%2F", "/").replaceAll("%25", "%");
 }
 
-function rowLabel(rowCount: bigint): string {
+function rowLabel(rowCount: bigint) {
   const normalized = normalizeEstimatedRowCount(rowCount);
   return normalized > 0 ? formatRows(normalized) : "—";
 }
 
-function simplifyType(rawType: string): string {
+function simplifyType(rawType: string) {
   return rawType.replace(TYPE_MODIFIER_PATTERN, "");
 }
 
 function matchesTableQuery(
   table: ReturnType<typeof tableInfo>,
   normalizedQuery: string
-): boolean {
+) {
   if (!normalizedQuery) {
     return true;
   }
@@ -332,7 +332,7 @@ function matchesTableQuery(
 function matchesViewQuery(
   view: ReturnType<typeof viewInfo>,
   normalizedQuery: string
-): boolean {
+) {
   if (!normalizedQuery) {
     return true;
   }
@@ -437,7 +437,7 @@ function layoutSchema({
   schemaTables: TableInfo[];
   schemaViews: ViewInfo[];
   tone: SchemaMapTone;
-}): SchemaLayoutResult | null {
+}) {
   if (schemaTables.length === 0 && schemaViews.length === 0) {
     return null;
   }
@@ -481,7 +481,7 @@ function layoutSchema({
     },
     nodes: tableLayout.nodes,
     viewNodes: viewLayout.viewNodes,
-  };
+  } satisfies SchemaLayoutResult | null;
 }
 
 function layoutSchemaTables({
@@ -569,7 +569,7 @@ function layoutSchemaViews({
 function tablesGroupedByDepth(
   schemaTables: TableInfo[],
   depths: Map<string, number>
-): Map<number, TableInfo[]> {
+) {
   const tablesByDepth = new Map<number, TableInfo[]>();
   for (const table of schemaTables) {
     const depth = depths.get(table.id) ?? 0;
@@ -628,7 +628,7 @@ function tableNode({
   tone: SchemaMapTone;
   x: number;
   y: number;
-}): SchemaMapNode {
+}) {
   return {
     columns: table.visibleColumns,
     height,
@@ -644,10 +644,10 @@ function tableNode({
     ),
     x,
     y,
-  };
+  } satisfies SchemaMapNode;
 }
 
-function tableNodeHeight(table: ReturnType<typeof tableInfo>): number {
+function tableNodeHeight(table: ReturnType<typeof tableInfo>) {
   return (
     HEADER_HEIGHT +
     Math.max(1, table.visibleColumns.length) * ROW_HEIGHT +
@@ -659,7 +659,7 @@ function tableNodeHeight(table: ReturnType<typeof tableInfo>): number {
 function referencesKnownTable(
   constraint: TableConstraint,
   tableIds: Set<string>
-): boolean {
+) {
   return (
     constraint.type === ConstraintType.FOREIGN_KEY &&
     tableIds.has(constraint.referencedTable)
@@ -669,13 +669,13 @@ function referencesKnownTable(
 function tableDepths(
   tables: ReturnType<typeof tableInfo>[],
   constraintsByTable: Record<string, TableConstraint[]>
-): Map<string, number> {
+) {
   const tableIds = new Set(tables.map((table) => table.id));
   const tableById = new Map(tables.map((table) => [table.id, table]));
   const memo = new Map<string, number>();
   const visiting = new Set<string>();
 
-  function depthFor(tableId: string): number {
+  function depthFor(tableId: string) {
     const memoized = memo.get(tableId);
     if (memoized !== undefined) {
       return memoized;
@@ -713,10 +713,10 @@ function edgesForTable({
   nodeById: Map<string, SchemaMapNode>;
   schemaTone: Map<string, SchemaMapTone>;
   table: ReturnType<typeof tableInfo>;
-}): SchemaMapEdge[] {
+}) {
   const source = nodeById.get(table.id);
   if (!source) {
-    return [];
+    return [] satisfies SchemaMapEdge[];
   }
   const edges: SchemaMapEdge[] = [];
   for (const constraint of constraints) {
@@ -749,7 +749,7 @@ function buildEdges({
   nodeById: Map<string, SchemaMapNode>;
   schemaTone: Map<string, SchemaMapTone>;
   tableInfos: ReturnType<typeof tableInfo>[];
-}): SchemaMapEdge[] {
+}) {
   return tableInfos.flatMap((table) =>
     edgesForTable({
       constraints: constraintsByTable[table.id] ?? [],
@@ -770,7 +770,7 @@ function edgeForConstraint({
   source: SchemaMapNode;
   target: SchemaMapNode;
   tone: SchemaMapTone;
-}): SchemaMapEdge {
+}) {
   const sourceColumnName = constraint.columnNames[0] ?? "";
   const targetColumnName = constraint.referencedColumnNames[0] ?? "id";
   const sourceY = edgeAnchorY(source, sourceColumnName);
@@ -793,10 +793,10 @@ function edgeForConstraint({
     target: target.id,
     toLabel: `${target.name}.${targetColumnName}`,
     tone,
-  };
+  } satisfies SchemaMapEdge;
 }
 
-function edgeAnchorY(node: SchemaMapNode, columnName: string): number {
+function edgeAnchorY(node: SchemaMapNode, columnName: string) {
   const columnIndex = node.columns.findIndex(
     (column) => column.name === columnName
   );

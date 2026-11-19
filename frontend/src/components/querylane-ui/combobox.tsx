@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-// The sidebar picker keeps its search inside the popup, unlike the registry's
-// input-first combobox. Own that composition here, not in managed UI output.
 function Combobox<
   Value,
   Multiple extends boolean | undefined = false,

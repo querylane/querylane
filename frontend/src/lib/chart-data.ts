@@ -1,6 +1,6 @@
 import type { ChartRow } from "@/components/charts/chart-context";
 
-function averageBucket(bucket: ChartRow[], seriesKey: string): number | null {
+function averageBucket(bucket: ChartRow[], seriesKey: string) {
   let sum = 0;
   let finiteCount = 0;
   for (const row of bucket) {
@@ -13,17 +13,17 @@ function averageBucket(bucket: ChartRow[], seriesKey: string): number | null {
   return finiteCount > 0 ? sum / finiteCount : null;
 }
 
-function hasFiniteSeriesValue(row: ChartRow, seriesKey: string): boolean {
+function hasFiniteSeriesValue(row: ChartRow, seriesKey: string) {
   const value = row[seriesKey];
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function observedTrendSpan(data: ChartRow[], seriesKey: string): ChartRow[] {
+function observedTrendSpan(data: ChartRow[], seriesKey: string) {
   const firstObservedIndex = data.findIndex((row) =>
     hasFiniteSeriesValue(row, seriesKey)
   );
   if (firstObservedIndex === -1) {
-    return [];
+    return [] satisfies ChartRow[];
   }
 
   const lastObservedIndex = data.findLastIndex((row) =>
@@ -47,7 +47,7 @@ export function downsampleTrend(
   data: ChartRow[],
   seriesKey: string,
   maxPoints: number
-): ChartRow[] {
+) {
   const observedData = observedTrendSpan(data, seriesKey);
   if (observedData.length <= maxPoints || maxPoints <= 0) {
     return observedData;

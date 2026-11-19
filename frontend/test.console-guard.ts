@@ -31,7 +31,7 @@ function isConsoleIssueGuardState(
   );
 }
 
-function getTestConsole(): Console {
+function getTestConsole() {
   const testConsole = Reflect.get(globalThis, "console");
   if (
     typeof testConsole === "object" &&
@@ -45,7 +45,7 @@ function getTestConsole(): Console {
   throw new Error("Expected the test environment to provide a global console.");
 }
 
-function getConsoleIssueGuardState(): ConsoleIssueGuardState {
+function getConsoleIssueGuardState() {
   const existingState: unknown = Reflect.get(globalThis, stateKey);
   if (isConsoleIssueGuardState(existingState)) {
     return existingState;
@@ -63,7 +63,7 @@ function getConsoleIssueGuardState(): ConsoleIssueGuardState {
   return state;
 }
 
-function formatConsoleArgument(argument: unknown): string {
+function formatConsoleArgument(argument: unknown) {
   if (argument instanceof Error) {
     return argument.stack ?? `${argument.name}: ${argument.message}`;
   }
@@ -86,7 +86,7 @@ function formatUnexpectedConsoleIssues(
 
   return [
     "Unexpected console output during test run.",
-    "Mock console.warn or console.error in the specific test only when that console output is the behavior under test.",
+    "Assert deliberate console output in the specific test without replacing console behavior.",
     ...formattedIssues,
   ].join("\n");
 }

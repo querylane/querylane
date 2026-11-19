@@ -20,14 +20,14 @@ interface CompletedTest {
   title: string;
 }
 
-function formatDuration(ms: number): string {
+function formatDuration(ms: number) {
   if (ms >= MS_PER_SECOND) {
     return `${(ms / MS_PER_SECOND).toFixed(1)}s`;
   }
   return `${Math.round(ms)}ms`;
 }
 
-function formatTitle(test: TestCase): string {
+function formatTitle(test: TestCase) {
   const fileName = basename(test.location.file);
   return test
     .titlePath()
@@ -35,7 +35,7 @@ function formatTitle(test: TestCase): string {
     .join(" › ");
 }
 
-function statusLabel(status: TestStatus): string {
+function statusLabel(status: TestStatus) {
   switch (status) {
     case "passed":
       return "PASS";
@@ -54,7 +54,7 @@ function writeLine(line = "") {
   stdout.write(`${line}\n`);
 }
 
-function truncate(value: string): string {
+function truncate(value: string) {
   if (value.length <= FAILURE_OUTPUT_LIMIT) {
     return value;
   }

@@ -3,7 +3,7 @@
 import { useLocation } from "@tanstack/react-router";
 import { isNonEmptyString } from "@/lib/value-guards";
 
-function databasePageName(segments: string[]): string {
+function databasePageName(segments: string[]) {
   if (!isNonEmptyString(segments[3])) {
     return "Instance overview";
   }
@@ -19,7 +19,7 @@ function databasePageName(segments: string[]): string {
   return "Database overview";
 }
 
-function instancePageName(segments: string[]): string {
+function instancePageName(segments: string[]) {
   const { 2: sub } = segments;
   if (!isNonEmptyString(sub)) {
     return "Instance overview";
@@ -36,13 +36,7 @@ function instancePageName(segments: string[]): string {
   return "Querylane";
 }
 
-/**
- * Maps a URL pathname to a human-readable, sentence-case page name for
- * screen-reader announcements. Returns a generic "Querylane" label for
- * deep dynamic routes (e.g. instance/database pages) where the meaningful
- * name lives in page headings already read by the reader.
- */
-function pathnameToPageName(pathname: string): string {
+function pathnameToPageName(pathname: string) {
   if (pathname === "/" || pathname === "") {
     return "Home";
   }

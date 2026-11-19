@@ -8,7 +8,6 @@ import {
   RowCountMode,
   type RowFilter,
   RowFilterSchema,
-  type RowOrder,
   RowOrder_Direction,
   RowOrderSchema,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
@@ -43,7 +42,7 @@ interface PageTokenState {
   tokens: string[];
 }
 
-function toRowOrder(column: SortColumn): RowOrder {
+function toRowOrder(column: SortColumn) {
   return create(RowOrderSchema, {
     column: column.columnKey,
     direction:
@@ -61,7 +60,7 @@ function useTableDataController({
   pageSize,
   selectedColumns = [],
   sortColumns,
-}: UseTableDataControllerArgs): TableDataController {
+}: UseTableDataControllerArgs) {
   const queryShapeKey = buildQueryShapeKey({
     name,
     sortColumns,
@@ -166,7 +165,7 @@ function useTableDataController({
     setPageSize,
     setSortColumns,
     sortColumns,
-  };
+  } satisfies TableDataController;
 }
 
 function buildQueryShapeKey({
@@ -193,19 +192,15 @@ function buildQueryShapeKey({
   return `${name}\u0000${sortKey}\u0000${filterKey}\u0000${pageSize}${projectionKey}`;
 }
 
-function resetPageTokenState(queryShapeKey: string): PageTokenState {
+function resetPageTokenState(queryShapeKey: string) {
   return {
     currentPageIndex: 0,
     queryShapeKey,
     tokens: INITIAL_TOKEN_STACK,
-  };
+  } satisfies PageTokenState;
 }
 
-function pushPageToken(
-  prev: string[],
-  fromIndex: number,
-  token: string
-): string[] {
+function pushPageToken(prev: string[], fromIndex: number, token: string) {
   if (prev[fromIndex + 1] === token) {
     return prev;
   }

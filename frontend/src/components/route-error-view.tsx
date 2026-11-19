@@ -21,7 +21,7 @@ interface RouteErrorViewProps
   reloadPage?: (() => void) | undefined;
 }
 
-function reloadWindow(): void {
+function reloadWindow() {
   globalThis.window.location.reload();
 }
 

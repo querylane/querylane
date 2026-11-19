@@ -22,10 +22,6 @@ export function SetupRoutePage() {
 
   useEffect(
     function syncWizardMethodToUrl() {
-      // Mirror the wizard's progress into ?method=… so any step past method
-      // selection is a shareable, refresh-safe deep link. Only clear the param
-      // once a method was actually selected (going Back), so an inbound deep
-      // link is never stripped before the wizard has had a chance to apply it.
       const urlMethod =
         wizardPhase === "method_selection"
           ? undefined

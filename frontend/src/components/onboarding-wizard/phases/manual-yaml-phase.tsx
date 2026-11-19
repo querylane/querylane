@@ -36,30 +36,30 @@ export function ManualYamlPhase() {
   const [pathCopyState, setPathCopyState] = useState<"copied" | "idle">("idle");
   const configPreview = buildConfigPreview(configFilePath);
   useEffect(
-    function resetCopyFeedback(): (() => void) | undefined {
+    function resetCopyFeedback() {
       if (copyState === "idle") {
         return undefined;
       }
       const timer = globalThis.window.setTimeout(() => {
         setCopyState("idle");
       }, COPY_RESET_DELAY_MS);
-      return () => {
+      return (() => {
         globalThis.window.clearTimeout(timer);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [copyState]
   );
   useEffect(
-    function resetPathCopyFeedback(): (() => void) | undefined {
+    function resetPathCopyFeedback() {
       if (pathCopyState === "idle") {
         return undefined;
       }
       const timer = globalThis.window.setTimeout(() => {
         setPathCopyState("idle");
       }, COPY_RESET_DELAY_MS);
-      return () => {
+      return (() => {
         globalThis.window.clearTimeout(timer);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [pathCopyState]
   );

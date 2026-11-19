@@ -96,7 +96,7 @@ function shouldPreservePageSearch({
   clearPageSearch = false,
   currentPage,
   targetPage,
-}: CanonicalAdminSearchOptions): boolean {
+}: CanonicalAdminSearchOptions) {
   return Boolean(currentPage && targetPage === currentPage && !clearPageSearch);
 }
 
@@ -106,7 +106,7 @@ function resolveNextAdminPage({
 }: {
   currentPage?: AdminPageId | undefined;
   targetScope: ScopeLevel;
-}): AdminPageId | undefined {
+}) {
   if (currentPage && canRenderAdminPageAtScope(currentPage, targetScope)) {
     return currentPage;
   }
@@ -120,7 +120,7 @@ function resolveCanonicalAdminPageTarget({
 }: {
   ids: RouteSelectionIds;
   page: AdminPageId;
-}): CanonicalAdminPageTarget | null {
+}) {
   if (page.startsWith("instance.")) {
     return resolveCanonicalInstancePageTarget({ ids, page });
   }
@@ -134,7 +134,7 @@ function resolveCanonicalInstancePageTarget({
 }: {
   ids: RouteSelectionIds;
   page: AdminPageId;
-}): CanonicalAdminPageTarget | null {
+}) {
   if (!isNonEmptyString(ids.instanceId)) {
     return null;
   }
@@ -144,22 +144,22 @@ function resolveCanonicalInstancePageTarget({
       return {
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "instance.activity":
       return {
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId/activity",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "instance.configuration":
       return {
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId/configuration",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "instance.roles":
       return {
         params: { instanceId: ids.instanceId },
         to: "/instances/$instanceId/roles",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "database.explorer":
     case "database.extensions":
     case "database.overview":
@@ -176,7 +176,7 @@ function resolveCanonicalDatabasePageTarget({
 }: {
   ids: RouteSelectionIds;
   page: AdminPageId;
-}): CanonicalAdminPageTarget | null {
+}) {
   if (
     !(
       isNonEmptyString(ids.instanceId) &&
@@ -195,7 +195,7 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "database.extensions":
       return {
         params: {
@@ -203,7 +203,7 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/extensions",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "database.explorer":
       return {
         params: {
@@ -211,7 +211,7 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/explorer",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "database.sql":
       return {
         params: {
@@ -219,7 +219,7 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/sql",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "database.workbench":
       return {
         params: {
@@ -227,7 +227,7 @@ function resolveCanonicalDatabasePageTarget({
           instanceId: ids.instanceId,
         },
         to: "/instances/$instanceId/databases/$databaseId/workbench",
-      };
+      } satisfies CanonicalAdminPageTarget | null;
     case "instance.activity":
     case "instance.configuration":
     case "instance.overview":
@@ -244,7 +244,7 @@ function buildCanonicalAdminSearch(
     currentPage,
     targetPage,
   }: CanonicalAdminSearchOptions
-): InstanceLayoutSearch {
+) {
   const baseSearch = shouldPreservePageSearch({
     clearPageSearch,
     currentPage,
@@ -256,13 +256,13 @@ function buildCanonicalAdminSearch(
   return {
     ...baseSearch,
     page: undefined,
-  };
+  } satisfies InstanceLayoutSearch;
 }
 
 function buildCanonicalRolesSearch(
   previous: InstanceLayoutSearch & { type?: unknown },
   searchOptions: CanonicalAdminSearchOptions
-): InstanceLayoutSearch & InstanceRolesSearch {
+) {
   const search = buildCanonicalAdminSearch(previous, searchOptions);
   const previousType =
     shouldPreservePageSearch(searchOptions) && typeof previous.type === "string"
@@ -273,14 +273,14 @@ function buildCanonicalRolesSearch(
     ...search,
     tab: isInstanceRolesTab(search.tab) ? search.tab : undefined,
     type: isInstanceRolesType(previousType) ? previousType : undefined,
-  };
+  } satisfies InstanceLayoutSearch & InstanceRolesSearch;
 }
 
 function navigateToCanonicalAdminTarget(
   navigate: NavigateFn,
   target: CanonicalAdminPageTarget,
   searchOptions: CanonicalAdminSearchOptions
-): Promise<void> {
+) {
   switch (target.to) {
     case "/instances/$instanceId":
       return navigate({
@@ -336,7 +336,7 @@ function navigateToCanonicalAdminTarget(
   }
 }
 
-function resolveScopeLevelFromIds(ids: RouteSelectionIds): ScopeLevel {
+function resolveScopeLevelFromIds(ids: RouteSelectionIds) {
   if (isNonEmptyString(ids.databaseId)) {
     return "database";
   }
@@ -354,7 +354,7 @@ function resolveLegacyAdminPageRedirect({
   currentPage?: AdminPageId | undefined;
   ids: RouteSelectionIds;
   search: InstanceLayoutSearch;
-}): (CanonicalAdminPageTarget & { search: InstanceLayoutSearch }) | null {
+}) {
   if (!isNonEmptyString(search.page)) {
     return null;
   }
@@ -382,7 +382,9 @@ function resolveLegacyAdminPageRedirect({
       target.to === "/instances/$instanceId/roles"
         ? buildCanonicalRolesSearch(search, searchOptions)
         : buildCanonicalAdminSearch(search, searchOptions),
-  };
+  } satisfies
+    | (CanonicalAdminPageTarget & { search: InstanceLayoutSearch })
+    | null;
 }
 
 export type { CanonicalAdminPageTarget, CanonicalAdminSearchOptions };

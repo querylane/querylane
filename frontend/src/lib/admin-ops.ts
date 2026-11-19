@@ -3,10 +3,6 @@ import { TimestampSchema, timestampDate } from "@bufbuild/protobuf/wkt";
 import { formatDistanceToNow } from "date-fns";
 import type { AdminRunnerExecution } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
-/**
- * Display length of a shortened replica id (xids are 20 chars; the tail is
- * the random part, the head is a timestamp shared by same-boot replicas).
- */
 const SHORT_REPLICA_ID_LENGTH = 7;
 
 /**
@@ -26,7 +22,7 @@ export const KNOWN_RUNNER_NAMES = [
 
 export const ALL_RUNNERS_FILTER_VALUE = "all";
 
-export function buildRunnerFilter(runnerName: string): string {
+export function buildRunnerFilter(runnerName: string) {
   if (!runnerName || runnerName === ALL_RUNNERS_FILTER_VALUE) {
     return "";
   }
@@ -46,7 +42,7 @@ export function deriveJobExecutionStatus(
     AdminRunnerExecution,
     "lastError" | "lastSuccessAt" | "leaseHeld"
   >
-): JobExecutionStatus {
+) {
   if (execution.leaseHeld) {
     return "running";
   }
@@ -59,7 +55,7 @@ export function deriveJobExecutionStatus(
   return "pending";
 }
 
-export function shortReplicaId(replicaId: string): string {
+export function shortReplicaId(replicaId: string) {
   if (replicaId.length <= SHORT_REPLICA_ID_LENGTH) {
     return replicaId;
   }
@@ -68,7 +64,7 @@ export function shortReplicaId(replicaId: string): string {
 
 export function formatRelativeTimestamp(
   timestamp: { seconds?: bigint; nanos?: number } | null | undefined
-): string {
+) {
   if (!timestamp) {
     return "—";
   }

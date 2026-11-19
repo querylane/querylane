@@ -39,9 +39,6 @@ import {
   listRoles,
 } from "@/protogen/querylane/console/v1alpha1/role-RoleService_connectquery";
 
-// Non-exported types and fetch helpers come first; all exports follow (per the
-// useExportsLast lint rule).
-
 interface ListAllQueryOptions {
   enabled?: boolean;
   refetchOnWindowFocus?: boolean;
@@ -96,8 +93,6 @@ interface RoleDatabasePair {
   role: Role;
 }
 
-// A role/database pair starts three facet requests. Two pairs keep scheduling
-// bounded while the transport's per-instance semaphore caps active RPCs at 4.
 const ACCESS_MAP_RESOURCE_CONCURRENCY = 2;
 const ACCESS_MAP_REQUEST_BUDGET = 300;
 const ACCESS_MAP_ROLE_FACET_REQUEST_COUNT = 3;
@@ -106,11 +101,11 @@ const ROLE_SUMMARY_ROW_CAP = 5000;
 async function mapWithConcurrency<T, Result>(
   items: T[],
   mapItem: (item: T) => Promise<Result>
-): Promise<Result[]> {
+) {
   const results: Result[] = [];
   const entries = items.entries();
 
-  async function worker(): Promise<void> {
+  async function worker() {
     const entry = entries.next();
     if (entry.done === true) {
       return;
@@ -138,7 +133,7 @@ function takeRoleDatabasePairs({
   databases: Database[];
   limit: number;
   roles: Role[];
-}): RoleDatabasePair[] {
+}) {
   const pairs: RoleDatabasePair[] = [];
   for (const role of roles) {
     for (const database of databases) {
@@ -154,16 +149,20 @@ function takeRoleDatabasePairs({
 async function keepPartialAccess<Response extends { nextPageToken: string }, T>(
   request: Promise<Response>,
   selectItems: (response: Response) => T[]
-): Promise<PartialAccessResult<T[]>> {
+) {
   const [result] = await Promise.allSettled([request]);
   if (result.status === "fulfilled") {
     return {
       failedRequestCount: 0,
       truncatedRequestCount: result.value.nextPageToken ? 1 : 0,
       value: selectItems(result.value),
-    };
+    } satisfies PartialAccessResult<T[]>;
   }
-  return { failedRequestCount: 1, truncatedRequestCount: 0, value: [] };
+  return {
+    failedRequestCount: 1,
+    truncatedRequestCount: 0,
+    value: [],
+  } satisfies PartialAccessResult<T[]>;
 }
 
 async function fetchAllRoles(
@@ -192,7 +191,7 @@ async function fetchAllRoles(
 async function fetchRoleAccessMapResources(
   transport: Transport,
   input: { instanceId: string; roles: Role[] }
-): Promise<RoleAccessMapResourcesResult> {
+) {
   const databaseClient = createClient(DatabaseService, transport);
   const roleClient = createClient(RoleService, transport);
   const databases = await paginateAll(
@@ -328,20 +327,20 @@ async function fetchRoleAccessMapResources(
       (total, result) => total + result.truncatedRequestCount,
       0
     ),
-  };
+  } satisfies RoleAccessMapResourcesResult;
 }
 
-function databaseIdOf(database: Database): string {
+function databaseIdOf(database: Database) {
   return (
     parseResourceLeafId(database.name) || database.displayName || database.name
   );
 }
 
-function databaseDisplayName(database: Database): string {
+function databaseDisplayName(database: Database) {
   return database.displayName || databaseIdOf(database);
 }
 
-function roleResourceIdOf(role: Role): string {
+function roleResourceIdOf(role: Role) {
   return parseResourceLeafId(role.name) || role.roleName;
 }
 

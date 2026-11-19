@@ -26,10 +26,7 @@ interface ResourceLoader<T = unknown> {
   retry: () => Promise<unknown>;
 }
 
-export function createResourceLoader<T>(
-  query: QueryLike<T>,
-  area: string
-): ResourceLoader<T> {
+export function createResourceLoader<T>(query: QueryLike<T>, area: string) {
   const hasData = query.data !== null && query.data !== undefined;
 
   const retry = () =>
@@ -51,5 +48,5 @@ export function createResourceLoader<T>(
       retry,
     },
     retry,
-  };
+  } satisfies ResourceLoader<T>;
 }

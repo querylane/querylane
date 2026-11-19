@@ -146,8 +146,6 @@ const storedWorkbenchSchema = z.object({
 });
 
 const STORAGE_KEY = "querylane.sql-workbench.v1";
-// Every keystroke updates the tab text; writing the whole workbench to
-// localStorage once typing pauses keeps serialization off the keystroke path.
 const PERSIST_DELAY_MS = 250;
 const MAX_HISTORY_ENTRIES = 100;
 const DEFAULT_TAB_TITLE_PREFIX = "Query";
@@ -156,7 +154,7 @@ const ID_RADIX = 36;
 const ID_RANDOM_START = 2;
 const ID_RANDOM_END = 10;
 
-function generateId(): string {
+function generateId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
@@ -166,32 +164,33 @@ function generateId(): string {
   return `${Date.now().toString(ID_RADIX)}-${random}`;
 }
 
-function scopeKey(instanceId: string, databaseId: string): string {
+function scopeKey(instanceId: string, databaseId: string) {
   return `${instanceId}/${databaseId}`;
 }
 
 function createTab(
   title: string,
   overrides: Partial<Pick<SqlTab, "savedQueryId" | "text" | "title">> = {}
-): SqlTab {
+) {
   return {
     createdAt: Date.now(),
     id: generateId(),
     text: "",
     title,
     ...overrides,
-  };
+  } satisfies SqlTab;
 }
 
-function defaultWorkspace(): SqlWorkspace {
+function defaultWorkspace() {
   const tab = createTab(`${DEFAULT_TAB_TITLE_PREFIX} 1`);
-  return { activeTabId: tab.id, nextTabNumber: 2, tabs: [tab] };
+  return {
+    activeTabId: tab.id,
+    nextTabNumber: 2,
+    tabs: [tab],
+  } satisfies SqlWorkspace;
 }
 
-function workspaceFor(
-  workspaces: Record<string, SqlWorkspace>,
-  scope: string
-): SqlWorkspace {
+function workspaceFor(workspaces: Record<string, SqlWorkspace>, scope: string) {
   return workspaces[scope] ?? defaultWorkspace();
 }
 
@@ -199,13 +198,13 @@ function withWorkspace(
   state: SqlWorkbenchState,
   scope: string,
   update: (workspace: SqlWorkspace) => SqlWorkspace
-): Pick<SqlWorkbenchState, "workspaces"> {
+) {
   return {
     workspaces: {
       ...state.workspaces,
       [scope]: update(workspaceFor(state.workspaces, scope)),
     },
-  };
+  } satisfies Pick<SqlWorkbenchState, "workspaces">;
 }
 
 function nextActiveTabAfterClose({
@@ -218,7 +217,7 @@ function nextActiveTabAfterClose({
   closedIndex: number;
   closedTabId: string;
   tabs: SqlTab[];
-}): string {
+}) {
   if (activeTabId !== closedTabId) {
     return activeTabId;
   }
@@ -226,11 +225,7 @@ function nextActiveTabAfterClose({
   return neighbour?.id ?? activeTabId;
 }
 
-/**
- * localStorage, written once updates pause. A pending write is flushed when
- * the page is hidden so closing the tab mid-typing keeps the draft.
- */
-function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
+function debouncedLocalStorage() {
   let recoveryWriteBlocked = false;
   let pending:
     | { name: string; value: StorageValue<PersistedSqlWorkbench> }
@@ -266,8 +261,6 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
         recoveryWriteBlocked = false;
         return version === undefined ? { state } : { state, version };
       } catch (error) {
-        // A mounted workbench creates a fresh workspace automatically. Keep the
-        // rejected bytes separately before that first write can replace them.
         recoveryWriteBlocked = true;
         localStorage.setItem(`${name}.recovery`, raw);
         recoveryWriteBlocked = false;
@@ -289,7 +282,7 @@ function debouncedLocalStorage(): PersistStorage<PersistedSqlWorkbench> {
       clearTimeout(timer);
       timer = setTimeout(flush, PERSIST_DELAY_MS);
     },
-  };
+  } satisfies PersistStorage<PersistedSqlWorkbench>;
 }
 
 function reportInMemorySqlWork() {
@@ -380,7 +373,7 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
         }
       },
       history: {},
-      openSavedQuery: (scope, id): string | undefined => {
+      openSavedQuery: (scope, id) => {
         const query = (get().savedQueries[scope] ?? []).find(
           (candidate) => candidate.id === id
         );
@@ -480,11 +473,12 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
     }),
     {
       name: STORAGE_KEY,
-      partialize: (state): PersistedSqlWorkbench => ({
-        history: state.history,
-        savedQueries: state.savedQueries,
-        workspaces: state.workspaces,
-      }),
+      partialize: (state) =>
+        ({
+          history: state.history,
+          savedQueries: state.savedQueries,
+          workspaces: state.workspaces,
+        }) satisfies PersistedSqlWorkbench,
       storage: debouncedLocalStorage(),
       onRehydrateStorage: () => (_state, error) => {
         if (error !== undefined) {
@@ -495,8 +489,6 @@ const useSqlWorkbenchStore = create<SqlWorkbenchState>()(
           captureException(error);
         }
       },
-      // persist stamps version 0. When the persisted shape changes, bump
-      // this and add a `migrate` from the previous version.
       version: 0,
     }
   )

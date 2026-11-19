@@ -1,14 +1,6 @@
 import type { FacetedFilterOption } from "@/components/ui/data-table-faceted-filter";
 import { Table_TableType } from "@/protogen/querylane/console/v1alpha1/table_pb";
 
-type CatalogObjectKindFilter =
-  | "external-table"
-  | "materialized-view"
-  | "partitioned-table"
-  | "table"
-  | "temporary-table"
-  | "view";
-
 interface CatalogObjectKindRow {
   isMaterialized: boolean;
   kind: "table" | "view";
@@ -37,9 +29,6 @@ interface CatalogSchemaFacetFilters {
   kindFilters: string[];
   ownerFilters: string[];
 }
-
-type CatalogSchemaKindFilter = "system" | "user";
-type CatalogObjectSystemFilter = "system" | "user";
 
 const EMPTY_OWNER_FILTER_VALUE = "__querylane_empty_owner__";
 const EMPTY_SCHEMA_FILTER_VALUE = "__querylane_empty_schema__";
@@ -76,21 +65,15 @@ function ownerFilterLabel(value: string) {
   return value === EMPTY_OWNER_FILTER_VALUE ? "No owner" : value;
 }
 
-function catalogObjectSystemValue(
-  object: CatalogObjectFacetRow
-): CatalogObjectSystemFilter {
+function catalogObjectSystemValue(object: CatalogObjectFacetRow) {
   return object.isSystem ? "system" : "user";
 }
 
-function catalogSchemaKindValue(
-  schema: CatalogSchemaFacetRow
-): CatalogSchemaKindFilter {
+function catalogSchemaKindValue(schema: CatalogSchemaFacetRow) {
   return schema.isSystemSchema ? "system" : "user";
 }
 
-function catalogObjectKindValue(
-  object: CatalogObjectKindRow
-): CatalogObjectKindFilter {
+function catalogObjectKindValue(object: CatalogObjectKindRow) {
   if (object.kind === "view") {
     return object.isMaterialized ? "materialized-view" : "view";
   }
@@ -114,7 +97,7 @@ function catalogObjectKindValue(
 function uniqueSortedOptions(
   values: string[],
   getLabel: (value: string) => string = (value) => value
-): FacetedFilterOption[] {
+) {
   return [...new Set(values)]
     .toSorted((left, right) => getLabel(left).localeCompare(getLabel(right)))
     .map((value) => ({ label: getLabel(value), value }));
@@ -172,7 +155,7 @@ function matchesSelectedFacet(
   selectedValues: Set<string>,
   selectedValueCount: number,
   value: string
-): boolean {
+) {
   return selectedValueCount === 0 || selectedValues.has(value);
 }
 
@@ -182,7 +165,7 @@ function filterCatalogObjectsByFacets<RowType extends CatalogObjectFacetRow>({
   ownerFilters,
   schemaFilters,
   systemFilters,
-}: CatalogObjectFacetFilters & { objects: RowType[] }): RowType[] {
+}: CatalogObjectFacetFilters & { objects: RowType[] }) {
   const kindFilterSet = new Set(kindFilters);
   const ownerFilterSet = new Set(ownerFilters);
   const schemaFilterSet = new Set(schemaFilters);
@@ -216,7 +199,7 @@ function filterCatalogSchemasByFacets<RowType extends CatalogSchemaFacetRow>({
   kindFilters,
   ownerFilters,
   schemas,
-}: CatalogSchemaFacetFilters & { schemas: RowType[] }): RowType[] {
+}: CatalogSchemaFacetFilters & { schemas: RowType[] }) {
   const kindFilterSet = new Set(kindFilters);
   const ownerFilterSet = new Set(ownerFilters);
   return schemas.filter((schema) => {
