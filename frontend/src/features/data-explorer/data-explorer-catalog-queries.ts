@@ -188,11 +188,6 @@ function useSchemaOverviewState({
   instanceId: string;
   selection: ExplorerSelection;
 }) {
-  // The schema overview must not inherit the sidebar search filter: header
-  // counts and sizes describe the schema, not the currently typed filter.
-  // Without a filter both hooks share the sidebar query's cache entry. The
-  // API exposes no schema-level aggregates, so stats can only cover the
-  // loaded pages; hasMoreTables/hasMoreViews flag them as lower bounds.
   const isSchemaOverview = selection.kind === "schema";
   const tablesQuery = useListTablesInfiniteQuery(
     tableListInput({ activeSchema, databaseId, instanceId }),
@@ -209,9 +204,6 @@ function useSchemaOverviewState({
     viewsQuery.data?.pages.flatMap((page) => page.views) ?? [];
 
   return {
-    // Raw protos for the schema overview's own inventory/aggregates. These must
-    // stay separate from the sidebar's filtered rawTables/rawViews so the
-    // overview is not narrowed by the currently typed sidebar query.
     rawTables: overviewTables,
     rawViews: overviewViews,
     tables: tableSummaries(overviewTables),
@@ -301,7 +293,7 @@ function resolveActiveSchema({
 
 function schemaSummaryFromQuery(
   schema: { displayName: string; name: string; owner: string } | undefined
-): SchemaSummary | null {
+) {
   if (!schema) {
     return null;
   }
@@ -309,10 +301,10 @@ function schemaSummaryFromQuery(
     id: parseResourceLeafId(schema.name),
     name: schema.displayName || parseResourceLeafId(schema.name),
     owner: schema.owner,
-  };
+  } satisfies SchemaSummary | null;
 }
 
-function isNotFoundError(error: unknown): boolean {
+function isNotFoundError(error: unknown) {
   return error instanceof ConnectError && error.code === Code.NotFound;
 }
 
@@ -324,7 +316,7 @@ function tableSummaries(
     sizeBytes: bigint;
     tableType?: Table_TableType | undefined;
   }[]
-): TableSummary[] {
+) {
   return rawTables.map((table) => ({
     id: parseResourceLeafId(table.name),
     name: table.displayName || parseResourceLeafId(table.name),
@@ -342,7 +334,7 @@ function viewSummaries(
     sizeBytes: bigint;
     viewType: View_ViewType;
   }[]
-): ViewSummary[] {
+) {
   return rawViews.map((view) => ({
     id: parseResourceLeafId(view.name),
     name: view.displayName || parseResourceLeafId(view.name),
@@ -356,7 +348,7 @@ function itemsByCategory(
   activeSchema: SchemaSummary | null,
   tables: TableSummary[],
   views: ViewSummary[]
-): Record<CategoryKey, ResourceItem[]> | null {
+) {
   if (!activeSchema) {
     return null;
   }
@@ -388,9 +380,9 @@ function flattenSchemaSummaries(
         }[];
       }[]
     | undefined
-): SchemaSummary[] {
+) {
   if (!pages) {
-    return [];
+    return [] satisfies SchemaSummary[];
   }
   const schemas: SchemaSummary[] = [];
   for (const page of pages) {

@@ -23,8 +23,6 @@ function ExplorerSidebarSlotProvider({
   );
 }
 
-/** Ref callback for the rail element that hosts the portaled explorer tree. */
-
 /**
  * Renders children into the registered rail slot. Renders nothing while no
  * slot is mounted (sidebar suspense fallback, closed mobile sheet, or tests

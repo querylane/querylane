@@ -8,7 +8,7 @@ interface ResolvedCell {
 function resolveEffectiveCell(
   cell: TableCell | undefined,
   resolved: ResolvedCell | undefined
-): TableCell | undefined {
+) {
   const fullValueToken = cell?.fullValueToken ?? "";
   if (fullValueToken !== "" && resolved?.fullValueToken === fullValueToken) {
     return resolved.cell;
@@ -27,7 +27,7 @@ function buildByteaDownloadFilename({
   columnName: string;
   rowIdentifier?: string | undefined;
   table: string;
-}): string {
+}) {
   const parts = [table, columnName];
   if (rowIdentifier !== undefined && rowIdentifier !== "") {
     parts.push(rowIdentifier.slice(0, ROW_IDENTIFIER_MAX_LENGTH));

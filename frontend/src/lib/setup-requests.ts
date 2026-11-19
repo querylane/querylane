@@ -59,9 +59,7 @@ function buildConnectionTestRequest(config: PostgresConfig) {
   return buildStandaloneTestConnectionRequest(buildPostgresConfig(config));
 }
 
-function getProgressFailureMessage(
-  event: SetupProgressEvent | undefined
-): SetupStreamFailure | null {
+function getProgressFailureMessage(event: SetupProgressEvent | undefined) {
   if (!event || event.state !== StepState.FAILED) {
     return null;
   }
@@ -69,7 +67,7 @@ function getProgressFailureMessage(
   return {
     failedEvent: event,
     message: event.error || event.displayName || "Database setup failed",
-  };
+  } satisfies SetupStreamFailure | null;
 }
 
 function createSetupStreamFailureError(failure: SetupStreamFailure) {
@@ -85,7 +83,7 @@ function createSetupStreamFailureError(failure: SetupStreamFailure) {
   });
 }
 
-function isSetupCompletionEvent(event: SetupProgressEvent): boolean {
+function isSetupCompletionEvent(event: SetupProgressEvent) {
   return (
     event.stepId === SetupStep.PERSISTING_CONFIG &&
     event.state === StepState.SUCCEEDED
@@ -95,7 +93,7 @@ function isSetupCompletionEvent(event: SetupProgressEvent): boolean {
 async function consumeSetupStreamWithProgress(
   stream: AsyncIterable<SetupAppDatabaseResponse>,
   onProgress: StepProgressCallback
-): Promise<SetupStreamFailure | null> {
+) {
   let failureMessage: SetupStreamFailure | null = null;
   let setupCompleted = false;
 
@@ -125,7 +123,7 @@ async function consumeSetupStreamWithProgress(
   return null;
 }
 
-function isWatchCompletionEvent(event: SetupProgressEvent): boolean {
+function isWatchCompletionEvent(event: SetupProgressEvent) {
   return (
     event.stepId === SetupStep.INITIALIZING_SERVICES &&
     event.state === StepState.SUCCEEDED
@@ -135,17 +133,13 @@ function isWatchCompletionEvent(event: SetupProgressEvent): boolean {
 async function consumeWatchStreamWithProgress(
   stream: AsyncIterable<WatchConfigChangesResponse>,
   onProgress: StepProgressCallback
-): Promise<SetupStreamFailure | null> {
+) {
   let failureMessage: SetupStreamFailure | null = null;
 
   for await (const response of stream) {
     const { event } = response;
     if (event) {
       onProgress(event);
-      // A failed step is not final on the watch path: the user can fix the
-      // config file and the backend retries initialization on the same
-      // stream. Initialization succeeding after a failure means setup
-      // completed — clear the stale failure.
       if (isWatchCompletionEvent(event)) {
         failureMessage = null;
       }

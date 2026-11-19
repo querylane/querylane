@@ -76,7 +76,7 @@ function formatForeignKeyColumns(constraint: TableConstraint) {
 function createConstraintKeyRow(
   constraint: TableConstraint,
   kind: TableKeyKind
-): TableKeyRow {
+) {
   return {
     columnsLabel:
       kind === "foreign"
@@ -88,12 +88,9 @@ function createConstraintKeyRow(
     kindLabel: TABLE_KEY_KIND_LABELS[kind],
     name: constraint.constraintName || "—",
     sortRank: TABLE_KEY_KIND_RANKS[kind],
-  };
+  } satisfies TableKeyRow;
 }
-function deriveConstraintKeyRows(constraints: TableConstraint[]): {
-  backingConstraintNames: Set<string>;
-  rows: TableKeyRow[];
-} {
+function deriveConstraintKeyRows(constraints: TableConstraint[]) {
   const backingConstraintNames = new Set<string>();
   const rows: TableKeyRow[] = [];
   for (const constraint of constraints) {
@@ -106,9 +103,12 @@ function deriveConstraintKeyRows(constraints: TableConstraint[]): {
     }
     rows.push(createConstraintKeyRow(constraint, kind));
   }
-  return { backingConstraintNames, rows };
+  return { backingConstraintNames, rows } satisfies {
+    backingConstraintNames: Set<string>;
+    rows: TableKeyRow[];
+  };
 }
-function createSecondaryIndexKeyRow(index: TableIndex): TableKeyRow {
+function createSecondaryIndexKeyRow(index: TableIndex) {
   const uniqueLabel = index.isUnique ? "Unique " : "";
   return {
     columnsLabel: formatIndexColumns(index),
@@ -118,7 +118,7 @@ function createSecondaryIndexKeyRow(index: TableIndex): TableKeyRow {
     kindLabel: TABLE_KEY_KIND_LABELS["secondary-index"],
     name: index.indexName || "—",
     sortRank: TABLE_KEY_KIND_RANKS["secondary-index"],
-  };
+  } satisfies TableKeyRow;
 }
 function sortTableKeyRows(keyRows: TableKeyRow[]) {
   return keyRows.toSorted((left, right) => {
@@ -131,7 +131,7 @@ function sortTableKeyRows(keyRows: TableKeyRow[]) {
 function deriveTableKeyRows(
   constraints: TableConstraint[],
   indexes: TableIndex[]
-): TableKeyRow[] {
+) {
   const { backingConstraintNames, rows } = deriveConstraintKeyRows(constraints);
   const secondaryIndexRows: TableKeyRow[] = [];
   for (const index of indexes) {
@@ -145,9 +145,9 @@ function deriveTableKeyRows(
 
 function deriveForeignKeyReferences(
   constraints: readonly TableConstraint[] | undefined
-): TableForeignKeyReference[] {
+) {
   if (!constraints) {
-    return [];
+    return [] satisfies TableForeignKeyReference[];
   }
   return constraints.flatMap((constraint) => {
     if (

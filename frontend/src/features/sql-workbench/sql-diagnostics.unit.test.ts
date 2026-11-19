@@ -1,8 +1,8 @@
 import { describe, expect, test } from "@rstest/core";
-import { problemRange, type SqlProblem } from "./sql-diagnostics";
+import { problemRange } from "./sql-diagnostics";
 import type { SqlStatement } from "./sql-statements";
 
-function problem(position: number): SqlProblem {
+function problem(position: number) {
   return { detail: "", hint: "", message: "boom", position, sqlstate: "42601" };
 }
 

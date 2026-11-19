@@ -58,7 +58,7 @@ function databaseOwnerFilterLabel(value: string) {
 function uniqueSortedFilterOptions(
   values: string[],
   getLabel: (value: string) => string = (value) => value
-): FacetedFilterOption[] {
+) {
   return [...new Set(values)]
     .toSorted((left, right) => getLabel(left).localeCompare(getLabel(right)))
     .map((value) => ({ label: getLabel(value), value }));
@@ -92,7 +92,7 @@ function filterDatabasesByFacets<RowType extends DatabaseFacetRow>({
   encodingFilters,
   kindFilters,
   ownerFilters,
-}: DatabaseFacetFilters & { databases: RowType[] }): RowType[] {
+}: DatabaseFacetFilters & { databases: RowType[] }) {
   const encodingFilterSet = new Set(encodingFilters);
   const kindFilterSet = new Set(kindFilters);
   const ownerFilterSet = new Set(ownerFilters);

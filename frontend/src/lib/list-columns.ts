@@ -11,7 +11,6 @@ const MAX_LIST_KEY_LENGTH = 512;
 const MAX_SELECTED_COLUMNS = 2000;
 const MAX_SORT_COLUMNS = 8;
 
-// Stable table keys, not mount order, identify independent lists on one page.
 const listColumnsSearchSchema = z.object({
   columnOrder: z
     .record(
@@ -177,7 +176,6 @@ function useListSorting(
   };
 }
 
-// Stale bookmarks fall back to the defaults instead of rendering an empty list.
 function resolveListColumns(
   selection: readonly string[] | undefined,
   available: readonly string[],

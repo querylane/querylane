@@ -24,14 +24,14 @@ interface SqlValidator {
   scopeKey: string;
 }
 
-function toSqlProblem(diagnostic: QueryDiagnostic): SqlProblem {
+function toSqlProblem(diagnostic: QueryDiagnostic) {
   return {
     detail: diagnostic.detail,
     hint: diagnostic.hint,
     message: diagnostic.message,
     position: diagnostic.position,
     sqlstate: diagnostic.sqlstate,
-  };
+  } satisfies SqlProblem;
 }
 
 function useSqlValidator({
@@ -43,7 +43,7 @@ function useSqlValidator({
   /** Validate the way the statement will run: same search_path. */
   defaultSchema?: string | undefined;
   instanceId: string;
-}): SqlValidator {
+}) {
   const transport = useTransport();
   const parent = buildDatabaseName(instanceId, databaseId);
   return {
@@ -56,12 +56,9 @@ function useSqlValidator({
         .then(({ diagnostic }) =>
           diagnostic ? toSqlProblem(diagnostic) : null
         )
-        .catch(
-          // The check itself failed: nothing is known about the statement.
-          () => undefined
-        ),
+        .catch(() => undefined),
     scopeKey: defaultSchema ?? "",
-  };
+  } satisfies SqlValidator;
 }
 
 export type { SqlValidator };

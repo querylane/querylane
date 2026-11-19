@@ -98,7 +98,7 @@ function useHiddenSidebarFocusGuard({
   hidden: boolean;
 }) {
   useEffect(
-    function syncHiddenSidebarFocusability(): (() => void) | undefined {
+    function syncHiddenSidebarFocusability() {
       const container = containerRef.current;
       if (!(container && hidden)) {
         return undefined;
@@ -115,7 +115,7 @@ function useHiddenSidebarFocusGuard({
         element.setAttribute("tabindex", "-1");
       }
 
-      return () => {
+      return (() => {
         for (const { element, tabIndex } of changedElements) {
           if (tabIndex === null) {
             element.removeAttribute("tabindex");
@@ -123,7 +123,7 @@ function useHiddenSidebarFocusGuard({
             element.setAttribute("tabindex", tabIndex);
           }
         }
-      };
+      }) satisfies (() => void) | undefined;
     },
     [containerRef, hidden]
   );
@@ -178,7 +178,7 @@ function useSidebarHoverReveal({
   }
 
   useEffect(
-    function revealSidebarFromScreenEdge(): (() => void) | undefined {
+    function revealSidebarFromScreenEdge() {
       if (!(enabled && !revealed)) {
         return undefined;
       }
@@ -202,15 +202,15 @@ function useSidebarHoverReveal({
       globalThis.window.addEventListener("pointermove", handlePointerMove, {
         passive: true,
       });
-      return () => {
+      return (() => {
         globalThis.window.removeEventListener("pointermove", handlePointerMove);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [enabled, revealed, side]
   );
 
   useEffect(
-    function retractSidebarAwayFromPointer(): (() => void) | undefined {
+    function retractSidebarAwayFromPointer() {
       if (!(enabled && revealed)) {
         return undefined;
       }
@@ -264,11 +264,11 @@ function useSidebarHoverReveal({
         passive: true,
       });
       globalThis.window.addEventListener("blur", handleWindowBlur);
-      return () => {
+      return (() => {
         clearCloseTimer();
         globalThis.window.removeEventListener("pointermove", handlePointerMove);
         globalThis.window.removeEventListener("blur", handleWindowBlur);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [containerRef, enabled, revealed, side]
   );
@@ -293,8 +293,6 @@ function SidebarProvider({
   const [openMobile, setOpenMobile] = useState(false);
   const [hoverRevealOpen, setHoverRevealOpen] = useState(false);
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = openProp ?? internalOpen;
   function setOpen(value: boolean | ((value: boolean) => boolean)) {
@@ -306,7 +304,6 @@ function SidebarProvider({
     }
   }
 
-  // Helper to toggle the sidebar.
   function toggleSidebar() {
     if (isMobile) {
       setOpenMobile((currentOpen) => !currentOpen);
@@ -315,8 +312,6 @@ function SidebarProvider({
     }
   }
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed";
 
   const contextValue: SidebarContextProps = {
@@ -356,7 +351,7 @@ function shouldRevealSidebarOnHover(
   collapsible: "offcanvas" | "icon" | "none",
   state: "expanded" | "collapsed",
   isMobile: boolean
-): boolean {
+) {
   return collapsible === "offcanvas" && state === "collapsed" && !isMobile;
 }
 
@@ -364,15 +359,13 @@ function isSidebarOffcanvasHidden(
   collapsible: "offcanvas" | "icon" | "none",
   state: "expanded" | "collapsed",
   hoverRevealOpen: boolean
-): boolean {
+) {
   return (
     collapsible === "offcanvas" && state === "collapsed" && !hoverRevealOpen
   );
 }
 
-function hasFloatingSidebarLayout(
-  variant: "sidebar" | "floating" | "inset"
-): boolean {
+function hasFloatingSidebarLayout(variant: "sidebar" | "floating" | "inset") {
   return variant === "floating" || variant === "inset";
 }
 
@@ -472,7 +465,6 @@ function Sidebar({
       data-state={state}
       data-variant={variant}
     >
-      {/* This is what handles the sidebar gap on desktop */}
       <div
         className={cn(
           "relative w-(--sidebar-width) bg-transparent duration-200 ease-linear",
@@ -490,7 +482,6 @@ function Sidebar({
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) duration-200 ease-linear group-data-[collapsible=offcanvas]:pointer-events-none group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:pointer-events-auto group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:z-30 group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:shadow-2xl data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:-translate-x-full data-[side=left]:group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:translate-x-0 data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:translate-x-full data-[side=right]:group-data-[collapsible=offcanvas]:data-[hover-reveal=open]:translate-x-0 lg:flex",
           styles["panel"],
-          // Adjust the padding for floating and inset variants.
           hasFloatingSidebarLayout(variant)
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -870,7 +861,6 @@ function SidebarMenuSkeleton({
 }: ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
   const [width] = useState(
     () =>
       `${Math.floor(Math.random() * SKELETON_WIDTH_RANGE_PERCENT) + SKELETON_MIN_WIDTH_PERCENT}%`

@@ -115,7 +115,6 @@ function MetricBar({
   );
 }
 
-/** Dependency rails share the metric rows; they do not encode timing. */
 function TopologyRail({
   continuations,
   expanded,
@@ -283,7 +282,7 @@ function PlanRows(props: PlanRowsProps) {
   );
 }
 
-function formatRawPlan(rawPlan: string): string {
+function formatRawPlan(rawPlan: string) {
   try {
     return JSON.stringify(JSON.parse(rawPlan), null, 2);
   } catch {
@@ -370,7 +369,7 @@ function PlanMetricControls({
   );
 }
 
-function defaultPlanMetric(nodes: PlanNode[], analyze: boolean): PlanMetric {
+function defaultPlanMetric(nodes: PlanNode[], analyze: boolean) {
   if (!analyze) {
     return "cost";
   }
@@ -721,7 +720,6 @@ function ExplainPlanView({
       </Tabs>
     );
   }
-  // A new EXPLAIN result must never inherit a previous plan's selection or folds.
   return (
     <PlanExplorer
       analyze={analyze}

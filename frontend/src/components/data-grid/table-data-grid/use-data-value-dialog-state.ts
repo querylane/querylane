@@ -21,14 +21,14 @@ function useDataValueDialogState() {
   const open = setOpenDialogId ? openDialogId === dialogId : localOpen;
 
   useEffect(
-    function clearOwnedDataValueDialogOnUnmount(): (() => void) | undefined {
+    function clearOwnedDataValueDialogOnUnmount() {
       if (!setOpenDialogId) {
         return undefined;
       }
 
       return function clearOwnedDataValueDialog() {
         setOpenDialogId((current) => (current === dialogId ? null : current));
-      };
+      } satisfies (() => void) | undefined;
     },
     [dialogId, setOpenDialogId]
   );

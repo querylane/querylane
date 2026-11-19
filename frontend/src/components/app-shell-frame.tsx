@@ -7,13 +7,6 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const FRONTEND_PACKAGE_VERSION = packageJson.version;
 
-/**
- * Static application shell for surfaces that must render without any backend
- * data (boot errors, root error boundary, pre-instance redirects). Mirrors the
- * real shell layout — full-height sidebar rail with the brand at its top, and a
- * content topbar — so error and loading states appear inside the app frame
- * instead of replacing it.
- */
 function SidebarRailPlaceholder() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar lg:flex">

@@ -6,9 +6,6 @@ import {
 } from "@/lib/role-display";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// Single source for the role-kind badge. Reused by the roles table and the
-// header breadcrumb so the classification, label, tone, and tooltip can't drift
-// between the two places a role's category is shown.
 export function RoleKindBadge({ role }: { role: Role }) {
   const kind = deriveRoleKind(role);
   return (

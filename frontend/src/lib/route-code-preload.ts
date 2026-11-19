@@ -6,14 +6,13 @@ import { canPreloadRouteCode } from "@/lib/router-options";
 export async function preloadRouteCode(
   router: Pick<AnyRouter, "loadRouteChunk">,
   route: AnyRoute
-): Promise<void> {
+) {
   if (!canPreloadRouteCode()) {
     return;
   }
   try {
     await router.loadRouteChunk(route);
   } catch (error) {
-    // Navigation still owns the visible route error/retry experience.
     logger.warn("Route code preload failed", { error, routeId: route.id });
   }
 }

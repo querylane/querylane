@@ -10,7 +10,7 @@ const CommandPaletteContext = createContext<CommandPaletteController | null>(
   null
 );
 
-function useCommandPalette(): CommandPaletteController {
+function useCommandPalette() {
   const controller = use(CommandPaletteContext);
   if (!controller) {
     throw new Error(

@@ -89,9 +89,7 @@ function PanelHeader({
       <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Metrics
       </span>
-      {/* A clock icon frames the segmented picker as a trailing time window
-          (the Grafana/Datadog convention); the comparison control lives on the
-          chart itself, next to the line it toggles, not up here. */}
+
       <div className="flex items-center gap-1.5 text-muted-foreground">
         <Clock aria-hidden="true" className="size-3.5" />
         <ChartRangePicker
@@ -153,11 +151,6 @@ function TabTrigger({
   );
 }
 
-/**
- * The non-interactive stat tile shown while metrics collection is warming up:
- * same anatomy as TabTrigger (label, latest value) but with a "collecting"
- * status caption instead of a trend, and no chart to switch to.
- */
 function CollectingStat({
   tab,
   series,
@@ -188,12 +181,7 @@ function CollectingStat({
   );
 }
 
-/**
- * The collecting-state body copy: a concrete "when will it draw" line (derived
- * from the 3-point floor) plus, when known, how long collection has been
- * running. Keeps the promise specific instead of open-ended.
- */
-function collectingDescription(coverage: MetricsCoverage): string {
+function collectingDescription(coverage: MetricsCoverage) {
   const remaining = samplesUntilChart(coverage);
   const threshold =
     remaining > 0
@@ -208,24 +196,13 @@ function collectingDescription(coverage: MetricsCoverage): string {
   return `Collection started ${formatElapsedDuration(elapsedMs)} ago. ${threshold}`;
 }
 
-/** Ratios live on a fixed 0-100% axis; the auto domain would tick past 100%. */
 const RATIO_Y_DOMAIN: [number, number] = [0, 1];
 
-/**
- * The previous window's series, shifted forward one window so it overlays the
- * current one ("this time last period"). Drawn dashed and translucent in the
- * SAME hue as the live series — identity stays with the metric, and the dash
- * marks it as context, not a measurement (the Axiom/Stripe convention). Null
- * when the previous window has too little data to draw — the overlay is then
- * omitted entirely rather than leaving a phantom legend entry. Only
- * single-series tabs get an overlay: on a two-series tab two identical dashed
- * lines would be unreadable.
- */
 function comparisonOverlay(
   primary: MetricTabSeries,
   previousSeries: Map<number, MetricSeries>,
   windowMs: number
-): { points: MetricPoint[]; series: ChartSeries } | null {
+) {
   const previous = previousSeries.get(primary.metric);
   if (!previous) {
     return null;
@@ -245,14 +222,8 @@ function comparisonOverlay(
       key: `${primary.metric}-previous`,
       label: "previous",
     },
-  };
+  } satisfies { points: MetricPoint[]; series: ChartSeries } | null;
 }
-
-/**
- * Empty states that stand in for a chart render flat inside the card, at the
- * chart's own height: a bordered box inside the card read as a second card,
- * and a shorter box made the panel jump between tabs.
- */
 
 function TabChart({
   tab,
@@ -305,8 +276,6 @@ function TabChart({
 
   const unit = present[0]?.metricSeries.unit ?? MetricUnit.UNSPECIFIED;
 
-  // The gate judges the current window alone: a comparison overlay must never
-  // resurrect a chart whose own window is still empty.
   if (!hasRenderableSpan(mergeSeriesData(dataSeries))) {
     return (
       <EmptyState
@@ -319,9 +288,6 @@ function TabChart({
     );
   }
 
-  // The previous-period overlay is always drawn (no toggle): on single-series
-  // tabs it is the chart's built-in "this time last period" context. Two-series
-  // tabs skip it — two dashed lines beside two solid ones would be unreadable.
   const primaryConfig = present[0]?.config;
   const isSingleSeries = present.length === 1;
   const overlay =
@@ -333,8 +299,6 @@ function TabChart({
     dataSeries.push({ key: overlay.series.key, points: overlay.points });
   }
 
-  // Default gutter axis: the plot reserves space for y-labels so dense series
-  // never run underneath them.
   return (
     <div className="h-72 w-full px-4 pt-4">
       <MetricChart
@@ -352,27 +316,12 @@ function TabChart({
   );
 }
 
-/**
- * The featured-metrics panel: a range picker over a segmented stat bar of
- * metric tabs (label, big value, period-over-period trend) sitting flush above
- * the selected metric's chart. Reads directly from a QueryMetrics response;
- * metrics absent from the response (e.g. I/O on PostgreSQL < 16) render a
- * graceful empty state. Until any series has enough points to draw, the charts
- * are replaced by one deliberate "collecting metrics" state that keeps the
- * latest values visible.
- */
-/**
- * Only draw the max_connections ceiling once the series has climbed within
- * reach of it. Below this fraction the limit is pure headroom: extending the
- * domain to show it would flatten the data into a line at the bottom, and an
- * unextended domain would never include it anyway.
- */
 const CONNECTIONS_LIMIT_PROXIMITY = 0.7;
 
 function connectionsThresholds(
   series: Map<number, MetricSeries>,
   connectionsLimit: number | undefined
-): ChartThreshold[] | undefined {
+) {
   if (
     !(
       typeof connectionsLimit === "number" &&
@@ -402,7 +351,7 @@ function connectionsThresholds(
       tone: "critical",
       value: connectionsLimit,
     },
-  ];
+  ] satisfies ChartThreshold[] | undefined;
 }
 
 export function InstanceMetricsPanel({
@@ -431,8 +380,6 @@ export function InstanceMetricsPanel({
     );
   }
 
-  // Without this branch a failed QueryMetrics would fall through to the
-  // "collecting metrics" state and promise data that will never arrive.
   if (isError && !response) {
     return (
       <Card presentation="bordered-flush">

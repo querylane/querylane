@@ -6,7 +6,6 @@ import {
   RowFilterGroup_Logic,
   RowFilterGroupSchema,
   RowFilterSchema,
-  type RowPredicate,
   RowPredicate_Operator,
   RowPredicateSchema,
   type TableValue,
@@ -19,9 +18,6 @@ const DEFAULT_FILTER_LOGIC = "and" as const;
 const FILTER_LOGICS = ["and", "or"] as const;
 const FLOAT_LITERAL_PATTERN = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u;
 const INTEGER_LITERAL_PATTERN = /^-?\d+$/u;
-// Postgres uuid_in also accepts upper-case digits, surrounding braces, and a
-// hyphen after any group of four digits (or no hyphens at all) — not just the
-// canonical 8-4-4-4-12 form.
 const UUID_LITERAL_PATTERN = /^(?:[0-9a-f]{4}-?){7}[0-9a-f]{4}$/iu;
 
 const FILTER_OPERATORS = [
@@ -250,20 +246,17 @@ function isFilterLogic(value: string): value is TableFilterLogic {
   return FILTER_LOGIC_SET.has(value);
 }
 
-function createFilterRule(
-  column = "",
-  logic?: TableFilterLogic
-): TableFilterRule {
+function createFilterRule(column = "", logic?: TableFilterLogic) {
   return {
     column,
     id: crypto.randomUUID?.() ?? `filter-${Date.now()}`,
     ...(logic === undefined ? {} : { logic }),
     operator: "eq",
     value: "",
-  };
+  } satisfies TableFilterRule;
 }
 
-function parseBooleanTableValue(value: string): TableValue | undefined {
+function parseBooleanTableValue(value: string) {
   const lower = value.toLowerCase();
   if (lower !== "true" && lower !== "false") {
     return undefined;
@@ -273,10 +266,7 @@ function parseBooleanTableValue(value: string): TableValue | undefined {
   });
 }
 
-function parseFloatTableValue(
-  rawValue: string,
-  value: string
-): TableValue | undefined {
+function parseFloatTableValue(rawValue: string, value: string) {
   if (!FLOAT_LITERAL_PATTERN.test(rawValue)) {
     return undefined;
   }
@@ -288,7 +278,7 @@ function parseFloatTableValue(
     : undefined;
 }
 
-function parseIntegerTableValue(value: string): TableValue | undefined {
+function parseIntegerTableValue(value: string) {
   return INTEGER_LITERAL_PATTERN.test(value)
     ? create(TableValueSchema, {
         kind: { case: "int64Value", value: BigInt(value) },
@@ -311,15 +301,17 @@ const tableFilterSearchSchema = z.object({
   r: z.array(compactRuleSearchSchema).default([]),
 });
 
-function emptyFilterState(): TableFilterState {
-  return { logic: DEFAULT_FILTER_LOGIC, rules: [] };
+function emptyFilterState() {
+  return { logic: DEFAULT_FILTER_LOGIC, rules: [] } satisfies TableFilterState;
 }
 
-function parseTableFilterSearchResult(
-  value: string | undefined
-): TableFilterSearchParseResult {
+function parseTableFilterSearchResult(value: string | undefined) {
   if (!isNonEmptyString(value)) {
-    return { error: null, ok: true, state: emptyFilterState() };
+    return {
+      error: null,
+      ok: true,
+      state: emptyFilterState(),
+    } satisfies TableFilterSearchParseResult;
   }
 
   try {
@@ -329,7 +321,7 @@ function parseTableFilterSearchResult(
         error: TABLE_FILTER_SEARCH_PARSE_ERROR_MESSAGE,
         ok: false,
         state: emptyFilterState(),
-      };
+      } satisfies TableFilterSearchParseResult;
     }
     return {
       error: null,
@@ -346,23 +338,21 @@ function parseTableFilterSearchResult(
           value2: rule.v2,
         })),
       },
-    };
+    } satisfies TableFilterSearchParseResult;
   } catch {
     return {
       error: TABLE_FILTER_SEARCH_PARSE_ERROR_MESSAGE,
       ok: false,
       state: emptyFilterState(),
-    };
+    } satisfies TableFilterSearchParseResult;
   }
 }
 
-function parseTableFilterSearch(value: string | undefined): TableFilterState {
+function parseTableFilterSearch(value: string | undefined) {
   return parseTableFilterSearchResult(value).state;
 }
 
-function serializeTableFilterSearch(
-  state: Readonly<TableFilterState>
-): string | undefined {
+function serializeTableFilterSearch(state: Readonly<TableFilterState>) {
   if (state.rules.length === 0 && state.logic === DEFAULT_FILTER_LOGIC) {
     return undefined;
   }
@@ -383,7 +373,7 @@ function serializeTableFilterSearch(
 function filterRulesForColumnNames(
   rules: readonly TableFilterRule[],
   columnNames: readonly string[]
-): TableFilterRule[] {
+) {
   const allowed = new Set(columnNames);
   return rules.filter((rule) => allowed.has(rule.column));
 }
@@ -391,17 +381,14 @@ function filterRulesForColumnNames(
 function filterStateForColumnNames(
   state: Readonly<TableFilterState>,
   columnNames: readonly string[]
-): TableFilterState {
+) {
   return {
     logic: state.logic,
     rules: filterRulesForColumnNames(state.rules, columnNames),
-  };
+  } satisfies TableFilterState;
 }
 
-// A rule whose required value is still empty is "incomplete": the user is
-// mid-edit, so it is excluded from both the row filter request and the
-// invalid list instead of raising a destructive alert and pausing the query.
-function isIncompleteFilterRule(rule: TableFilterRule): boolean {
+function isIncompleteFilterRule(rule: TableFilterRule) {
   const meta = FILTER_OPERATOR_META[rule.operator];
   if (meta.valueCount === 0) {
     return false;
@@ -415,7 +402,7 @@ function isIncompleteFilterRule(rule: TableFilterRule): boolean {
 function expectedFilterValueDescription(
   dataType: DataType,
   operator: FilterOperator
-): string {
+) {
   if (operator === "jsonContains" || dataType === DataType.JSON) {
     return 'JSON, like {"tier":"enterprise"} or "text"';
   }
@@ -448,45 +435,45 @@ function expectedFilterValueDescription(
 function getInvalidFilterRules(
   rules: readonly TableFilterRule[],
   columns: readonly FilterColumnMeta[]
-): InvalidFilterRule[] {
+) {
   const columnMap = new Map(
     columns.map((column) => [column.columnName, column])
   );
-  return rules
-    .slice(0, MAX_FILTER_RULES)
-    .flatMap((rule): InvalidFilterRule[] => {
-      const column = columnMap.get(rule.column);
-      if (!column) {
-        return [{ id: rule.id, message: `${rule.column} is not available.` }];
-      }
-      if (isIncompleteFilterRule(rule)) {
-        return [];
-      }
-      if (!isOperatorAllowedForColumn(column, rule.operator)) {
-        return [
-          {
-            id: rule.id,
-            message: `${FILTER_OPERATOR_META[rule.operator].label} cannot be used with ${rule.column}.`,
-          },
-        ];
-      }
-      if (!buildPredicate(rule, column)) {
-        const expected = expectedFilterValueDescription(
-          column.dataType,
-          rule.operator
-        );
-        return [
-          {
-            id: rule.id,
-            message: `${rule.column} expects ${expected}.`,
-          },
-        ];
-      }
-      return [];
-    });
+  return rules.slice(0, MAX_FILTER_RULES).flatMap((rule) => {
+    const column = columnMap.get(rule.column);
+    if (!column) {
+      return [
+        { id: rule.id, message: `${rule.column} is not available.` },
+      ] satisfies InvalidFilterRule[];
+    }
+    if (isIncompleteFilterRule(rule)) {
+      return [] satisfies InvalidFilterRule[];
+    }
+    if (!isOperatorAllowedForColumn(column, rule.operator)) {
+      return [
+        {
+          id: rule.id,
+          message: `${FILTER_OPERATOR_META[rule.operator].label} cannot be used with ${rule.column}.`,
+        },
+      ] satisfies InvalidFilterRule[];
+    }
+    if (!buildPredicate(rule, column)) {
+      const expected = expectedFilterValueDescription(
+        column.dataType,
+        rule.operator
+      );
+      return [
+        {
+          id: rule.id,
+          message: `${rule.column} expects ${expected}.`,
+        },
+      ] satisfies InvalidFilterRule[];
+    }
+    return [] satisfies InvalidFilterRule[];
+  });
 }
 
-function buildFilterLabel(rule: TableFilterRule): string {
+function buildFilterLabel(rule: TableFilterRule) {
   const operator = FILTER_OPERATOR_META[rule.operator];
   let label: string;
   if (operator.valueCount === 0) {
@@ -499,8 +486,6 @@ function buildFilterLabel(rule: TableFilterRule): string {
   return rule.negated === true ? `not (${label})` : label;
 }
 
-// Text-like columns (including enums and other types Postgres can compare as
-// text) keep every operator except JSON containment.
 const BOOLEAN_IDENTITY_OPERATORS = new Set<FilterOperator>([
   "isTrue",
   "isFalse",
@@ -510,8 +495,6 @@ const TEXT_OPERATORS: readonly FilterOperator[] = FILTER_OPERATORS.filter(
   (operator) =>
     operator !== "jsonContains" && !BOOLEAN_IDENTITY_OPERATORS.has(operator)
 );
-// Numbers and temporal types compare and range, but LIKE would require a text
-// cast the read path does not perform.
 const ORDERABLE_OPERATORS: readonly FilterOperator[] = [
   "eq",
   "ne",
@@ -540,8 +523,6 @@ const BOOLEAN_OPERATORS: readonly FilterOperator[] = [
   "isUnknown",
   "isDistinct",
 ];
-// JSON list operators are excluded because list values split on commas, which
-// JSON literals routinely contain.
 const JSON_OPERATORS: readonly FilterOperator[] = [
   "eq",
   "ne",
@@ -554,9 +535,6 @@ const LEGACY_JSON_OPERATORS: readonly FilterOperator[] = JSON_OPERATORS.filter(
   (operator) => operator !== "isDistinct"
 );
 
-// Set views of the per-type operator lists above (the arrays stay the source
-// of truth because their order drives the operator dropdown), so membership
-// checks inside per-rule loops stay constant-time.
 const OPERATOR_SET_CACHE = new Map<
   readonly FilterOperator[],
   ReadonlySet<FilterOperator>
@@ -565,7 +543,7 @@ const OPERATOR_SET_CACHE = new Map<
 function isOperatorAllowedForColumn(
   column: FilterColumnMeta | undefined,
   operator: FilterOperator
-): boolean {
+) {
   const operators = getOperatorsForColumn(column);
   let operatorSet = OPERATOR_SET_CACHE.get(operators);
   if (!operatorSet) {
@@ -575,16 +553,10 @@ function isOperatorAllowedForColumn(
   return operatorSet.has(operator);
 }
 
-function getOperatorsForColumn(
-  column: FilterColumnMeta | undefined
-): readonly FilterOperator[] {
+function getOperatorsForColumn(column: FilterColumnMeta | undefined) {
   if (!column) {
     return FILTER_OPERATORS;
   }
-  // Arrays, bytea, and geometry values are written as Postgres text literals
-  // and compared with the column's own operators server-side, so they keep
-  // the orderable set too; types without an ordering surface a server error
-  // instead of being blocked client-side.
   switch (column.dataType) {
     case DataType.JSON:
       return column.rawType?.trim().toLowerCase() === "jsonb"
@@ -617,7 +589,7 @@ function buildRowFilter(
   rules: readonly TableFilterRule[],
   columns: readonly FilterColumnMeta[],
   logic: TableFilterLogic = DEFAULT_FILTER_LOGIC
-): RowFilter | undefined {
+) {
   const columnMap = new Map(
     columns.map((column) => [column.columnName, column])
   );
@@ -641,7 +613,7 @@ function buildRowFilter(
 function buildFilterChildren(
   rules: readonly TableFilterRule[],
   columnMap: ReadonlyMap<string, FilterColumnMeta>
-): FilterChild[] {
+) {
   return rules.slice(0, MAX_FILTER_RULES).flatMap((rule) => {
     const column = columnMap.get(rule.column);
     const predicate = column ? buildPredicate(rule, column) : undefined;
@@ -662,7 +634,7 @@ function buildFilterChildren(
 function groupFilterChildrenByPrecedence(
   children: FilterChild[],
   fallbackLogic: TableFilterLogic
-): RowFilter[][] {
+) {
   const andGroups: RowFilter[][] = [[]];
   for (const child of children) {
     const currentGroup = andGroups.at(-1);
@@ -679,17 +651,14 @@ function groupFilterChildrenByPrecedence(
   return andGroups.filter((group) => group.length > 0);
 }
 
-function collapseAndFilterGroup(children: RowFilter[]): RowFilter {
+function collapseAndFilterGroup(children: RowFilter[]) {
   const [onlyChild] = children;
   return children.length === 1 && onlyChild
     ? onlyChild
     : createFilterGroup(children, RowFilterGroup_Logic.AND);
 }
 
-function createFilterGroup(
-  children: RowFilter[],
-  logic: RowFilterGroup_Logic
-): RowFilter {
+function createFilterGroup(children: RowFilter[], logic: RowFilterGroup_Logic) {
   return create(RowFilterSchema, {
     node: {
       case: "group",
@@ -698,10 +667,7 @@ function createFilterGroup(
   });
 }
 
-function buildPredicate(
-  rule: TableFilterRule,
-  column: FilterColumnMeta
-): RowPredicate | undefined {
+function buildPredicate(rule: TableFilterRule, column: FilterColumnMeta) {
   const meta = FILTER_OPERATOR_META[rule.operator];
   if (!isOperatorAllowedForColumn(column, rule.operator)) {
     return undefined;
@@ -718,10 +684,7 @@ function buildPredicate(
   });
 }
 
-function buildRangeValues(
-  rule: TableFilterRule,
-  dataType: DataType
-): TableValue[] | undefined {
+function buildRangeValues(rule: TableFilterRule, dataType: DataType) {
   const first = parseTableValue(rule.value, dataType, rule.operator);
   const second = parseTableValue(rule.value2 ?? "", dataType, rule.operator);
   return first !== undefined && second !== undefined
@@ -729,10 +692,7 @@ function buildRangeValues(
     : undefined;
 }
 
-function buildListValues(
-  rule: TableFilterRule,
-  dataType: DataType
-): TableValue[] | undefined {
+function buildListValues(rule: TableFilterRule, dataType: DataType) {
   const parts = rule.value
     .split(",")
     .map((part) => part.trim())
@@ -754,9 +714,9 @@ function buildValues(
   rule: TableFilterRule,
   dataType: DataType,
   valueCount: FilterOperatorMeta["valueCount"]
-): TableValue[] | undefined {
+) {
   if (valueCount === 0) {
-    return [];
+    return [] satisfies TableValue[] | undefined;
   }
   if (valueCount === 2) {
     return buildRangeValues(rule, dataType);
@@ -768,13 +728,13 @@ function buildValues(
   return value ? [value] : undefined;
 }
 
-function isUuidLiteral(value: string): boolean {
+function isUuidLiteral(value: string) {
   const inner =
     value.startsWith("{") && value.endsWith("}") ? value.slice(1, -1) : value;
   return UUID_LITERAL_PATTERN.test(inner);
 }
 
-function parseJsonTableValue(value: string): TableValue | undefined {
+function parseJsonTableValue(value: string) {
   try {
     JSON.parse(value);
   } catch {
@@ -787,7 +747,7 @@ function parseTableValue(
   rawValue: string,
   dataType: DataType,
   operator: FilterOperator
-): TableValue | undefined {
+) {
   const value = rawValue.trim();
   if (!value) {
     return undefined;
@@ -813,10 +773,6 @@ function parseTableValue(
     case DataType.TIME:
     case DataType.DATE:
     case DataType.TIMESTAMP:
-      // Deliberately unvalidated: Postgres accepts DateStyle-dependent
-      // formats, timezone offsets, and keywords like `now` that no client
-      // check can predict, so the server stays the authority and a bad value
-      // surfaces its error instead of being blocked here.
       return create(TableValueSchema, {
         kind: { case: "timestampValue", value },
       });

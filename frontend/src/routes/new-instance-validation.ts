@@ -46,7 +46,7 @@ const FIELD_FOCUS_ORDER = [
   "labels",
 ] as const satisfies readonly CreateInstanceInvalidFieldName[];
 
-function isInvalidPostgresPort(normalizedPort: string, port: number): boolean {
+function isInvalidPostgresPort(normalizedPort: string, port: number) {
   const hasNumericFormat =
     POSTGRES_PORT_PATTERN.test(normalizedPort) && Number.isInteger(port);
   return (
@@ -57,13 +57,13 @@ function isInvalidPostgresPort(normalizedPort: string, port: number): boolean {
 function hasInvalidDirectSslNegotiation(
   sslMode: string,
   sslNegotiation: string
-): boolean {
+) {
   return sslNegotiation === "direct" && !isDirectSslNegotiationMode(sslMode);
 }
 
 function validateCreateInstanceForm(
   formState: CreateInstanceValidationFormState
-): CreateInstanceValidationResult {
+) {
   const errors: CreateInstanceFormErrors = {};
   if (formState.displayName.trim().length === 0) {
     errors.displayName = "Display name is required.";
@@ -99,7 +99,7 @@ function validateCreateInstanceForm(
     firstInvalidField:
       FIELD_FOCUS_ORDER.find((field) => isNonEmptyString(errors[field])) ??
       null,
-  };
+  } satisfies CreateInstanceValidationResult;
 }
 
 export type {

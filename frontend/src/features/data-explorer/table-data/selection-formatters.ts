@@ -53,7 +53,7 @@ interface ChunkedExportBuilder {
  * keys cells by column needs a unique key per position, so repeated names are
  * suffixed with their occurrence; the first occurrence keeps the bare name.
  */
-function resultColumnKeys(columns: readonly TableResultColumn[]): string[] {
+function resultColumnKeys(columns: readonly TableResultColumn[]) {
   const seen = new Map<string, number>();
   return columns.map((column) => {
     const count = seen.get(column.columnName) ?? 0;
@@ -62,15 +62,10 @@ function resultColumnKeys(columns: readonly TableResultColumn[]): string[] {
   });
 }
 
-// countRowsWithTruncatedCells reports how many selected rows have at least
-// one cell where the server-returned preview was truncated. Exports refuse
-// to serialise such rows: the displayed cell is a prefix, and writing it
-// into a CSV/SQL/JSON payload would produce a silently-corrupt artifact
-// (especially the SQL INSERT, which looks authoritative).
 function countRowsWithTruncatedCells(
   rows: SelectedRow[],
   keys: readonly string[]
-): number {
+) {
   let count = 0;
   for (const row of rows) {
     for (const key of keys) {
@@ -92,7 +87,7 @@ const CSV_QUOTE_PATTERN = /"/gu;
 const SQL_QUOTE_PATTERN = /'/gu;
 const SQL_IDENTIFIER_QUOTE_PATTERN = /"/gu;
 
-function buildFilename(table: string, ext: string): string {
+function buildFilename(table: string, ext: string) {
   const date = format(new Date(), FILENAME_DATE_FORMAT);
   const safeTable = table.replaceAll(SAFE_FILENAME_PATTERN, "_") || "table";
   return `${safeTable}_${date}.${ext}`;
@@ -101,7 +96,7 @@ function buildFilename(table: string, ext: string): string {
 function getExportFileDetails(
   exportFormat: ExportFormat,
   resourceName: string
-): ExportFileDetails {
+) {
   const { table } = parseTableQualifiedName(resourceName);
   switch (exportFormat) {
     case "json":
@@ -109,24 +104,24 @@ function getExportFileDetails(
         extensions: [".json"],
         filename: buildFilename(table, "json"),
         mimeType: "application/json",
-      };
+      } satisfies ExportFileDetails;
     case "sql":
       return {
         extensions: [".sql"],
         filename: buildFilename(table, "sql"),
         mimeType: "application/sql",
-      };
+      } satisfies ExportFileDetails;
     case "csv":
     default:
       return {
         extensions: [".csv"],
         filename: buildFilename(table, "csv"),
         mimeType: "text/csv;charset=utf-8",
-      };
+      } satisfies ExportFileDetails;
   }
 }
 
-function escapeCsv(value: string, neutralizeFormula = true): string {
+function escapeCsv(value: string, neutralizeFormula = true) {
   const safeValue =
     neutralizeFormula && CSV_FORMULA_PREFIX_PATTERN.test(value)
       ? `'${value}`
@@ -137,10 +132,6 @@ function escapeCsv(value: string, neutralizeFormula = true): string {
   return safeValue;
 }
 
-// Exports serialise the RAW TableCell value, never the on-screen display
-// string: the display formatter applies locale grouping, rounds doubles to
-// six fraction digits, and reformats timestamps into the local time zone —
-// all of which would silently corrupt CSV/SQL/JSON artifacts.
 type RawCellValue =
   | { kind: "bool"; value: boolean }
   | { kind: "null" }
@@ -150,7 +141,7 @@ type RawCellValue =
 const BYTE_HEX_WIDTH = 2;
 const HEX_RADIX = 16;
 
-function bytesToPostgresHex(bytes: Uint8Array): string {
+function bytesToPostgresHex(bytes: Uint8Array) {
   let hex = "";
   for (const byte of bytes) {
     hex += byte.toString(HEX_RADIX).padStart(BYTE_HEX_WIDTH, "0");
@@ -158,38 +149,44 @@ function bytesToPostgresHex(bytes: Uint8Array): string {
   return `\\x${hex}`;
 }
 
-function rawCellValue(cell: TableCell | undefined): RawCellValue {
+function rawCellValue(cell: TableCell | undefined) {
   const kind = cell?.value?.kind;
   if (!kind || kind.case === "nullValue") {
-    return { kind: "null" };
+    return { kind: "null" } satisfies RawCellValue;
   }
   switch (kind.case) {
     case "boolValue":
-      return { kind: "bool", value: kind.value };
+      return { kind: "bool", value: kind.value } satisfies RawCellValue;
     case "bytesValue":
-      return { kind: "text", text: bytesToPostgresHex(kind.value) };
+      return {
+        kind: "text",
+        text: bytesToPostgresHex(kind.value),
+      } satisfies RawCellValue;
     case "doubleValue":
-      // String() keeps full IEEE-754 precision with no locale formatting.
-      return { kind: "number", text: String(kind.value) };
+      return {
+        kind: "number",
+        text: String(kind.value),
+      } satisfies RawCellValue;
     case "int64Value":
-      return { kind: "number", text: kind.value.toString() };
+      return {
+        kind: "number",
+        text: kind.value.toString(),
+      } satisfies RawCellValue;
     case "numericValue":
-      return { kind: "number", text: kind.value ?? "" };
+      return { kind: "number", text: kind.value ?? "" } satisfies RawCellValue;
     case "jsonValue":
-      return { kind: "text", text: kind.value ?? "" };
+      return { kind: "text", text: kind.value ?? "" } satisfies RawCellValue;
     case "timestampValue":
-      // Keep the server-provided string: offset and sub-second precision
-      // must survive the round trip.
-      return { kind: "text", text: kind.value ?? "" };
+      return { kind: "text", text: kind.value ?? "" } satisfies RawCellValue;
     case "stringValue":
-      return { kind: "text", text: kind.value };
+      return { kind: "text", text: kind.value } satisfies RawCellValue;
     case undefined:
     default:
-      return { kind: "text", text: kind.value ?? "" };
+      return { kind: "text", text: kind.value ?? "" } satisfies RawCellValue;
   }
 }
 
-function rawCellText(value: RawCellValue): string {
+function rawCellText(value: RawCellValue) {
   switch (value.kind) {
     case "null":
       return "";
@@ -202,11 +199,11 @@ function rawCellText(value: RawCellValue): string {
   }
 }
 
-function formatCellForClipboard(cell: TableCell | undefined): string {
+function formatCellForClipboard(cell: TableCell | undefined) {
   return rawCellText(rawCellValue(cell));
 }
 
-function formatCsvRow(row: SelectedRow, keys: readonly string[]): string {
+function formatCsvRow(row: SelectedRow, keys: readonly string[]) {
   const cells = keys.map((key) => {
     const raw = rawCellValue(row.cells.get(key));
     return raw.kind === "null"
@@ -220,7 +217,7 @@ function formatRowsAsCsv(
   rows: SelectedRow[],
   columns: TableResultColumn[],
   resourceName: string
-): ExportPayload {
+) {
   const { table } = parseTableQualifiedName(resourceName);
   const header = columns
     .map((column) => escapeCsv(column.columnName))
@@ -234,16 +231,14 @@ function formatRowsAsCsv(
     contents: `${lines.join("\n")}\n`,
     filename: buildFilename(table, "csv"),
     mimeType: "text/csv;charset=utf-8",
-  };
+  } satisfies ExportPayload;
 }
 
-// Repeated column names collapse to the last value, as PostgreSQL's own
-// row_to_json output does once parsed; JSON objects cannot carry duplicates.
 function formatJsonRecord(
   row: SelectedRow,
   columns: TableResultColumn[],
   keys: readonly string[]
-): Record<string, string | boolean | null> {
+) {
   const record: Record<string, string | boolean | null> = {};
   for (const [index, column] of columns.entries()) {
     const raw = rawCellValue(row.cells.get(keys[index] ?? column.columnName));
@@ -252,8 +247,6 @@ function formatJsonRecord(
     } else if (raw.kind === "bool") {
       record[column.columnName] = raw.value;
     } else {
-      // Numbers stay strings: int64 and numeric values can exceed the
-      // precision a JSON number (IEEE-754 double) can represent.
       record[column.columnName] = raw.text;
     }
   }
@@ -264,7 +257,7 @@ function formatRowsAsJson(
   rows: SelectedRow[],
   columns: TableResultColumn[],
   resourceName: string
-): ExportPayload {
+) {
   const { table } = parseTableQualifiedName(resourceName);
   const keys = resultColumnKeys(columns);
   const records = rows.map((row) => formatJsonRecord(row, columns, keys));
@@ -272,14 +265,14 @@ function formatRowsAsJson(
     contents: `${JSON.stringify(records, null, 2)}\n`,
     filename: buildFilename(table, "json"),
     mimeType: "application/json",
-  };
+  } satisfies ExportPayload;
 }
 
-function quoteSqlIdentifier(identifier: string): string {
+function quoteSqlIdentifier(identifier: string) {
   return `"${identifier.replaceAll(SQL_IDENTIFIER_QUOTE_PATTERN, '""')}"`;
 }
 
-function formatSqlLiteral(cell: TableCell | undefined): string {
+function formatSqlLiteral(cell: TableCell | undefined) {
   const raw = rawCellValue(cell);
   if (raw.kind === "null") {
     return "NULL";
@@ -290,12 +283,10 @@ function formatSqlLiteral(cell: TableCell | undefined): string {
   if (raw.kind === "number" && SQL_NUMERIC_PATTERN.test(raw.text)) {
     return raw.text;
   }
-  // Exponent and special float forms ("1e+30", "NaN") plus every text kind
-  // are quoted; PostgreSQL accepts them as typed literals.
   return `'${raw.text.replaceAll(SQL_QUOTE_PATTERN, "''")}'`;
 }
 
-function formatSqlValueRow(row: SelectedRow, keys: readonly string[]): string {
+function formatSqlValueRow(row: SelectedRow, keys: readonly string[]) {
   const literals = keys
     .map((key) => formatSqlLiteral(row.cells.get(key)))
     .join(", ");
@@ -306,7 +297,7 @@ function formatRowsAsSql(
   rows: SelectedRow[],
   columns: TableResultColumn[],
   resourceName: string
-): ExportPayload {
+) {
   const { schema, table } = parseTableQualifiedName(resourceName);
   const qualified = `${quoteSqlIdentifier(schema)}.${quoteSqlIdentifier(table)}`;
   const columnList = columns
@@ -318,7 +309,7 @@ function formatRowsAsSql(
       contents: `-- No rows selected for ${qualified}\n`,
       filename: buildFilename(table, "sql"),
       mimeType: "application/sql",
-    };
+    } satisfies ExportPayload;
   }
 
   const keys = resultColumnKeys(columns);
@@ -331,10 +322,10 @@ function formatRowsAsSql(
     contents,
     filename: buildFilename(table, "sql"),
     mimeType: "application/sql",
-  };
+  } satisfies ExportPayload;
 }
 
-function indentJsonChunk(json: string): string {
+function indentJsonChunk(json: string) {
   return json
     .split("\n")
     .map((line) => `  ${line}`)
@@ -345,7 +336,7 @@ function appendCsvRows(
   chunks: string[],
   rows: SelectedRow[],
   keys: readonly string[]
-): number {
+) {
   for (const row of rows) {
     chunks.push(formatCsvRow(row, keys), "\n");
   }
@@ -364,7 +355,7 @@ function appendJsonRows({
   columns: TableResultColumn[];
   keys: readonly string[];
   initialRowCount: number;
-}): number {
+}) {
   let appended = 0;
   for (const row of rows) {
     chunks.push(
@@ -396,7 +387,7 @@ function appendSqlRows({
   rows,
   schema,
   table,
-}: AppendSqlRowsArgs): number {
+}: AppendSqlRowsArgs) {
   if (columns.length === 0) {
     return 0;
   }
@@ -419,7 +410,7 @@ function appendSqlRows({
   return appended;
 }
 
-function hasNoSqlRows(rowCount: number, columnCount: number): boolean {
+function hasNoSqlRows(rowCount: number, columnCount: number) {
   return rowCount === 0 || columnCount === 0;
 }
 
@@ -427,7 +418,7 @@ function createChunkedExportBuilder(
   exportFormat: ExportFormat,
   columns: TableResultColumn[],
   resourceName: string
-): ChunkedExportBuilder {
+) {
   const { schema, table } = parseTableQualifiedName(resourceName);
   const keys = resultColumnKeys(columns);
   const normalizedFormat =
@@ -480,15 +471,19 @@ function createChunkedExportBuilder(
       table,
     });
   };
-  const drainChunks = (): BlobPart[] => {
+  const drainChunks = () => {
     const drained = [...chunks];
     chunks.length = 0;
     return drained;
   };
 
-  const finish = (): ChunkedExportResult => {
+  const finish = () => {
     if (truncatedRowCount > 0) {
-      return { ok: false, reason: "truncated", truncatedRowCount };
+      return {
+        ok: false,
+        reason: "truncated",
+        truncatedRowCount,
+      } satisfies ChunkedExportResult;
     }
 
     switch (normalizedFormat) {
@@ -500,7 +495,7 @@ function createChunkedExportBuilder(
             filename: buildFilename(table, "csv"),
             mimeType: "text/csv;charset=utf-8",
           },
-        };
+        } satisfies ChunkedExportResult;
       case "json":
         chunks.push(rowCount === 0 ? "]\n" : "\n]\n");
         return {
@@ -510,7 +505,7 @@ function createChunkedExportBuilder(
             filename: buildFilename(table, "json"),
             mimeType: "application/json",
           },
-        };
+        } satisfies ChunkedExportResult;
       case "sql":
         if (hasNoSqlRows(rowCount, columns.length)) {
           return {
@@ -520,7 +515,7 @@ function createChunkedExportBuilder(
               filename: buildFilename(table, "sql"),
               mimeType: "application/sql",
             },
-          };
+          } satisfies ChunkedExportResult;
         }
         chunks.push(";\n");
         return {
@@ -530,7 +525,7 @@ function createChunkedExportBuilder(
             filename: buildFilename(table, "sql"),
             mimeType: "application/sql",
           },
-        };
+        } satisfies ChunkedExportResult;
       default:
         return {
           ok: true,
@@ -539,11 +534,11 @@ function createChunkedExportBuilder(
             filename: buildFilename(table, "csv"),
             mimeType: "text/csv;charset=utf-8",
           },
-        };
+        } satisfies ChunkedExportResult;
     }
   };
 
-  return { addRows, drainChunks, finish };
+  return { addRows, drainChunks, finish } satisfies ChunkedExportBuilder;
 }
 
 function buildExport({
@@ -556,13 +551,17 @@ function buildExport({
   rows: SelectedRow[];
   columns: TableResultColumn[];
   resourceName: string;
-}): ExportResult {
+}) {
   const truncatedRowCount = countRowsWithTruncatedCells(
     rows,
     resultColumnKeys(columns)
   );
   if (truncatedRowCount > 0) {
-    return { ok: false, reason: "truncated", truncatedRowCount };
+    return {
+      ok: false,
+      reason: "truncated",
+      truncatedRowCount,
+    } satisfies ExportResult;
   }
 
   let payload: ExportPayload;
@@ -579,7 +578,7 @@ function buildExport({
     default:
       payload = formatRowsAsCsv(rows, columns, resourceName);
   }
-  return { ok: true, payload };
+  return { ok: true, payload } satisfies ExportResult;
 }
 
 export type {

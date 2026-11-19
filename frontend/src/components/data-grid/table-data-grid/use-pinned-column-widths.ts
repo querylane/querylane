@@ -9,7 +9,7 @@ import type { ColumnWidth, ColumnWidths } from "react-data-grid";
  * the pointer. Recording each measured width as `resized` pins it: a drag
  * then changes only the dragged column, like a spreadsheet.
  */
-function pinColumnWidths(next: ColumnWidths): ColumnWidths {
+function pinColumnWidths(next: ColumnWidths) {
   const pinned = new Map<string, ColumnWidth>();
   for (const [key, width] of next) {
     pinned.set(
@@ -36,16 +36,19 @@ function usePinnedColumnWidths({
 }: {
   columnSignature: string;
   hasRows: boolean;
-}): {
-  columnWidths: ColumnWidths | undefined;
-  onColumnWidthsChange: ((next: ColumnWidths) => void) | undefined;
-} {
+}) {
   const [state, setState] = useState({
     signature: columnSignature,
     widths: NO_WIDTHS,
   });
   if (!hasRows) {
-    return { columnWidths: undefined, onColumnWidthsChange: undefined };
+    return {
+      columnWidths: undefined,
+      onColumnWidthsChange: undefined,
+    } satisfies {
+      columnWidths: ColumnWidths | undefined;
+      onColumnWidthsChange: ((next: ColumnWidths) => void) | undefined;
+    };
   }
   return {
     columnWidths:
@@ -53,6 +56,9 @@ function usePinnedColumnWidths({
     onColumnWidthsChange: (next) => {
       setState({ signature: columnSignature, widths: pinColumnWidths(next) });
     },
+  } satisfies {
+    columnWidths: ColumnWidths | undefined;
+    onColumnWidthsChange: ((next: ColumnWidths) => void) | undefined;
   };
 }
 

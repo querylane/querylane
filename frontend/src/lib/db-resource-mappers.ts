@@ -45,7 +45,7 @@ interface ResourceCollectionQueryState {
   suppressedReason: ResourceCollectionSuppressedReason | null;
 }
 
-function mapInstance(instance: Instance): PostgresInstance {
+function mapInstance(instance: Instance) {
   const credentialsUnreadable =
     instance.credentialState !== Instance_CredentialState.UNSPECIFIED;
 
@@ -60,10 +60,10 @@ function mapInstance(instance: Instance): PostgresInstance {
     status: credentialsUnreadable
       ? "error"
       : toConnectionStatus(instance.connectionState),
-  };
+  } satisfies PostgresInstance;
 }
 
-function mapDatabase(database: Database): PostgresDatabase {
+function mapDatabase(database: Database) {
   return {
     characterSet: database.characterSet,
     collation: database.collation,
@@ -72,13 +72,10 @@ function mapDatabase(database: Database): PostgresDatabase {
     name: database.displayName || parseResourceLeafId(database.name),
     owner: database.owner,
     resourceName: database.name,
-  };
+  } satisfies PostgresDatabase;
 }
 
-function createFallbackDatabase(
-  instanceId: string,
-  databaseId: string
-): PostgresDatabase {
+function createFallbackDatabase(instanceId: string, databaseId: string) {
   return {
     characterSet: "",
     collation: "",
@@ -87,7 +84,7 @@ function createFallbackDatabase(
     name: databaseId,
     owner: "",
     resourceName: buildDatabaseName(instanceId, databaseId),
-  };
+  } satisfies PostgresDatabase;
 }
 
 export type {

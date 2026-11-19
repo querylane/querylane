@@ -10,12 +10,7 @@ import {
 import { ExplorerSidebarPortal } from "@/lib/explorer-sidebar-slot";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
-// TanStack Router already splits this route component. A second lazy page
-// adds another request waterfall and Suspense reveal before the explorer.
-
 function DatabaseExplorerLoadingShell() {
-  // Mirrors the loaded layout: the object browser lives in the shared
-  // sidebar rail (via the slot portal), the detail area fills the page.
   return (
     <>
       <ExplorerSidebarPortal>

@@ -5,7 +5,6 @@ const KIB = 1024;
 const ENFORCED_SPLIT_SIZE_KIB = 80;
 const MAX_ASYNC_CHUNK_REQUESTS = 30;
 const MAX_INITIAL_CHUNK_REQUESTS = 20;
-// Extract smaller shared modules instead of duplicating them across route chunks.
 const MIN_SPLIT_SIZE_KIB = 10;
 
 const managedChunkCacheGroups = {
@@ -28,8 +27,6 @@ const managedChunkCacheGroups = {
     name: "form-validation",
     priority: 20,
     reuseExistingChunk: true,
-    // React Hook Form stays in its onboarding-only chunk; grouping it here
-    // would make the instance configuration form download a library it omits.
     test: /[/\\]node_modules[/\\]@bufbuild[/\\](?:protovalidate|cel|cel-spec)[/\\]/u,
   },
   protobufRpc: {
@@ -37,13 +34,11 @@ const managedChunkCacheGroups = {
     name: "protobuf",
     priority: 20,
     reuseExistingChunk: true,
-    // Keep validation engines out of the runtime used by ordinary RPC pages.
     test: /[/\\]node_modules[/\\](?:@bufbuild[/\\]protobuf|@connectrpc[/\\][^/\\]+)[/\\]/u,
   },
   sharedAsyncStyles: {
     chunks: "async",
     minChunks: 2,
-    // Shared grid styles are smaller than the global JS-oriented threshold.
     minSize: 0,
     name: "shared-async-styles",
     priority: 40,
@@ -65,8 +60,6 @@ const managedChunkCacheGroups = {
     reuseExistingChunk: true,
     test: /[/\\]node_modules[/\\](?:@codemirror|@lezer|@marijn|crelt|style-mod|w3c-keyname)[/\\]/u,
   },
-  // The PostgreSQL grammar and the Lezer runtime load alongside the editor
-  // core; keeping them apart holds each chunk under the async script cap.
   sqlGrammar: {
     chunks: "async",
     name: "sql-grammar",
@@ -106,17 +99,12 @@ const managedSplitChunksConfig = {
   hidePathInfo: true,
   maxAsyncRequests: MAX_ASYNC_CHUNK_REQUESTS,
   maxInitialRequests: MAX_INITIAL_CHUNK_REQUESTS,
-  // Route wrappers intentionally stay tiny after shared code is extracted.
-  // Rspack 2.3 now enforces minRemainingSize; preserve the previous behavior
-  // instead of duplicating shared pages to keep each wrapper above minSize.
   minRemainingSize: 0,
   minSize: MIN_SPLIT_SIZE_KIB * KIB,
   preset: "default",
 } satisfies SplitChunksConfig;
 
 const productionOptimizationOverrides = {
-  // Prefer compact stable IDs and the smallest export names; every other
-  // production optimization inherits newer Rspack defaults.
   chunkIds: "compact-hashed",
   mangleExports: "size",
   moduleIds: "compact-hashed",
@@ -132,7 +120,7 @@ interface PreconnectOriginInput {
   isProduction: boolean;
 }
 
-function httpOrigin(rawValue: string | undefined): string | null {
+function httpOrigin(rawValue: string | undefined) {
   const trimmedValue = rawValue?.trim();
   if (!isNonEmptyString(trimmedValue)) {
     return null;
@@ -144,7 +132,7 @@ function httpOrigin(rawValue: string | undefined): string | null {
       return url.origin;
     }
   } catch {
-    // Ignore invalid origins and fall through to the null result.
+    return null;
   }
   return null;
 }

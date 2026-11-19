@@ -184,9 +184,6 @@ function RecordDetailDrawer({
         className="flex flex-col"
         presentation="detail"
         side="right"
-        // Registry sheets cap at sm:max-w-sm; record details need a wide
-        // drawer, and `ui/` must stay native shadcn output, so the width
-        // override lives here.
         width="detail"
       >
         <SheetHeader presentation="record-drawer">

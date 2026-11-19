@@ -138,7 +138,6 @@ describe("assessMetricsCoverage", () => {
     endTime: { nanos: 0, seconds: BigInt(daySeconds) },
     startTime: { nanos: 0, seconds: 0n },
   };
-  // A wide (7d) window used to prove the point floor is range-independent.
 
   test("treats an undefined response as nascent with no first sample", () => {
     expect(assessMetricsCoverage(undefined)).toEqual({
@@ -172,8 +171,6 @@ describe("assessMetricsCoverage", () => {
   });
 
   test("uses the best-covered series for the density signal", () => {
-    // A dense gauge next to an almost-empty counter must not force the panel
-    // into the collecting state.
     const response = create(QueryMetricsResponseSchema, {
       interval: dayInterval,
       series: [
@@ -249,7 +246,7 @@ describe("formatElapsedDuration", () => {
 
   test("decomposes past hours into days", () => {
     expect(formatElapsedDuration(25 * 3_600_000)).toBe("about 1 day");
-    // A week-old transaction used to read "about 168 hours".
+
     expect(formatElapsedDuration(7 * 24 * 3_600_000)).toBe("about 7 days");
   });
 });
@@ -334,7 +331,6 @@ describe("metricRangeWindowMs", () => {
 });
 
 describe("buildInstanceMetricsInput", () => {
-  // One week past epoch.
   const anchorMs = 7 * 24 * 3600 * 1000;
 
   test("leaves step unset so the backend picks the bucket size", () => {

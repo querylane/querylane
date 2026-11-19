@@ -334,11 +334,11 @@ const STATIC_TYPE_META: Record<string, TypeDisplayMeta> = {
   },
 };
 
-function uniqueBadges(badges: readonly string[]): string[] {
-  return [...new Set(badges.filter(Boolean))];
+function uniqueBadges(badges: readonly string[]) {
+  return [...new Set(badges.filter(Boolean))] satisfies string[];
 }
 
-function normalizeRawType(rawType: string): string {
+function normalizeRawType(rawType: string) {
   return rawType
     .trim()
     .toLowerCase()
@@ -357,19 +357,16 @@ function parseTypeLength(rawType: string, characterMaximumLength: number) {
   return Number.parseInt(match[1], 10);
 }
 
-function withDisplay(
-  column: ColumnTypeInput,
-  meta: TypeDisplayMeta
-): PostgresTypeDisplay {
+function withDisplay(column: ColumnTypeInput, meta: TypeDisplayMeta) {
   return {
     badges: uniqueBadges(meta.badges ?? []),
     category: meta.category,
     displayType: meta.displayType ?? (column.rawType || "unknown"),
     summary: meta.summary,
-  };
+  } satisfies PostgresTypeDisplay;
 }
 
-function fallbackTypeDisplay(column: ColumnTypeInput): PostgresTypeDisplay {
+function fallbackTypeDisplay(column: ColumnTypeInput) {
   switch (column.dataType) {
     case DataType.ARRAY:
       return withDisplay(column, {
@@ -465,10 +462,7 @@ function fallbackTypeDisplay(column: ColumnTypeInput): PostgresTypeDisplay {
   }
 }
 
-function describeArrayType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeArrayType(column: ColumnTypeInput, normalized: string) {
   const arrayMatch = ARRAY_TYPE_PATTERN.exec(normalized);
   if (!isNonEmptyString(arrayMatch?.[1])) {
     return undefined;
@@ -480,10 +474,7 @@ function describeArrayType(
   });
 }
 
-function describeIntegerType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeIntegerType(column: ColumnTypeInput, normalized: string) {
   const integerMeta = INTEGER_META[normalized];
   if (!integerMeta) {
     return undefined;
@@ -499,10 +490,7 @@ function describeIntegerType(
   });
 }
 
-function describeCharacterType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeCharacterType(column: ColumnTypeInput, normalized: string) {
   const length = parseTypeLength(column.rawType, column.characterMaximumLength);
   if (FIXED_CHARACTER_TYPES.has(normalized)) {
     return withDisplay(column, {
@@ -526,7 +514,7 @@ function describeCharacterType(
 function describeIntervalVariantType(
   column: ColumnTypeInput,
   normalized: string
-): PostgresTypeDisplay | undefined {
+) {
   if (!normalized.startsWith("interval ")) {
     return undefined;
   }
@@ -537,10 +525,7 @@ function describeIntervalVariantType(
   });
 }
 
-function describeNetworkType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeNetworkType(column: ColumnTypeInput, normalized: string) {
   if (!NETWORK_TYPES.has(normalized)) {
     return undefined;
   }
@@ -551,10 +536,7 @@ function describeNetworkType(
   });
 }
 
-function describeObjectIdType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeObjectIdType(column: ColumnTypeInput, normalized: string) {
   const isInternalId = normalized === "xid" || normalized === "cid";
   if (!(OBJECT_ID_TYPES.has(normalized) || isInternalId)) {
     return undefined;
@@ -568,10 +550,7 @@ function describeObjectIdType(
   });
 }
 
-function describeRangeType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeRangeType(column: ColumnTypeInput, normalized: string) {
   if (!RANGE_TYPES.has(normalized)) {
     return undefined;
   }
@@ -582,10 +561,7 @@ function describeRangeType(
   });
 }
 
-function describeSpatialType(
-  column: ColumnTypeInput,
-  normalized: string
-): PostgresTypeDisplay | undefined {
+function describeSpatialType(column: ColumnTypeInput, normalized: string) {
   if (!SPATIAL_TYPES.has(normalized)) {
     return undefined;
   }
@@ -600,7 +576,7 @@ function describeSpatialType(
   });
 }
 
-function describePostgresType(column: ColumnTypeInput): PostgresTypeDisplay {
+function describePostgresType(column: ColumnTypeInput) {
   const normalized = normalizeRawType(column.rawType);
   return (
     describeArrayType(column, normalized) ??

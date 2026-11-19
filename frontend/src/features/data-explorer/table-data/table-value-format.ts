@@ -37,7 +37,7 @@ const TIME_PARTS_PATTERN =
 const TIMEZONE_OFFSET_PATTERN =
   /^(?<capture1>[+-])(?<capture2>\d{2})(?::?(?<capture3>\d{2}))?$/u;
 
-function formatTimezoneLabel(offset: string | undefined): string | undefined {
+function formatTimezoneLabel(offset: string | undefined) {
   if (!isNonEmptyString(offset)) {
     return undefined;
   }
@@ -60,12 +60,12 @@ function formatTimezoneLabel(offset: string | undefined): string | undefined {
   return `UTC${normalizedOffset}`;
 }
 
-function formatTimestamp(raw: string): {
-  display: string;
-  timezoneLabel?: string | undefined;
-} {
+function formatTimestamp(raw: string) {
   if (!raw) {
-    return { display: "" };
+    return { display: "" } satisfies {
+      display: string;
+      timezoneLabel?: string | undefined;
+    };
   }
   const parts = RFC3339_PARTS_PATTERN.exec(raw);
   if (
@@ -77,30 +77,42 @@ function formatTimestamp(raw: string): {
     return {
       display: `${parts[1]} ${parts[2]}`,
       timezoneLabel,
+    } satisfies {
+      display: string;
+      timezoneLabel?: string | undefined;
     };
   }
   try {
-    return { display: format(parseISO(raw), TIMESTAMP_FORMAT) };
+    return { display: format(parseISO(raw), TIMESTAMP_FORMAT) } satisfies {
+      display: string;
+      timezoneLabel?: string | undefined;
+    };
   } catch {
-    return { display: raw };
+    return { display: raw } satisfies {
+      display: string;
+      timezoneLabel?: string | undefined;
+    };
   }
 }
 
-function formatTime(raw: string): {
-  display: string;
-  timezoneLabel?: string | undefined;
-} {
+function formatTime(raw: string) {
   const parts = TIME_PARTS_PATTERN.exec(raw);
   if (!isNonEmptyString(parts?.[1])) {
-    return { display: raw };
+    return { display: raw } satisfies {
+      display: string;
+      timezoneLabel?: string | undefined;
+    };
   }
   return {
     display: parts[1],
     timezoneLabel: formatTimezoneLabel(parts[2]),
+  } satisfies {
+    display: string;
+    timezoneLabel?: string | undefined;
   };
 }
 
-function columnHasTimezone(rawType: string): boolean {
+function columnHasTimezone(rawType: string) {
   const normalized = rawType.trim().toLowerCase();
   return (
     normalized.startsWith("timestamptz") ||
@@ -109,7 +121,7 @@ function columnHasTimezone(rawType: string): boolean {
   );
 }
 
-function formatNumber(value: number): string {
+function formatNumber(value: number) {
   if (Number.isInteger(value)) {
     return value.toString();
   }
@@ -128,26 +140,26 @@ function createFormattedCell({
   isTruncated: boolean;
   kind: FormattedCellKind;
   timezoneLabel?: string | undefined;
-}): FormattedCell {
+}) {
   return {
     display,
     isNull: false,
     isTruncated,
     kind,
     timezoneLabel,
-  };
+  } satisfies FormattedCell;
 }
 
-function createNullCell(): FormattedCell {
+function createNullCell() {
   return {
     display: NULL_DISPLAY,
     isNull: true,
     isTruncated: false,
     kind: "null",
-  };
+  } satisfies FormattedCell;
 }
 
-function formatBytesCell(cell: TableCell, value: unknown): FormattedCell {
+function formatBytesCell(cell: TableCell, value: unknown) {
   const length = value instanceof Uint8Array ? value.length : 0;
   const fullSize = cell.fullSizeBytes;
   const bytes = fullSize > 0n ? Number(fullSize) : length;
@@ -162,7 +174,7 @@ function formatTimestampCell(
   column: TableResultColumn,
   rawValue: unknown,
   truncated: boolean
-): FormattedCell {
+) {
   const raw = typeof rawValue === "string" ? rawValue : "";
   let temporal = formatTimestamp(raw);
   if (column.dataType === DataType.DATE) {
@@ -188,7 +200,7 @@ function formatStringCell(
   column: TableResultColumn,
   rawValue: unknown,
   truncated: boolean
-): FormattedCell | null {
+) {
   if (column.dataType !== DataType.ARRAY) {
     return null;
   }
@@ -209,7 +221,7 @@ function formatExtendedKnownValueCell({
   column: TableResultColumn;
   truncated: boolean;
   value: unknown;
-}): FormattedCell | null {
+}) {
   switch (caseName) {
     case "jsonValue":
       return createFormattedCell({
@@ -226,7 +238,7 @@ function formatExtendedKnownValueCell({
   }
 }
 
-function formatBooleanValue(value: unknown): FormattedCell {
+function formatBooleanValue(value: unknown) {
   return createFormattedCell({
     display: value === true ? "true" : "false",
     isTruncated: false,
@@ -234,7 +246,7 @@ function formatBooleanValue(value: unknown): FormattedCell {
   });
 }
 
-function formatDoubleValue(value: unknown): FormattedCell {
+function formatDoubleValue(value: unknown) {
   return createFormattedCell({
     display: typeof value === "number" ? formatNumber(value) : String(value),
     isTruncated: false,
@@ -242,7 +254,7 @@ function formatDoubleValue(value: unknown): FormattedCell {
   });
 }
 
-function formatIntegerValue(value: unknown): FormattedCell {
+function formatIntegerValue(value: unknown) {
   return createFormattedCell({
     display: typeof value === "bigint" ? value.toString() : String(value),
     isTruncated: false,
@@ -250,10 +262,7 @@ function formatIntegerValue(value: unknown): FormattedCell {
   });
 }
 
-function formatKnownValueCell(
-  cell: TableCell,
-  column: TableResultColumn
-): FormattedCell | null {
+function formatKnownValueCell(cell: TableCell, column: TableResultColumn) {
   const kind = cell.value?.kind;
   if (!kind || kind.case === "nullValue") {
     return null;
@@ -294,7 +303,7 @@ function formatKnownValueCell(
 function formatTableCell(
   cell: TableCell | undefined,
   column: TableResultColumn
-): FormattedCell {
+) {
   const kindCase = cell?.value?.kind.case;
 
   if (!cell || kindCase === undefined || kindCase === "nullValue") {

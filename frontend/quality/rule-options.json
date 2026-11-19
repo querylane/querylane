@@ -33,7 +33,7 @@
       "correctness/noUndeclaredDependencies": {
         "devDependencies": [
           "**/*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
-          "**/__tests__/**",
+          "**/*.test-utils.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
           "**/e2e/**",
           "**/tests/**",
           "**/scripts/**",
@@ -199,6 +199,12 @@
       "no-void": [
         {
           "allowAsStatement": true
+        }
+      ],
+      "no-warning-comments": [
+        {
+          "decoration": ["*"],
+          "terms": ["todo", "fixme", "xxx", "@todo"]
         }
       ],
       "one-var": ["never"],

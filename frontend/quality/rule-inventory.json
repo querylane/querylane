@@ -1,7 +1,8 @@
 {
   "versions": {
     "@biomejs/biome": "2.6.7",
-    "ultracite": "8.1.1",
+    "ultracite": "8.3.0",
+    "@interfere/landmines": "0.1.1",
     "oxlint": "1.94.0",
     "@shadcn/lint": "0.2.5",
     "react-doctor": "0.9.23",
@@ -3712,7 +3713,7 @@
     {
       "rule": "nursery/noDanglingUnderscore",
       "decision": "inapplicable",
-      "reason": "Build-time __API_BASE_URL__ and external virtualizer _didMount/_willUpdate members have fixed external names. Ignored parameters are already exempt.",
+      "reason": "External virtualizer _didMount/_willUpdate members have fixed external names. Ignored parameters are already exempt.",
       "docs": "https://biomejs.dev/linter/rules/no-dangling-underscore"
     },
     {
@@ -14788,6 +14789,58 @@
       "rule": "querylane/no-manual-memoization",
       "decision": "error",
       "reason": "React Compiler owns memoization. Reject named imports, namespace/default member aliases and destructuring; preserve unrelated namespaces, type-only imports, and passthrough mocks."
+    }
+  ],
+  "landmines": [
+    {
+      "rule": "landmines-structure/colocated-tests",
+      "decision": "error",
+      "reason": "Keep tests beside the code they exercise and move their fixtures with them."
+    },
+    {
+      "rule": "landmines-structure/package-exports",
+      "decision": "error",
+      "reason": "Expose intentional package entrypoints rather than wildcard access to implementation files."
+    },
+    {
+      "rule": "landmines-structure/test-file-names",
+      "decision": "error",
+      "reason": "Use the supported test, fixture, and test-helper filenames for predictable discovery."
+    },
+    {
+      "rule": "landmines-style/no-comments",
+      "decision": "error",
+      "reason": "Express intent with names and code; reserve comments for functional directives, public API docs, and recurring hazards."
+    },
+    {
+      "rule": "landmines-testing/no-fixed-sleep",
+      "decision": "error",
+      "reason": "Wait for observable completion rather than elapsed time."
+    },
+    {
+      "rule": "landmines-testing/no-flake-masking",
+      "decision": "error",
+      "reason": "Fail on unstable behavior rather than hiding it with retries, skips, or increased timeouts."
+    },
+    {
+      "rule": "landmines-testing/no-test-doubles",
+      "decision": "error",
+      "reason": "Exercise the real implementation; replace external I/O at its boundary rather than mocking local subjects."
+    },
+    {
+      "rule": "landmines-testing/no-unsignaled-poll",
+      "decision": "error",
+      "reason": "Poll only for an observable completion signal."
+    },
+    {
+      "rule": "landmines-testing/strict-msw",
+      "decision": "error",
+      "reason": "Require MSW starts to reject unhandled requests instead of reaching the network."
+    },
+    {
+      "rule": "landmines-types/no-explicit-return-types",
+      "decision": "error",
+      "reason": "Infer function implementation returns; keep boundary contracts on function types and typed values."
     }
   ]
 }

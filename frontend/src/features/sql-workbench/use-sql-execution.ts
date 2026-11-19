@@ -74,18 +74,17 @@ const EXECUTE_BATCH_SIZE = 500;
 const MS_PER_SECOND = 1000;
 const NANOS_PER_MS = 1_000_000;
 
-/** Explains share the controller map with runs under their own key. */
-function explainKey(tabId: string): string {
+function explainKey(tabId: string) {
   return `explain:${tabId}`;
 }
 
-function isCancellation(error: unknown): boolean {
+function isCancellation(error: unknown) {
   return error instanceof ConnectError && error.code === Code.Canceled;
 }
 
 function durationToMs(
   duration: { nanos: number; seconds: bigint } | undefined
-): number {
+) {
   if (!duration) {
     return 0;
   }
@@ -94,23 +93,26 @@ function durationToMs(
   );
 }
 
-/** Maps one streamed response onto an execution state update. */
-function patchForResponse(
-  response: ExecuteQueryResponse
-): ExecutionPatch | null {
+function patchForResponse(response: ExecuteQueryResponse) {
   const { result } = response;
   switch (result.case) {
     case "columnMetadata": {
       const { columns } = result.value;
-      return (current) => ({ ...current, columns });
+      return ((current) => ({
+        ...current,
+        columns,
+      })) satisfies ExecutionPatch | null;
     }
     case "rowBatch": {
       const { rows } = result.value;
-      return (current) => ({ ...current, rows: [...current.rows, ...rows] });
+      return ((current) => ({
+        ...current,
+        rows: [...current.rows, ...rows],
+      })) satisfies ExecutionPatch | null;
     }
     case "stats": {
       const stats = result.value;
-      return (current) => ({
+      return ((current) => ({
         ...current,
         notices: stats.notices,
         stats: {
@@ -120,7 +122,7 @@ function patchForResponse(
           rowsAffected: Number(stats.rowsAffected),
           truncated: stats.truncated,
         },
-      });
+      })) satisfies ExecutionPatch | null;
     }
     case undefined:
     default:
@@ -128,23 +130,24 @@ function patchForResponse(
   }
 }
 
-/**
- * Rows a run returned, counted as the stream arrives rather than read back
- * from state: history needs the count the moment the stream ends, before
- * React applies the updates. The server's final stats win over the tally.
- */
 interface RowTally {
   received: number;
   reported?: number | undefined;
 }
 
-function tallyRows(tally: RowTally, response: ExecuteQueryResponse): RowTally {
+function tallyRows(tally: RowTally, response: ExecuteQueryResponse) {
   const { result } = response;
   if (result.case === "rowBatch") {
-    return { ...tally, received: tally.received + result.value.rows.length };
+    return {
+      ...tally,
+      received: tally.received + result.value.rows.length,
+    } satisfies RowTally;
   }
   if (result.case === "stats") {
-    return { ...tally, reported: Number(result.value.rowCount) };
+    return {
+      ...tally,
+      reported: Number(result.value.rowCount),
+    } satisfies RowTally;
   }
   return tally;
 }
@@ -153,7 +156,7 @@ function initialExecution(
   statement: string,
   rowLimit: number,
   startedAt: number
-): SqlExecution {
+) {
   return {
     columns: [],
     notices: [],
@@ -162,7 +165,7 @@ function initialExecution(
     startedAt,
     statement,
     status: "running",
-  };
+  } satisfies SqlExecution;
 }
 
 function useSqlExecution({
@@ -219,7 +222,7 @@ function useSqlExecution({
     signal: AbortSignal;
     statement: string;
     tabId: string;
-  }): Promise<{ rowCount: number }> {
+  }) {
     const client = createClient(SQLService, longRunningTransport);
     const stream = client.executeQuery(
       {
@@ -239,7 +242,9 @@ function useSqlExecution({
         patchExecution(tabId, patch);
       }
     }
-    return { rowCount: tally.reported ?? tally.received };
+    return { rowCount: tally.reported ?? tally.received } satisfies {
+      rowCount: number;
+    };
   }
 
   function settle(
@@ -249,7 +254,7 @@ function useSqlExecution({
       | { error: AppUiError; status: "error" }
       | { status: "cancelled" }
       | { rowCount: number; status: "success" }
-  ): ExecutionStatus {
+  ) {
     const finishedAt = Date.now();
     patchExecution(tabId, (current) => ({
       ...current,
@@ -276,7 +281,7 @@ function useSqlExecution({
     tabId: string,
     statement: string,
     options: { defaultSchema?: string | undefined; rowLimit: number }
-  ): Promise<ExecutionStatus> {
+  ) {
     cancel(tabId);
     const controller = new AbortController();
     controllersRef.current.set(tabId, controller);
@@ -316,7 +321,7 @@ function useSqlExecution({
     tabId: string,
     statement: string,
     options: { analyze: boolean; defaultSchema?: string | undefined }
-  ): Promise<void> {
+  ) {
     cancelExplain(tabId);
     const controller = new AbortController();
     controllersRef.current.set(explainKey(tabId), controller);

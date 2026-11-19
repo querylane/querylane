@@ -79,8 +79,6 @@ function SqlWorkbenchPage({
   if (!(workspace && activeTab)) {
     return <div aria-busy="true" className="flex-1" />;
   }
-  // Keyed by scope so switching databases unmounts the workbench: in-flight
-  // queries abort with it instead of settling into the next database's history.
   return (
     <SqlWorkbench
       activeTab={activeTab}
@@ -98,10 +96,10 @@ function useWorkbenchEditorActions({
 }: {
   editorRef: React.RefObject<SqlEditorHandle | null>;
 }) {
-  function currentStatements(): SqlStatement[] {
+  function currentStatements() {
     const target = editorRef.current?.getRunTarget();
     if (!target) {
-      return [];
+      return [] satisfies SqlStatement[];
     }
     const statements = resolveRunnableStatements(target);
     if (statements.length === 0) {
@@ -113,8 +111,6 @@ function useWorkbenchEditorActions({
   }
 
   async function formatCurrent() {
-    // sql-formatter is only needed once someone formats, so it loads then.
-    // The text is read after the import so typing during the load is kept.
     let formatSqlText: typeof FormatSqlText;
     try {
       ({ formatSqlText } = await import("@/features/sql-workbench/sql-format"));
@@ -158,7 +154,7 @@ function useWorkbenchExecutionActions({
   const activeExecution = execution.executions[activeTab.id];
   const isRunning = activeExecution?.status === "running";
   const statements = splitSqlStatements(activeTab.text);
-  function runCurrent(): Promise<unknown> | undefined {
+  function runCurrent() {
     if (isRunning) {
       return undefined;
     }
@@ -170,7 +166,7 @@ function useWorkbenchExecutionActions({
     return runSequence(pending);
   }
 
-  async function runSequence(pending: readonly SqlStatement[]): Promise<void> {
+  async function runSequence(pending: readonly SqlStatement[]) {
     const [next, ...rest] = pending;
     if (!next) {
       return;
@@ -184,7 +180,7 @@ function useWorkbenchExecutionActions({
     }
   }
 
-  function runAll(): Promise<void> | undefined {
+  function runAll() {
     if (isRunning || statements.length === 0) {
       return undefined;
     }
@@ -192,7 +188,6 @@ function useWorkbenchExecutionActions({
     return runSequence(statements);
   }
 
-  /** Re-runs the statement that failed, not whatever is under the cursor now. */
   function retryActiveExecution() {
     if (!activeExecution) {
       return runCurrent();
@@ -203,9 +198,7 @@ function useWorkbenchExecutionActions({
     });
   }
 
-  function explain(
-    analyze: boolean
-  ): ReturnType<typeof execution.explain> | undefined {
+  function explain(analyze: boolean) {
     const pending = currentStatements();
     if (pending.length > 1) {
       toast.info("Explain one statement at a time", {
@@ -323,8 +316,6 @@ function SqlWorkbench({
     setHistoryOpen(false);
   }
 
-  // On phones the rail is a sheet; close it after a pick so the editor or the
-  // fresh results are visible immediately.
   function closeMobileRail() {
     if (isMobile) {
       setOpenMobile(false);
@@ -337,7 +328,6 @@ function SqlWorkbench({
   }
 
   function queryRelation(relation: SqlRelation) {
-    // The new tab has no default schema, so names resolve as in `public`.
     const statement = sampleStatement(relation);
     const tabId = store.addTab(scope, {
       text: statement,

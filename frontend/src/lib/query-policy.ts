@@ -2,11 +2,6 @@ import { Code, ConnectError } from "@connectrpc/connect";
 
 const DEFAULT_QUERY_GC_TIME_MS = 300_000;
 
-/**
- * Central Querylane cache/fetch policy.
- * Keep resource freshness decisions here so route loaders, hooks, and intent
- * prefetches share one contract.
- */
 const ONE_MINUTE_IN_MILLISECONDS = 60_000;
 const TWO_MINUTES_IN_MILLISECONDS = 2 * ONE_MINUTE_IN_MILLISECONDS;
 const FIVE_MINUTES_IN_MILLISECONDS = DEFAULT_QUERY_GC_TIME_MS;
@@ -41,10 +36,7 @@ export const UNAVAILABLE_QUERY_RETRY_LIMIT = 1;
  * retried: the user already waited the full client deadline, so surface the
  * retryable error instead of silently doubling the wait.
  */
-export function shouldRetryQuery(
-  failureCount: number,
-  error: unknown
-): boolean {
+export function shouldRetryQuery(failureCount: number, error: unknown) {
   if (failureCount >= UNAVAILABLE_QUERY_RETRY_LIMIT) {
     return false;
   }

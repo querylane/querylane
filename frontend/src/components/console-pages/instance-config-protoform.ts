@@ -78,7 +78,7 @@ function configValuesEqual(
   path: string,
   current: ReturnType<InstanceProtoForm["createMessage"]>,
   defaults: ReturnType<typeof createInstanceFormDefaults>
-): boolean {
+) {
   switch (path) {
     case "config.host":
       return current.config?.host === defaults.config?.host;
@@ -120,7 +120,9 @@ function widenConfigPath(path: string) {
   return path.startsWith("config.") ? "config" : path;
 }
 
-function findFirstErrorMessage(value: unknown): string | undefined {
+const findFirstErrorMessage: (value: unknown) => string | undefined = (
+  value
+) => {
   if (!(value !== null && typeof value === "object")) {
     return undefined;
   }
@@ -134,7 +136,7 @@ function findFirstErrorMessage(value: unknown): string | undefined {
     }
   }
   return undefined;
-}
+};
 
 export type { InstanceProtoForm };
 export {

@@ -55,7 +55,6 @@ export function AbbrPill({
   );
 }
 
-// Density rollup strip: one pill per column showing full / partial / none.
 export function DensityStrip({
   columns,
   counts,
@@ -86,9 +85,6 @@ export function DensityStrip({
   );
 }
 
-// Held-only pills (no not-held columns) for flat rows and row detail. Neutral by
-// default — colour is reserved for the density rollups where it carries the
-// per-schema coverage signal.
 export function HeldPillStrip({
   columns,
   object,
@@ -168,7 +164,6 @@ export function CountPill({
   );
 }
 
-// "← Grants" affordance that returns from a drill-in to the grants overview.
 export function BackBar({ onBack }: { onBack: () => void }) {
   return (
     <Button
@@ -185,7 +180,6 @@ export function BackBar({ onBack }: { onBack: () => void }) {
   );
 }
 
-// Title row for a drill-in: icon + heading + optional child tag/count.
 export function ContentHead({
   children,
   count,
@@ -217,7 +211,6 @@ export function ContentHead({
   );
 }
 
-// Shared dashed empty-state block (overview / Owns / PUBLIC / defaults).
 export function GrantsEmptyState({
   children,
   title,

@@ -1,28 +1,28 @@
 import type { AdminPageId } from "@/lib/admin-page";
 import { isNonEmptyString } from "@/lib/value-guards";
 
-function matchesPath(pathname: string, target?: string): boolean {
+function matchesPath(pathname: string, target?: string) {
   if (!isNonEmptyString(target)) {
     return false;
   }
   return pathname === target || pathname === `${target}/`;
 }
 
-function buildInstancePaths(instanceBase?: string): SidebarPaths {
+function buildInstancePaths(instanceBase?: string) {
   if (!isNonEmptyString(instanceBase)) {
-    return {};
+    return {} satisfies SidebarPaths;
   }
   return {
     instanceActivity: `${instanceBase}/activity`,
     instanceConfiguration: `${instanceBase}/configuration`,
     instanceOverview: instanceBase,
     instanceRoles: `${instanceBase}/roles`,
-  };
+  } satisfies SidebarPaths;
 }
 
-function buildDatabasePaths(databaseBase?: string): SidebarPaths {
+function buildDatabasePaths(databaseBase?: string) {
   if (!isNonEmptyString(databaseBase)) {
-    return {};
+    return {} satisfies SidebarPaths;
   }
   return {
     databaseExplorer: `${databaseBase}/explorer`,
@@ -30,7 +30,7 @@ function buildDatabasePaths(databaseBase?: string): SidebarPaths {
     databaseOverview: databaseBase,
     databaseSql: `${databaseBase}/sql`,
     databaseWorkbench: `${databaseBase}/workbench`,
-  };
+  } satisfies SidebarPaths;
 }
 
 type NavKey = AdminPageId;
@@ -78,10 +78,7 @@ interface NavActiveState {
   instanceRoles: boolean;
 }
 
-function buildSidebarPaths({
-  databaseId,
-  instanceId,
-}: NavigationIds): SidebarPaths {
+function buildSidebarPaths({ databaseId, instanceId }: NavigationIds) {
   const instanceBase = isNonEmptyString(instanceId)
     ? `/instances/${instanceId}`
     : undefined;
@@ -95,7 +92,7 @@ function buildSidebarPaths({
   return {
     ...buildInstancePaths(instanceBase),
     ...buildDatabasePaths(databaseBase),
-  };
+  } satisfies SidebarPaths;
 }
 
 function buildNavActiveState({
@@ -104,7 +101,7 @@ function buildNavActiveState({
 }: {
   pathname: string;
   paths: SidebarPaths;
-}): NavActiveState {
+}) {
   return {
     databaseExplorer: matchesPath(pathname, paths.databaseExplorer),
     databaseExtensions: matchesPath(pathname, paths.databaseExtensions),
@@ -115,7 +112,7 @@ function buildNavActiveState({
     instanceConfiguration: matchesPath(pathname, paths.instanceConfiguration),
     instanceOverview: matchesPath(pathname, paths.instanceOverview),
     instanceRoles: matchesPath(pathname, paths.instanceRoles),
-  };
+  } satisfies NavActiveState;
 }
 
 export type { NavActiveState, NavigationIds, NavKey, NavSection, SidebarPaths };

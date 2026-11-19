@@ -2,7 +2,6 @@ import { createClient, type Transport } from "@connectrpc/connect";
 import { useTransport } from "@connectrpc/connect-query";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type {
-  StructureConstraintKind,
   StructureMapSchema,
   StructureMapTable,
   StructureMapView,
@@ -77,7 +76,7 @@ const viewRowsCache = new Map<string, StructureMapView[]>();
 const structureTableRowsCache = new Map<string, StructureMapTable[]>();
 let nextObjectIdentity = 0;
 
-function objectIdentityKey(value: object | undefined): string {
+function objectIdentityKey(value: object | undefined) {
   if (!value) {
     return "none";
   }
@@ -91,13 +90,11 @@ function objectIdentityKey(value: object | undefined): string {
   return nextKey;
 }
 
-function queryDataIdentityKey<T extends object>(
-  queries: QueryDataResult<T>[]
-): string {
+function queryDataIdentityKey<T extends object>(queries: QueryDataResult<T>[]) {
   return queries.map((query) => objectIdentityKey(query.data)).join("|");
 }
 
-function rememberDerived<T>(cache: Map<string, T>, key: string, value: T): T {
+function rememberDerived<T>(cache: Map<string, T>, key: string, value: T) {
   if (cache.size >= MAX_DERIVED_CACHE_ENTRIES) {
     const oldestKey = cache.keys().next().value;
     if (oldestKey !== undefined) {
@@ -152,10 +149,7 @@ function fetchViews(
   return createClient(ViewService, transport).listViews(input);
 }
 
-async function fetchTableMetadata(
-  transport: Transport,
-  parent: string
-): Promise<TableMetadataResponse> {
+async function fetchTableMetadata(transport: Transport, parent: string) {
   const client = createTableClient(transport);
   const [columns, constraints, indexes, policies, triggers] = await Promise.all(
     [
@@ -172,12 +166,10 @@ async function fetchTableMetadata(
     indexes: indexes.indexes,
     policies: policies.policies,
     triggers: triggers.triggers,
-  };
+  } satisfies TableMetadataResponse;
 }
 
-function schemaRows(
-  response: ListSchemasResponse | undefined
-): StructureMapSchema[] {
+function schemaRows(response: ListSchemasResponse | undefined) {
   if (!response) {
     return EMPTY_SCHEMAS;
   }
@@ -194,17 +186,17 @@ function schemaRows(
   return rows;
 }
 
-function tableSchemaName(table: Table): string {
+function tableSchemaName(table: Table) {
   const match = TABLE_SCHEMA_PATTERN.exec(table.name);
   return match?.[1] ?? "";
 }
 
-function viewSchemaName(view: View): string {
+function viewSchemaName(view: View) {
   const match = VIEW_SCHEMA_PATTERN.exec(view.name);
   return match?.[1] ?? "";
 }
 
-function tableRows(queries: QueryDataResult<ListTablesResponse>[]): Table[] {
+function tableRows(queries: QueryDataResult<ListTablesResponse>[]) {
   const key = queryDataIdentityKey(queries);
   const cached = tableRowsCache.get(key);
   if (cached) {
@@ -214,9 +206,7 @@ function tableRows(queries: QueryDataResult<ListTablesResponse>[]): Table[] {
   return rememberDerived(tableRowsCache, key, rows);
 }
 
-function viewRows(
-  queries: QueryDataResult<ListViewsResponse>[]
-): StructureMapView[] {
+function viewRows(queries: QueryDataResult<ListViewsResponse>[]) {
   const key = queryDataIdentityKey(queries);
   const cached = viewRowsCache.get(key);
   if (cached) {
@@ -228,7 +218,7 @@ function viewRows(
   return rememberDerived(viewRowsCache, key, rows);
 }
 
-function constraintKind(type: ConstraintType): StructureConstraintKind | null {
+function constraintKind(type: ConstraintType) {
   switch (type) {
     case ConstraintType.PRIMARY_KEY:
       return "primary_key";
@@ -247,7 +237,7 @@ function constraintKind(type: ConstraintType): StructureConstraintKind | null {
   }
 }
 
-function policyCommandLabel(command: PolicyCommand): string {
+function policyCommandLabel(command: PolicyCommand) {
   switch (command) {
     case PolicyCommand.ALL:
       return "ALL";
@@ -266,7 +256,7 @@ function policyCommandLabel(command: PolicyCommand): string {
   }
 }
 
-function viewTypeLabel(viewType: View_ViewType): StructureMapView["viewType"] {
+function viewTypeLabel(viewType: View_ViewType) {
   switch (viewType) {
     case View_ViewType.MATERIALIZED:
       return "materialized";
@@ -278,20 +268,20 @@ function viewTypeLabel(viewType: View_ViewType): StructureMapView["viewType"] {
   }
 }
 
-function viewMapRow(view: View): StructureMapView {
+function viewMapRow(view: View) {
   return {
     comment: view.comment,
     owner: view.owner,
     schemaName: viewSchemaName(view),
     viewName: view.displayName || parseResourceLeafId(view.name),
     viewType: viewTypeLabel(view.viewType),
-  };
+  } satisfies StructureMapView;
 }
 
 function mergeTableMetadata(
   table: Table,
   metadata: TableMetadataResponse | undefined
-): StructureMapTable {
+) {
   const schemaName = tableSchemaName(table);
   return {
     columns:
@@ -341,7 +331,7 @@ function mergeTableMetadata(
         timing: trigger.timing,
         triggerName: trigger.triggerName,
       })) ?? [],
-  };
+  } satisfies StructureMapTable;
 }
 
 function schemasInMapScope({
@@ -352,7 +342,7 @@ function schemasInMapScope({
   activeSchemaName?: string | undefined;
   detailScope: "all" | "selected-schema";
   schemas: StructureMapSchema[];
-}): StructureMapSchema[] {
+}) {
   if (detailScope === "all" || !isNonEmptyString(activeSchemaName)) {
     return schemas;
   }
@@ -409,7 +399,7 @@ function structureMapViewInput({
   return viewsForSchemaQueryInput({ databaseId, instanceId, schemaId });
 }
 
-function inspectableTables(tables: Table[]): Table[] {
+function inspectableTables(tables: Table[]) {
   if (tables.length <= MAX_DETAIL_TABLES) {
     return tables;
   }
@@ -426,19 +416,19 @@ function firstQueryError(
   queries: {
     error: unknown;
   }[]
-): unknown {
+) {
   return queries.find((query) => Boolean(query.error))?.error;
 }
 
 function tableResponsesHaveNextPage(
   queries: QueryDataResult<ListTablesResponse>[]
-): boolean {
+) {
   return queries.some((query) => Boolean(query.data?.nextPageToken));
 }
 
 function viewResponsesHaveNextPage(
   queries: QueryDataResult<ListViewsResponse>[]
-): boolean {
+) {
   return queries.some((query) => Boolean(query.data?.nextPageToken));
 }
 
@@ -450,7 +440,7 @@ function structureTableRows({
   detailQueries: QueryDataResult<TableMetadataResponse>[];
   detailTables: Table[];
   rawTables: Table[];
-}): StructureMapTable[] {
+}) {
   if (rawTables.length === 0) {
     return EMPTY_STRUCTURE_TABLES;
   }
@@ -493,7 +483,7 @@ function structureMapTruncatedReason({
   tableResponses: QueryDataResult<ListTablesResponse>[];
   totalInspectableTables: number;
   viewResponses: QueryDataResult<ListViewsResponse>[];
-}): string | null {
+}) {
   if (
     detailScope === "all" &&
     typeof schemaResponse?.nextPageToken === "string" &&
@@ -518,7 +508,7 @@ function useStructureMapData({
   databaseId,
   detailScope,
   instanceId,
-}: StructureMapDataInput): StructureMapDataResult {
+}: StructureMapDataInput) {
   const transport = useTransport();
   const schemaInput = structureMapSchemaInput({ databaseId, instanceId });
   const schemasQuery = useQuery({
@@ -611,7 +601,7 @@ function useStructureMapData({
     tables,
     truncatedReason: reason,
     views,
-  };
+  } satisfies StructureMapDataResult;
 }
 
 export {

@@ -16,9 +16,7 @@ const LOCAL_TEST_TIMEOUT_MS = 10_000;
 const CI_TEST_TIMEOUT_MS = 45_000;
 const WEB_SERVER_TIMEOUT_MS = 120_000;
 const SCREENSHOT_MISMATCH_THRESHOLD = 0.02;
-// Baselines are captured on Linux (CI and `test:visual:update` both use the
-// official Playwright image). macOS and Windows font rendering drifts, so local
-// runs get a looser threshold and may not rewrite baselines.
+
 const CANONICAL_SCREENSHOT_PLATFORM = "linux";
 const LOCAL_VISUAL_MISMATCH_THRESHOLD = 0.05;
 const isCanonicalScreenshotPlatform =
@@ -26,7 +24,7 @@ const isCanonicalScreenshotPlatform =
 const UPDATE_SNAPSHOTS_ARGUMENT_PATTERN =
   /^(?<capture1>-u|--update-snapshots)(?<capture2>=|$)/u;
 const LOCAL_WORKERS = 2;
-// GitHub-hosted ubuntu-latest runners have 4 vCPUs; Playwright defaults to half.
+
 const CI_WORKERS = 4;
 const PORT = e2eEnv.PORT ?? e2eEnv.PLAYWRIGHT_PORT ?? DEFAULT_PORT;
 const BASE_URL =
@@ -35,10 +33,10 @@ const PLAYWRIGHT_BASE_URL_KEY = "baseURL";
 const useExternalServer = Boolean(
   e2eEnv.BASE_URL ?? e2eEnv.PLAYWRIGHT_BASE_URL
 );
-// Adds the visual harness entry. Production bundle budgets run separately.
+
 const serverCommand = e2eEnv.QUERYLANE_E2E_SKIP_BUILD
   ? `bun run preview --host 127.0.0.1 --port ${PORT}`
-  : `QUERYLANE_VISUAL_HARNESS=1 bunx rsbuild build && bun run preview --host 127.0.0.1 --port ${PORT}`;
+  : `bunx rsbuild build && bun run preview --host 127.0.0.1 --port ${PORT}`;
 
 if (
   !isCanonicalScreenshotPlatform &&
@@ -70,7 +68,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testDir: "./tests",
+      testDir: "./journeys",
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: CHROMIUM_LAUNCH_OPTIONS,
@@ -88,7 +86,7 @@ export default defineConfig({
         },
       },
       name: `visual-${colorScheme}`,
-      // Pixel checks remain available through explicit --project selections.
+
       default: false,
       testDir: "./visual",
       use: {
@@ -99,16 +97,14 @@ export default defineConfig({
       },
     })),
   ] satisfies PlaywrightTestConfig["projects"],
-  // Keep CI logs readable: list prints test names instead of dot progress,
-  // GitHub annotations surface failures, and HTML/JSON keep full artifacts off-log.
+
   reporter: e2eEnv.CI ? CI_REPORTERS : [["./llm-reporter.ts"]],
   retries: 0,
   snapshotPathTemplate:
     "{testDir}/__screenshots__/{testFileBaseName}/{projectName}/{arg}{ext}",
-  testMatch: "**/*.spec.ts",
+  testMatch: "**/*.e2e.test.ts",
   timeout: e2eEnv.CI ? CI_TEST_TIMEOUT_MS : LOCAL_TEST_TIMEOUT_MS,
-  // Never write baselines implicitly: a missing snapshot fails the run.
-  // `--update-snapshots` (Linux only, see guard above) is the one way to write.
+
   updateSnapshots: "none",
   use: {
     actionTimeout: ACTION_TIMEOUT_MS,
@@ -118,9 +114,7 @@ export default defineConfig({
     headless: true,
     locale: "en-US",
     navigationTimeout: NAVIGATION_TIMEOUT_MS,
-    // Viewport captures avoid oversized full-page artifacts with large blank
-    // bands around centered onboarding screens. Tests that need visual review
-    // should use softScreenshot(), which captures the content panel instead.
+
     screenshot: { fullPage: false, mode: "only-on-failure" },
     timezoneId: "UTC",
     trace: {

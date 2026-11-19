@@ -18,7 +18,7 @@ function buildResourceCollectionQueryState({
   isPending: boolean;
   items: readonly unknown[];
   suppressedReason?: ResourceCollectionSuppressedReason | null;
-}): ResourceCollectionQueryState {
+}) {
   if (!enabled) {
     const normalizedSuppressedReason = suppressedReason ?? null;
     return {
@@ -30,7 +30,7 @@ function buildResourceCollectionQueryState({
       isSuppressed: normalizedSuppressedReason !== null,
       status: "idle",
       suppressedReason: normalizedSuppressedReason,
-    };
+    } satisfies ResourceCollectionQueryState;
   }
 
   const normalizedError = error ?? null;
@@ -50,7 +50,7 @@ function buildResourceCollectionQueryState({
     isSuppressed: false,
     status,
     suppressedReason: null,
-  };
+  } satisfies ResourceCollectionQueryState;
 }
 
 export { buildResourceCollectionQueryState };

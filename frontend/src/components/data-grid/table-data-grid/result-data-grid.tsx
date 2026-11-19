@@ -151,16 +151,14 @@ interface ResultDataGridProps {
   toolbar?: boolean | undefined;
 }
 
-// Stable default so the grid columns are not rebuilt every render for tables
-// without foreign keys.
 const NO_FOREIGN_KEY_REFERENCES: readonly TableForeignKeyReference[] = [];
 const NO_STATUS_ITEMS: GridStatusItem[] = [];
 const NO_SORT_COLUMNS: SortColumn[] = [];
 function ignoreSortChange() {
-  // Results without server sort: the statement's ORDER BY decides.
+  return undefined;
 }
 
-function useCellSelectionStore(): CellSelectionStore {
+function useCellSelectionStore() {
   const [store] = useState(createCellSelectionStore);
   return store;
 }
@@ -187,7 +185,7 @@ function useOpenRowState(rows: GridRow[]) {
 function buildGridRows(
   resultRows: readonly ResultRow[],
   resultColumns: TableResultColumn[]
-): GridRow[] {
+) {
   return resultRows.map((row, rowIndex) => {
     const grouped: GridRow = {
       [ROW_KEY_FIELD]: row.rowKey || fallbackRowKey(rowIndex),
@@ -203,7 +201,7 @@ function buildGridRows(
 function buildOpenRowCells(
   openRow: GridRow | undefined,
   resultColumns: TableResultColumn[]
-): Map<string, TableCell | undefined> {
+) {
   const openRowCells = new Map<string, TableCell | undefined>();
   if (!openRow) {
     return openRowCells;
@@ -284,11 +282,11 @@ function pluralizedCount(
   count: number,
   singular: string,
   plural = `${singular}s`
-): string {
+) {
   return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
 }
 
-function getCellSelectionLiveLabel(summary: CellSelectionSummary): string {
+function getCellSelectionLiveLabel(summary: CellSelectionSummary) {
   if (summary.cellCount === 0) {
     return "Cell selection cleared.";
   }
@@ -440,7 +438,6 @@ function ResultDataGridFooter({
   );
 }
 
-/** Toolbar and alerts above the grid; renders nothing when both are absent. */
 function ResultDataGridHeader({
   alerts,
   isFlush,
@@ -500,9 +497,6 @@ function ResultDataGridChrome({
   suppressStatusAndPagination,
   variant,
 }: ResultDataGridChromeProps) {
-  // Default variant renders full-bleed inside its pane: the toolbar, status
-  // bar, and pagination become padded bars while the grid itself runs
-  // edge-to-edge. The expanded dialog keeps the inset, rounded look.
   const isFlush = variant !== "expanded";
   const {
     reorderColumns: handleColumnsReorder,
@@ -602,8 +596,6 @@ function ExpandedDataGridDialog({
   return (
     <Dialog
       onOpenChange={(nextOpen, eventDetails) => {
-        // RDG prevents Escape when it clears a cell range. Honor that handled
-        // key instead of also dismissing the expanded grid.
         if (
           !nextOpen &&
           eventDetails.reason === "escape-key" &&
@@ -670,10 +662,6 @@ function ResultDataGridContent({
   rows: GridRow[];
   setOpenRowIndex: (next: number | null) => void;
 }) {
-  // The parent owns the available height; keep RDG at that finite height so
-  // row virtualization stays active. Spacing between chrome pieces comes
-  // from the flush bars' own padding, not a flex gap. The explorer keeps a
-  // minimum height; a resizable panel (`fill`) may be smaller.
   return (
     <div
       className={cn(
@@ -716,19 +704,10 @@ function ResultDataGridContent({
   );
 }
 
-function optionalHandler(
-  enabled: boolean,
-  handler: () => void
-): (() => void) | undefined {
+function optionalHandler(enabled: boolean, handler: () => void) {
   return enabled ? handler : undefined;
 }
 
-/**
- * Runs `onChange` after a committed render in which `key` changed. Compares
- * committed keys so StrictMode's mount-effect replay stays a no-op, and keeps
- * the callback out of the dependencies so the state it touches does not
- * retrigger the effect.
- */
 function useOnKeyChange(key: string, onChange: () => void) {
   const handleChange = useEffectEvent(onChange);
   const previousKeyRef = useRef(key);
@@ -745,8 +724,7 @@ function useOnKeyChange(key: string, onChange: () => void) {
   );
 }
 
-/** RDG column index of the first result column, after the action columns. */
-function dataColumnStartIndex(columns: Column<GridRow>[]): number {
+function dataColumnStartIndex(columns: Column<GridRow>[]) {
   return columns.filter((column) => isGridActionColumnKey(column.key)).length;
 }
 
@@ -793,8 +771,6 @@ function ResultDataGrid({
   const rows = buildGridRows(resultRows, resultColumns);
   const { openRowIndex, setOpenRowIndex } = useOpenRowState(rows);
 
-  // Selection and the open record drawer are scoped to one result: prior
-  // keys don't map across page/sort/filter changes or a new query.
   useOnKeyChange(resetKey, () => {
     cellSelectionStore.clear();
     if (selectedRows.size > 0) {
@@ -828,8 +804,6 @@ function ResultDataGrid({
   });
   const dataColumnStart = dataColumnStartIndex(columns);
   const displayedDataColumnKeys = getDisplayedDataColumnKeys(columns);
-  // A cell selection is positional, so it cannot survive columns or rows
-  // moving under it.
   useOnKeyChange(
     JSON.stringify([
       displayedDataColumnKeys,

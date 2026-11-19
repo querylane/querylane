@@ -16,28 +16,6 @@ import { file_querylane_console_v1alpha1_errors } from "@/protogen/querylane/con
 import { decideBlockingAppState } from "@/stores/blocking-app-state";
 import { markSetupRequired } from "@/stores/setup-required-signal";
 
-/**
- * Global interceptor that normalizes ConnectRPC failures from any API call,
- * reports them once, and updates global blocker/setup state for route redirects.
- */
-interface BlockingErrorStoreModule {
-  useBlockingErrorStore: {
-    getState: () => {
-      setBlockingError: (
-        error: ReturnType<typeof normalizeAppUiError>,
-        returnTo?: string | null
-      ) => void;
-    };
-  };
-}
-
-interface SetupInterceptorDependencies {
-  getCurrentHref: () => string | null;
-  loadBlockingErrorStore: () => Promise<BlockingErrorStoreModule>;
-  logger: typeof logger;
-  markSetupRequired: () => void;
-}
-
 interface ConnectRequestLike {
   method?: { name?: string | undefined };
   service?: { typeName?: string | undefined };
@@ -46,17 +24,16 @@ interface ConnectRequestLike {
 const EXPECTED_FAILURE_RPC_PATH =
   "querylane.console.v1alpha1.InstanceService/TestInstanceConnection";
 
-const defaultSetupInterceptorDependencies: SetupInterceptorDependencies = {
-  getCurrentHref: () =>
-    globalThis.window === undefined
-      ? null
-      : `${globalThis.window.location.pathname}${globalThis.window.location.search}${globalThis.window.location.hash}`,
-  loadBlockingErrorStore: () => import("@/stores/blocking-error-store"),
-  logger,
-  markSetupRequired,
-};
+function getCurrentHref() {
+  const browser = globalThis.window;
+  if (browser === undefined) {
+    return null;
+  }
+  const { pathname, search, hash } = browser.location;
+  return `${pathname}${search}${hash}`;
+}
 
-function getRpcEndpoint(req: unknown): string {
+function getRpcEndpoint(req: unknown) {
   if (typeof req !== "object" || req === null) {
     return "unknown.endpoint";
   }
@@ -70,61 +47,55 @@ function getRpcEndpoint(req: unknown): string {
 
 async function applyBlockingDecision(
   decision: ReturnType<typeof decideBlockingAppState>,
-  endpoint: string,
-  dependencies: SetupInterceptorDependencies
+  endpoint: string
 ) {
   if (decision.setupRequired) {
-    dependencies.logger.info("Setup required detected from API response", {
+    logger.info("Setup required detected from API response", {
       endpoint,
     });
-    dependencies.markSetupRequired();
+    markSetupRequired();
   }
 
   if (decision.blockingError) {
-    const { useBlockingErrorStore } =
-      await dependencies.loadBlockingErrorStore();
+    const { useBlockingErrorStore } = await import(
+      "@/stores/blocking-error-store"
+    );
     useBlockingErrorStore
       .getState()
       .setBlockingError(decision.blockingError, decision.returnTo);
   }
 }
 
-function createSetupInterceptor(
-  dependencies: SetupInterceptorDependencies = defaultSetupInterceptorDependencies
-): Interceptor {
-  return (next) => async (req) => {
-    const endpoint = getRpcEndpoint(req);
+const setupInterceptor: Interceptor = (next) => async (req) => {
+  const endpoint = getRpcEndpoint(req);
 
-    try {
-      return await next(req);
-    } catch (error) {
-      const errorContext = {
-        area: "transport",
+  try {
+    return await next(req);
+  } catch (error) {
+    const errorContext = {
+      area: "transport",
+      endpoint,
+      source: "connect",
+    } as const;
+    attachAppUiErrorContext(error, errorContext);
+    const uiError = normalizeAppUiError(error, errorContext);
+
+    const blockingDecision = decideBlockingAppState({
+      currentHref: getCurrentHref(),
+      error: uiError,
+    });
+    await applyBlockingDecision(blockingDecision, endpoint);
+
+    reportAppUiError(uiError, {
+      expected: endpoint === EXPECTED_FAILURE_RPC_PATH,
+      tags: {
         endpoint,
-        source: "connect",
-      } as const;
-      attachAppUiErrorContext(error, errorContext);
-      const uiError = normalizeAppUiError(error, errorContext);
+      },
+    });
 
-      const blockingDecision = decideBlockingAppState({
-        currentHref: dependencies.getCurrentHref(),
-        error: uiError,
-      });
-      await applyBlockingDecision(blockingDecision, endpoint, dependencies);
-
-      reportAppUiError(uiError, {
-        expected: endpoint === EXPECTED_FAILURE_RPC_PATH,
-        tags: {
-          endpoint,
-        },
-      });
-
-      throw error;
-    }
-  };
-}
-
-const setupInterceptor = createSetupInterceptor();
+    throw error;
+  }
+};
 
 interface ConnectBaseUrlOptions {
   configuredBaseUrl: string;
@@ -136,7 +107,7 @@ function resolveConnectBaseUrl({
   configuredBaseUrl,
   isDevelopment,
   locationOrigin: currentOrigin,
-}: ConnectBaseUrlOptions): string {
+}: ConnectBaseUrlOptions) {
   const trimmedBaseUrl = configuredBaseUrl.trim();
   if (trimmedBaseUrl) {
     return trimmedBaseUrl;
@@ -149,55 +120,24 @@ function resolveConnectBaseUrl({
   return currentOrigin;
 }
 
-/**
- * Client-side deadline for every RPC. Aborting the fetch at the deadline frees
- * the browser's per-origin connection slot (a hanging instance would otherwise
- * starve all RPCs app-wide), and the Connect-Timeout-Ms header propagates the
- * deadline to the backend so its work is canceled too. 30s matches the
- * server-side statement_timeout applied to ReadRows, so a legitimate slow read
- * is never cut short by the client.
- */
 const DEFAULT_RPC_TIMEOUT_MS = 30_000;
-/**
- * Deadline for RPCs that may legitimately run long (e.g. EXPLAIN ANALYZE,
- * which the backend caps at 60s). Kept above the server cap plus grace so the
- * server-side limit always fires first.
- */
 const LONG_RUNNING_RPC_TIMEOUT_MS = 90_000;
 
-const locationOrigin =
-  typeof globalThis === "undefined" ? null : globalThis.location.origin;
+const locationOrigin = globalThis.location?.origin ?? null;
 const connectBaseUrl = resolveConnectBaseUrl({
   configuredBaseUrl: env.PUBLIC_API_BASE_URL,
   isDevelopment: import.meta.env.DEV,
   locationOrigin,
 });
 
-/**
- * One shared limiter across both transports so the per-instance concurrency
- * cap covers every RPC regardless of which deadline tier it uses. It sits
- * after (inside) the setup interceptor so failures raised while a request is
- * queued still flow through error normalization and reporting.
- */
 const instanceRpcConcurrencyInterceptor =
   createInstanceRpcConcurrencyInterceptor();
 
-/**
- * Registry of the `google.protobuf.Any` detail types the backend packs into
- * `google.rpc.Status.details` on partial errors (e.g. GetInstanceOverview,
- * CheckInstanceHealth, QueryMetrics). Without it, connect cannot decode those
- * Any values from JSON and the whole response fails to deserialize.
- */
 const errorDetailRegistry = createRegistry(
   file_google_rpc_error_details,
   file_querylane_console_v1alpha1_errors
 );
 
-/**
- * Shared fetch wrapper that intercepts non-Connect responses (e.g. HTML from
- * an auth or gateway proxy) before connect-web fails to parse them, so users
- * see friendly copy instead of a raw parse error.
- */
 const appConnectFetch = createUnexpectedResponseFetch();
 
 function createAppConnectTransport(defaultTimeoutMs: number) {
@@ -215,11 +155,4 @@ const longRunningTransport = createAppConnectTransport(
   LONG_RUNNING_RPC_TIMEOUT_MS
 );
 
-export {
-  createSetupInterceptor,
-  DEFAULT_RPC_TIMEOUT_MS,
-  LONG_RUNNING_RPC_TIMEOUT_MS,
-  longRunningTransport,
-  resolveConnectBaseUrl,
-  transport,
-};
+export { longRunningTransport, transport };

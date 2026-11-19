@@ -20,7 +20,7 @@ function buildGridStatusItems({
   limits,
   pageSize,
   rowsReturned,
-}: BuildGridStatusItemsArgs): GridStatusItem[] {
+}: BuildGridStatusItemsArgs) {
   const items: GridStatusItem[] = [];
 
   if (isResponseCapped({ hasNext, limits, pageSize, rowsReturned })) {
@@ -40,7 +40,7 @@ function isResponseCapped({
   limits,
   pageSize,
   rowsReturned,
-}: BuildGridStatusItemsArgs): boolean {
+}: BuildGridStatusItemsArgs) {
   if (hasNext && rowsReturned < pageSize) {
     return true;
   }

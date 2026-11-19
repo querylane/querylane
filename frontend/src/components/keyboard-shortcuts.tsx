@@ -28,7 +28,7 @@ const SHORTCUT_GROUPS: readonly KeyboardShortcutGroup[] = [
 ];
 const KEYBOARD_SHORTCUT_CHORD_TIMEOUT_MS = 1000;
 
-function isTextEntryTarget(target: EventTarget | null): boolean {
+function isTextEntryTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
     return false;
   }
@@ -41,9 +41,7 @@ function isTextEntryTarget(target: EventTarget | null): boolean {
   );
 }
 
-function resolveKeyboardShortcutScope(
-  target: EventTarget | null
-): KeyboardShortcutScope {
+function resolveKeyboardShortcutScope(target: EventTarget | null) {
   if (!(target instanceof Element)) {
     return "global";
   }
@@ -60,21 +58,19 @@ interface KeyboardShortcutInput {
   shift: boolean;
 }
 
-function keyboardShortcutInputFromEvent(
-  event: KeyboardEvent
-): KeyboardShortcutInput {
+function keyboardShortcutInputFromEvent(event: KeyboardEvent) {
   return {
     alt: event.altKey,
     key: event.key,
     primary: event.metaKey || event.ctrlKey,
     shift: event.shiftKey,
-  };
+  } satisfies KeyboardShortcutInput;
 }
 
 function matchesKeyboardShortcutStroke(
   input: KeyboardShortcutInput,
   stroke: KeyboardShortcutStroke
-): boolean {
+) {
   return (
     input.key.toLowerCase() === stroke.key.toLowerCase() &&
     input.primary === Boolean(stroke.primary) &&
@@ -86,7 +82,7 @@ function matchesKeyboardShortcutStroke(
 function bindingMatchesPrefix(
   binding: KeyboardShortcutBinding,
   inputs: readonly KeyboardShortcutInput[]
-): boolean {
+) {
   if (binding.length < inputs.length) {
     return false;
   }
@@ -119,14 +115,14 @@ type KeyboardShortcutEventResolution =
 function shortcutIsAvailableAtScope(
   shortcut: KeyboardShortcutDefinition,
   scope: KeyboardShortcutScope
-): boolean {
+) {
   return shortcut.scope === "global" || shortcut.scope === scope;
 }
 
 function availableKeyboardShortcuts(
   handlers: ReadonlyMap<KeyboardShortcutId, () => void>,
   scope: KeyboardShortcutScope
-): HandledKeyboardShortcut[] {
+) {
   return KEYBOARD_SHORTCUTS.filter(
     (shortcut): shortcut is HandledKeyboardShortcut =>
       shortcut.kind === "handled" &&
@@ -138,7 +134,7 @@ function availableKeyboardShortcuts(
 function resolveKeyboardShortcut(
   inputs: readonly KeyboardShortcutInput[],
   shortcuts: readonly HandledKeyboardShortcut[]
-): KeyboardShortcutResolution {
+) {
   for (const shortcut of shortcuts) {
     const exactBinding = shortcut.bindings.find(
       (binding) =>
@@ -146,7 +142,7 @@ function resolveKeyboardShortcut(
         bindingMatchesPrefix(binding, inputs)
     );
     if (exactBinding) {
-      return { shortcut, status: "exact" };
+      return { shortcut, status: "exact" } satisfies KeyboardShortcutResolution;
     }
   }
   const hasPrefix = shortcuts.some((shortcut) =>
@@ -155,14 +151,14 @@ function resolveKeyboardShortcut(
         binding.length > inputs.length && bindingMatchesPrefix(binding, inputs)
     )
   );
-  return hasPrefix ? { status: "prefix" } : null;
+  return hasPrefix
+    ? ({ status: "prefix" } satisfies KeyboardShortcutResolution)
+    : null;
 }
 
-function activePendingInputs(
-  pending: PendingKeyboardShortcut | undefined
-): readonly KeyboardShortcutInput[] {
+function activePendingInputs(pending: PendingKeyboardShortcut | undefined) {
   if (!pending) {
-    return [];
+    return [] satisfies readonly KeyboardShortcutInput[];
   }
   return pending.expiresAt >= Date.now() ? pending.inputs : [];
 }
@@ -175,13 +171,13 @@ function resolveKeyboardShortcutEvent({
   event: KeyboardEvent;
   handlers: ReadonlyMap<KeyboardShortcutId, () => void>;
   pending: PendingKeyboardShortcut | undefined;
-}): KeyboardShortcutEventResolution {
+}) {
   if (event.isComposing || event.repeat) {
-    return { status: "none" };
+    return { status: "none" } satisfies KeyboardShortcutEventResolution;
   }
   const input = keyboardShortcutInputFromEvent(event);
   if (isTextEntryTarget(event.target) && !input.primary) {
-    return { status: "none" };
+    return { status: "none" } satisfies KeyboardShortcutEventResolution;
   }
 
   const availableShortcuts = availableKeyboardShortcuts(
@@ -197,7 +193,7 @@ function resolveKeyboardShortcutEvent({
   const resolution =
     sequenceResolution ?? resolveKeyboardShortcut([input], availableShortcuts);
   if (!resolution) {
-    return { status: "none" };
+    return { status: "none" } satisfies KeyboardShortcutEventResolution;
   }
   if (resolution.status === "prefix") {
     return {
@@ -206,14 +202,12 @@ function resolveKeyboardShortcutEvent({
         inputs: sequenceResolution ? sequence : [input],
       },
       status: "prefix",
-    };
+    } satisfies KeyboardShortcutEventResolution;
   }
   return resolution;
 }
 
-function pendingAfterResolution(
-  resolution: KeyboardShortcutEventResolution
-): PendingKeyboardShortcut | undefined {
+function pendingAfterResolution(resolution: KeyboardShortcutEventResolution) {
   return resolution.status === "prefix" ? resolution.pending : undefined;
 }
 

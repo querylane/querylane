@@ -1,10 +1,7 @@
 import type { DescField, DescMessage, DescOneof } from "@bufbuild/protobuf";
 import { isNonEmptyString } from "@/lib/value-guards";
 
-function protoPathToFormPath(
-  schema: DescMessage,
-  serverPath: string
-): string | null {
+function protoPathToFormPath(schema: DescMessage, serverPath: string) {
   if (!serverPath) {
     return null;
   }
@@ -25,10 +22,7 @@ function protoPathToFormPath(
   return path ? path.join(".") : null;
 }
 
-function mapFieldPath(
-  field: DescField,
-  serverPath: string
-): string | null | undefined {
+function mapFieldPath(field: DescField, serverPath: string) {
   const dotted = `${field.name}.`;
   const bracketed = `${field.name}[`;
   if (serverPath.startsWith(dotted)) {
@@ -52,10 +46,10 @@ function mapFieldPath(
 const LIST_INDEX_PATTERN = /\[(?<capture1>\d+)\]/gu;
 const INDEX_SEGMENT_PATTERN = /^\d+$/u;
 
-function walk(
+const walk: (
   current: DescMessage,
   segments: readonly string[]
-): string[] | null {
+) => string[] | null = (current, segments) => {
   if (segments.length === 0) {
     return [];
   }
@@ -87,9 +81,12 @@ function walk(
   }
   const tail = walk(field.message, rest);
   return tail === null ? null : [...formPath, ...tail];
-}
+};
 
-function walkOneof(oneof: DescOneof, rest: readonly string[]): string[] | null {
+const walkOneof: (
+  oneof: DescOneof,
+  rest: readonly string[]
+) => string[] | null = (oneof, rest) => {
   if (rest.length === 0) {
     return [oneof.localName];
   }
@@ -105,13 +102,13 @@ function walkOneof(oneof: DescOneof, rest: readonly string[]): string[] | null {
   }
   const tail = walkInto(branch, afterBranch);
   return tail === null ? null : [oneof.localName, "value", ...tail];
-}
+};
 
-function walkListItem(
+const walkListItem: (
   field: DescField,
   formPath: string[],
   segments: readonly string[]
-): string[] | null {
+) => string[] | null = (field, formPath, segments) => {
   const [index, ...afterIndex] = segments;
   if (!(isNonEmptyString(index) && INDEX_SEGMENT_PATTERN.test(index))) {
     return null;
@@ -124,37 +121,31 @@ function walkListItem(
   }
   const tail = walk(field.message, afterIndex);
   return tail === null ? null : [...formPath, index, ...tail];
-}
+};
 
-function walkInto(
+const walkInto: (
   field: DescField,
   segments: readonly string[]
-): string[] | null {
+) => string[] | null = (field, segments) => {
   if (segments.length === 0) {
     return [];
   }
   return field.message ? walk(field.message, segments) : null;
-}
+};
 
 type Resolved =
   | { kind: "field"; field: DescField }
   | { kind: "oneof"; oneof: DescOneof };
 
-function findOneofMember(
-  member: DescOneof,
-  protoName: string
-): Resolved | undefined {
+function findOneofMember(member: DescOneof, protoName: string) {
   if (member.name === protoName) {
-    return { kind: "oneof", oneof: member };
+    return { kind: "oneof", oneof: member } satisfies Resolved | undefined;
   }
   const field = member.fields.find((candidate) => candidate.name === protoName);
-  return field ? { field, kind: "field" } : undefined;
+  return field ? ({ field, kind: "field" } satisfies Resolved) : undefined;
 }
 
-function findMember(
-  message: DescMessage,
-  protoName: string
-): Resolved | undefined {
+function findMember(message: DescMessage, protoName: string) {
   for (const member of message.members) {
     if (member.kind === "oneof") {
       const resolved = findOneofMember(member, protoName);
@@ -162,7 +153,7 @@ function findMember(
         return resolved;
       }
     } else if (member.name === protoName) {
-      return { field: member, kind: "field" };
+      return { field: member, kind: "field" } satisfies Resolved | undefined;
     }
   }
   return undefined;

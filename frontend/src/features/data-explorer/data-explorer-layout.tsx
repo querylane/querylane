@@ -49,11 +49,8 @@ export function ExplorerDetailPane({
   onTableTabChange: (tab: TableDetailTab) => void;
   onSelectResource: (category: CategoryKey, name: string) => void;
   onSelectTableInSchema: (schemaName: string, name: string) => void;
-  // Unfiltered schema-overview protos (not narrowed by the sidebar search) —
-  // used for the schema inventory + header aggregates.
   overviewTables: Table[];
   overviewViews: View[];
-  // Sidebar-filtered protos — used only to resolve the selected resource.
   rawTables: Table[];
   rawViews: View[];
   schemas: SchemaSummary[];

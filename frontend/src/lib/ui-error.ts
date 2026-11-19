@@ -9,7 +9,6 @@ import type {
   AppUiErrorContext,
   AppUiErrorPostgres,
   BlockingErrorReason,
-  ReportAppUiErrorDependencies,
 } from "@/lib/ui-error-types";
 import type { UnexpectedResponseInfo } from "@/lib/unexpected-response";
 import {
@@ -26,10 +25,6 @@ const APP_UI_ERROR_CONTEXT = Symbol.for("querylane.app-ui-error-context");
 const APP_UI_ERROR_REPORTED = Symbol.for("querylane.app-ui-error-reported");
 const APP_UI_ERROR_SURFACED = Symbol.for("querylane.app-ui-error-surfaced");
 
-/**
- * Stable toast id so a burst of failing RPCs (e.g. the backend going down
- * behind a proxy) collapses into one updating toast instead of a storm.
- */
 const UNEXPECTED_RESPONSE_TOAST_ID = "unexpected-server-response";
 const BROWSER_TRANSPORT_FAILURE_MESSAGES = new Set([
   "Failed to fetch",
@@ -91,29 +86,20 @@ const CONNECT_CODE_TITLES: Partial<Record<Code, string>> = {
   [Code.Unknown]: "Unexpected error",
 };
 
-const defaultReportAppUiErrorDependencies: ReportAppUiErrorDependencies = {
-  captureException,
-  logger,
-  toast,
-};
-
 function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function readAttachedContext(error: unknown): AppUiErrorContext {
+function readAttachedContext(error: unknown) {
   if (!isRecord(error)) {
-    return {};
+    return {} satisfies AppUiErrorContext;
   }
 
   const attached = error[APP_UI_ERROR_CONTEXT];
   return isRecord(attached) ? attached : {};
 }
 
-function attachAppUiErrorContext(
-  error: unknown,
-  context: AppUiErrorContext
-): void {
+function attachAppUiErrorContext(error: unknown, context: AppUiErrorContext) {
   if (!isRecord(error)) {
     return;
   }
@@ -124,21 +110,21 @@ function attachAppUiErrorContext(
   };
 }
 
-function isAppDatabaseUnavailableReason(reason: string | null): boolean {
+function isAppDatabaseUnavailableReason(reason: string | null) {
   return (
     reason === "APP_DATABASE_UNAVAILABLE" ||
     reason === "ERROR_REASON_APP_DATABASE_UNAVAILABLE"
   );
 }
 
-function isLiveQueryLimitReason(reason: string | null): boolean {
+function isLiveQueryLimitReason(reason: string | null) {
   return (
     reason === "LIVE_QUERY_LIMIT_EXCEEDED" ||
     reason === "ERROR_REASON_LIVE_QUERY_LIMIT_EXCEEDED"
   );
 }
 
-function isInstanceUnavailableReason(reason: string | null): boolean {
+function isInstanceUnavailableReason(reason: string | null) {
   return (
     reason === "INSTANCE_UNAVAILABLE" ||
     reason === "ERROR_REASON_INSTANCE_UNAVAILABLE"
@@ -153,7 +139,7 @@ function classifyBlockingReason({
   code: Code | null;
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
-}): BlockingErrorReason | null {
+}) {
   if (
     reason === "APP_DATABASE_NOT_CONFIGURED" ||
     reason === "ERROR_REASON_APP_DATABASE_NOT_CONFIGURED"
@@ -192,7 +178,7 @@ function buildTitle({
   code: Code | null;
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
-}): string {
+}) {
   if (blockingReason) {
     return BLOCKING_TITLES[blockingReason];
   }
@@ -221,7 +207,7 @@ function buildRetryGuidance({
   code: Code | null;
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
-}): string | null {
+}) {
   if (isAppDatabaseUnavailableReason(reason)) {
     return "Retry after the meta database is available.";
   }
@@ -270,7 +256,7 @@ function buildSummary({
   return "PostgreSQL error";
 }
 
-function isManualRetryableError(source: AppErrorSource): boolean {
+function isManualRetryableError(source: AppErrorSource) {
   return !["mutation", "runtime", "unknown"].includes(source);
 }
 
@@ -310,11 +296,6 @@ function buildTechnicalDetails(error: {
   );
 }
 
-/**
- * Chooses the user-facing copy: proxy/non-Connect responses get their own
- * status-based presentation; everything else keeps the code/postgres-driven
- * titles and guidance.
- */
 function buildErrorPresentation({
   blockingReason,
   code,
@@ -329,7 +310,7 @@ function buildErrorPresentation({
   postgres: AppUiErrorPostgres | null;
   reason: string | null;
   unexpectedResponse: UnexpectedResponseInfo | null;
-}): { retryGuidance: string | null; summary: string; title: string } {
+}) {
   if (unexpectedResponse) {
     return describeUnexpectedResponse(unexpectedResponse);
   }
@@ -346,19 +327,20 @@ function buildErrorPresentation({
         "Check that the Querylane server is running and that your network or proxy can reach it, then retry.",
       summary: "Querylane did not respond.",
       title: "Cannot reach Querylane",
+    } satisfies {
+      retryGuidance: string | null;
+      summary: string;
+      title: string;
     };
   }
   return {
     retryGuidance: buildRetryGuidance({ code, postgres, reason }),
     summary: buildSummary({ message, postgres, reason }),
     title: buildTitle({ blockingReason, code, postgres, reason }),
-  };
+  } satisfies { retryGuidance: string | null; summary: string; title: string };
 }
 
-function normalizeAppUiError(
-  error: unknown,
-  context?: AppUiErrorContext
-): AppUiError {
+function normalizeAppUiError(error: unknown, context?: AppUiErrorContext) {
   const mergedContext = { ...readAttachedContext(error), ...context };
   const source = mergedContext.source ?? "unknown";
   const connectError = error instanceof ConnectError ? error : null;
@@ -424,10 +406,10 @@ function normalizeAppUiError(
     technicalDetails,
     title,
     unexpectedResponse,
-  };
+  } satisfies AppUiError;
 }
 
-function isAppDatabaseUnavailableError(error: unknown): boolean {
+function isAppDatabaseUnavailableError(error: unknown) {
   if (error === null || error === undefined) {
     return false;
   }
@@ -441,7 +423,7 @@ function isAppDatabaseUnavailableError(error: unknown): boolean {
   );
 }
 
-function isExpectedAppUiError(error: AppUiError): boolean {
+function isExpectedAppUiError(error: AppUiError) {
   return (
     error.code === Code.Canceled ||
     error.blockingReason === "setup_required" ||
@@ -450,7 +432,7 @@ function isExpectedAppUiError(error: AppUiError): boolean {
   );
 }
 
-function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
+function shouldReportAppUiError(error: AppUiError, expected: boolean) {
   if (!isRecord(error.originalError)) {
     return !(expected || isExpectedAppUiError(error));
   }
@@ -468,10 +450,7 @@ function shouldReportAppUiError(error: AppUiError, expected: boolean): boolean {
   return true;
 }
 
-function shouldSurfaceAppUiError(
-  error: AppUiError,
-  expected: boolean
-): boolean {
+function shouldSurfaceAppUiError(error: AppUiError, expected: boolean) {
   if (
     error.context.surface !== "toast" ||
     expected ||
@@ -506,7 +485,7 @@ function buildSafePostgresContext(postgres: AppUiErrorPostgres | null) {
   };
 }
 
-function reportCaptureTarget(error: AppUiError): Error {
+function reportCaptureTarget(error: AppUiError) {
   if (error.postgres) {
     return new Error(error.title);
   }
@@ -515,14 +494,14 @@ function reportCaptureTarget(error: AppUiError): Error {
     : new Error(error.message);
 }
 
-function reportMessage(error: AppUiError): string {
+function reportMessage(error: AppUiError) {
   return error.postgres ? error.title : error.message;
 }
 
 function buildReportTags(
   error: AppUiError,
   extraTags: Record<string, string> | undefined
-): Record<string, string> {
+) {
   return {
     area: error.context.area ?? error.source,
     blocking_reason: error.blockingReason ?? "none",
@@ -533,14 +512,10 @@ function buildReportTags(
     source: error.source,
     unexpected_response_kind: error.unexpectedResponse?.kind ?? "none",
     ...extraTags,
-  };
+  } satisfies Record<string, string>;
 }
 
-function buildToastOptions(error: AppUiError): {
-  action: { label: string; onClick: () => void };
-  description: string;
-  id?: string;
-} {
+function buildToastOptions(error: AppUiError) {
   const options = {
     action: {
       label: "Report bug",
@@ -557,7 +532,11 @@ function buildToastOptions(error: AppUiError): {
     description: error.summary,
   };
   if (error.unexpectedResponse) {
-    return { ...options, id: UNEXPECTED_RESPONSE_TOAST_ID };
+    return { ...options, id: UNEXPECTED_RESPONSE_TOAST_ID } satisfies {
+      action: { label: string; onClick: () => void };
+      description: string;
+      id?: string;
+    };
   }
   return options;
 }
@@ -567,8 +546,7 @@ function reportAppUiError(
   context?: {
     expected?: boolean | undefined;
     tags?: Record<string, string> | undefined;
-  },
-  dependencies: ReportAppUiErrorDependencies = defaultReportAppUiErrorDependencies
+  }
 ) {
   const expected = context?.expected ?? false;
   const shouldReport = shouldReportAppUiError(error, expected);
@@ -578,7 +556,7 @@ function reportAppUiError(
     const safePostgresContext = buildSafePostgresContext(error.postgres);
     const captureTarget = reportCaptureTarget(error);
 
-    dependencies.captureException(captureTarget, {
+    captureException(captureTarget, {
       extras: {
         app_ui_error_details_count: error.details.length,
         app_ui_error_postgres: safePostgresContext,
@@ -586,7 +564,7 @@ function reportAppUiError(
       tags: buildReportTags(error, context?.tags),
     });
 
-    dependencies.logger.error(reportMessage(error), {
+    logger.error(reportMessage(error), {
       code: error.codeLabel,
       postgres: safePostgresContext,
       reason: error.connectReason,
@@ -596,13 +574,11 @@ function reportAppUiError(
   }
 
   if (shouldSurface) {
-    dependencies.toast.error(error.title, buildToastOptions(error));
+    toast.error(error.title, buildToastOptions(error));
   }
 }
 
-function getBlockingRoutePath(
-  blockingReason: BlockingErrorReason | null
-): "/access-denied" | "/setup" | null {
+function getBlockingRoutePath(blockingReason: BlockingErrorReason | null) {
   if (blockingReason === "setup_required") {
     return "/setup";
   }

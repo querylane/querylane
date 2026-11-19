@@ -4,7 +4,6 @@ import type { ChartSeries } from "@/components/charts/chart-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** A legend is the dependable identity channel for two or more series. */
 const MIN_SERIES_FOR_LEGEND = 2;
 
 function ChartLegend({

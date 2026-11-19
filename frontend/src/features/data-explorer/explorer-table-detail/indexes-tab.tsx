@@ -319,7 +319,7 @@ function buildIndexInventoryColumns({
 }: {
   schemaName: string;
   tableName: string;
-}): DataTableColumnDef<TableIndex>[] {
+}) {
   return [
     {
       accessorFn: (row) => row.indexName,
@@ -395,7 +395,7 @@ function buildIndexInventoryColumns({
         cellClassName: "w-10 text-right",
       },
     },
-  ];
+  ] satisfies DataTableColumnDef<TableIndex>[];
 }
 function IndexMethodBadge({ method }: { method: string }) {
   const methodMeta = describePostgresIndexMethod(method);

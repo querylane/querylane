@@ -271,7 +271,7 @@ const serializedMockResponses = new Map(
   )
 );
 
-function findLighthouseMockBody(url: string): string | undefined {
+function findLighthouseMockBody(url: string) {
   let pathname: string;
   try {
     ({ pathname } = new URL(url));
@@ -295,7 +295,7 @@ function findLighthouseMockBody(url: string): string | undefined {
   return serializedMockResponses.get(`${serviceName}/${methodName}`);
 }
 
-function createLighthouseMockResponse(request: Request): Response | undefined {
+function createLighthouseMockResponse(request: Request) {
   if (request.method !== "POST") {
     return undefined;
   }
@@ -308,7 +308,7 @@ function createLighthouseMockResponse(request: Request): Response | undefined {
   return new Response(body, { headers: JSON_HEADERS });
 }
 
-function contentTypeFor(filePath: string): string {
+function contentTypeFor(filePath: string) {
   if (filePath.endsWith(".html")) {
     return "text/html; charset=utf-8";
   }
@@ -333,7 +333,7 @@ function contentTypeFor(filePath: string): string {
   return "application/octet-stream";
 }
 
-function resolveDistFilePath(distDir: string, pathname: string): string | null {
+function resolveDistFilePath(distDir: string, pathname: string) {
   const decodedPathname = decodeURIComponent(pathname);
   const normalizedPathname = normalize(decodedPathname).replace(
     LEADING_SLASH_PATTERN,
@@ -373,7 +373,7 @@ function isCompressibleContentType(contentType: string) {
   );
 }
 
-function createStaticBodyCacheEntry(filePath: string): StaticBodyCacheEntry {
+function createStaticBodyCacheEntry(filePath: string) {
   const sourceBody = readFileSync(filePath);
   if (!isCompressibleContentType(contentTypeFor(filePath))) {
     return { sourceBody };
@@ -423,7 +423,7 @@ function encodedStaticBody({
   return { body: entry.sourceBody, contentEncoding: null };
 }
 
-function responseBodyInit(body: Buffer): ArrayBuffer {
+function responseBodyInit(body: Buffer) {
   const copy = new Uint8Array(body.byteLength);
   copy.set(body);
   return copy.buffer;
@@ -466,10 +466,7 @@ function createStaticFileResponse({
   );
 }
 
-function createStaticResponse(
-  request: Request,
-  distDir = DEFAULT_DIST_DIR
-): Response | undefined {
+function createStaticResponse(request: Request, distDir = DEFAULT_DIST_DIR) {
   if (!(request.method === "GET" || request.method === "HEAD")) {
     return undefined;
   }
@@ -500,10 +497,7 @@ function createStaticResponse(
   });
 }
 
-function handleLighthouseRequest(
-  request: Request,
-  distDir = DEFAULT_DIST_DIR
-): Response {
+function handleLighthouseRequest(request: Request, distDir = DEFAULT_DIST_DIR) {
   const mockResponse = createLighthouseMockResponse(request);
   if (mockResponse) {
     return mockResponse;
@@ -555,7 +549,7 @@ function readPort() {
   return Number.isFinite(port) ? port : DEFAULT_PORT;
 }
 
-function headersFromIncoming(headers: IncomingHttpHeaders): Headers {
+function headersFromIncoming(headers: IncomingHttpHeaders) {
   const requestHeaders = new Headers();
   for (const [key, value] of Object.entries(headers)) {
     if (Array.isArray(value)) {

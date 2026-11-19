@@ -52,7 +52,7 @@ const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
 function selectedFacetValues<Value extends string>(
   options: readonly { value: Value }[],
   selected: readonly string[]
-): Value[] {
+) {
   const selectedValues = new Set(selected);
   return options.flatMap((option) =>
     selectedValues.has(option.value) ? [option.value] : []

@@ -9,14 +9,14 @@ import type { AppUiError } from "@/lib/ui-error-types";
 import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useBlockingErrorStore } from "@/stores/blocking-error-store";
 
-function buildAccessDeniedError(error: AppUiError): AppUiError {
+function buildAccessDeniedError(error: AppUiError) {
   if (error.blockingReason === "unauthenticated") {
     return {
       ...error,
       message:
         "Your session is not authorized for this screen right now. Retry after restoring access.",
       title: "Authentication required",
-    };
+    } satisfies AppUiError;
   }
   if (error.blockingReason === "permission_denied") {
     return {
@@ -24,14 +24,14 @@ function buildAccessDeniedError(error: AppUiError): AppUiError {
       message:
         "Your account does not have permission to continue here. Retry after your access is updated.",
       title: "Access denied",
-    };
+    } satisfies AppUiError;
   }
   return {
     ...error,
     message:
       "Querylane blocked navigation because access could not be verified for this page.",
     title: "Access denied",
-  };
+  } satisfies AppUiError;
 }
 export function AccessDeniedRoutePage() {
   const navigate = useNavigate({ from: "/access-denied" });

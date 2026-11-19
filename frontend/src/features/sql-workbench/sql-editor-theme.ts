@@ -2,12 +2,6 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 
-/**
- * CodeMirror theme wired to Querylane's design tokens so the editor follows
- * light/dark mode without a separate stylesheet swap. Token colors reuse the
- * chart palette, which is already tuned for both themes.
- */
-
 const editorTheme = EditorView.theme({
   "&": {
     backgroundColor: "var(--background)",
@@ -95,7 +89,6 @@ const editorTheme = EditorView.theme({
   ".cm-tooltip .cm-tooltip-arrow:before": {
     borderTopColor: "var(--border)",
   },
-  // Completion popup: icon, label, then a muted right-aligned detail per row.
   ".cm-tooltip-autocomplete": {
     "& > ul": {
       fontFamily: "var(--font-mono)",
@@ -149,8 +142,6 @@ const editorTheme = EditorView.theme({
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  // Diagnostics: a wavy underline under the offending token and a tooltip
-  // with PostgreSQL's message, detail and hint.
   ".cm-lintRange-error": {
     backgroundImage: "none",
     textDecoration: "underline wavy var(--destructive)",

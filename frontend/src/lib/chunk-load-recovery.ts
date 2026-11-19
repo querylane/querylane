@@ -17,36 +17,36 @@ interface ReloadChunkLoadErrorOptions extends ChunkLoadReloadAttemptOptions {
   reloadPage: () => void;
 }
 
-function readErrorMessage(error: unknown): string {
+function readErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function isTanStackModuleNotFoundError(error: unknown): boolean {
+function isTanStackModuleNotFoundError(error: unknown) {
   const message = readErrorMessage(error);
   return TANSTACK_MODULE_NOT_FOUND_ERROR_PREFIXES.some((prefix) =>
     message.startsWith(prefix)
   );
 }
 
-function isRspackChunkLoadError(error: unknown): boolean {
+function isRspackChunkLoadError(error: unknown) {
   const message = readErrorMessage(error);
   return RSPACK_CHUNK_LOAD_ERROR_PATTERNS.some((pattern) =>
     pattern.test(message)
   );
 }
 
-function isChunkLoadError(error: unknown): boolean {
+function isChunkLoadError(error: unknown) {
   return isTanStackModuleNotFoundError(error) || isRspackChunkLoadError(error);
 }
 
-function getChunkLoadReloadStorageKey(error: unknown): string {
+function getChunkLoadReloadStorageKey(error: unknown) {
   return `${TANSTACK_ROUTER_RELOAD_KEY_PREFIX}${readErrorMessage(error)}`;
 }
 
 function hasChunkLoadReloadAttempt({
   error,
   storage,
-}: ChunkLoadReloadAttemptOptions): boolean {
+}: ChunkLoadReloadAttemptOptions) {
   try {
     return storage.getItem(getChunkLoadReloadStorageKey(error)) === "1";
   } catch {
@@ -57,7 +57,7 @@ function hasChunkLoadReloadAttempt({
 function reserveChunkLoadReloadAttempt({
   error,
   storage,
-}: ChunkLoadReloadAttemptOptions): boolean {
+}: ChunkLoadReloadAttemptOptions) {
   try {
     if (hasChunkLoadReloadAttempt({ error, storage })) {
       return false;
@@ -69,25 +69,23 @@ function reserveChunkLoadReloadAttempt({
   }
 }
 
-function getChunkLoadSessionStorage(): Storage | undefined {
+function getChunkLoadSessionStorage() {
   if (typeof globalThis === "undefined") {
     return undefined;
   }
 
-  let storage: Storage | undefined;
   try {
-    storage = globalThis.sessionStorage;
+    return globalThis.sessionStorage;
   } catch {
-    // Session storage can be unavailable in privacy-restricted contexts.
+    return undefined;
   }
-  return storage;
 }
 
 function reloadChunkLoadErrorOnce({
   error,
   reloadPage,
   storage,
-}: ReloadChunkLoadErrorOptions): boolean {
+}: ReloadChunkLoadErrorOptions) {
   if (!reserveChunkLoadReloadAttempt({ error, storage })) {
     return false;
   }

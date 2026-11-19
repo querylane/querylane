@@ -349,7 +349,7 @@ function ForeignKeyDataCell({
   }, []);
 
   useEffect(
-    function cancelPendingOpenOnOutsidePointerDown(): (() => void) | undefined {
+    function cancelPendingOpenOnOutsidePointerDown() {
       if (!isAwaitingOpen) {
         return undefined;
       }
@@ -364,9 +364,9 @@ function ForeignKeyDataCell({
         setIsAwaitingOpen(false);
       }
       document.addEventListener("pointerdown", cancelIfOutsideTrigger);
-      return () => {
+      return (() => {
         document.removeEventListener("pointerdown", cancelIfOutsideTrigger);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [isAwaitingOpen]
   );

@@ -105,8 +105,6 @@ function RoleHero({
   );
 }
 
-// The full role-detail render. RoleDetailContent computes the view model and
-// hands it here, keeping the data wiring and the markup in separate units.
 function RoleDetailView(props: RoleDetailViewProps) {
   const {
     builtinInfo,

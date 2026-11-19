@@ -8,7 +8,7 @@ const defaultBuiltAtFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
-function normalizeMetadataValue(value: string | undefined): string {
+function normalizeMetadataValue(value: string | undefined) {
   const trimmed = value?.trim();
   if (!isNonEmptyString(trimmed)) {
     return UNKNOWN_METADATA_VALUE;
@@ -19,7 +19,7 @@ function normalizeMetadataValue(value: string | undefined): string {
     : trimmed;
 }
 
-function normalizeVersion(value: string): string {
+function normalizeVersion(value: string) {
   if (value === UNKNOWN_METADATA_VALUE) {
     return value;
   }
@@ -39,7 +39,7 @@ export function resolveQuerylaneAboutMetadata(
   fallbackVersion: string,
   formatBuiltAt: (date: Date) => string = (date) =>
     defaultBuiltAtFormatter.format(date)
-): QuerylaneAboutMetadata {
+) {
   const versionFromBuildInfo = normalizeMetadataValue(buildInfo?.version);
   const fallback = normalizeMetadataValue(fallbackVersion);
   const resolvedVersion =
@@ -61,5 +61,5 @@ export function resolveQuerylaneAboutMetadata(
     gitBranch: normalizeMetadataValue(buildInfo?.gitBranch),
     gitCommit: normalizeMetadataValue(buildInfo?.gitCommit),
     version: normalizeVersion(resolvedVersion),
-  };
+  } satisfies QuerylaneAboutMetadata;
 }

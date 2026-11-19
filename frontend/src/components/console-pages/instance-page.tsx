@@ -134,7 +134,6 @@ interface OverviewLiveData {
   activityPending: boolean;
   activityRefreshing: boolean;
   activityUpdatedAt: number;
-  /** The server's max_connections, drawn as a threshold on the chart. */
   connectionsMax: number | undefined;
   handleRangeChange: (rangeHours: number) => void;
   health: InstanceHealth | undefined;
@@ -143,10 +142,8 @@ interface OverviewLiveData {
   metricsError: boolean;
   metricsPending: boolean;
   metricsRange: MetricRange;
-  /** True while a range switch is showing the previous window's data. */
   metricsRefreshing: boolean;
   metricsResponse: QueryMetricsResponse | undefined;
-  /** The window before metricsResponse's, for the comparison overlay. */
   previousMetricsResponse: QueryMetricsResponse | undefined;
 }
 type DatabaseRow = ReturnType<typeof useDb>["databases"][number];
@@ -204,7 +201,7 @@ function getInstanceDeleteDestination({
   credentialsUnreadable: boolean;
   deleteDisabledReason: string | null;
   instanceCount: number;
-}): "/" | "/new-instance" {
+}) {
   if (
     !credentialsUnreadable ||
     isNonEmptyString(deleteDisabledReason) ||
@@ -226,15 +223,13 @@ function runDeleteNavigationFollowUp(promise: Promise<unknown>) {
 
 const PERCENT_MULTIPLIER = 100;
 
-function getLastRefreshedLabel(lastRefreshedAt: number): string | null {
+function getLastRefreshedLabel(lastRefreshedAt: number) {
   return lastRefreshedAt > 0
     ? `Last refreshed ${TIME_FORMATTER.format(new Date(lastRefreshedAt))}`
     : null;
 }
 
-function getConnectionPct(
-  overview: InstanceOverview | undefined
-): number | undefined {
+function getConnectionPct(overview: InstanceOverview | undefined) {
   if (!(overview?.connections && overview.connections.maxConnections > 0)) {
     return undefined;
   }
@@ -249,9 +244,9 @@ function getConnectionPct(
 function getVisiblePartialErrors(
   isConnected: boolean,
   partialErrors: Status[] | undefined
-): Status[] {
+) {
   if (!isConnected) {
-    return [];
+    return [] satisfies Status[];
   }
 
   return partialErrors ?? [];
@@ -276,9 +271,7 @@ interface InstancePageHeaderDatabasesState {
   isUnavailable: boolean;
 }
 
-function connectionsCaption(
-  overview: InstanceOverview | undefined
-): string | undefined {
+function connectionsCaption(overview: InstanceOverview | undefined) {
   if (!overview?.connections) {
     return undefined;
   }
@@ -586,8 +579,6 @@ const databaseColumns: DataTableColumnDef<DatabaseRow>[] = [
     },
   },
   {
-    // NUL-join keeps charset primary and collation secondary without creating
-    // a visible combined string in the table body.
     accessorFn: (row) => `${row.characterSet}\u0000${row.collation}`,
     cell: ({ row }) => (
       <DatabaseEncodingValue
@@ -788,9 +779,6 @@ function InstanceOverviewContent({
   return (
     <>
       {connectionStatus === "connected" ? (
-        // Fixed side-column width: the connections card keeps one internal
-        // layout at every two-column viewport instead of shrinking
-        // fractionally; below xl it stacks full-width.
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <InstanceMetricsPanel
             connectionsLimit={liveData.connectionsMax}
@@ -880,8 +868,6 @@ function refreshInstancePageData({
     refetchInstancePageQuery(overviewQuery, "console.instance.overview");
   }
   if (showOverviewLiveData) {
-    // Advance the metrics window to "now" — a plain refetch would re-query
-    // the identical frozen interval and charts would never move forward.
     setMetricsAnchorMs(quantizedMetricsAnchor());
     refetchInstancePageQuery(metricsQuery, "console.instance.metrics");
     refetchInstancePageQuery(previousMetricsQuery, "console.instance.metrics");
@@ -923,7 +909,7 @@ async function saveInstanceConfiguration(
     setFormNotice: Dispatch<SetStateAction<FormNotice>>;
     updateInstanceMutation: ReturnType<typeof useUpdateInstanceMutation>;
   }
-): Promise<unknown> {
+) {
   if (!instance || isConfigManaged) {
     return undefined;
   }
@@ -939,8 +925,6 @@ async function saveInstanceConfiguration(
     });
     toast.success("Instance configuration saved");
     await instanceQuery.refetch();
-    // Remount the configuration form from the refetched instance so the
-    // redacted password returns to blank and dirty state clears.
     setConfigFormResetKey((key) => key + 1);
     if (isConnected) {
       handleAsyncAction(() => overviewQuery.refetch())();
@@ -1031,7 +1015,7 @@ function getConnectedOverview({
 }: {
   isConnected: boolean;
   overview: InstanceOverview | undefined;
-}): InstanceOverview | undefined {
+}) {
   if (!isConnected) {
     return undefined;
   }
@@ -1054,7 +1038,7 @@ function getSettledMetricsResponse({
 }: {
   data: QueryMetricsResponse | undefined;
   isPlaceholderData: boolean;
-}): QueryMetricsResponse | undefined {
+}) {
   if (isPlaceholderData) {
     return undefined;
   }
@@ -1134,12 +1118,9 @@ function BackendInstancePage({
     isConnected,
     section,
   });
-  // Metrics range is local to this mounted instance page.
   const [metricsRangeHours, setMetricsRangeHours] = useState(
     DEFAULT_METRIC_RANGE.hours
   );
-  // One shared anchor for both metrics windows (they must tile exactly);
-  // advanced on explicit refresh so the queried window moves forward.
   const [metricsAnchorMs, setMetricsAnchorMs] = useState(
     quantizedMetricsAnchor
   );
@@ -1149,8 +1130,6 @@ function BackendInstancePage({
     rangeHours: metricsRangeHours,
     options: {
       enabled: liveDataVisibility.overview,
-      // Hold the previous window's charts (dimmed) while a range switch loads,
-      // instead of flashing the skeleton and jumping layout.
       placeholderData: (previous) => previous,
       refetchOnWindowFocus: false,
     },
@@ -1184,8 +1163,6 @@ function BackendInstancePage({
     }
   );
   const configuredDatabase = instance?.config?.database ?? "";
-  // Full (unfiltered) inventory for the configured database: the health
-  // facts header shows the installed extension count.
   const extensionsQuery = useListAllExtensionsQuery(
     extensionsForDatabaseQueryInput({
       databaseId: configuredDatabase,
@@ -1366,9 +1343,6 @@ function buildInstanceLiveData({
     metricsRange: metricRangeByHours(metricsRangeHours),
     metricsRefreshing: metricsQuery.isPlaceholderData,
     metricsResponse: metricsQuery.data,
-    // While a range switch still shows the OLD window as placeholder
-    // data, suppress the overlay: shifting the old range's points by
-    // the new range's window length would draw it at wrong times.
     previousMetricsResponse: getSettledMetricsResponse({
       data: previousMetricsQuery.data,
       isPlaceholderData: previousMetricsQuery.isPlaceholderData,
@@ -1527,9 +1501,7 @@ function renderLoadedInstancePageContent({
             </p>
           </div>
         ) : null}
-        {/* The activity view brings its own heading + live stats and refreshes
-            on its own cadence, so the shared instance header (and its KPI bar)
-            would just duplicate that chrome. */}
+
         {section === "activity" ? null : (
           <InstancePageHeader
             connectionStatus={connectionStatus}

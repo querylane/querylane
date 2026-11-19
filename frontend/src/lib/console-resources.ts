@@ -1,9 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import {
-  type Timestamp,
-  TimestampSchema,
-  timestampDate,
-} from "@bufbuild/protobuf/wkt";
+import { TimestampSchema, timestampDate } from "@bufbuild/protobuf/wkt";
 import { isNonEmptyString } from "@/lib/value-guards";
 import { Instance_ConnectionState } from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
@@ -19,8 +15,6 @@ interface QualifiedRelationName {
   schema: string;
 }
 
-// Pinned to en-US like the metric formatters in lib/metrics.ts — a mixed
-// locale would render "1,5 KB" storage next to "1.5" axis ticks.
 const byteFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
@@ -35,29 +29,26 @@ const TABLE_RESOURCE_NAME_PATTERN =
 const RELATION_RESOURCE_NAME_PATTERN =
   /^instances\/[^/]+\/databases\/[^/]+\/schemas\/(?<capture1>[^/]+)\/(?:tables|views)\/(?<capture2>[^/]+)$/u;
 
-// Keep frontend resource names in lockstep with backend/resource/internal.go:
-// resource-name IDs only escape the path separator and escape character.
-// Non-ASCII IDs stay readable on the wire.
-function encodeResourceSegment(segment: string): string {
+function encodeResourceSegment(segment: string) {
   return segment.replaceAll("%", "%25").replaceAll("/", "%2F");
 }
 
-function decodeResourceSegment(segment: string): string {
+function decodeResourceSegment(segment: string) {
   return segment.replaceAll("%2F", "/").replaceAll("%25", "%");
 }
 
-function splitResourceName(name: string): string[] {
+function splitResourceName(name: string) {
   return name.split("/").filter((segment) => segment.length > 0);
 }
 
-function toTimestamp(value: { seconds?: bigint; nanos?: number }): Timestamp {
+function toTimestamp(value: { seconds?: bigint; nanos?: number }) {
   return create(TimestampSchema, {
     nanos: value.nanos ?? 0,
     seconds: value.seconds ?? 0n,
   });
 }
 
-function byteUnitLabel(units: readonly string[], index: number): string {
+function byteUnitLabel(units: readonly string[], index: number) {
   const unit = units[index];
   if (unit === undefined) {
     throw new RangeError("Invalid byte unit index");
@@ -65,23 +56,15 @@ function byteUnitLabel(units: readonly string[], index: number): string {
   return unit;
 }
 
-export function buildInstanceName(instanceId: string): string {
+export function buildInstanceName(instanceId: string) {
   return `instances/${encodeResourceSegment(instanceId)}`;
 }
 
-export function buildDatabaseName(
-  instanceId: string,
-  databaseId: string
-): string {
+export function buildDatabaseName(instanceId: string, databaseId: string) {
   return `${buildInstanceName(instanceId)}/databases/${encodeResourceSegment(databaseId)}`;
 }
 
-// Unlike the sibling builders, roleId is NOT percent-encoded: it is already a
-// base64url id (see backend resource.EncodeRoleID — alphabet [A-Za-z0-9_-], so
-// URL-safe). The backend decodes this segment with base64, not decodeURIComponent,
-// and parseResourceLeafId/roleIdOf round-trip it verbatim — re-encoding it here
-// would be wrong.
-export function buildRoleName(instanceId: string, roleId: string): string {
+export function buildRoleName(instanceId: string, roleId: string) {
   return `${buildInstanceName(instanceId)}/roles/${roleId}`;
 }
 
@@ -89,7 +72,7 @@ export function buildSchemaName(
   instanceId: string,
   databaseId: string,
   schemaId: string
-): string {
+) {
   return `${buildDatabaseName(instanceId, databaseId)}/schemas/${encodeResourceSegment(schemaId)}`;
 }
 
@@ -103,7 +86,7 @@ export function buildTableName({
   databaseId: string;
   schemaId: string;
   tableId: string;
-}): string {
+}) {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/tables/${encodeResourceSegment(tableId)}`;
 }
 
@@ -117,16 +100,16 @@ export function buildViewName({
   databaseId: string;
   schemaId: string;
   viewId: string;
-}): string {
+}) {
   return `${buildSchemaName(instanceId, databaseId, schemaId)}/views/${encodeResourceSegment(viewId)}`;
 }
 
-export function parseResourceLeafId(name: string): string {
+export function parseResourceLeafId(name: string) {
   const segments = splitResourceName(name);
   return decodeResourceSegment(segments.at(-1) ?? name);
 }
 
-export function parseTableQualifiedName(name: string): QualifiedTableName {
+export function parseTableQualifiedName(name: string) {
   const parsed = tryParseTableQualifiedName(name);
   if (!parsed) {
     throw new Error(`invalid table resource name: ${name}`);
@@ -134,9 +117,7 @@ export function parseTableQualifiedName(name: string): QualifiedTableName {
   return parsed;
 }
 
-export function parseRelationQualifiedName(
-  name: string
-): QualifiedRelationName {
+export function parseRelationQualifiedName(name: string) {
   const parsed = tryParseRelationQualifiedName(name);
   if (!parsed) {
     throw new Error(`invalid table or view resource name: ${name}`);
@@ -144,9 +125,7 @@ export function parseRelationQualifiedName(
   return parsed;
 }
 
-export function tryParseRelationQualifiedName(
-  name: string
-): QualifiedRelationName | undefined {
+export function tryParseRelationQualifiedName(name: string) {
   const match = RELATION_RESOURCE_NAME_PATTERN.exec(name);
   if (
     !(
@@ -160,12 +139,10 @@ export function tryParseRelationQualifiedName(
   return {
     relation: decodeResourceSegment(match[2]),
     schema: decodeResourceSegment(match[1]),
-  };
+  } satisfies QualifiedRelationName | undefined;
 }
 
-export function tryParseTableQualifiedName(
-  name: string
-): QualifiedTableName | undefined {
+export function tryParseTableQualifiedName(name: string) {
   const match = TABLE_RESOURCE_NAME_PATTERN.exec(name);
   if (
     !(
@@ -179,12 +156,12 @@ export function tryParseTableQualifiedName(
   return {
     schema: decodeResourceSegment(match[1]),
     table: decodeResourceSegment(match[2]),
-  };
+  } satisfies QualifiedTableName | undefined;
 }
 
 export function formatBytes(
   sizeBytes: bigint | number | string | null | undefined
-): string {
+) {
   if (
     sizeBytes === null ||
     sizeBytes === undefined ||
@@ -208,9 +185,6 @@ export function formatBytes(
     unitIndex += 1;
   }
 
-  // Round to the displayed precision FIRST, then check for boundary overshoot:
-  // 1048575 B scales to 1023.999 KB, which display-rounds to "1,024 KB" — roll
-  // it into the next unit instead (the filesize.js applyRounding technique).
   let rounded =
     unitIndex === 0
       ? Math.round(value)
@@ -225,7 +199,7 @@ export function formatBytes(
 
 export function normalizeEstimatedRowCount(
   value: bigint | number | string | null | undefined
-): number {
+) {
   if (value === null || value === undefined) {
     return 0;
   }
@@ -238,9 +212,7 @@ export function normalizeEstimatedRowCount(
   return numeric;
 }
 
-export function toConnectionStatus(
-  state: Instance_ConnectionState
-): DbConnectionStatus {
+export function toConnectionStatus(state: Instance_ConnectionState) {
   if (state === Instance_ConnectionState.ACTIVE) {
     return "connected";
   }
@@ -254,7 +226,7 @@ export function toConnectionStatus(
 
 export function formatTimestampLabel(
   timestamp: { seconds?: bigint; nanos?: number } | null | undefined
-): string {
+) {
   if (!timestamp) {
     return "—";
   }
@@ -268,7 +240,7 @@ export function formatTimestampLabel(
 
 export function formatUptime(
   startedAt: { seconds?: bigint; nanos?: number } | null | undefined
-): string {
+) {
   if (!startedAt) {
     return "—";
   }

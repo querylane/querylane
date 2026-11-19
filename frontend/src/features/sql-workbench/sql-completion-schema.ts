@@ -29,16 +29,10 @@ interface ReferencedRelation {
 type RelationIndex = ReadonlyMap<string, ReadonlySet<string>>;
 
 const MAX_REFERENCED_RELATIONS = 12;
-// Ranking among equally good matches: what you are most likely reaching for
-// in a given position wins. lang-sql gives keywords -1.
 const COLUMN_BOOST = 3;
 const RELATION_BOOST = 2;
 const SCHEMA_BOOST = 1;
-// Typing "." while a schema or relation is highlighted accepts it and keeps
-// going, so `cr.cus` flows into `crm.customer` without pressing Enter.
 const MEMBER_ACCESS = ["."];
-// Keywords a relation name follows. Text after one up to the cursor is a
-// relation reference in progress: keywords are noise there.
 const RELATION_KEYWORDS = ["from", "join", "update", "into", "only"].join("|");
 const RELATION_POSITION_PATTERN = new RegExp(
   `\\b(?:${RELATION_KEYWORDS})\\s+[\\w$".]*$`,
@@ -56,14 +50,14 @@ const RESERVED_AFTER_KEYWORD = new Set([
   "values",
 ]);
 
-function unquoteIdentifier(identifier: string): string {
+function unquoteIdentifier(identifier: string) {
   if (identifier.startsWith('"') && identifier.endsWith('"')) {
     return identifier.slice(1, -1).replaceAll('""', '"');
   }
   return identifier.toLowerCase();
 }
 
-function indexRelations(relations: readonly SqlRelation[]): RelationIndex {
+function indexRelations(relations: readonly SqlRelation[]) {
   const bySchema = new Map<string, Set<string>>();
   for (const relation of relations) {
     const names = bySchema.get(relation.schema) ?? new Set<string>();
@@ -73,11 +67,7 @@ function indexRelations(relations: readonly SqlRelation[]): RelationIndex {
   return bySchema;
 }
 
-function resolveQualified(
-  index: RelationIndex,
-  schema: string,
-  name: string
-): ReferencedRelation | null {
+function resolveQualified(index: RelationIndex, schema: string, name: string) {
   return index.get(schema)?.has(name) === true ? { name, schema } : null;
 }
 
@@ -85,13 +75,13 @@ function resolveUnqualified(
   index: RelationIndex,
   name: string,
   defaultSchema: string
-): ReferencedRelation | null {
+) {
   if (index.get(defaultSchema)?.has(name) === true) {
-    return { name, schema: defaultSchema };
+    return { name, schema: defaultSchema } satisfies ReferencedRelation | null;
   }
   for (const [schema, names] of index) {
     if (names.has(name)) {
-      return { name, schema };
+      return { name, schema } satisfies ReferencedRelation | null;
     }
   }
   return null;
@@ -101,7 +91,7 @@ function resolveReference(
   index: RelationIndex,
   match: RegExpExecArray,
   defaultSchema: string
-): ReferencedRelation | null {
+) {
   const [, first = "", second] = match;
   const firstName = unquoteIdentifier(first);
   if (isNonEmptyString(second)) {
@@ -123,7 +113,7 @@ function extractReferencedRelations(
   text: string,
   relations: readonly SqlRelation[],
   defaultSchema: string = DEFAULT_SCHEMA
-): ReferencedRelation[] {
+) {
   const index = indexRelations(relations);
   const found = new Map<string, ReferencedRelation>();
   for (const match of text.matchAll(RELATION_REFERENCE_PATTERN)) {
@@ -135,36 +125,34 @@ function extractReferencedRelations(
       break;
     }
   }
-  return [...found.values()];
+  return [...found.values()] satisfies ReferencedRelation[];
 }
 
 /**
  * True when the text before the cursor is a relation reference in progress,
  * e.g. `FROM cr` or `JOIN crm.`; false once an alias or a space follows.
  */
-function isRelationPosition(textBeforeCursor: string): boolean {
+function isRelationPosition(textBeforeCursor: string) {
   return RELATION_POSITION_PATTERN.test(textBeforeCursor);
 }
 
-// Completion `type` values name the glyph in sql-completion-icons.ts; the
-// detail is the secondary, right-aligned text (data type, object kind).
-function columnCompletion(column: CompletionColumn): Completion {
+function columnCompletion(column: CompletionColumn) {
   return {
     boost: COLUMN_BOOST,
     detail: column.type,
     label: column.name,
     type: column.isPrimaryKey ? "primary-key" : "column",
-  };
+  } satisfies Completion;
 }
 
-function relationType(relation: SqlRelation): string {
+function relationType(relation: SqlRelation) {
   if (relation.kind === "table") {
     return "table";
   }
   return relation.isMaterialized ? "materialized-view" : "view";
 }
 
-function relationCompletion(relation: SqlRelation): Completion {
+function relationCompletion(relation: SqlRelation) {
   const type = relationType(relation);
   return {
     boost: RELATION_BOOST,
@@ -172,7 +160,7 @@ function relationCompletion(relation: SqlRelation): Completion {
     detail: type.replace("-", " "),
     label: relation.name,
     type,
-  };
+  } satisfies Completion;
 }
 
 /**

@@ -54,12 +54,7 @@ const DEFAULT_WIZARD_SESSION_STATE: OnboardingWizardSessionState = {
   watchNotice: null,
 };
 
-function getConfigurePhaseForMethod(
-  method: ConfigMethod | null
-): Extract<
-  WizardPhase,
-  "configure_embedded" | "configure_ui" | "configure_yaml" | "method_selection"
-> {
+function getConfigurePhaseForMethod(method: ConfigMethod | null) {
   if (method === "ui_configured") {
     return "configure_ui";
   }
@@ -75,9 +70,7 @@ function getConfigurePhaseForMethod(
   return "method_selection";
 }
 
-function getProgressPhaseForMethod(
-  method: ConfigMethod | null
-): Extract<WizardPhase, "progress_running" | "progress_waiting_for_config"> {
+function getProgressPhaseForMethod(method: ConfigMethod | null) {
   if (method === "manual_yaml") {
     return "progress_waiting_for_config";
   }
@@ -101,7 +94,7 @@ function upsertProgressEvent(
   return updated;
 }
 
-export function createOnboardingWizardStore() {
+function createOnboardingWizardStore() {
   return create<OnboardingWizardStore>()((set, get) => ({
     ...DEFAULT_WIZARD_SESSION_STATE,
 
@@ -198,4 +191,3 @@ export function createOnboardingWizardStore() {
 }
 
 export const useOnboardingWizardStore = createOnboardingWizardStore();
-export { DEFAULT_WIZARD_SESSION_STATE };

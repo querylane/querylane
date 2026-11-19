@@ -78,7 +78,7 @@ function ResultsPlaceholder({
   );
 }
 
-function elapsedMs(execution: SqlExecution): number {
+function elapsedMs(execution: SqlExecution) {
   if (execution.stats) {
     return execution.stats.latencyMs;
   }
@@ -106,8 +106,6 @@ function RunningStatus({ execution }: { execution: SqlExecution }) {
 
 function SuccessStatus({ execution }: { execution: SqlExecution }) {
   const rowCount = execution.stats?.rowCount ?? execution.rows.length;
-  // Statements without a result set are summarised by their command tag
-  // ("SET", "DO") rather than a meaningless "0 rows".
   const isCommand = execution.columns.length === 0;
   const commandTag = execution.stats?.commandTag;
   return (
@@ -166,8 +164,6 @@ function ExecutionStatusLine({ execution }: { execution: SqlExecution }) {
 }
 
 function exportExecution(execution: SqlExecution, exportFormat: ExportFormat) {
-  // Cells are keyed by position-unique keys, not names: `SELECT a.id, b.id`
-  // must export both values.
   const keys = resultColumnKeys(execution.columns);
   const result = buildExport({
     columns: execution.columns,
@@ -262,9 +258,6 @@ function ExecutionError({
   error: AppUiError;
   onRetry: () => Promise<unknown> | undefined;
 }) {
-  // A rejected statement is the user's SQL to fix: re-running it unchanged
-  // can only fail again, and it is not a Querylane bug (the details dialog
-  // still offers a report for edge cases).
   const retryable = canRetrySqlExecution(error);
   return (
     <div className="flex-1 overflow-auto p-4">
@@ -342,10 +335,7 @@ function ResultsBody({
   );
 }
 
-function keyedNotices(notices: string[]): {
-  key: string;
-  text: string;
-}[] {
+function keyedNotices(notices: string[]) {
   const seen = new Map<string, number>();
   return notices.map((text) => {
     const occurrence = seen.get(text) ?? 0;
@@ -503,9 +493,7 @@ function ResultsToolbar({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {/* The Run status and export describe the Results tab. The Plan tab
-            has its own header for the EXPLAIN that produced it, so showing
-            the last Run's status there would mix two operations. */}
+
       <div className="flex items-center gap-3 pr-1 text-xs">
         {execution && activeTab !== "plan" ? (
           <ExecutionStatusLine execution={execution} />
@@ -543,9 +531,6 @@ function SqlResultsPane({
   return (
     <section
       aria-label="Query output"
-      // h-full: the resizable panel's content box is a plain block, so without
-      // an explicit height this section grows to the grid's full row height.
-      // That defeats virtualization and scrolls the tab strip and header away.
       className="flex h-full min-h-0 flex-1 flex-col bg-background"
     >
       <ResultsToolbar

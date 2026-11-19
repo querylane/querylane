@@ -6,7 +6,7 @@ React + TypeScript app bundled with Rsbuild.
 
 - Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
-- Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
+- Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See [browser and visual regression](docs/testing/browser-visual-regression.md) and [Landmines test policy](docs/testing/landmines.md).
 - `react-doctor` runs lint/dead-code checks.
 
 ## Scripts
@@ -22,7 +22,7 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run doctor:full` - run React Doctor against the whole frontend
 - `bun run doctor:audit` - run full React Doctor with inline suppressions ignored
 - `bun run test:unit` - run unit tests with Rstest and happy-dom
-- `bun run test:integration` - run integration tests with Rstest and happy-dom
+- `bun run test:integration` - run integration tests with Rstest in happy-dom and Node
 - `bun run test:unit:watch` - run unit tests in Rstest watch mode
 - `bun run test:integration:watch` - run integration tests in Rstest watch mode
 - `bun run test:browser` - run Rstest browser behavior tests in Chromium (light and dark)
@@ -31,8 +31,8 @@ React + TypeScript app bundled with Rsbuild.
 - `bun run test:visual:update` - regenerate Linux visual baselines in the Playwright container
 - `bun run test:accessibility` - run dedicated Playwright accessibility checks with axe-core
 - `bun run perf:lighthouse` - build and generate local Lighthouse HTML/JSON reports
-- `bun run lint` - run canonical Biome checks
-- `bun run lint:changed` - run canonical Biome checks only on changed frontend files
+- `bun run lint` - run the reviewed Biome, typed Oxlint, and suppression checks
+- `bun run lint:changed` - run the reviewed Biome, typed Oxlint, and suppression checks only on changed frontend files
 - `bun run lint:fix` - apply canonical Biome fixes
 
 ## Agent-friendly test output

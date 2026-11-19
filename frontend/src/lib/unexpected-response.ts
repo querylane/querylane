@@ -38,19 +38,11 @@ const REDIRECT_STATUS_MIN = 300;
 const REDIRECT_STATUS_LIMIT = 400;
 const SERVER_ERROR_STATUS_MIN = 500;
 
-/**
- * Permissive prefix match for the Connect protocol content types
- * (application/proto, application/json, and their connect+ streaming
- * variants). If a response plausibly is Connect, we never intervene so real
- * Connect error decoding stays untouched.
- */
 const CONNECT_CONTENT_TYPE_PATTERN =
   /^application\/(?:connect\+)?(?:json|proto)\b/iu;
 const UNARY_JSON_CONTENT_TYPE_PATTERN = /^application\/json\b/iu;
 
-function describeUnexpectedResponse(
-  info: UnexpectedResponseInfo
-): UnexpectedResponsePresentation {
+function describeUnexpectedResponse(info: UnexpectedResponseInfo) {
   switch (info.kind) {
     case "redirect":
       return {
@@ -58,27 +50,27 @@ function describeUnexpectedResponse(
         summary:
           "The request was redirected instead of reaching the Querylane API. A sign-in page or proxy may have intercepted it.",
         title: UNEXPECTED_RESPONSE_TITLE,
-      };
+      } satisfies UnexpectedResponsePresentation;
     case "auth":
       return {
         retryGuidance: RELOAD_SIGN_IN_GUIDANCE,
         summary: `The server returned an access error page (HTTP ${info.status}) instead of an API response. Your session may have expired.`,
         title: UNEXPECTED_RESPONSE_TITLE,
-      };
+      } satisfies UnexpectedResponsePresentation;
     case "server":
       return {
         retryGuidance:
           "Retry in a moment. If the problem persists, check that the Querylane server is running.",
         summary: `The server returned a gateway error page (HTTP ${info.status}) instead of an API response. The Querylane server may be down or restarting.`,
         title: UNEXPECTED_RESPONSE_TITLE,
-      };
+      } satisfies UnexpectedResponsePresentation;
     case "unexpected":
     default:
       return {
         retryGuidance: "Reload the page and try again.",
         summary: `The server returned an unexpected ${info.contentType ?? "unknown"} response (HTTP ${info.status}) instead of an API response. A proxy in front of Querylane may have intercepted the request.`,
         title: UNEXPECTED_RESPONSE_TITLE,
-      };
+      } satisfies UnexpectedResponsePresentation;
   }
 }
 
@@ -92,17 +84,15 @@ class UnexpectedResponseError extends Error {
   }
 }
 
-function isConnectContentType(contentType: string | null): boolean {
+function isConnectContentType(contentType: string | null) {
   return contentType !== null && CONNECT_CONTENT_TYPE_PATTERN.test(contentType);
 }
 
-function isRedirectStatus(status: number): boolean {
+function isRedirectStatus(status: number) {
   return status >= REDIRECT_STATUS_MIN && status < REDIRECT_STATUS_LIMIT;
 }
 
-function classifyUnexpectedResponseKind(
-  status: number
-): UnexpectedResponseKind {
+function classifyUnexpectedResponseKind(status: number) {
   if (status === 0 || isRedirectStatus(status)) {
     return "redirect";
   }
@@ -115,15 +105,13 @@ function classifyUnexpectedResponseKind(
   return "unexpected";
 }
 
-function isRedirectResponse(
-  response: Pick<Response, "status" | "type">
-): boolean {
+function isRedirectResponse(response: Pick<Response, "status" | "type">) {
   return (
     response.type === "opaqueredirect" || isRedirectStatus(response.status)
   );
 }
 
-function sanitizeBodySnippet(text: string): string | null {
+function sanitizeBodySnippet(text: string) {
   const compact = text.replaceAll(/\s+/gu, " ").trim();
   if (!compact) {
     return null;
@@ -131,7 +119,7 @@ function sanitizeBodySnippet(text: string): string | null {
   return compact.slice(0, BODY_SNIPPET_MAX_LENGTH);
 }
 
-async function readBodySnippet(response: Response): Promise<string | null> {
+async function readBodySnippet(response: Response) {
   try {
     return sanitizeBodySnippet(await response.text());
   } catch {
@@ -142,7 +130,7 @@ async function readBodySnippet(response: Response): Promise<string | null> {
 function buildUnexpectedResponseError(
   response: Response,
   bodySnippet: string | null
-): UnexpectedResponseError {
+) {
   return new UnexpectedResponseError({
     bodySnippet,
     contentType: response.headers.get("content-type"),
@@ -152,17 +140,11 @@ function buildUnexpectedResponseError(
   });
 }
 
-function looksLikeJsonObject(text: string): boolean {
+function looksLikeJsonObject(text: string) {
   return text.trimStart().startsWith("{");
 }
 
-/**
- * Non-200 unary responses claiming application/json go through connect's
- * error-JSON decoder; when a proxy lies about the content type and sends HTML,
- * that decoder throws a SyntaxError stacktrace at the user. Sniff the (small)
- * error body via a clone and intercept when it clearly is not JSON.
- */
-async function sniffUnaryErrorBody(response: Response): Promise<Response> {
+async function sniffUnaryErrorBody(response: Response) {
   let bodyText: string;
   try {
     bodyText = await response.clone().text();
@@ -175,7 +157,7 @@ async function sniffUnaryErrorBody(response: Response): Promise<Response> {
   throw buildUnexpectedResponseError(response, sanitizeBodySnippet(bodyText));
 }
 
-async function ensureConnectResponse(response: Response): Promise<Response> {
+async function ensureConnectResponse(response: Response) {
   if (isRedirectResponse(response)) {
     throw buildUnexpectedResponseError(response, null);
   }
@@ -199,10 +181,7 @@ async function ensureConnectResponse(response: Response): Promise<Response> {
   return response;
 }
 
-function defaultBaseFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit
-): Promise<Response> {
+function defaultBaseFetch(input: RequestInfo | URL, init?: RequestInit) {
   return globalThis.fetch(input, init);
 }
 
@@ -215,14 +194,14 @@ function defaultBaseFetch(
  */
 function createUnexpectedResponseFetch(
   baseFetch: typeof globalThis.fetch = defaultBaseFetch
-): typeof globalThis.fetch {
-  return async (input, init) => {
+) {
+  return (async (input, init) => {
     const response = await baseFetch(input, { ...init, redirect: "manual" });
     return await ensureConnectResponse(response);
-  };
+  }) satisfies typeof globalThis.fetch;
 }
 
-function findUnexpectedResponse(error: unknown): UnexpectedResponseInfo | null {
+function findUnexpectedResponse(error: unknown) {
   if (error instanceof UnexpectedResponseError) {
     return error.info;
   }

@@ -30,7 +30,7 @@ function selectRoleGrantsTableSlice(
   tableSlice: RoleGrantsTableSlice | undefined,
   source: RoleGrantsTableSource,
   filter: string | undefined
-): RoleGrantsTableSlice | undefined {
+) {
   return tableSlice?.source === source && tableSlice.filter === filter
     ? tableSlice
     : undefined;

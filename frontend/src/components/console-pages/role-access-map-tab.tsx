@@ -40,11 +40,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type {
-  AccessDefaultPrivilege,
-  AccessGrant,
-  AccessObjectType,
-} from "@/features/database-visualization/access-map-model";
+import type { AccessObjectType } from "@/features/database-visualization/access-map-model";
 import { buildAccessMapModel } from "@/features/database-visualization/access-map-model";
 import {
   useDatabaseVisualizationStore,
@@ -125,7 +121,9 @@ const DEFAULT_ACCESS_MAP_FACET_VISIBILITY = {
   publicGrants: true,
 } satisfies AccessMapFacetVisibility;
 
-function grantObjectType(type: GrantObjectType): AccessObjectType | null {
+const grantObjectType: (type: GrantObjectType) => AccessObjectType | null = (
+  type
+) => {
   switch (type) {
     case GrantObjectType.DATABASE:
       return "database";
@@ -150,11 +148,11 @@ function grantObjectType(type: GrantObjectType): AccessObjectType | null {
     default:
       return assertNever(type);
   }
-}
+};
 
-function defaultObjectType(
+const defaultObjectType: (
   type: DefaultPrivilegeObjectType
-): AccessObjectType | null {
+) => AccessObjectType | null = (type) => {
   switch (type) {
     case DefaultPrivilegeObjectType.TABLES:
       return "tables";
@@ -173,9 +171,9 @@ function defaultObjectType(
     default:
       return assertNever(type);
   }
-}
+};
 
-function directGrantRows(props: RoleDetailViewProps): AccessGrant[] {
+function directGrantRows(props: RoleDetailViewProps) {
   return props.grantObjects.flatMap((object) => {
     const objectType = grantObjectType(object.objectType);
     if (objectType === null) {
@@ -191,7 +189,7 @@ function directGrantRows(props: RoleDetailViewProps): AccessGrant[] {
   });
 }
 
-function ownedObjectRows(props: RoleDetailViewProps): AccessGrant[] {
+function ownedObjectRows(props: RoleDetailViewProps) {
   return props.ownedObjects.flatMap((object) => {
     const objectType = grantObjectType(object.objectType);
     if (objectType === null) {
@@ -209,7 +207,7 @@ function ownedObjectRows(props: RoleDetailViewProps): AccessGrant[] {
   });
 }
 
-function publicGrantRows(props: RoleDetailViewProps): AccessGrant[] {
+function publicGrantRows(props: RoleDetailViewProps) {
   return props.publicGrants.flatMap((grant) => {
     const objectType = grantObjectType(grant.objectType);
     if (objectType === null) {
@@ -227,9 +225,7 @@ function publicGrantRows(props: RoleDetailViewProps): AccessGrant[] {
   });
 }
 
-function defaultPrivilegeRows(
-  props: RoleDetailViewProps
-): AccessDefaultPrivilege[] {
+function defaultPrivilegeRows(props: RoleDetailViewProps) {
   return props.defaultPrivileges.flatMap((privilege) => {
     const objectType = defaultObjectType(privilege.objectType);
     if (objectType === null) {
@@ -247,7 +243,7 @@ function defaultPrivilegeRows(
   });
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "An unknown error occurred.";
 }
 
@@ -286,9 +282,7 @@ function AccessMapKpiCount({
   );
 }
 
-function accessMapFacetForNode(
-  node: VisualizationNode
-): AccessMapVisibleFacet | null {
+function accessMapFacetForNode(node: VisualizationNode) {
   if (node.id.startsWith("parent:")) {
     return "parents";
   }
@@ -318,7 +312,7 @@ function filterAccessMapModel({
   edges: VisualizationEdge[];
   nodes: VisualizationNode[];
   visibleFacets: AccessMapFacetVisibility;
-}): { edges: VisualizationEdge[]; nodes: VisualizationNode[] } {
+}) {
   const visibleNodes = nodes.filter((node) => {
     const facet = accessMapFacetForNode(node);
     return facet === null || visibleFacets[facet];
@@ -330,7 +324,7 @@ function filterAccessMapModel({
         visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
     ),
     nodes: visibleNodes,
-  };
+  } satisfies { edges: VisualizationEdge[]; nodes: VisualizationNode[] };
 }
 
 function AccessMapCanvasActions({
@@ -429,7 +423,7 @@ function AccessMapCanvasActions({
 function shouldShowPartialAccessAlert(
   partialAccess: boolean,
   isMapExpanded: boolean
-): boolean {
+) {
   return partialAccess && !isMapExpanded;
 }
 

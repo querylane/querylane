@@ -34,7 +34,7 @@ function selectedResourceQueryError({
   selectedTableError: unknown;
   selectedViewError: unknown;
   selection: ExplorerSelection;
-}): unknown {
+}) {
   if (selection.kind !== "resource") {
     return undefined;
   }
@@ -53,7 +53,7 @@ function buildSelectedResourceName({
   databaseId: string;
   instanceId: string;
   selection: ExplorerSelection;
-}): string | undefined {
+}) {
   if (!(activeSchema && selection.kind === "resource")) {
     return undefined;
   }
@@ -75,7 +75,7 @@ function buildSelectedResourceName({
 
 function injectSelectedResource<
   T extends { displayName?: string; name: string },
->(resources: T[], selected: T | undefined, query: string): T[] {
+>(resources: T[], selected: T | undefined, query: string) {
   if (!(selected && matchesNameFilter(resourceDisplayName(selected), query))) {
     return resources;
   }

@@ -17,7 +17,7 @@ function isTableListSort(value: string): value is TableListSort {
   return TABLE_LIST_SORT_VALUES.has(value);
 }
 
-function tableListSortToOrderBy(sort: TableListSort): string {
+function tableListSortToOrderBy(sort: TableListSort) {
   switch (sort) {
     case "name-asc":
       return "name asc";

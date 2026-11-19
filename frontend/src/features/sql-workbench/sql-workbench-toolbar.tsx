@@ -59,7 +59,6 @@ function ShortcutHint({ keys }: { keys: string[] }) {
   );
 }
 
-/** A quiet icon-only action; its name and shortcut live in the tooltip. */
 function IconAction({
   children,
   disabled = false,
@@ -100,11 +99,6 @@ function IconAction({
   );
 }
 
-/**
- * The one primary control. Run executes the statement at the cursor (or the
- * selection); the attached menu holds the other ways to execute: every
- * statement in order, and the two EXPLAIN modes.
- */
 function RunControl({
   canRun,
   isRunning,

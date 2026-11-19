@@ -5,13 +5,11 @@ import { cn } from "@/lib/utils";
 
 const SPARKLINE_WIDTH = 64;
 const SPARKLINE_HEIGHT = 32;
-/** Where a flat (zero-span) series draws: centered in the sparkline box. */
 const SPARKLINE_FLAT_POSITION = 0.5;
 const MIN_SPARKLINE_POINTS = 2;
-/** Vertical viewBox inset so the stroke never clips at the cell edges. */
 const SPARKLINE_INSET = 3;
 
-function sparklinePath(values: number[]): string {
+function sparklinePath(values: number[]) {
   const minimum = Math.min(...values);
   const maximum = Math.max(...values);
   const span = maximum - minimum;
@@ -54,8 +52,7 @@ function TrendSparkline({ values }: { values: number[] }) {
         d={`${path} L${SPARKLINE_WIDTH},${SPARKLINE_HEIGHT} L0,${SPARKLINE_HEIGHT} Z`}
         fill={`url(#${gradientId})`}
       />
-      {/* The viewBox stretches non-uniformly to the cell; without this the
-          stroke scales too, so steep segments render thicker than flat ones. */}
+
       <path
         d={path}
         stroke="currentColor"
@@ -66,8 +63,6 @@ function TrendSparkline({ values }: { values: number[] }) {
   );
 }
 
-// Below md the strip is a 2×2 grid: separate the rows with a border on the
-// first two cells and the columns with a border on odd cells.
 const CELL_BORDERS =
   "border-border max-md:odd:border-r max-md:nth-[-n+2]:border-b";
 

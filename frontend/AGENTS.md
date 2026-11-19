@@ -98,3 +98,10 @@ All commits must follow: `type(scope): description`
 - Do not use raw `useQuery` / `useMutation` when ConnectRPC is available (exception: `useTransport`/`callUnaryMethod` pattern with `@connectrpc/connect` imports)
 - Protobuf v2: use `create(Schema, { ... })`. Do not construct messages as object literals with `$typeName`.
 - Protobuf v2: use Standard Schema + protovalidate as react-hook-form resolver instead of duplicating validation in Zod
+
+## Test policy (all contributors and coding agents)
+
+- The shared CI lint gate runs the pinned Ultracite 8.3.0 presets and all ten Landmines rules at error. Fix the cause of a finding; do not add test allowlists, suppressions, or runner shortcuts.
+- Test an observable behavior at the strongest practical boundary. Keep one owner for each contract. Use the real implementation and SDK; intercept only the network with strict MSW. Await visible state, completion, or an explicit event, not a fixed delay, a recorder poll, or a retry.
+- Colocate module tests. Use `<subject>.unit.test.ts`, `<subject>.integration.test.tsx`, or `<subject>.browser.test.tsx` to choose the Rstest project; Playwright journeys use `*.e2e.test.ts`. Name support files `*.fixture.ts` and `*.test-utils.ts`.
+- Infer implementation return types. Type the receiving value or use `satisfies` where the contract needs context. Keep durable rationale in docs or the PR, not inline narration.

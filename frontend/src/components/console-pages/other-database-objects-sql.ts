@@ -189,8 +189,6 @@ const EVENT_TRIGGERS_SQL = `SELECT
     CASE e.evtenabled WHEN 'O' THEN 'ok' ELSE 'warning' END AS status
   FROM pg_catalog.pg_event_trigger e`;
 
-// jobname is only unique per username in pg_cron, so jobid is appended to
-// keep the keyset cursor's sort_key unique.
 const CRON_JOBS_SQL = `SELECT
     'cronJobs'::text AS category,
     COALESCE(jobname, format('job %s', jobid)) AS name,
@@ -220,7 +218,6 @@ const CATEGORY_SOURCES: Record<OtherObjectCategory, CategorySource> = {
   types: { needsNamespaces: true, sql: TYPES_SQL },
 };
 
-/** Non-cron categories combined in one round trip for the overview. */
 const SUMMARY_CATEGORY_ORDER: readonly OtherObjectCategory[] = [
   "routines",
   "sequences",
@@ -236,7 +233,7 @@ const SUMMARY_CATEGORY_ORDER: readonly OtherObjectCategory[] = [
  * bind parameters, so quote doubling is the injection boundary; NUL bytes are
  * dropped because PostgreSQL rejects them inside literals.
  */
-function toSqlTextLiteral(value: string): string {
+function toSqlTextLiteral(value: string) {
   return `'${value.replaceAll("\u0000", "").replaceAll("'", "''")}'`;
 }
 
@@ -245,7 +242,7 @@ function toSqlTextLiteral(value: string): string {
  * the user's search text are escaped so they match literally (names may
  * genuinely contain them).
  */
-function toLikeContainsLiteral(value: string): string {
+function toLikeContainsLiteral(value: string) {
   const pattern = value
     .replaceAll("\u0000", "")
     .replaceAll(/[\\%_]/gu, (match) => `\\${match}`)
@@ -258,7 +255,7 @@ function toLikeContainsLiteral(value: string): string {
  * a window count over the full category, so they stay correct no matter how
  * many objects exist.
  */
-function buildOtherObjectsSummaryStatement(): string {
+function buildOtherObjectsSummaryStatement() {
   const combined = SUMMARY_CATEGORY_ORDER.map(
     (category) => CATEGORY_SOURCES[category].sql
   ).join("\n  UNION ALL\n  ");
@@ -280,7 +277,7 @@ ORDER BY category, lower(sort_key), sort_key`;
 }
 
 /** Cron summary runs separately: `cron.job` only exists with pg_cron. */
-function buildCronJobsSummaryStatement(): string {
+function buildCronJobsSummaryStatement() {
   return `SELECT ${RESULT_COLUMNS}, count(*) OVER () AS category_total
 FROM (${CRON_JOBS_SQL}) AS cron_jobs
 ORDER BY lower(sort_key), sort_key
@@ -302,7 +299,7 @@ function buildOtherObjectsBrowseStatement({
   afterSortKey,
   category,
   search,
-}: BrowseStatementInput): string {
+}: BrowseStatementInput) {
   const source = CATEGORY_SOURCES[category];
   const conditions: string[] = [];
   if (isNonEmptyString(search)) {

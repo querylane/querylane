@@ -53,8 +53,6 @@ import {
   type OwnedObject,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// ───────── "What ownership grants" legend ─────────
-
 const OWNERSHIP_PRIVS: {
   key: string;
   tone: PrivTone;
@@ -135,8 +133,6 @@ function ImplicitTag() {
   );
 }
 
-// ───────── Future-owned note (real CREATE-on-schema data) ─────────
-
 function FutureOwnedNote({
   roleName,
   schemas,
@@ -163,8 +159,6 @@ function FutureOwnedNote({
   );
 }
 
-// ───────── Owned-object inventory ─────────
-
 function OwnedObjectCell({ object }: { object: OwnedObject }) {
   const meta =
     GRANT_OBJECT_META[object.objectType] ??
@@ -186,10 +180,7 @@ function OwnedObjectCell({ object }: { object: OwnedObject }) {
   );
 }
 
-function ownedTableFilter(
-  activeKind: string,
-  search: string
-): RoleGrantsTableFilter | null {
+function ownedTableFilter(activeKind: string, search: string) {
   const activeObjectType = OWNED_TYPE_ORDER.find(
     (type) => slugForObjectType(type) === activeKind
   );
@@ -200,7 +191,9 @@ function ownedTableFilter(
         : grantObjectTypeFilterToken(activeObjectType),
     search,
   });
-  return isNonEmptyString(filter) ? { filter, source: "owned" } : null;
+  return isNonEmptyString(filter)
+    ? ({ filter, source: "owned" } satisfies RoleGrantsTableFilter)
+    : null;
 }
 
 function OwnedObjectsTable({
@@ -294,8 +287,6 @@ function OwnedObjectsTable({
   );
 }
 
-// ───────── Cleanup card ─────────
-
 function CleanupCard({
   count,
   partial,
@@ -305,8 +296,6 @@ function CleanupCard({
   partial: boolean;
   roleName: string;
 }) {
-  // Quote the identifier so the copy-paste SQL is valid for role names needing
-  // quoting (uppercase, spaces, special chars). Display-only, never executed.
   const quoted = `"${roleName.replaceAll('"', '""')}"`;
   const sql = `-- Required before DROP ROLE ${quoted};
 REASSIGN OWNED BY ${quoted} TO postgres;
@@ -341,8 +330,6 @@ DROP OWNED BY ${quoted};`;
     </section>
   );
 }
-
-// ───────── Owns view ─────────
 
 function OwnsDescription({
   databaseName,
@@ -383,7 +370,7 @@ function OwnsDescription({
   );
 }
 
-function schemasWithCreateGrant(directGrants: GrantedObject[]): string[] {
+function schemasWithCreateGrant(directGrants: GrantedObject[]) {
   return directGrants.flatMap((object) => {
     const canCreate = object.privileges.some(
       (privilege) => privilege.name === "CREATE"

@@ -74,10 +74,10 @@ async function fetchAllInstances(
   });
 }
 
-function queryKeyReferencesInstanceResource(
+const queryKeyReferencesInstanceResource: (
   value: unknown,
   instanceName: string
-): boolean {
+) => boolean = (value, instanceName) => {
   if (typeof value === "string") {
     return value === instanceName || value.startsWith(`${instanceName}/`);
   }
@@ -92,12 +92,12 @@ function queryKeyReferencesInstanceResource(
     );
   }
   return false;
-}
+};
 
 function queryKeyIsUnscopedOrUsesTransport(
   value: unknown,
   transportKey: string | undefined
-): boolean {
+) {
   if (!isUnknownArray(value) || value[0] !== "connect-query") {
     return true;
   }

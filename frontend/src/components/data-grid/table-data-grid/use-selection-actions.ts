@@ -39,11 +39,6 @@ import type {
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-/**
- * Without a full-value source a truncated preview cannot be completed;
- * resolveFullCell turns the missing value into an error, so copies and
- * exports refuse instead of writing a silent prefix.
- */
 const noFullCellSource: FetchFullCell = () => Promise.resolve(undefined);
 
 function useSelectionActions({
@@ -75,18 +70,14 @@ function useSelectionActions({
   const selected = () =>
     collectSelectedRows({ resultColumns, rows, selectedRows });
 
-  const resolveSelectedRows = (
-    selectedForExport: SelectedRow[]
-  ): Promise<SelectedRow[]> =>
+  const resolveSelectedRows = (selectedForExport: SelectedRow[]) =>
     Promise.all(
       selectedForExport.map(async (row) => ({
         cells: await resolveRowCells(row.cells, fetchFullCell),
       }))
     );
 
-  const resolveCellSelectionBlocks = (
-    blocks: CellSelectionBlocks
-  ): Promise<CellSelectionBlocks> =>
+  const resolveCellSelectionBlocks = (blocks: CellSelectionBlocks) =>
     Promise.all(
       blocks.map((block) =>
         Promise.all(
@@ -97,7 +88,7 @@ function useSelectionActions({
       )
     );
 
-  const copySelectedCells = (): boolean => {
+  const copySelectedCells = () => {
     const blocks = collectCellSelectionBlocks({
       cellSelectionStore,
       dataColumnKeys: getDisplayedDataColumnKeys(columns),
@@ -125,11 +116,7 @@ function useSelectionActions({
     return true;
   };
 
-  // Returns null when there is nothing to export or the selection needs
-  // more full-value fetches than the cap allows; the caller must bail.
-  const selectionForFullExport = (): {
-    rows: Promise<SelectedRow[]>;
-  } | null => {
+  const selectionForFullExport = () => {
     const selectedForExport = selected();
     if (selectedForExport.length === 0) {
       return null;
@@ -146,7 +133,9 @@ function useSelectionActions({
         pendingFetches > 0
           ? resolveSelectedRows(selectedForExport)
           : Promise.resolve(selectedForExport),
-    };
+    } satisfies {
+      rows: Promise<SelectedRow[]>;
+    } | null;
   };
 
   const buildSelectionExport = (

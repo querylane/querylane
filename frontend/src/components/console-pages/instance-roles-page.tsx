@@ -66,7 +66,7 @@ function normalizeRolesNavigateSearch(previous: {
   q?: unknown;
   tab?: unknown;
   type?: unknown;
-}): InstanceRolesSearch {
+}) {
   const q = typeof previous.q === "string" ? previous.q : undefined;
   const tab = typeof previous.tab === "string" ? previous.tab : undefined;
   const type = typeof previous.type === "string" ? previous.type : undefined;
@@ -75,7 +75,7 @@ function normalizeRolesNavigateSearch(previous: {
     q,
     tab: isInstanceRolesTab(tab) ? tab : undefined,
     type: isInstanceRolesType(type) ? type : undefined,
-  };
+  } satisfies InstanceRolesSearch;
 }
 const DEFAULT_ROLE_MAP_KIND_VISIBILITY = {
   builtin: false,
@@ -115,7 +115,7 @@ function roleMapVisibilityForType(
   } satisfies RoleMapKindVisibility;
 }
 
-function connLimitLabel(limit: number): string {
+function connLimitLabel(limit: number) {
   return limit < 0 ? "∞" : String(limit);
 }
 
@@ -123,8 +123,6 @@ function NameCell({ role }: { role: Role }) {
   const kind = deriveRoleKind(role);
   const isSystem = role.isSystemRole || isPredefinedRoleName(role.roleName);
   const builtinInfo = predefinedRoleInfo(role.roleName);
-  // Built-in roles get their real predefined-role summary; ordinary roles show
-  // their COMMENT ON ROLE text when present.
   const comment = isSystem ? undefined : role.comment || undefined;
   const subtitle = isSystem && builtinInfo ? builtinInfo.summary : comment;
   return (
@@ -238,7 +236,7 @@ function summarizeRoles(roles: Role[]) {
 function rolesDescription(
   counts: Record<KindFilter, number>,
   loginCount: number
-): string {
+) {
   const roleUnit = counts.all === 1 ? "role" : "roles";
   const groupUnit = counts.group === 1 ? "group" : "groups";
   return `${counts.all} ${roleUnit} · ${loginCount} can log in · ${counts.group} ${groupUnit} · ${counts.builtin} built-in`;
@@ -331,7 +329,7 @@ function rolesPageDescription(
   counts: ReturnType<typeof summarizeRoles>["counts"],
   loginCount: number,
   partial: boolean
-): string {
+) {
   const description = rolesDescription(counts, loginCount);
   return partial ? `${description} · first 5,000 shown` : description;
 }
@@ -587,9 +585,6 @@ export function InstanceRolesPage({
           onValueChange={handleRolesTabChange}
           value={activeTab}
         >
-          {/* One toolbar row: search + type filter lead on the left like every
-              other page's toolbar; the view switcher sits on the right because
-              both filters apply to the table and the access map alike. */}
           <div className="flex min-w-0 flex-wrap items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <div className="min-w-0 sm:flex-none">
@@ -628,8 +623,7 @@ export function InstanceRolesPage({
               <TabsTrigger value="map">Access map</TabsTrigger>
             </TabsList>
           </div>
-          {/* Tabs root already adds gap-2; mt-1 lands on the 12px toolbar→table
-              gap that the shared DataTable toolbar uses on other pages. */}
+
           <TabsContent className="mt-1" value="details">
             {rolesDetailsContent}
           </TabsContent>

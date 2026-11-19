@@ -4,7 +4,7 @@ const ROWS_THRESHOLD_BILLION = 1_000_000_000;
 const ROWS_THRESHOLD_TEN = 10;
 const TRAILING_ZERO_DECIMAL = /\.0$/u;
 
-export function formatRows(value: number): string {
+export function formatRows(value: number) {
   if (value < ROWS_THRESHOLD_THOUSAND) {
     return String(value);
   }

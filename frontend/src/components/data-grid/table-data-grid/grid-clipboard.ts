@@ -17,12 +17,6 @@ function writeClipboard(value: string) {
     });
 }
 
-// writeClipboardDeferred copies text that still has to be produced
-// asynchronously (e.g. fetching a truncated cell's full value first).
-// A promise-valued ClipboardItem keeps the user-gesture activation alive
-// across the async gap — Safari rejects a plain writeText issued after
-// an await. Browsers without ClipboardItem fall back to writeText and
-// rely on the transient-activation window outlasting the fetch.
 function writeClipboardDeferred(getText: () => Promise<string>) {
   if (!Boolean(navigator.clipboard)) {
     toast.error("Clipboard isn't available in this browser");

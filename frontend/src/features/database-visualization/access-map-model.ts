@@ -139,7 +139,7 @@ function objectNavigation(
     : undefined;
 }
 
-function defaultPrivilegeScopeLine(privilege: AccessDefaultPrivilege): string {
+function defaultPrivilegeScopeLine(privilege: AccessDefaultPrivilege) {
   if (privilege.objectType === "large_objects") {
     return "Database scope";
   }
@@ -148,7 +148,7 @@ function defaultPrivilegeScopeLine(privilege: AccessDefaultPrivilege): string {
     : "All schemas";
 }
 
-function roleBadges(role: AccessRoleNode): string[] {
+function roleBadges(role: AccessRoleNode) {
   const badges: string[] = [];
   if (role.attributes.canLogin) {
     badges.push("LOGIN");
@@ -395,7 +395,7 @@ function appendDefaultPrivilegeNodes({
   }
 }
 
-function buildAccessSummary(input: AccessMapModelInput): AccessMapSummary {
+function buildAccessSummary(input: AccessMapModelInput) {
   return {
     bypassesRls: input.role.attributes.bypassesRls,
     defaultPrivilegeCount: input.defaultPrivileges.length,
@@ -405,10 +405,10 @@ function buildAccessSummary(input: AccessMapModelInput): AccessMapSummary {
     parentRoleCount: input.parentRoles.length,
     publicGrantCount: input.publicGrants.length,
     superuser: input.role.attributes.isSuperuser,
-  };
+  } satisfies AccessMapSummary;
 }
 
-function buildAccessMapModel(input: AccessMapModelInput): AccessMapModel {
+function buildAccessMapModel(input: AccessMapModelInput) {
   const selectedRoleId = `role:${input.role.roleId}`;
   const nodes: VisualizationNode[] = [
     {
@@ -433,7 +433,11 @@ function buildAccessMapModel(input: AccessMapModelInput): AccessMapModel {
   appendPublicGrantNodes({ input, selectedRoleId, nodes, edges });
   appendDefaultPrivilegeNodes({ input, selectedRoleId, nodes, edges });
 
-  return { edges, nodes, summary: buildAccessSummary(input) };
+  return {
+    edges,
+    nodes,
+    summary: buildAccessSummary(input),
+  } satisfies AccessMapModel;
 }
 
 export type {

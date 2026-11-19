@@ -48,12 +48,6 @@ interface MetricTimeChartProps {
   yTickBase?: ChartTickBase | undefined;
 }
 
-interface MetricDatum {
-  seriesKey: string;
-  time: number;
-  value: number | null;
-}
-
 const INSET_CHART_MARGIN = { bottom: 28, left: 8, right: 4, top: 18 };
 const AREA_FILL_TOP_OPACITY = 0.16;
 const AREA_FILL_OPACITY = 0.2;
@@ -68,8 +62,6 @@ const DASHED_STROKE_WIDTH = 1.5;
 const DASHED_STROKE_OPACITY = 0.55;
 const Y_DOMAIN_SEGMENTS = 4;
 const INITIAL_WIDTH = 320;
-// Explicit opacity: the library default (0.11) multiplies the already
-// translucent border token into invisibility.
 const GRID_LINE: ChartGuideLineStyle = {
   stroke: "var(--color-border)",
   strokeOpacity: 1,
@@ -100,18 +92,13 @@ function emphasisColor(color: string, opacity: number) {
     : `color-mix(in srgb, ${color} ${opacity * PERCENT}%, transparent)`;
 }
 
-function extentOf(data: ChartRow[]): [number, number] {
+function extentOf(data: ChartRow[]) {
   const first = data[0]?.time ?? 0;
   const last = data.at(-1)?.time ?? first;
-  return [first, last];
+  return [first, last] satisfies [number, number];
 }
 
-/** A row's largest y-value: the stack sum in stacked mode, else the max. */
-function rowMax(
-  row: ChartRow,
-  series: ChartSeries[],
-  stacked: boolean
-): number {
+function rowMax(row: ChartRow, series: ChartSeries[], stacked: boolean) {
   let max = 0;
   let stackSum = 0;
   for (const item of series) {
@@ -139,7 +126,7 @@ function yAxisMax({
   series: ChartSeries[];
   stacked: boolean;
   thresholds: ChartThreshold[] | undefined;
-}): number {
+}) {
   let max = 0;
   for (const row of data) {
     max = Math.max(max, rowMax(row, series, stacked));
@@ -153,7 +140,7 @@ function yAxisMax({
   return max;
 }
 
-function evenTicks([min, max]: [number, number]): number[] {
+function evenTicks([min, max]: [number, number]) {
   const step = (max - min) / Y_DOMAIN_SEGMENTS;
   return Array.from(
     { length: Y_DOMAIN_SEGMENTS + 1 },
@@ -161,23 +148,20 @@ function evenTicks([min, max]: [number, number]): number[] {
   );
 }
 
-function resolveVariant(
-  variant: MetricTimeChartVariant,
-  seriesCount: number
-): "area" | "line" | "stacked" {
+function resolveVariant(variant: MetricTimeChartVariant, seriesCount: number) {
   if (variant !== "auto") {
     return variant;
   }
   return seriesCount === 1 ? "area" : "line";
 }
 
-function thresholdColor(tone: ChartThreshold["tone"]): string {
+function thresholdColor(tone: ChartThreshold["tone"]) {
   return tone === "critical"
     ? "var(--color-destructive)"
     : "var(--color-muted-foreground)";
 }
 
-function rowsForSeries(data: ChartRow[], seriesKey: string): MetricDatum[] {
+function rowsForSeries(data: ChartRow[], seriesKey: string) {
   return data.map((row) => ({
     seriesKey,
     time: row.time,
@@ -199,16 +183,22 @@ function resolveValueAxis({
   thresholds: ChartThreshold[] | undefined;
   yDomain: [number, number] | undefined;
   yTickBase: ChartTickBase;
-}): { domain: [number, number]; ticks: number[] } {
+}) {
   if (yDomain) {
-    return { domain: yDomain, ticks: evenTicks(yDomain) };
+    return { domain: yDomain, ticks: evenTicks(yDomain) } satisfies {
+      domain: [number, number];
+      ticks: number[];
+    };
   }
 
   const ticks = niceAxisTicks(
     yAxisMax({ data, series, stacked: drawMode === "stacked", thresholds }),
     yTickBase
   ) ?? [0, 1];
-  return { domain: [0, ticks.at(-1) ?? 1], ticks };
+  return { domain: [0, ticks.at(-1) ?? 1], ticks } satisfies {
+    domain: [number, number];
+    ticks: number[];
+  };
 }
 
 function buildThresholdMarks(
@@ -255,11 +245,6 @@ function buildThresholdMarks(
   return [...thresholdRules, ...thresholdLabels];
 }
 
-/**
- * A themed, responsive TanStack time-series chart. App-owned tick generation,
- * formatters, colors, missing-value gaps, thresholds, overlays, and legends
- * remain stable while TanStack owns the accessible SVG and interaction model.
- */
 function MetricTimeChartPlot({
   data,
   domain,

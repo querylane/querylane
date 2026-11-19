@@ -52,7 +52,6 @@ const PARTITION_SHARE_WIDTH_CLASSES = [
   "w-11/12",
   "w-full",
 ] as const;
-// Range bounds may carry a time-of-day suffix, e.g. FROM ('2026-01-01 00:00:00+00').
 const RANGE_BOUNDS_PATTERN =
   /FROM \('(?<capture1>\d{4}-\d{2}-\d{2})[^']*'\) TO \('(?<capture2>\d{4}-\d{2}-\d{2})[^']*'\)/iu;
 const FOR_VALUES_PREFIX_PATTERN = /^FOR VALUES\s+/iu;
@@ -75,16 +74,14 @@ function hasPartitionMetadata(
   );
 }
 
-function derivePartitionTabCount(
-  metadata: TablePartitionMetadata | undefined
-): number | undefined {
+function derivePartitionTabCount(metadata: TablePartitionMetadata | undefined) {
   if (!metadata || metadata.partitionCount <= 0) {
     return undefined;
   }
   return metadata.partitionCount;
 }
 
-function formatPartitionResourceLabel(resourceName: string): string {
+function formatPartitionResourceLabel(resourceName: string) {
   if (!resourceName) {
     return "—";
   }
@@ -96,7 +93,7 @@ function formatPartitionResourceLabel(resourceName: string): string {
   }
 }
 
-function partitionSchemaName(partition: TablePartition): string {
+function partitionSchemaName(partition: TablePartition) {
   if (!partition.table) {
     return "—";
   }
@@ -107,7 +104,7 @@ function partitionSchemaName(partition: TablePartition): string {
   }
 }
 
-function partitionBoundKind(partition: TablePartition): PartitionBoundKind {
+function partitionBoundKind(partition: TablePartition) {
   const bound = partition.partitionBound.trim().toUpperCase();
   if (bound === "DEFAULT" || bound.includes(" DEFAULT")) {
     return "default";
@@ -127,7 +124,7 @@ function partitionBoundKind(partition: TablePartition): PartitionBoundKind {
 function filterPartitionDisplayRows(
   rows: PartitionDisplayRow[],
   search: string
-): PartitionDisplayRow[] {
+) {
   const query = search.trim().toLocaleLowerCase();
   if (!query) {
     return rows;
@@ -147,19 +144,17 @@ function filterPartitionDisplayRows(
   );
 }
 
-function summarizePartitionDisplayRows(
-  rows: PartitionDisplayRow[]
-): PartitionRowsSummary {
+function summarizePartitionDisplayRows(rows: PartitionDisplayRow[]) {
   const totalRows = rows.reduce((sum, row) => sum + row.estimatedRows, 0);
   const totalSize = rows.reduce((sum, row) => sum + row.sizeBytes, 0);
 
   return {
     totalRowsLabel: totalRows > 0 ? formatPartitionTotalRows(totalRows) : "—",
     totalSizeLabel: totalSize > 0 ? formatBytes(totalSize) : "—",
-  };
+  } satisfies PartitionRowsSummary;
 }
 
-function bigintToNumber(value: bigint): number {
+function bigintToNumber(value: bigint) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) {
     return 0;
@@ -167,7 +162,7 @@ function bigintToNumber(value: bigint): number {
   return numeric;
 }
 
-function formatPartitionRows(value: number): string {
+function formatPartitionRows(value: number) {
   if (value < THOUSAND) {
     return String(Math.round(value));
   }
@@ -186,7 +181,7 @@ function formatPartitionRows(value: number): string {
   return `${(value / BILLION).toFixed(1).replace(TRAILING_ZERO_DECIMAL, "")}B`;
 }
 
-function formatPartitionTotalRows(value: number): string {
+function formatPartitionTotalRows(value: number) {
   if (value < MILLION) {
     return formatPartitionRows(value);
   }
@@ -198,10 +193,10 @@ function formatPartitionTotalRows(value: number): string {
   return `${(value / BILLION).toFixed(1)}B`;
 }
 
-function widthClassForRatio<T extends readonly [string, ...string[]]>(
+function widthClassForRatio<T extends string>(
   ratio: number,
-  classes: T
-): T[number] {
+  classes: readonly [T, ...T[]]
+) {
   if (!Number.isFinite(ratio) || ratio <= 0) {
     return classes[0];
   }
@@ -210,7 +205,7 @@ function widthClassForRatio<T extends readonly [string, ...string[]]>(
   return classes[Math.max(1, Math.round(bounded * maxIndex))] ?? classes[0];
 }
 
-function partitionDisplayName(partition: TablePartition): string {
+function partitionDisplayName(partition: TablePartition) {
   if (partition.displayName) {
     return partition.displayName;
   }
@@ -224,22 +219,17 @@ function partitionDisplayName(partition: TablePartition): string {
   }
 }
 
-function rangeBoundDayLabels(
-  partitionBound: string
-): { end: string; start: string } | undefined {
+function rangeBoundDayLabels(partitionBound: string) {
   const bounds = RANGE_BOUNDS_PATTERN.exec(partitionBound);
   const start = bounds?.[1];
   const end = bounds?.[2];
   if (!(isNonEmptyString(start) && typeof end === "string" && end.length > 0)) {
     return undefined;
   }
-  return { end, start };
+  return { end, start } satisfies { end: string; start: string } | undefined;
 }
 
-function partitionBoundLabel(
-  partitionBound: string,
-  kind: PartitionBoundKind
-): string {
+function partitionBoundLabel(partitionBound: string, kind: PartitionBoundKind) {
   if (kind === "default") {
     return "DEFAULT — catches rows outside every range";
   }
@@ -253,9 +243,7 @@ function partitionBoundLabel(
   return withoutPrefix || "—";
 }
 
-function rangeBoundDates(
-  partitionBound: string
-): { end: number; start: number } | undefined {
+function rangeBoundDates(partitionBound: string) {
   const bounds = rangeBoundDayLabels(partitionBound);
   if (!bounds) {
     return undefined;
@@ -266,10 +254,10 @@ function rangeBoundDates(
   if (!(Number.isFinite(start) && Number.isFinite(end)) || end <= start) {
     return undefined;
   }
-  return { end, start };
+  return { end, start } satisfies { end: number; start: number } | undefined;
 }
 
-function utcDay(value: Date): number {
+function utcDay(value: Date) {
   return Date.UTC(
     value.getUTCFullYear(),
     value.getUTCMonth(),
@@ -277,7 +265,7 @@ function utcDay(value: Date): number {
   );
 }
 
-function isDateInsideRange(partitionBound: string, currentDate: Date): boolean {
+function isDateInsideRange(partitionBound: string, currentDate: Date) {
   const bounds = rangeBoundDates(partitionBound);
   if (!bounds) {
     return false;
@@ -299,7 +287,7 @@ function buildPartitionDisplayRow({
   rowCount: number;
   size: number;
   totalRows: number;
-}): PartitionDisplayRow {
+}) {
   const boundKind = partitionBoundKind(partition);
   const share = totalRows > 0 ? rowCount / totalRows : 0;
   const isDefault = boundKind === "default";
@@ -322,7 +310,7 @@ function buildPartitionDisplayRow({
     sizeBytes: size,
     sizeLabel: size > 0 ? formatBytes(size) : "—",
     table: partition.table,
-  };
+  } satisfies PartitionDisplayRow;
 }
 
 function derivePartitionViewModel({
@@ -331,7 +319,7 @@ function derivePartitionViewModel({
 }: {
   currentDate?: Date | undefined;
   partitions: TablePartition[];
-}): PartitionViewModel {
+}) {
   const rowsWithNumbers = partitions.map((partition) => ({
     partition,
     rows: bigintToNumber(partition.estimatedRows),
@@ -357,7 +345,7 @@ function derivePartitionViewModel({
     rows,
     totalRowsLabel: totalRows > 0 ? formatPartitionTotalRows(totalRows) : "—",
     totalSizeLabel: totalSize > 0 ? formatBytes(totalSize) : "—",
-  };
+  } satisfies PartitionViewModel;
 }
 
 export type {

@@ -15,10 +15,6 @@ import { waitForNextFrame } from "@/lib/wait-for-next-frame";
 import { useOnboardingWizardStore } from "@/stores/onboarding-wizard-store";
 import { useSetupStore } from "@/stores/setup-store";
 
-/**
- * Patterns that indicate a configuration issue (wrong credentials,
- * unreachable host, etc.) vs a transient/infrastructure issue.
- */
 const CONFIG_ERROR_PATTERNS = [
   /password authentication/iu,
   /no pg_hba\.conf/iu,
@@ -44,17 +40,17 @@ const STORAGE_FULL_PATTERNS = [
   /not enough (?:disk )?space/iu,
 ];
 
-function isLikelyConfigurationError(errorMessage: string): boolean {
+function isLikelyConfigurationError(errorMessage: string) {
   return CONFIG_ERROR_PATTERNS.some((pattern) => pattern.test(errorMessage));
 }
 
-function isStorageFullError(errorMessage: string): boolean {
+function isStorageFullError(errorMessage: string) {
   return STORAGE_FULL_PATTERNS.some((pattern) => pattern.test(errorMessage));
 }
 
 type SetupErrorKind = "configuration" | "storage_full" | "transient";
 
-function classifySetupError(errorText: string): SetupErrorKind {
+function classifySetupError(errorText: string) {
   if (isStorageFullError(errorText)) {
     return "storage_full";
   }
@@ -67,7 +63,7 @@ function classifySetupError(errorText: string): SetupErrorKind {
 function presentStreamError(
   streamError: AppUiError | null,
   errorKind: SetupErrorKind
-): AppUiError | null {
+) {
   if (!(streamError && errorKind === "storage_full")) {
     return streamError;
   }
@@ -78,7 +74,7 @@ function presentStreamError(
       "Free disk space where Querylane stores embedded PostgreSQL data, then retry.",
     summary: "Embedded PostgreSQL could not write its data.",
     title: "Storage full",
-  };
+  } satisfies AppUiError | null;
 }
 
 function buildSetupFailureDescription({
@@ -223,9 +219,6 @@ export function ErrorSummaryPhase() {
   );
   const failedStepName = failedEvent?.displayName;
   const failedStepError = failedEvent?.error;
-  // Position of the failed step in the pipeline. Counting succeeded steps
-  // instead would over-report when steps succeed after the failure (the
-  // backend can retry on the same stream).
   const failedStepIndex = failedEvent
     ? progressEvents.findIndex((e) => e.stepId === failedEvent.stepId)
     : -1;
@@ -258,7 +251,6 @@ export function ErrorSummaryPhase() {
       <div className="space-y-5">
         <SetupErrorHint errorKind={errorKind} />
 
-        {/* Failed step detail */}
         {isNonEmptyString(failedStepName) ? (
           <div className="rounded-xl border border-negative-400/18 bg-negative-500/6 px-4 py-3">
             <div className="space-y-2">

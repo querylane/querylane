@@ -22,7 +22,6 @@ const sqlCodeBlockVariants = cva("max-w-full min-w-0 font-mono", {
         "rounded-md border bg-muted/40 p-3 text-xs leading-relaxed text-foreground",
       compact:
         "overflow-x-auto rounded-md border-0 bg-muted/55 px-3 py-2 text-xs leading-relaxed wrap-break-word whitespace-pre-wrap text-foreground",
-      // Keep line height after font size: cn() resolves conflicts in order.
       inline: ["truncate text-(length:--text-xs)", "leading-normal"],
     },
     copyable: { true: "", false: "" },
@@ -73,8 +72,6 @@ function observeSqlScrollFocus(node: HTMLPreElement | null) {
         : -1;
   }
 
-  // Lazy highlighting, font delivery and container resizing can each change
-  // overflow. Only a genuinely scrollable snippet belongs in the tab order.
   syncScrollFocus();
   const resizeObserver =
     typeof ResizeObserver === "undefined"

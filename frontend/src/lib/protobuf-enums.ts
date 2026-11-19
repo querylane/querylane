@@ -1,8 +1,3 @@
-import type { ConfigMethod } from "@/components/onboarding-wizard/types";
-import type {
-  SslModeOptionValue,
-  SslNegotiationOptionValue,
-} from "@/lib/ssl-modes";
 import {
   PostgresConfig_SslMode,
   PostgresConfig_SslNegotiation,
@@ -18,7 +13,7 @@ import {
 } from "@/protogen/querylane/console/v1alpha1/table_pb";
 import { View_ViewType } from "@/protogen/querylane/console/v1alpha1/view_pb";
 
-export function formatConstraintType(type: ConstraintType): string {
+export function formatConstraintType(type: ConstraintType) {
   switch (type) {
     case ConstraintType.PRIMARY_KEY:
       return "Primary key";
@@ -36,11 +31,11 @@ export function formatConstraintType(type: ConstraintType): string {
   }
 }
 
-export function formatPolicyMode(mode: PolicyMode): string {
+export function formatPolicyMode(mode: PolicyMode) {
   return mode === PolicyMode.RESTRICTIVE ? "Restrictive" : "Permissive";
 }
 
-export function formatPolicyCommand(command: PolicyCommand): string {
+export function formatPolicyCommand(command: PolicyCommand) {
   switch (command) {
     case PolicyCommand.ALL:
       return "ALL";
@@ -58,7 +53,7 @@ export function formatPolicyCommand(command: PolicyCommand): string {
   }
 }
 
-export function formatReferentialAction(action: ReferentialAction): string {
+export function formatReferentialAction(action: ReferentialAction) {
   switch (action) {
     case ReferentialAction.CASCADE:
       return "CASCADE";
@@ -76,7 +71,7 @@ export function formatReferentialAction(action: ReferentialAction): string {
   }
 }
 
-export function formatTableType(tableType: Table_TableType): string {
+export function formatTableType(tableType: Table_TableType) {
   switch (tableType) {
     case Table_TableType.BASE_TABLE:
       return "Base table";
@@ -92,7 +87,7 @@ export function formatTableType(tableType: Table_TableType): string {
   }
 }
 
-export function formatViewType(viewType: View_ViewType): string {
+export function formatViewType(viewType: View_ViewType) {
   switch (viewType) {
     case View_ViewType.MATERIALIZED:
       return "Materialized";
@@ -104,9 +99,7 @@ export function formatViewType(viewType: View_ViewType): string {
   }
 }
 
-export function formatSslMode(
-  mode: PostgresConfig_SslMode
-): SslModeOptionValue {
+export function formatSslMode(mode: PostgresConfig_SslMode) {
   switch (mode) {
     case PostgresConfig_SslMode.ALLOW:
       return "allow";
@@ -125,7 +118,7 @@ export function formatSslMode(
   }
 }
 
-export function toSslMode(value: string): PostgresConfig_SslMode {
+export function toSslMode(value: string) {
   switch (value) {
     case "disable":
       return PostgresConfig_SslMode.DISABLED;
@@ -144,7 +137,7 @@ export function toSslMode(value: string): PostgresConfig_SslMode {
 
 export function formatSslNegotiation(
   negotiation: PostgresConfig_SslNegotiation
-): SslNegotiationOptionValue {
+) {
   if (
     normalizeSslNegotiation(negotiation) ===
     PostgresConfig_SslNegotiation.DIRECT
@@ -154,7 +147,7 @@ export function formatSslNegotiation(
   return "postgres";
 }
 
-export function toSslNegotiation(value: string): PostgresConfig_SslNegotiation {
+export function toSslNegotiation(value: string) {
   switch (value) {
     case "direct":
       return PostgresConfig_SslNegotiation.DIRECT;
@@ -167,16 +160,14 @@ export function toSslNegotiation(value: string): PostgresConfig_SslNegotiation {
 
 export function normalizeSslNegotiation(
   negotiation: PostgresConfig_SslNegotiation | undefined
-): PostgresConfig_SslNegotiation {
+) {
   if (negotiation === PostgresConfig_SslNegotiation.DIRECT) {
     return PostgresConfig_SslNegotiation.DIRECT;
   }
   return PostgresConfig_SslNegotiation.POSTGRES;
 }
 
-export function formatReplicationRole(
-  role: ServerInfo_ReplicationRole
-): string {
+export function formatReplicationRole(role: ServerInfo_ReplicationRole) {
   switch (role) {
     case ServerInfo_ReplicationRole.PRIMARY:
       return "Primary";
@@ -188,7 +179,7 @@ export function formatReplicationRole(
   }
 }
 
-export function formatSetupMethod(method: SetupMethod): ConfigMethod | null {
+export function formatSetupMethod(method: SetupMethod) {
   if (method === SetupMethod.UI_CONFIGURED) {
     return "ui_configured";
   }

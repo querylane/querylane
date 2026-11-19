@@ -68,21 +68,21 @@ function routeDataQuery<
       PrefetchQueryKey
     >
   >[1]
-): RouteDataQuery {
+) {
   return {
     prefetch: (queryClient) => {
       prefetchRouteQuery(queryClient, options).catch(captureException);
     },
     queryKey: options.queryKey,
     staleTime: options.staleTime,
-  };
+  } satisfies RouteDataQuery;
 }
 
 function databaseSummaryQueries({
   databaseId,
   instanceId,
   transport,
-}: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
+}: DatabaseRouteParams & { transport: Transport }) {
   return [
     routeDataQuery(
       selectedDatabaseQueryOptions({
@@ -91,7 +91,7 @@ function databaseSummaryQueries({
         transport,
       })
     ),
-  ];
+  ] satisfies RouteDataQuery[];
 }
 
 function createQueryOptionsForReadRows({
@@ -120,7 +120,7 @@ function createQueryOptionsForReadRows({
 export function instanceRouteDataQueries({
   instanceId,
   transport,
-}: InstanceRouteParams & { transport: Transport }): RouteDataQuery[] {
+}: InstanceRouteParams & { transport: Transport }) {
   return [
     routeDataQuery(listAllInstancesQueryOptions({ transport })),
     routeDataQuery(selectedInstanceQueryOptions({ instanceId, transport })),
@@ -130,14 +130,14 @@ export function instanceRouteDataQueries({
         transport,
       })
     ),
-  ];
+  ] satisfies RouteDataQuery[];
 }
 
 export function databaseRouteDataQueries({
   databaseId,
   instanceId,
   transport,
-}: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
+}: DatabaseRouteParams & { transport: Transport }) {
   return databaseSummaryQueries({ databaseId, instanceId, transport });
 }
 
@@ -145,7 +145,7 @@ export function extensionRouteDataQueries({
   databaseId,
   instanceId,
   transport,
-}: DatabaseRouteParams & { transport: Transport }): RouteDataQuery[] {
+}: DatabaseRouteParams & { transport: Transport }) {
   return [
     ...databaseSummaryQueries({ databaseId, instanceId, transport }),
     routeDataQuery(
@@ -154,7 +154,7 @@ export function extensionRouteDataQueries({
         transport,
       })
     ),
-  ];
+  ] satisfies RouteDataQuery[];
 }
 
 export function explorerRouteDataQueries({
@@ -165,7 +165,7 @@ export function explorerRouteDataQueries({
 }: DatabaseRouteParams & {
   search: ExplorerRouteSearch;
   transport: Transport;
-}): RouteDataQuery[] {
+}) {
   const queries: RouteDataQuery[] = [
     ...databaseSummaryQueries({ databaseId, instanceId, transport }),
   ];

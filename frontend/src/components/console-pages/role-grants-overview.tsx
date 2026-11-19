@@ -34,18 +34,14 @@ import {
   type OwnedObject,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// Em dash as a JS expression (not JSX text) so it renders as the "no value"
-// glyph without tripping the no-em-dash-in-prose lint.
 const EM_DASH = "—";
 type LoadedFacetState = Exclude<FacetState, "idle">;
 
-function loadedFacetState(state: FacetState): LoadedFacetState {
+function loadedFacetState(state: FacetState) {
   return state === "idle" ? "loading" : state;
 }
 
-// ───────── Reach-row preview strings ─────────
-
-function ownsPreview(objects: OwnedObject[]): string {
+function ownsPreview(objects: OwnedObject[]) {
   if (objects.length === 0) {
     return "Nothing owned in this database.";
   }
@@ -68,7 +64,7 @@ function ownsPreview(objects: OwnedObject[]): string {
   return `${breakdown} in ${schemaSummary}`;
 }
 
-function defaultsPreview(rules: DefaultPrivilegeRule[]): string {
+function defaultsPreview(rules: DefaultPrivilegeRule[]) {
   const [first] = rules;
   if (!first) {
     return "No future-grant rules.";
@@ -77,7 +73,7 @@ function defaultsPreview(rules: DefaultPrivilegeRule[]): string {
   return `${rules.length} rule${rules.length === 1 ? "" : "s"} — when ${first.creatorRoleName} creates new ${label} in ${first.schemaName || "any schema"}…`;
 }
 
-function publicPreview(objects: GrantedObject[]): string {
+function publicPreview(objects: GrantedObject[]) {
   if (objects.length === 0) {
     return "No PUBLIC grants visible.";
   }
@@ -104,7 +100,7 @@ function publicPreview(objects: GrantedObject[]): string {
   return `${objects.length} grant${objects.length === 1 ? "" : "s"}${detail}`;
 }
 
-function publicPrivilegeSummary(objects: GrantedObject[]): string {
+function publicPrivilegeSummary(objects: GrantedObject[]) {
   const names: string[] = [];
   const seen = new Set<string>();
   for (const object of objects) {
@@ -123,8 +119,6 @@ function publicPrivilegeSummary(objects: GrantedObject[]): string {
   }
   return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 }
-
-// ───────── Section + rows ─────────
 
 function SectionHead({
   count,
@@ -257,8 +251,6 @@ function ReachRow({
   state: LoadedFacetState;
   unit: string;
 }) {
-  // A failed/pending facet shows its own state rather than its empty-state preview
-  // (which would read as a definitive "nothing here").
   let detail = desc;
   if (state === "error") {
     detail = "Couldn't load — data unavailable";
@@ -295,8 +287,6 @@ function ReachRow({
     </DrillRow>
   );
 }
-
-// ───────── Overview ─────────
 
 function DirectGrantSchemaScope({
   grantsPartial,
@@ -356,8 +346,6 @@ function DirectGrantsLede({
   );
 }
 
-// The grants summary line. Lives in the tab header next to the database
-// selector (which already names the database), so it doesn't repeat it.
 function OverviewLede({
   grantsPartial,
   indirectPaths,

@@ -34,11 +34,11 @@ const CODE_LABELS: Record<number, string> = {
   [Code.Unauthenticated]: "unauthenticated",
 };
 
-function grpcCodeLabel(code: number): string {
+function grpcCodeLabel(code: number) {
   return CODE_LABELS[code] ?? `code_${code}`;
 }
 
-function formatConnectError(error: unknown): string {
+function formatConnectError(error: unknown) {
   if (error instanceof ConnectError) {
     const violations = extractFieldViolations(error);
     const { code, rawMessage } = error;
@@ -69,7 +69,7 @@ interface FieldViolation {
   field: string;
 }
 
-function extractFieldViolations(error: ConnectError): FieldViolation[] {
+function extractFieldViolations(error: ConnectError) {
   const violations: FieldViolation[] = [];
   try {
     for (const badRequest of error.findDetails(BadRequestSchema)) {
@@ -91,7 +91,7 @@ function formatToastErrorMessage({
   action: string;
   entity: string;
   error: unknown;
-}): string {
+}) {
   return `Failed to ${action} ${entity}: ${formatConnectError(error)}`;
 }
 
@@ -145,9 +145,7 @@ const MAPPED_DETAIL_TYPES: ReadonlySet<string> = new Set([
   RetryInfoSchema.typeName,
 ]);
 
-function connectDetailTypeName(
-  detail: ConnectError["details"][number]
-): string | undefined {
+function connectDetailTypeName(detail: ConnectError["details"][number]) {
   if ("desc" in detail) {
     return detail.desc.typeName;
   }
@@ -270,7 +268,7 @@ function applyResourceDetails(
   }
 }
 
-function extractConnectErrorContext(error: unknown): ConnectErrorContext {
+function extractConnectErrorContext(error: unknown) {
   const context: ConnectErrorContext = {
     helpLinks: [],
     preconditionViolations: [],

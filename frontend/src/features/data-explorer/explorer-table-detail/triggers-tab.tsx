@@ -42,7 +42,6 @@ const TRIGGER_WHEN_RE =
   /\bWHEN\s*\((?<capture1>[\s\S]+)\)\s+EXECUTE\s+(?:FUNCTION|PROCEDURE)\b/iu;
 const TRIGGER_SQL_COPY_FEEDBACK_MS = 1500;
 
-/** Leaves simple names bare to mirror pg_get_triggerdef output. */
 function formatTriggerSqlIdentifier(identifier: string) {
   if (SIMPLE_SQL_IDENTIFIER_RE.test(identifier)) {
     return identifier;
@@ -150,16 +149,16 @@ function TriggerSqlCopyButton({
     "idle"
   );
 
-  useEffect((): (() => void) | undefined => {
+  useEffect(() => {
     if (copyState === "idle") {
       return undefined;
     }
     const timeout = globalThis.setTimeout(function resetTriggerSqlCopyState() {
       setCopyState("idle");
     }, TRIGGER_SQL_COPY_FEEDBACK_MS);
-    return () => {
+    return (() => {
       globalThis.clearTimeout(timeout);
-    };
+    }) satisfies (() => void) | undefined;
   }, [copyState]);
 
   async function handleCopyTriggerSql() {

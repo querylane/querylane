@@ -2,7 +2,6 @@ const ROW_LIMIT_100 = 100;
 const ROW_LIMIT_500 = 500;
 const ROW_LIMIT_1000 = 1000;
 const ROW_LIMIT_5000 = 5000;
-/** Matches the server-side cap on `ExecuteQueryRequest.row_limit`. */
 const ROW_LIMIT_10000 = 10_000;
 
 const ROW_LIMIT_OPTIONS = [

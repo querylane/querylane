@@ -36,13 +36,11 @@ interface ForeignKeyReferencePreview {
   targetLabel: string;
 }
 
-function ignoreUnknownTableValueKind(value: never): void {
+function ignoreUnknownTableValueKind(value: never) {
   Boolean(value);
 }
 
-function tableCellValueToFilterValue(
-  cell: TableCell | undefined
-): TableValue | undefined {
+function tableCellValueToFilterValue(cell: TableCell | undefined) {
   if (cell?.truncated === true) {
     return undefined;
   }
@@ -92,7 +90,7 @@ function buildForeignKeyRequiredFilter({
   reference: TableForeignKeyReference;
   resultColumns: readonly TableResultColumn[];
   row: GridRow;
-}): RowFilter | undefined {
+}) {
   const children: RowFilter[] = [];
   const resultColumnsByName = Map.groupBy(
     resultColumns,
@@ -161,7 +159,7 @@ function buildForeignKeyReferencePreview({
   resultColumns: readonly TableResultColumn[];
   row: GridRow;
   sourceColumn: string;
-}): ForeignKeyReferencePreview | undefined {
+}) {
   const resultColumn = resultColumns.find(
     (column) => column.columnName === sourceColumn
   );
@@ -198,7 +196,7 @@ function buildForeignKeyReferencePreview({
     requiredFilter,
     sourceColumn,
     targetLabel: `${target.schema}.${target.table}`,
-  };
+  } satisfies ForeignKeyReferencePreview | undefined;
 }
 
 export type {

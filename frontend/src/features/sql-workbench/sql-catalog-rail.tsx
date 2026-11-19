@@ -121,16 +121,6 @@ function RelationLabel({
   );
 }
 
-/*
- * Row-action tooltips open above the row: a tooltip to the right would cover
- * the neighbouring icons, and Base UI keeps a tooltip open while the pointer
- * is over it, so the next icon could never be reached.
- */
-
-/**
- * Explicit insert: clicking a name only browses (expands columns), so
- * adding text to the editor is always a deliberate action.
- */
 function InsertAction({
   label,
   onInsert,
@@ -159,11 +149,6 @@ function InsertAction({
   );
 }
 
-/**
- * Relation row actions float over the row's right edge, so names keep their
- * full width until the row is hovered or focused (touch screens always show
- * them). Column rows use their indent gutter instead.
- */
 const ROW_ACTIONS_CLASS =
   "absolute inset-y-0 right-1 flex items-center bg-sidebar opacity-0 pointer-coarse:opacity-100 transition-opacity focus-within:opacity-100";
 
@@ -218,8 +203,6 @@ function RelationColumns({
             className="group/column relative flex h-6 items-center gap-2 rounded-sm pr-2 pl-9 text-xs hover:bg-accent/60"
             key={column.name}
           >
-            {/* The insert action lives in the row's indent gutter, under the
-                table chevron, so it never covers the column name or type. */}
             <span className="absolute inset-y-0 left-2 flex items-center opacity-0 transition-opacity group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
               <InsertAction
                 label={`Insert ${column.name} at the cursor`}
@@ -262,8 +245,6 @@ function RelationRow({
 }) {
   const Icon = relationIcon(relation);
   const qualified = qualifiedRelationName(relation, actions.defaultSchema);
-  // ListTableColumns serves tables and materialized views; plain views have
-  // nothing to expand.
   const expandable = relation.kind === "table" || relation.isMaterialized;
   return (
     <li>
@@ -438,7 +419,7 @@ function SchemaSection({
   );
 }
 
-function toggled(set: ReadonlySet<string>, key: string): Set<string> {
+function toggled(set: ReadonlySet<string>, key: string) {
   const next = new Set(set);
   if (next.has(key)) {
     next.delete(key);
@@ -497,7 +478,6 @@ function SqlCatalogRail(actions: CatalogRailActions) {
         {filtered.map((schema) => (
           <SchemaSection
             actions={actions}
-            // A filter opens every matching schema so hits are visible at once.
             expanded={filtering || expandedSchemas.has(schema.id)}
             expandedRelations={expandedRelations}
             key={schema.id}

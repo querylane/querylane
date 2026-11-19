@@ -28,8 +28,6 @@ interface ContextMenuState {
   top: number;
 }
 
-// Grid cell mouse/selection handlers plus the context-menu copy actions. Built
-// per render from the current rows and menu position.
 function buildCellInteractionHandlers({
   cellSelectionStore,
   contextMenu,

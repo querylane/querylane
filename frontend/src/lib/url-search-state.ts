@@ -2,7 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { handleNavigationError } from "@/lib/navigation-errors";
 
-function normalizeSearchText(value: string): string {
+function normalizeSearchText(value: string) {
   return value.trim() === "" ? "" : value;
 }
 
@@ -15,9 +15,7 @@ type UrlTableSearchRoute =
   | "/instances/$instanceId/roles/"
   | "/instances/$instanceId/databases/$databaseId/extensions";
 
-function useUrlTableSearch(
-  from: UrlTableSearchRoute
-): [string, (value: string) => Promise<void>] {
+function useUrlTableSearch(from: UrlTableSearchRoute) {
   const routeSearchText = useSearch({
     from,
     select: (search) => (typeof search.q === "string" ? search.q : ""),
@@ -46,7 +44,7 @@ function useUrlTableSearch(
     [routeSearchText]
   );
 
-  function setUrlSearchText(value: string): Promise<void> {
+  function setUrlSearchText(value: string) {
     const nextValue = normalizeSearchText(value);
     const pendingNavigation = {
       settledRevisionAtStart: settledRouteRevisionRef.current,
@@ -87,7 +85,10 @@ function useUrlTableSearch(
       });
   }
 
-  return [draftSearchText, setUrlSearchText];
+  return [draftSearchText, setUrlSearchText] satisfies [
+    string,
+    (value: string) => Promise<void>,
+  ];
 }
 
 export type { UrlTableSearchRoute };

@@ -25,7 +25,10 @@ interface UseReadRowsQueryOptions {
   keepPreviousData?: boolean;
 }
 
-function queryKeyContainsTableName(value: unknown, tableName: string): boolean {
+const queryKeyContainsTableName: (
+  value: unknown,
+  tableName: string
+) => boolean = (value, tableName) => {
   if (value === tableName) {
     return true;
   }
@@ -38,22 +41,22 @@ function queryKeyContainsTableName(value: unknown, tableName: string): boolean {
     );
   }
   return false;
-}
+};
 
 function findLastSuccessfulReadRows(
   queryClient: QueryClient,
   currentQueryKey: readonly unknown[]
-): ReadRowsResponse | undefined {
+) {
   let latest: { data: ReadRowsResponse; updatedAt: number } | undefined;
   const requestIdentity = JSON.stringify(
     currentQueryKey,
-    (key, value: unknown): unknown => (key === "pageToken" ? undefined : value)
+    (key, value: unknown) => (key === "pageToken" ? undefined : value)
   );
 
   for (const query of queryClient.getQueryCache().findAll()) {
     if (
       query.state.status !== "success" ||
-      JSON.stringify(query.queryKey, (key, value: unknown): unknown =>
+      JSON.stringify(query.queryKey, (key, value: unknown) =>
         key === "pageToken" ? undefined : value
       ) !== requestIdentity ||
       !isMessage(query.state.data, ReadRowsResponseSchema)

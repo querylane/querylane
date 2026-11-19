@@ -10,11 +10,9 @@ const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60_000;
 const MS_ROUNDING_FLOOR = 10;
 
-function toTopObjects(
-  catalog: DatabaseCatalogResult | undefined
-): CatalogObject[] {
+function toTopObjects(catalog: DatabaseCatalogResult | undefined) {
   if (!catalog) {
-    return [];
+    return [] satisfies CatalogObject[];
   }
   return catalog.objects
     .filter((object) => !object.isSystem)
@@ -23,11 +21,9 @@ function toTopObjects(
 }
 
 /** Schemas ordered by how much of the database they occupy. */
-function toSortedSchemas(
-  catalog: DatabaseCatalogResult | undefined
-): CatalogSchema[] {
+function toSortedSchemas(catalog: DatabaseCatalogResult | undefined) {
   if (!catalog) {
-    return [];
+    return [] satisfies CatalogSchema[];
   }
   return catalog.schemas.toSorted((left, right) =>
     Number(right.totalSizeBytes - left.totalSizeBytes)
@@ -35,11 +31,11 @@ function toSortedSchemas(
 }
 
 /** Clamped 0-100 share for progress meters. */
-function ratioToPercent(ratio: number): number {
+function ratioToPercent(ratio: number) {
   return Math.max(0, Math.min(1, ratio)) * PERCENT;
 }
 
-function formatMs(ms: number): string {
+function formatMs(ms: number) {
   if (ms >= MS_PER_MINUTE) {
     return `${(ms / MS_PER_MINUTE).toFixed(1)} min`;
   }

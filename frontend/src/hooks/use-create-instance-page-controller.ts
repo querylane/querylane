@@ -20,7 +20,6 @@ import {
 } from "@/features/new-instance-submission";
 import {
   type CreateInstanceLabel,
-  type CreateInstanceWorkflowState,
   canCreateInstance,
   createCreateInstanceWorkflowState,
   getConnectionFingerprint,
@@ -52,22 +51,6 @@ const CONNECTION_FIELDS = new Set<CreateInstanceFieldName>([
   "username",
 ]);
 
-function createInitialWorkflow(
-  initialState: Partial<CreateInstanceWorkflowState> | undefined
-) {
-  const emptyState = createCreateInstanceWorkflowState();
-  return initialState
-    ? {
-        ...emptyState,
-        ...initialState,
-        formState: {
-          ...emptyState.formState,
-          ...initialState.formState,
-        },
-      }
-    : emptyState;
-}
-
 function withoutFieldError(
   errors: CreateInstanceFormErrors,
   field: CreateInstanceInvalidFieldName
@@ -80,9 +63,7 @@ function withoutFieldError(
   return remaining;
 }
 
-function getSupplementalServerErrors(
-  fieldErrors: CreateInstanceFormErrors
-): CreateInstanceFormErrors {
+function getSupplementalServerErrors(fieldErrors: CreateInstanceFormErrors) {
   const errors: CreateInstanceFormErrors = {};
   if (isNonEmptyString(fieldErrors.instanceId)) {
     errors.instanceId = fieldErrors.instanceId;
@@ -107,9 +88,12 @@ function createServerNotice({
   error: unknown;
   generalErrors: string[];
   handled: boolean;
-}): InlineNotice | null {
+}) {
   if (generalErrors.length > 0) {
-    return { message: generalErrors.join(" "), variant: "error" };
+    return {
+      message: generalErrors.join(" "),
+      variant: "error",
+    } satisfies InlineNotice | null;
   }
   if (handled) {
     return null;
@@ -120,18 +104,19 @@ function createServerNotice({
     source: "mutation",
     surface: "inline",
   });
-  return { message: uiError.message, variant: "error" };
+  return {
+    message: uiError.message,
+    variant: "error",
+  } satisfies InlineNotice | null;
 }
 
-export function useCreateInstancePageController(
-  initialState?: Partial<CreateInstanceWorkflowState>
-) {
+export function useCreateInstancePageController() {
   const navigate = useNavigate({ from: "/new-instance" });
   const queryClient = useQueryClient();
   const transport = useTransport();
   const createInstanceMutation = useCreateInstanceMutation();
   const testInstanceConnectionMutation = useTestInstanceConnectionMutation();
-  const initialWorkflow = createInitialWorkflow(initialState);
+  const initialWorkflow = createCreateInstanceWorkflowState();
   const formDefaults = createCreateInstanceDefaultValues(
     initialWorkflow.formState
   );
@@ -145,8 +130,6 @@ export function useCreateInstancePageController(
   const [instanceId, setInstanceId] = useState(
     initialWorkflow.formState.instanceId
   );
-  // map rows need stable IDs while blank keys
-  // cannot be represented by a protobuf map; every valid row is synced below.
   const [labels, setLabels] = useState(initialWorkflow.formState.labels);
   const [showAdvanced, setShowAdvanced] = useState(
     initialWorkflow.showAdvanced
@@ -165,8 +148,6 @@ export function useCreateInstancePageController(
     setLastSuccessfulConnectionFingerprint,
   ] = useState(initialWorkflow.lastSuccessfulConnectionFingerprint);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Focus waits for the commit that renders the errors: a frame can fire
-  // before React commits updates made after an awaited request.
   const [invalidFieldFocusRequest, setInvalidFieldFocusRequest] = useState(0);
   const requestInvalidFieldFocus = () => {
     setInvalidFieldFocusRequest((request) => request + 1);

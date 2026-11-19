@@ -66,7 +66,7 @@ function getFailedOnboardingEvent() {
 export function useOnboardingWizardController({
   initialMethod,
   onFinish,
-}: UseOnboardingWizardControllerOptions): OnboardingWizardController {
+}: UseOnboardingWizardControllerOptions) {
   const {
     applyProgressEvent,
     goToConfigureStateAction,
@@ -87,7 +87,6 @@ export function useOnboardingWizardController({
   );
   const onboardingState = useSetupStore((state) => state.onboardingState);
 
-  // sync wizard phase state
   useEffect(() => {
     resetSession();
     return () => {
@@ -95,9 +94,6 @@ export function useOnboardingWizardController({
     };
   }, [resetSession]);
 
-  // Deep link (/setup?method=…): skip method selection once the server
-  // confirms the requested method is available. Only fires while the wizard
-  // is untouched, so going Back never bounces the user forward again.
   useEffect(
     function applyInitialMethod() {
       if (!(initialMethod && onboardingState)) {
@@ -172,7 +168,7 @@ export function useOnboardingWizardController({
     watchIsRunning: watchState.isRunning,
     watchManualRetryRequired: watchState.manualRetryRequired,
     watchRetryPending: watchState.retryPending,
-  };
+  } satisfies OnboardingWizardController;
 }
 
 export type { OnboardingWizardController };

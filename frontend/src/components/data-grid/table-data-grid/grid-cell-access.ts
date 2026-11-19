@@ -4,10 +4,7 @@ import type {
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-function getGridCell(
-  row: GridRow,
-  column: TableResultColumn
-): TableCell | undefined {
+function getGridCell(row: GridRow, column: TableResultColumn) {
   return row.cells.get(column.columnName);
 }
 

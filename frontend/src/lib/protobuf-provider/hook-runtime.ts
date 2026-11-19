@@ -28,10 +28,7 @@ import {
   ValueSchema,
 } from "@bufbuild/protobuf/wkt";
 import type { ValidatorOptions } from "@bufbuild/protovalidate";
-import type {
-  EmptyRepeatedStringPolicy,
-  FormValues,
-} from "@/lib/core/field-model";
+import type { EmptyRepeatedStringPolicy } from "@/lib/core/field-model";
 import type { StandardSchemaV1 } from "@/lib/core/standard-schema";
 import { isNonEmptyString, isUnknownArray } from "@/lib/value-guards";
 import type { ProtoformMessageFormatter } from "../core/messages.js";
@@ -104,7 +101,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function toDateTimeLocalValue(
   timestamp: MessageShape<typeof TimestampSchema> | undefined
-): string | undefined {
+) {
   if (!timestamp) {
     return undefined;
   }
@@ -134,11 +131,10 @@ function toDateTimeLocalValue(
   return `${year}-${month}-${day}T${hours}:${minutes}${secondsSuffix}`;
 }
 
-function objectHasValues(value: Record<string, unknown>): boolean {
-  return Object.values(value).some((item) => hasFormValue(item));
-}
+const objectHasValues: (value: Record<string, unknown>) => boolean = (value) =>
+  Object.values(value).some((item) => hasFormValue(item));
 
-function hasFormValue(entry: unknown): boolean {
+const hasFormValue: (entry: unknown) => boolean = (entry) => {
   if (entry === undefined || entry === null) {
     return false;
   }
@@ -149,7 +145,7 @@ function hasFormValue(entry: unknown): boolean {
     return entry.length > 0;
   }
   return isPlainObject(entry) ? objectHasValues(entry) : true;
-}
+};
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (
@@ -171,10 +167,7 @@ function isJsonValue(value: unknown): value is JsonValue {
   );
 }
 
-function scalarToFormValue(
-  scalar: ScalarType | undefined,
-  value: unknown
-): unknown {
+function scalarToFormValue(scalar: ScalarType | undefined, value: unknown) {
   if (scalar === ScalarType.BYTES) {
     return value instanceof Uint8Array ? base64Encode(value) : undefined;
   }
@@ -184,7 +177,7 @@ function scalarToFormValue(
   return value;
 }
 
-function anyToFormValue(value: unknown): ProtoAnyFormValue | undefined {
+function anyToFormValue(value: unknown) {
   if (!isPlainObject(value)) {
     return undefined;
   }
@@ -192,10 +185,10 @@ function anyToFormValue(value: unknown): ProtoAnyFormValue | undefined {
     typeUrl: typeof value["typeUrl"] === "string" ? value["typeUrl"] : "",
     valueBase64:
       value["value"] instanceof Uint8Array ? base64Encode(value["value"]) : "",
-  };
+  } satisfies ProtoAnyFormValue | undefined;
 }
 
-function jsonMessageToFormValue(field: MessageField, value: unknown): unknown {
+function jsonMessageToFormValue(field: MessageField, value: unknown) {
   if (isMessage(value, field.message)) {
     return toJson(field.message, value);
   }
@@ -214,7 +207,7 @@ function jsonMessageToFormValue(field: MessageField, value: unknown): unknown {
   }
 }
 
-function fieldMaskToFormValue(value: unknown): unknown {
+function fieldMaskToFormValue(value: unknown) {
   if (!isPlainObject(value)) {
     return undefined;
   }
@@ -225,7 +218,7 @@ function fieldMaskToFormValue(value: unknown): unknown {
     : undefined;
 }
 
-function messageFieldToFormValue(field: MessageField, value: unknown): unknown {
+function messageFieldToFormValue(field: MessageField, value: unknown) {
   if (isWrapperDesc(field.message)) {
     return scalarToFormValue(
       field.message.fields[0]?.scalar,
@@ -256,7 +249,7 @@ function messageFieldToFormValue(field: MessageField, value: unknown): unknown {
   }
 }
 
-function fieldToFormValue(field: DescField, value: unknown): unknown {
+function fieldToFormValue(field: DescField, value: unknown) {
   switch (field.fieldKind) {
     case "scalar":
       return scalarToFormValue(field.scalar, value);
@@ -283,7 +276,7 @@ function fieldToFormValue(field: DescField, value: unknown): unknown {
   }
 }
 
-function listItemToFormValue(field: ListField, value: unknown): unknown {
+function listItemToFormValue(field: ListField, value: unknown) {
   if (value === null) {
     return null;
   }
@@ -300,7 +293,7 @@ function listItemToFormValue(field: ListField, value: unknown): unknown {
     : value;
 }
 
-function mapValueToFormValue(field: MapField, value: unknown): unknown {
+function mapValueToFormValue(field: MapField, value: unknown) {
   if (value === null) {
     return null;
   }
@@ -317,10 +310,7 @@ function mapValueToFormValue(field: MapField, value: unknown): unknown {
     : value;
 }
 
-function mapKeyToFormValue(
-  field: MapField,
-  key: string
-): string | number | boolean {
+function mapKeyToFormValue(field: MapField, key: string) {
   if (field.mapKey === ScalarType.BOOL) {
     return key === "true";
   }
@@ -330,7 +320,7 @@ function mapKeyToFormValue(
   return Number(key);
 }
 
-function oneofToFormValue(member: DescOneof, value: unknown): unknown {
+function oneofToFormValue(member: DescOneof, value: unknown) {
   if (!(isPlainObject(value) && isNonEmptyString(value["case"]))) {
     return { case: undefined, value: undefined };
   }
@@ -345,12 +335,9 @@ function oneofToFormValue(member: DescOneof, value: unknown): unknown {
   };
 }
 
-function messageToFormValues(
-  desc: DescMessage,
-  value: unknown
-): Record<string, unknown> {
+function messageToFormValues(desc: DescMessage, value: unknown) {
   if (!isPlainObject(value)) {
-    return {};
+    return {} satisfies Record<string, unknown>;
   }
   const result: Record<string, unknown> = {};
 
@@ -383,7 +370,7 @@ function protoToFormValues(
   return messageToFormValues(desc, value ?? create(desc));
 }
 
-function normalizeBooleanValue(value: unknown): boolean | undefined {
+function normalizeBooleanValue(value: unknown) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -399,7 +386,7 @@ function normalizeBooleanValue(value: unknown): boolean | undefined {
   return Boolean(value);
 }
 
-function normalizeNumberValue(value: unknown): number | undefined {
+function normalizeNumberValue(value: unknown) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -410,7 +397,7 @@ function normalizeNumberValue(value: unknown): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-function normalizeFloatingPointValue(value: unknown): number | undefined {
+function normalizeFloatingPointValue(value: unknown) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -424,7 +411,7 @@ function normalizeFloatingPointValue(value: unknown): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-function normalizeBigIntValue(value: unknown): bigint | undefined {
+function normalizeBigIntValue(value: unknown) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -444,7 +431,7 @@ function normalizeBigIntValue(value: unknown): bigint | undefined {
   return undefined;
 }
 
-function mapKeyText(value: unknown): string {
+function mapKeyText(value: unknown) {
   if (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -456,7 +443,7 @@ function mapKeyText(value: unknown): string {
   throw new TypeError("Expected a scalar map key");
 }
 
-function scalarString(value: unknown): string {
+function scalarString(value: unknown) {
   if (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -475,10 +462,7 @@ function normalizeBytesValue(value: unknown) {
   return value instanceof Uint8Array ? value : undefined;
 }
 
-function normalizeScalarValue(
-  scalar: ScalarType | undefined,
-  value: unknown
-): unknown {
+function normalizeScalarValue(scalar: ScalarType | undefined, value: unknown) {
   if (scalar === ScalarType.STRING) {
     return value === undefined || value === null
       ? undefined
@@ -499,9 +483,7 @@ function normalizeScalarValue(
   return normalizeNumberValue(value);
 }
 
-function timestampFromFormValue(
-  value: unknown
-): ReturnType<typeof timestampFromDate> | undefined {
+function timestampFromFormValue(value: unknown) {
   if (!isNonEmptyString(value)) {
     return undefined;
   }
@@ -513,7 +495,7 @@ function timestampFromFormValue(
   return timestamp;
 }
 
-function optionalStringFormValue(value: unknown): string {
+function optionalStringFormValue(value: unknown) {
   if (value === undefined) {
     return "";
   }
@@ -523,9 +505,7 @@ function optionalStringFormValue(value: unknown): string {
   return value;
 }
 
-function anyFromFormValue(
-  value: unknown
-): { typeUrl: string; value: ReturnType<typeof base64Decode> } | undefined {
+function anyFromFormValue(value: unknown) {
   if (!isPlainObject(value)) {
     return undefined;
   }
@@ -534,13 +514,12 @@ function anyFromFormValue(
   if (!(isNonEmptyString(typeUrl) || isNonEmptyString(valueBase64))) {
     return undefined;
   }
-  return { typeUrl, value: base64Decode(valueBase64) };
+  return { typeUrl, value: base64Decode(valueBase64) } satisfies
+    | { typeUrl: string; value: ReturnType<typeof base64Decode> }
+    | undefined;
 }
 
-function jsonMessageFromFormValue(
-  field: MessageField,
-  value: unknown
-): unknown {
+function jsonMessageFromFormValue(field: MessageField, value: unknown) {
   if (value === undefined) {
     return undefined;
   }
@@ -570,7 +549,7 @@ function normalizeMessageFieldValue({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): unknown {
+}) {
   if (isWrapperDesc(field.message)) {
     return normalizeScalarValue(field.message.fields[0]?.scalar, value);
   }
@@ -630,7 +609,7 @@ function listItemToProtoValue({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): unknown {
+}) {
   if (field.listKind === "scalar") {
     return normalizeScalarValue(field.scalar, value);
   }
@@ -655,7 +634,7 @@ function mapValueToProtoValue({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): unknown {
+}) {
   if (field.mapKind === "scalar") {
     return normalizeScalarValue(field.scalar, value);
   }
@@ -680,9 +659,9 @@ function repeatedListEntries({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): unknown[] {
+}) {
   if (!isUnknownArray(value)) {
-    return [];
+    return [] satisfies unknown[];
   }
   const policy = options.emptyRepeatedStringPolicies?.[path.join(".")];
   if (
@@ -707,7 +686,7 @@ function fieldToProtoValue({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): unknown {
+}) {
   switch (field.fieldKind) {
     case "scalar":
       return normalizeScalarValue(field.scalar, value);
@@ -768,7 +747,7 @@ function oneofToProtoInit({
   value: unknown;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): { case: string; value: unknown } | undefined {
+}) {
   if (!(isPlainObject(value) && isNonEmptyString(value["case"]))) {
     return undefined;
   }
@@ -786,7 +765,7 @@ function oneofToProtoInit({
       options,
       path: [...path, member.localName, field.localName],
     }),
-  };
+  } satisfies { case: string; value: unknown } | undefined;
 }
 
 function messageToProtoInit({
@@ -799,7 +778,7 @@ function messageToProtoInit({
   value: AnyObject;
   options: ProtoConversionOptions;
   path: readonly string[];
-}): Record<string, unknown> {
+}) {
   const result: Record<string, unknown> = {};
 
   for (const member of desc.members) {
@@ -854,7 +833,7 @@ function knownMessageValuesEqual({
   left: AnyObject;
   right: AnyObject;
   preserveTimestampPrecision: boolean;
-}): boolean {
+}) {
   if (!(isMessage(left, desc) && isMessage(right, desc))) {
     return false;
   }
@@ -892,7 +871,7 @@ function uniqueRepeatedSourceIndex({
   matchedSourceIndexes,
   matchedTargetIndexes,
   preserveTimestampPrecision,
-}: RepeatedMatchContext): number | undefined {
+}: RepeatedMatchContext) {
   const candidates = source.flatMap((value, candidateIndex) =>
     !matchedSourceIndexes.has(candidateIndex) &&
     isPlainObject(value) &&
@@ -937,7 +916,7 @@ function preserveRepeatedMessageUnknownFields({
   target: unknown[];
   source: unknown[];
   preserveTimestampPrecision: boolean;
-}): void {
+}) {
   const matchedSourceIndexes = new Set<number>();
   const matchedTargetIndexes = new Set<number>();
 
@@ -988,7 +967,7 @@ function preservePositionalUnknownFields({
   matchedSourceIndexes,
   matchedTargetIndexes,
   preserveTimestampPrecision,
-}: Omit<RepeatedMatchContext, "targetValue">): void {
+}: Omit<RepeatedMatchContext, "targetValue">) {
   if (target.length !== source.length) {
     return;
   }
@@ -1046,7 +1025,7 @@ function preserveFieldUnknownFields({
   target: unknown;
   source: unknown;
   preserveTimestampPrecision: boolean;
-}): void {
+}) {
   switch (field.fieldKind) {
     case "message":
       if (isPlainObject(target) && isPlainObject(source)) {
@@ -1158,7 +1137,7 @@ function preserveMessageUnknownFields({
   target: AnyObject;
   source: AnyObject;
   preserveTimestampPrecision?: boolean;
-}): void {
+}) {
   if (preserveTimestampPrecision) {
     preserveTimestampSourcePrecision(target, source);
   }
@@ -1191,7 +1170,7 @@ function preserveProtoMessageSource<Desc extends DescMessage>(
   desc: Desc,
   target: MessageShape<Desc>,
   source?: MessageShape<Desc>
-): MessageShape<Desc> {
+) {
   if (!source) {
     return target;
   }
@@ -1210,7 +1189,7 @@ function formValuesToProto<Desc extends DescMessage>({
   values: Record<string, unknown>;
   source?: MessageShape<Desc> | undefined;
   options?: ProtoConversionOptions;
-}): MessageShape<Desc> {
+}) {
   const message = create(desc, formValuesToProtoInit(desc, values, options));
   if (source) {
     preserveMessageUnknownFields({
@@ -1227,7 +1206,7 @@ function protoFormValuesToPayload(
   desc: DescMessage,
   values: Record<string, unknown>,
   options: ProtoConversionOptions = {}
-): unknown {
+) {
   try {
     const init = formValuesToProtoInit(desc, values, options);
     const message = create(desc, init);
@@ -1241,10 +1220,7 @@ function protoFormValuesToPayload(
   }
 }
 
-function protoPayloadToFormValues(
-  desc: DescMessage,
-  payload: unknown
-): FormValues | undefined {
+function protoPayloadToFormValues(desc: DescMessage, payload: unknown) {
   try {
     const json = payload ?? {};
     if (!isJsonValue(json)) {
@@ -1268,7 +1244,7 @@ interface IssuePathCursor {
 
 function issuePathKey(
   segment: StandardSchemaV1.PathSegment | PropertyKey | undefined
-): PropertyKey | undefined {
+) {
   return segment !== null && typeof segment === "object" && "key" in segment
     ? segment.key
     : segment;
@@ -1407,7 +1383,7 @@ function normalizeIssuePath(
   desc: DescMessage,
   issue: SchemaIssue,
   values: AnyObject
-): (string | number)[] {
+) {
   const cursor: IssuePathCursor = {
     desc,
     normalized: [],
@@ -1453,11 +1429,7 @@ const SIGNED_64_MIN = -9_223_372_036_854_775_808n;
 const SIGNED_64_MAX = 9_223_372_036_854_775_807n;
 const UNSIGNED_64_MAX = 18_446_744_073_709_551_615n;
 
-function integerConversionIssue(
-  value: unknown,
-  min: number,
-  max: number
-): boolean {
+function integerConversionIssue(value: unknown, min: number, max: number) {
   const numeric = normalizeNumberValue(value);
   return (
     numeric === undefined ||
@@ -1467,11 +1439,7 @@ function integerConversionIssue(
   );
 }
 
-function bigintConversionIssue(
-  value: unknown,
-  min: bigint,
-  max: bigint
-): boolean {
+function bigintConversionIssue(value: unknown, min: bigint, max: bigint) {
   const numeric = normalizeBigIntValue(value);
   return numeric === undefined || numeric < min || numeric > max;
 }
@@ -1479,7 +1447,7 @@ function bigintConversionIssue(
 function getScalarConversionIssue(
   scalar: ScalarType | undefined,
   value: unknown
-): string | undefined {
+) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -1513,7 +1481,7 @@ function getScalarConversionIssue(
   return undefined;
 }
 
-function durationConversionIssue(value: unknown): string | undefined {
+function durationConversionIssue(value: unknown) {
   if (typeof value !== "string") {
     return "Enter a valid duration.";
   }
@@ -1525,10 +1493,7 @@ function durationConversionIssue(value: unknown): string | undefined {
   }
 }
 
-function getMessageConversionIssue(
-  desc: DescMessage,
-  value: unknown
-): string | undefined {
+function getMessageConversionIssue(desc: DescMessage, value: unknown) {
   if (isEmptyFormValue(value)) {
     return undefined;
   }
@@ -1547,7 +1512,7 @@ function getMessageConversionIssue(
   return anyConversionIssue(value);
 }
 
-function anyConversionIssue(value: AnyObject): string | undefined {
+function anyConversionIssue(value: AnyObject) {
   const { valueBase64 } = value;
   if (valueBase64 === undefined || valueBase64 === "") {
     return undefined;
@@ -1563,7 +1528,7 @@ function anyConversionIssue(value: AnyObject): string | undefined {
   return undefined;
 }
 
-function getMapConversionIssue(value: unknown): string | undefined {
+function getMapConversionIssue(value: unknown) {
   if (!isUnknownArray(value)) {
     return undefined;
   }
@@ -1584,14 +1549,14 @@ function getMapConversionIssue(value: unknown): string | undefined {
 function conversionIssue(
   message: string | undefined,
   path: (string | number)[]
-): NormalizedProtoIssue[] {
+) {
   return isNonEmptyString(message) ? [{ message, path }] : [];
 }
-function getMessageValueConversionIssues(
+const getMessageValueConversionIssues: (
   desc: DescMessage,
   value: unknown,
   path: (string | number)[]
-): NormalizedProtoIssue[] {
+) => NormalizedProtoIssue[] = (desc, value, path) => {
   if (isWrapperDesc(desc)) {
     return conversionIssue(
       getScalarConversionIssue(desc.fields[0]?.scalar, value),
@@ -1603,12 +1568,12 @@ function getMessageValueConversionIssues(
     return getFormConversionIssues(desc, value, path);
   }
   return conversionIssue(message, path);
-}
+};
 function getElementConversionIssues(
   field: ListField | MapField,
   value: unknown,
   path: (string | number)[]
-): NormalizedProtoIssue[] {
+) {
   if (field.scalar !== undefined) {
     return conversionIssue(getScalarConversionIssue(field.scalar, value), path);
   }
@@ -1620,7 +1585,7 @@ function getMapValueConversionIssues(
   field: MapField,
   value: unknown,
   path: (string | number)[]
-): NormalizedProtoIssue[] {
+) {
   const issues = conversionIssue(getMapConversionIssue(value), path);
   if (isUnknownArray(value)) {
     return [
@@ -1634,7 +1599,7 @@ function getMapValueConversionIssues(
             ])
           : []
       ),
-    ];
+    ] satisfies NormalizedProtoIssue[];
   }
   return isPlainObject(value)
     ? [
@@ -1645,11 +1610,11 @@ function getMapValueConversionIssues(
       ]
     : issues;
 }
-function getFieldConversionIssues(
+const getFieldConversionIssues: (
   field: DescField,
   value: unknown,
   path: (string | number)[]
-): NormalizedProtoIssue[] {
+) => NormalizedProtoIssue[] = (field, value, path) => {
   switch (field.fieldKind) {
     case "scalar":
       return conversionIssue(
@@ -1671,14 +1636,14 @@ function getFieldConversionIssues(
     default:
       return field satisfies never;
   }
-}
+};
 
-function getFormConversionIssues(
+const getFormConversionIssues: (
   desc: DescMessage,
   values: Record<string, unknown>,
-  path: (string | number)[] = []
-): NormalizedProtoIssue[] {
-  return desc.members.flatMap((member) => {
+  path?: (string | number)[]
+) => NormalizedProtoIssue[] = (desc, values, path = []) =>
+  desc.members.flatMap((member) => {
     if (member.kind === "oneof") {
       const selection = values[member.localName];
       if (!isPlainObject(selection)) {
@@ -1700,11 +1665,8 @@ function getFormConversionIssues(
       member.localName,
     ]);
   });
-}
 
-function toFailureResult(error: unknown): {
-  readonly issues: readonly NormalizedProtoIssue[];
-} {
+function toFailureResult(error: unknown) {
   return {
     issues: [
       {
@@ -1715,6 +1677,8 @@ function toFailureResult(error: unknown): {
         path: [],
       },
     ],
+  } satisfies {
+    readonly issues: readonly NormalizedProtoIssue[];
   };
 }
 
@@ -1730,7 +1694,7 @@ function normalizeValidationResult<Desc extends DescMessage>({
   validationResult: StandardSchemaV1.Result<MessageValidType<Desc>>;
   fallbackValue: MessageShape<Desc>;
   context: ProtoValidationContext;
-}): NormalizedProtoValidationResult<MessageShape<Desc>> {
+}) {
   if (validationResult.issues) {
     const issues = filterValidationIssues(
       desc,
@@ -1741,11 +1705,13 @@ function normalizeValidationResult<Desc extends DescMessage>({
       context.validationMask
     );
     if (issues.length === 0) {
-      return { value: fallbackValue };
+      return { value: fallbackValue } satisfies NormalizedProtoValidationResult<
+        MessageShape<Desc>
+      >;
     }
     return {
       issues,
-    };
+    } satisfies NormalizedProtoValidationResult<MessageShape<Desc>>;
   }
 
   if (!isMessage(validationResult.value, desc)) {
@@ -1753,14 +1719,16 @@ function normalizeValidationResult<Desc extends DescMessage>({
       new TypeError("Validation returned a different protobuf message type")
     );
   }
-  return { value: validationResult.value };
+  return {
+    value: validationResult.value,
+  } satisfies NormalizedProtoValidationResult<MessageShape<Desc>>;
 }
 
 function filterValidationIssues(
   desc: DescMessage,
   issues: readonly NormalizedProtoIssue[],
   validationMask?: FieldMask
-): readonly NormalizedProtoIssue[] {
+) {
   if (!validationMask || validationMask.paths.includes("*")) {
     return issues;
   }
@@ -1798,9 +1766,7 @@ function validateFormValuesAgainstProtoSchema<Desc extends DescMessage>({
   options?: ProtoConversionOptions;
   source?: MessageShape<Desc> | undefined;
   context?: ProtoValidationContext;
-}):
-  | NormalizedProtoValidationResult<MessageShape<Desc>>
-  | Promise<NormalizedProtoValidationResult<MessageShape<Desc>>> {
+}) {
   try {
     const conversionIssues = filterValidationIssues(
       desc,
@@ -1808,7 +1774,9 @@ function validateFormValuesAgainstProtoSchema<Desc extends DescMessage>({
       context.validationMask
     );
     if (conversionIssues.length > 0) {
-      return { issues: conversionIssues };
+      return { issues: conversionIssues } satisfies
+        | NormalizedProtoValidationResult<MessageShape<Desc>>
+        | Promise<NormalizedProtoValidationResult<MessageShape<Desc>>>;
     }
     const message = formValuesToProto({ desc, values, source, options });
     const validationResult = schema["~standard"].validate(message);

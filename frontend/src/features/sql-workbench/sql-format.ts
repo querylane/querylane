@@ -1,7 +1,7 @@
 import { formatDialect, postgresql } from "sql-formatter";
 
 /** Pretty-prints SQL with PostgreSQL rules; returns the input when parsing fails. */
-function formatSqlText(text: string): { ok: boolean; text: string } {
+function formatSqlText(text: string) {
   try {
     return {
       ok: true,
@@ -12,9 +12,9 @@ function formatSqlText(text: string): { ok: boolean; text: string } {
         keywordCase: "upper",
         linesBetweenQueries: 2,
       }),
-    };
+    } satisfies { ok: boolean; text: string };
   } catch {
-    return { ok: false, text };
+    return { ok: false, text } satisfies { ok: boolean; text: string };
   }
 }
 

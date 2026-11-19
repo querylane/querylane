@@ -5,10 +5,6 @@ interface PostgresPlatform {
   os: string;
 }
 
-/**
- * Ordered by specificity: compiler-environment markers (mingw/cygwin/msvc)
- * must win before a generic "windows" match would.
- */
 const OS_SEGMENT_LABELS: readonly (readonly [string, string])[] = [
   ["linux", "linux"],
   ["darwin", "macos"],
@@ -25,10 +21,6 @@ const OS_SEGMENT_LABELS: readonly (readonly [string, string])[] = [
   ["aix", "aix"],
 ];
 
-/**
- * Matches the target triple after " on " in a PostgreSQL version() string,
- * e.g. "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc".
- */
 const PLATFORM_TRIPLE_PATTERN = /\bon\s+(?<capture1>[\w.]+(?:-[\w.]+)+)/u;
 
 /**
@@ -36,9 +28,7 @@ const PLATFORM_TRIPLE_PATTERN = /\bon\s+(?<capture1>[\w.]+(?:-[\w.]+)+)/u;
  * string. Returns null when the string does not carry a recognizable target
  * triple (e.g. Windows builds report "compiled by Visual C++" without one).
  */
-function parsePostgresPlatform(
-  version: string | null | undefined
-): PostgresPlatform | null {
+function parsePostgresPlatform(version: string | null | undefined) {
   if (!isNonEmptyString(version)) {
     return null;
   }
@@ -58,7 +48,7 @@ function parsePostgresPlatform(
     const normalized = segment.toLowerCase();
     for (const [needle, label] of OS_SEGMENT_LABELS) {
       if (normalized.includes(needle)) {
-        return { arch, os: label };
+        return { arch, os: label } satisfies PostgresPlatform | null;
       }
     }
   }

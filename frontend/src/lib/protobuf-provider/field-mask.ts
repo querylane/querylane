@@ -9,11 +9,7 @@ import {
   type DescOneof,
   getExtension,
 } from "@bufbuild/protobuf";
-import {
-  type FieldMask,
-  FieldMaskSchema,
-  FieldOptionsSchema,
-} from "@bufbuild/protobuf/wkt";
+import { FieldMaskSchema, FieldOptionsSchema } from "@bufbuild/protobuf/wkt";
 
 type FormRecord = Record<string, unknown>;
 
@@ -27,7 +23,10 @@ function isRecord(value: unknown): value is FormRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function valuesEqual(left: unknown, right: unknown): boolean {
+const valuesEqual: (left: unknown, right: unknown) => boolean = (
+  left,
+  right
+) => {
   if (Object.is(left, right)) {
     return true;
   }
@@ -48,16 +47,19 @@ function valuesEqual(left: unknown, right: unknown): boolean {
   }
 
   return recordValuesEqual(left, right);
-}
+};
 
-function byteArraysEqual(left: Uint8Array, right: Uint8Array): boolean {
+function byteArraysEqual(left: Uint8Array, right: Uint8Array) {
   return (
     left.length === right.length &&
     left.every((value, index) => value === right[index])
   );
 }
 
-function recordValuesEqual(left: FormRecord, right: FormRecord): boolean {
+const recordValuesEqual: (left: FormRecord, right: FormRecord) => boolean = (
+  left,
+  right
+) => {
   const leftKeys = Object.keys(left);
   const rightKeys = Object.keys(right);
   return (
@@ -66,14 +68,14 @@ function recordValuesEqual(left: FormRecord, right: FormRecord): boolean {
       (key) => Object.hasOwn(right, key) && valuesEqual(left[key], right[key])
     )
   );
-}
+};
 
-function dirtyFieldsFromValues(current: unknown, initial: unknown): FormRecord {
+function dirtyFieldsFromValues(current: unknown, initial: unknown) {
   if (valuesEqual(current, initial)) {
-    return {};
+    return {} satisfies FormRecord;
   }
   if (!(isRecord(current) && isRecord(initial))) {
-    return {};
+    return {} satisfies FormRecord;
   }
 
   const dirtyFields: FormRecord = {};
@@ -92,7 +94,7 @@ function dirtyFieldsFromValues(current: unknown, initial: unknown): FormRecord {
   return dirtyFields;
 }
 
-function hasDirtyValue(value: unknown): boolean {
+const hasDirtyValue: (value: unknown) => boolean = (value) => {
   if (value === true) {
     return true;
   }
@@ -103,13 +105,13 @@ function hasDirtyValue(value: unknown): boolean {
     return Object.values(value).some((item) => hasDirtyValue(item));
   }
   return false;
-}
+};
 
-function fieldPath(prefix: string, field: DescField): string {
+function fieldPath(prefix: string, field: DescField) {
   return prefix ? `${prefix}.${field.name}` : field.name;
 }
 
-function isUpdatableField(field: DescField): boolean {
+function isUpdatableField(field: DescField) {
   const behaviors = getExtension(
     field.proto.options ?? create(FieldOptionsSchema),
     fieldBehaviorExtension
@@ -117,10 +119,7 @@ function isUpdatableField(field: DescField): boolean {
   return behaviors.every((behavior) => !NON_UPDATABLE_BEHAVIORS.has(behavior));
 }
 
-function findField(
-  schema: DescMessage,
-  segment: string
-): DescField | undefined {
+function findField(schema: DescMessage, segment: string) {
   return schema.fields.find(
     (field) =>
       field.localName === segment ||
@@ -129,7 +128,7 @@ function findField(
   );
 }
 
-function normalizeFieldPath(schema: DescMessage, path: string): string {
+function normalizeFieldPath(schema: DescMessage, path: string) {
   if (path === "*") {
     return path;
   }
@@ -163,9 +162,9 @@ function normalizeFieldPath(schema: DescMessage, path: string): string {
   return normalized.join(".");
 }
 
-function fieldOrder(schema: DescMessage, path: string): number[] {
+function fieldOrder(schema: DescMessage, path: string) {
   if (path === "*") {
-    return [-1];
+    return [-1] satisfies number[];
   }
 
   const order: number[] = [];
@@ -184,11 +183,7 @@ function fieldOrder(schema: DescMessage, path: string): number[] {
   return order;
 }
 
-function compareFieldOrder(
-  schema: DescMessage,
-  left: string,
-  right: string
-): number {
+function compareFieldOrder(schema: DescMessage, left: string, right: string) {
   const leftOrder = fieldOrder(schema, left);
   const rightOrder = fieldOrder(schema, right);
   const length = Math.max(leftOrder.length, rightOrder.length);
@@ -201,10 +196,7 @@ function compareFieldOrder(
   return left.localeCompare(right);
 }
 
-function createFieldMask(
-  schema: DescMessage,
-  paths: readonly string[]
-): FieldMask {
+function createFieldMask(schema: DescMessage, paths: readonly string[]) {
   const normalizedPaths = [
     ...new Set(paths.map((path) => normalizeFieldPath(schema, path))),
   ];
@@ -220,7 +212,7 @@ function createFieldMask(
   return create(FieldMaskSchema, { paths: minimizedPaths });
 }
 
-function collectFieldPaths({
+const collectFieldPaths: ({
   field,
   dirtyValue,
   currentValue,
@@ -232,7 +224,13 @@ function collectFieldPaths({
   currentValue: unknown;
   initialValue: unknown;
   prefix: string;
-}): string[] {
+}) => string[] = ({
+  field,
+  dirtyValue,
+  currentValue,
+  initialValue,
+  prefix,
+}) => {
   if (!(hasDirtyValue(dirtyValue) && isUpdatableField(field))) {
     return [];
   }
@@ -257,9 +255,9 @@ function collectFieldPaths({
     prefix: path,
   });
   return nestedPaths.length > 0 ? nestedPaths : [path];
-}
+};
 
-function collectOneofPaths({
+const collectOneofPaths: ({
   oneof,
   dirtyValue,
   currentValue,
@@ -271,7 +269,13 @@ function collectOneofPaths({
   currentValue: unknown;
   initialValue: unknown;
   prefix: string;
-}): string[] {
+}) => string[] = ({
+  oneof,
+  dirtyValue,
+  currentValue,
+  initialValue,
+  prefix,
+}) => {
   if (!hasDirtyValue(dirtyValue)) {
     return [];
   }
@@ -310,22 +314,28 @@ function collectOneofPaths({
     initialValue: initialOneofValue,
     prefix,
   });
-}
+};
 
-function collectMessagePaths({
+const collectMessagePaths: ({
   schema,
   dirtyFields,
   currentValues,
   initialValues,
-  prefix = "",
+  prefix,
 }: {
   schema: DescMessage;
   dirtyFields: FormRecord;
   currentValues: FormRecord;
   initialValues: FormRecord;
   prefix?: string;
-}): string[] {
-  return schema.members.flatMap((member) => {
+}) => string[] = ({
+  schema,
+  dirtyFields,
+  currentValues,
+  initialValues,
+  prefix = "",
+}) =>
+  schema.members.flatMap((member) => {
     if (member.kind === "oneof") {
       return collectOneofPaths({
         oneof: member,
@@ -343,7 +353,6 @@ function collectMessagePaths({
       prefix,
     });
   });
-}
 
 function createUpdateMask({
   schema,
@@ -355,7 +364,7 @@ function createUpdateMask({
   dirtyFields: unknown;
   currentValues: unknown;
   initialValues?: unknown;
-}): FieldMask {
+}) {
   const paths = collectMessagePaths({
     schema,
     dirtyFields: isRecord(dirtyFields) ? dirtyFields : {},

@@ -26,11 +26,11 @@ function resolveCreateInstanceSuccessTarget({
   createdInstanceName: string | undefined;
   databases: DatabaseResource[];
   preferredDatabaseId: string;
-}): CreateInstanceSuccessTarget {
+}) {
   const instanceId = parseResourceLeafId(createdInstanceName ?? "");
 
   if (!instanceId) {
-    return { replace: true, to: "/" };
+    return { replace: true, to: "/" } satisfies CreateInstanceSuccessTarget;
   }
 
   const normalizedPreferredDatabaseId = preferredDatabaseId.trim();
@@ -46,13 +46,13 @@ function resolveCreateInstanceSuccessTarget({
     return {
       params: { instanceId },
       to: "/instances/$instanceId",
-    };
+    } satisfies CreateInstanceSuccessTarget;
   }
 
   return {
     params: { databaseId, instanceId },
     to: "/instances/$instanceId/databases/$databaseId/explorer",
-  };
+  } satisfies CreateInstanceSuccessTarget;
 }
 
 export type { CreateInstanceSuccessTarget, DatabaseResource };

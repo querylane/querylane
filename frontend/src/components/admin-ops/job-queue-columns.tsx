@@ -8,8 +8,6 @@ import {
 } from "@/lib/admin-ops";
 import type { AdminRunnerExecution } from "@/protogen/querylane/console/v1alpha1/admin_pb";
 
-// Placeholder shown for empty cells; held in a constant so the em-dash is a
-// value rather than JSX prose (matches how the explorer tables render blanks).
 const EMPTY_CELL = "—";
 
 export function JobStatusCell({ status }: { status: JobExecutionStatus }) {

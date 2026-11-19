@@ -16,8 +16,6 @@ interface CatalogSchemaNode {
 
 const SAMPLE_ROW_LIMIT = 100;
 const PLAIN_IDENTIFIER = /^[a-z_][a-z0-9_$]*$/u;
-// PostgreSQL keywords that cannot be used as a bare table or column name.
-// Quoting them keeps an inserted `"user"` or `"order"` runnable as typed.
 const RESERVED_WORDS = new Set([
   "all",
   "analyse",
@@ -121,11 +119,10 @@ const RESERVED_WORDS = new Set([
   "window",
   "with",
 ]);
-// Characters after which an inserted identifier needs no separating space.
 const NO_SPACE_BEFORE = new Set(["(", ",", ".", " ", "\n", "\t", "\r", ""]);
 
 /** Quotes an identifier only when PostgreSQL would otherwise misread it. */
-function quoteIdentifier(name: string): string {
+function quoteIdentifier(name: string) {
   if (PLAIN_IDENTIFIER.test(name) && !RESERVED_WORDS.has(name)) {
     return name;
   }
@@ -140,25 +137,20 @@ function quoteIdentifier(name: string): string {
 function qualifiedRelationName(
   relation: SqlRelation,
   defaultSchema: string = DEFAULT_SCHEMA
-): string {
+) {
   const name = quoteIdentifier(relation.name);
   return relation.schema === defaultSchema
     ? name
     : `${quoteIdentifier(relation.schema)}.${name}`;
 }
 
-/** Inserted names must not fuse with an adjacent identifier character. */
 const IDENTIFIER_CHAR = /[\p{L}\p{N}_$"]/u;
 
 /**
  * Pads an inserted name with spaces where it would otherwise fuse with the
  * token before or after the cursor.
  */
-function padInsertion(
-  charBefore: string,
-  text: string,
-  charAfter = ""
-): string {
+function padInsertion(charBefore: string, text: string, charAfter = "") {
   const before = NO_SPACE_BEFORE.has(charBefore) ? "" : " ";
   const after = IDENTIFIER_CHAR.test(charAfter) ? " " : "";
   return `${before}${text}${after}`;
@@ -167,18 +159,18 @@ function padInsertion(
 function sampleStatement(
   relation: SqlRelation,
   defaultSchema: string = DEFAULT_SCHEMA
-): string {
+) {
   return `SELECT *\nFROM ${qualifiedRelationName(relation, defaultSchema)}\nLIMIT ${SAMPLE_ROW_LIMIT};`;
 }
 
-function compareRelations(a: SqlRelation, b: SqlRelation): number {
+function compareRelations(a: SqlRelation, b: SqlRelation) {
   if (a.kind !== b.kind) {
     return a.kind === "table" ? -1 : 1;
   }
   return a.name.localeCompare(b.name);
 }
 
-function compareSchemas(a: CatalogSchemaNode, b: CatalogSchemaNode): number {
+function compareSchemas(a: CatalogSchemaNode, b: CatalogSchemaNode) {
   if (a.isSystem !== b.isSystem) {
     return a.isSystem ? 1 : -1;
   }
@@ -189,7 +181,7 @@ function compareSchemas(a: CatalogSchemaNode, b: CatalogSchemaNode): number {
 function buildCatalogTree(
   schemas: readonly CatalogSchema[],
   objects: readonly CatalogObject[]
-): CatalogSchemaNode[] {
+) {
   const nodes = new Map<string, CatalogSchemaNode>();
   for (const schema of schemas) {
     nodes.set(schema.schemaId, {
@@ -213,7 +205,7 @@ function buildCatalogTree(
   return tree.toSorted(compareSchemas);
 }
 
-function matches(value: string, query: string): boolean {
+function matches(value: string, query: string) {
   return value.toLowerCase().includes(query);
 }
 
@@ -221,13 +213,10 @@ function matches(value: string, query: string): boolean {
  * Keeps schemas whose name matches (with all their relations) and relations
  * whose bare or qualified name matches. An empty query returns the tree as is.
  */
-function filterCatalogTree(
-  tree: readonly CatalogSchemaNode[],
-  query: string
-): CatalogSchemaNode[] {
+function filterCatalogTree(tree: readonly CatalogSchemaNode[], query: string) {
   const normalized = query.trim().toLowerCase();
   if (normalized === "") {
-    return [...tree];
+    return [...tree] satisfies CatalogSchemaNode[];
   }
   const filtered: CatalogSchemaNode[] = [];
   for (const node of tree) {

@@ -53,10 +53,7 @@ import {
 import { isNonEmptyString } from "@/lib/value-guards";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-function roleSectionSearch(
-  previous: RoleDetailSearch,
-  next: Section
-): RoleDetailSearch {
+function roleSectionSearch(previous: RoleDetailSearch, next: Section) {
   const stayOnGrants = next === "grants";
   return {
     ...previous,
@@ -64,17 +61,17 @@ function roleSectionSearch(
     grantsSchema: stayOnGrants ? previous.grantsSchema : undefined,
     grantsType: stayOnGrants ? previous.grantsType : undefined,
     tab: next === "overview" ? undefined : next,
-  };
+  } satisfies RoleDetailSearch;
 }
 
-function hasReadWriteBuiltin(role: Role): boolean {
+function hasReadWriteBuiltin(role: Role) {
   return [
     role.roleName,
     ...role.memberOf.map((membership) => membership.roleName),
   ].some((name) => name === "pg_read_all_data" || name === "pg_write_all_data");
 }
 
-function connectionLimitSubText(role: Role): string | undefined {
+function connectionLimitSubText(role: Role) {
   if (!(role.attributes?.canLogin === true)) {
     return undefined;
   }
@@ -91,17 +88,21 @@ function resolveGrantsView({
   grantsReach: GrantsReach | undefined;
   grantsSchema: string | undefined;
   grantsType: GrantsType | undefined;
-}): GrantsView {
+}) {
   if (section !== "grants") {
-    return { kind: "overview" };
+    return { kind: "overview" } satisfies GrantsView;
   }
   if (grantsReach) {
-    return { kind: "reach", reach: grantsReach };
+    return { kind: "reach", reach: grantsReach } satisfies GrantsView;
   }
   if (isNonEmptyString(grantsSchema)) {
-    return { kind: "schema", schema: grantsSchema, type: grantsType };
+    return {
+      kind: "schema",
+      schema: grantsSchema,
+      type: grantsType,
+    } satisfies GrantsView;
   }
-  return { kind: "overview" };
+  return { kind: "overview" } satisfies GrantsView;
 }
 
 interface RoleFacetQueryState {
@@ -122,7 +123,7 @@ function buildRoleFacetStates({
   loadFacets: boolean;
   ownedObjectsQuery: RoleFacetQueryState;
   publicGrantsQuery: RoleFacetQueryState;
-}): FacetStates {
+}) {
   const deferred = facetsEnabled && !loadFacets;
   return {
     defaults: facetStateOf(facetsEnabled, defaultPrivilegesQuery, {
@@ -134,11 +135,9 @@ function buildRoleFacetStates({
     publicGrants: facetStateOf(facetsEnabled, publicGrantsQuery, {
       deferred: deferred && publicGrantsQuery.data === undefined,
     }),
-  };
+  } satisfies FacetStates;
 }
 
-// Direct object grants for the selected database, aggregated to one entry per
-// object (the page is object-centric, so KPIs and tabs count distinct objects).
 function useRoleGrants({
   effectiveDbId,
   instanceId,
@@ -183,9 +182,6 @@ function useRoleGrants({
   };
 }
 
-// The three security facets (owned objects, PUBLIC grants, default privileges),
-// scoped to the selected database and suppressed for built-in roles. Returns the
-// data plus each facet's load state, keeping the query wiring out of the view.
 function useRoleFacets({
   effectiveDbId,
   instanceId,
@@ -241,8 +237,6 @@ function useRoleFacets({
   };
 }
 
-// The three URL-driven navigation handlers for the role detail page, grouped so
-// RoleDetailContent stays focused on its view model rather than search wiring.
 function useGrantsNavigation(setChosenDbId: (next: string) => void) {
   const navigate = useNavigate({
     from: "/instances/$instanceId/roles/$roleId",
@@ -250,8 +244,6 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
   const setSection = (next: Section) => {
     navigate({
       replace: true,
-      // The grants drill-in is only meaningful on the grants tab; drop it
-      // when leaving so a later visit lands on the grants overview.
       search: (previous) => roleSectionSearch(previous, next),
     }).catch((error: unknown) => {
       handleNavigationError(error, { area: "role-detail.section" });
@@ -259,8 +251,6 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
   };
   const onNavigateGrants = (next: GrantsView) => {
     navigate({
-      // replace:false so the browser Back button steps a drill-in back to the
-      // grants overview rather than leaving the page.
       replace: false,
       search: (previous) => ({
         ...previous,
@@ -273,8 +263,6 @@ function useGrantsNavigation(setChosenDbId: (next: string) => void) {
       handleNavigationError(error, { area: "role-detail.grants" });
     });
   };
-  // Switching databases from inside the Grants tab: a drilled-in schema/reach
-  // may not exist in the new database, so reset to the grants overview.
   const onSelectGrantsDatabase = (next: string) => {
     setChosenDbId(next);
     navigate({
@@ -311,8 +299,6 @@ function RoleDetailContent({
   roleId: string;
   tab: RoleTab | undefined;
 }) {
-  // The selected tab lives in the URL (?tab=…) so it survives reload and can be
-  // shared; "overview" is the default and is omitted from the URL.
   const section: Section = tab ?? "overview";
   const { databases, selectedDatabase } = useDb();
   const [chosenDbId, setChosenDbId] = useState<string | null>(null);
@@ -358,10 +344,6 @@ function RoleDetailContent({
     grantsReady,
   });
 
-  // Security facets, scoped to the selected database. The "Owns" KPI mirrors the
-  // "Direct grants" KPI: show "—"/"Unavailable" while the owned-objects query is
-  // pending or failed, rather than asserting "no owned objects" from an empty
-  // default.
   const {
     defaultPrivileges,
     defaultPrivilegesPartial,
@@ -409,10 +391,6 @@ function RoleDetailContent({
 
   const connLimitSub = connectionLimitSubText(role);
 
-  // Built-in access via membership: a normal role that is a member of a pg_*
-  // role (the case users care about). Direct parents only; recursive closure
-  // is out of scope for now. Names drive the access spine; details drive the
-  // built-in role page's hierarchy block (e.g. pg_monitor ⇒ pg_read_all_settings).
   const { details: builtinParentDetails, names: builtinParents } =
     deriveBuiltinParents(role);
   const isSuperuser = Boolean(attributes?.isSuperuser);

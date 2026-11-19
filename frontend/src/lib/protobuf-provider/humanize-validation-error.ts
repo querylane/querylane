@@ -58,7 +58,7 @@ const GENERIC_MESSAGES = new Set([
   "exactly one field is required in oneof",
 ]);
 
-function isGenericValidationMessage(message: string): boolean {
+function isGenericValidationMessage(message: string) {
   if (GENERIC_MESSAGES.has(message)) {
     return true;
   }
@@ -84,7 +84,7 @@ function isGenericValidationMessage(message: string): boolean {
 function humanizeLengthConstraint(
   message: string,
   formatter?: ProtoformMessageFormatter
-): string | undefined {
+) {
   const minLenMatch = MIN_LEN_PATTERN.exec(message);
   if (isNonEmptyString(minLenMatch?.[1])) {
     const limit = Number(minLenMatch[1]);
@@ -118,7 +118,7 @@ function humanizeLengthConstraint(
 function humanizeItemConstraint(
   message: string,
   formatter?: ProtoformMessageFormatter
-): string | undefined {
+) {
   const minItemsMatch = MIN_ITEMS_PATTERN.exec(message);
   if (isNonEmptyString(minItemsMatch?.[1])) {
     const limit = Number(minItemsMatch[1]);
@@ -149,7 +149,7 @@ function humanizeItemConstraint(
 function humanizeNumericBound(
   message: string,
   formatter?: ProtoformMessageFormatter
-): string | undefined {
+) {
   const gteMatch = GTE_PATTERN.exec(message);
   if (isNonEmptyString(gteMatch?.[1])) {
     return formatProtoformMessage({
@@ -192,7 +192,7 @@ function humanizeNumericBound(
 function humanizeRegexError(
   message: string,
   formatter?: ProtoformMessageFormatter
-): string | undefined {
+) {
   const regexMatch = REGEX_ERROR_PATTERN.exec(message);
   if (!isNonEmptyString(regexMatch?.[1])) {
     return undefined;
@@ -212,7 +212,7 @@ function humanizeRegexError(
 function humanizeValidationError(
   message: string,
   formatter?: ProtoformMessageFormatter
-): string {
+) {
   if (message === "value is required") {
     return formatProtoformMessage({
       formatter,
@@ -244,7 +244,7 @@ const SERVER_FIELD_ERROR_FALLBACK = "Review this value and try again.";
 function humanizeServerFieldError(
   description: string,
   formatter?: ProtoformMessageFormatter
-): string {
+) {
   const message = description.trim();
   return message
     ? humanizeValidationError(message, formatter)

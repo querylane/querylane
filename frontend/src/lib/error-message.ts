@@ -1,4 +1,4 @@
-function errorMessageOf(error: unknown): string {
+function errorMessageOf(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }

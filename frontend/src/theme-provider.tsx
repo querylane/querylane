@@ -32,18 +32,18 @@ function subscribeToSystemTheme(onStoreChange: () => void) {
   };
 }
 
-function getSystemTheme(): ResolvedTheme {
+function getSystemTheme() {
   if (
     globalThis.window !== undefined &&
     typeof globalThis.window.matchMedia === "function" &&
     globalThis.window.matchMedia("(prefers-color-scheme: dark)").matches
   ) {
-    return "dark";
+    return "dark" as const;
   }
-  return "light";
+  return "light" as const;
 }
 
-function getThemeStorage(): Storage | null {
+function getThemeStorage() {
   if (globalThis.window === undefined) {
     return null;
   }
@@ -55,7 +55,7 @@ function getThemeStorage(): Storage | null {
   }
 }
 
-function getInitialTheme(storageKey: string, defaultTheme: Theme): Theme {
+function getInitialTheme(storageKey: string, defaultTheme: Theme) {
   const storedTheme = getThemeStorage()?.getItem(storageKey) ?? null;
   return isTheme(storedTheme) ? storedTheme : defaultTheme;
 }
@@ -69,15 +69,14 @@ function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(() =>
     getInitialTheme(storageKey, defaultTheme)
   );
-  const systemTheme = useSyncExternalStore(
+  const systemTheme = useSyncExternalStore<ResolvedTheme>(
     subscribeToSystemTheme,
     getSystemTheme,
-    (): ResolvedTheme => "light"
+    () => "light"
   );
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
-  // sync theme with system/DOM
   useEffect(
     function applyThemeToDom() {
       const root = globalThis.window.document.documentElement;

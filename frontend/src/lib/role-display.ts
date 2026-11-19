@@ -4,9 +4,6 @@ import { formatDistanceToNow } from "date-fns";
 import { parseResourceLeafId } from "@/lib/console-resources";
 import type { Role } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// Non-exported constants and helpers come first; all exports follow (per the
-// useExportsLast lint rule).
-
 const SOON_THRESHOLD_DAYS = 14;
 const MS_PER_DAY = 86_400_000;
 
@@ -51,7 +48,7 @@ const SERVER_POWERS: AttributeBadge[] = [
   },
 ];
 
-function isServerPowerGranted(role: Role, key: string): boolean {
+function isServerPowerGranted(role: Role, key: string) {
   const { attributes } = role;
   switch (key) {
     case "superuser":
@@ -69,27 +66,19 @@ function isServerPowerGranted(role: Role, key: string): boolean {
   }
 }
 
-function plural(count: number): string {
+function plural(count: number) {
   return count === 1 ? "" : "s";
 }
 
-function quoteIdentifier(name: string): string {
+function quoteIdentifier(name: string) {
   return `"${name.replaceAll('"', '""')}"`;
 }
 
-function countRolesWhere(
-  roles: Role[],
-  predicate: (role: Role) => boolean
-): number {
+function countRolesWhere(roles: Role[], predicate: (role: Role) => boolean) {
   return roles.filter((value) => predicate(value)).length;
 }
 
-// Counts login roles whose password has expired or is expiring soon, in a single
-// pass (extracted so computeRoleRisk stays a flat tally).
-function countPasswordExpiry(
-  roles: Role[],
-  now: Date
-): { expired: number; soon: number } {
+function countPasswordExpiry(roles: Role[], now: Date) {
   let expired = 0;
   let soon = 0;
   for (const role of roles) {
@@ -104,11 +93,10 @@ function countPasswordExpiry(
       soon += 1;
     }
   }
-  return { expired, soon };
+  return { expired, soon } satisfies { expired: number; soon: number };
 }
 
-// Builds the WITH-option clause tokens for CREATE ROLE from the role attributes.
-function roleAttributeOptions(attributes: Role["attributes"]): string[] {
+function roleAttributeOptions(attributes: Role["attributes"]) {
   const options: string[] = [
     attributes?.canLogin === true ? "LOGIN" : "NOLOGIN",
   ];
@@ -141,7 +129,7 @@ function roleAttributeOptions(attributes: Role["attributes"]): string[] {
 function membershipGrantStatements(
   memberships: Role["memberOf"],
   name: string
-): string[] {
+) {
   return memberships.map((membership) => {
     const grantOptions: string[] = [];
     if (membership.adminOption) {
@@ -158,7 +146,7 @@ function membershipGrantStatements(
 function configParameterStatements(
   attributes: Role["attributes"],
   name: string
-): string[] {
+) {
   const statements: string[] = [];
   const parameters = attributes?.configParameters ?? [];
   for (const parameter of parameters) {
@@ -175,8 +163,6 @@ function configParameterStatements(
   return statements;
 }
 
-// Predefined PostgreSQL role descriptors (documentation, not catalog truth);
-// see PredefinedRoleInfo below. Keyed by the lowercase pg_* role name.
 const PREDEFINED_ROLES: Record<string, PredefinedRoleInfo> = {
   pg_checkpoint: {
     implicit: ["EXECUTE the CHECKPOINT command"],
@@ -288,7 +274,7 @@ const PREDEFINED_ROLES: Record<string, PredefinedRoleInfo> = {
   },
 };
 
-function categorizeRole(role: Role): RoleCategory {
+function categorizeRole(role: Role) {
   if (role.isSystemRole) {
     return "system";
   }
@@ -320,36 +306,21 @@ export const ROLE_KIND_TOOLTIP: Record<RoleKind, string> = {
   super: "Has SUPERUSER — bypasses every permission check (rolsuper).",
 };
 
-// Predefined PostgreSQL roles ship in pg_authid and grant implicit privileges
-// to their members via hard-coded has_*_privilege() checks — there are no GRANT
-// rows to inspect. The catalog does not expose what each grants, and the set
-// changes across major versions, so this map is documentation, not ground
-// truth: copy reads as guidance ("In recent PostgreSQL versions, …") and any
-// pg_* role we don't recognize still gets a generic built-in label rather than
-// a wrong claim. Names/privileges per the PostgreSQL predefined-roles docs.
 export interface PredefinedRoleInfo {
   implicit: string[];
   since: string;
   summary: string;
 }
 
-// True for any pg_* role, whether or not we have a descriptor for it. Predefined
-// PostgreSQL roles are always lowercase `pg_*`, so this is case-sensitive — a
-// user role like `PG_APP` must not be classified as built-in.
-export function isPredefinedRoleName(roleName: string): boolean {
+export function isPredefinedRoleName(roleName: string) {
   return roleName.startsWith("pg_");
 }
 
-// Descriptor for a known predefined role, or null. Unknown pg_* roles return
-// null but are still rendered as built-in via deriveRoleKind / the generic
-// label, never with a fabricated privilege claim.
-export function predefinedRoleInfo(
-  roleName: string
-): PredefinedRoleInfo | null {
+export function predefinedRoleInfo(roleName: string) {
   return PREDEFINED_ROLES[roleName] ?? null;
 }
 
-export function deriveRoleKind(role: Role): RoleKind {
+export function deriveRoleKind(role: Role) {
   if (role.isSystemRole || isPredefinedRoleName(role.roleName)) {
     return "builtin";
   }
@@ -409,11 +380,11 @@ export interface PasswordExpiry {
   state: ExpiryState;
 }
 
-export function roleIdOf(role: Role): string {
+export function roleIdOf(role: Role) {
   return parseResourceLeafId(role.name);
 }
 
-export function categorizeRoles(roles: Role[]): Record<RoleCategory, Role[]> {
+export function categorizeRoles(roles: Role[]) {
   const grouped: Record<RoleCategory, Role[]> = {
     group: [],
     login: [],
@@ -425,30 +396,28 @@ export function categorizeRoles(roles: Role[]): Record<RoleCategory, Role[]> {
   return grouped;
 }
 
-export function roleCapabilityMatrix(role: Role): CapabilityState[] {
+export function roleCapabilityMatrix(role: Role) {
   return SERVER_POWERS.map((power) => ({
     ...power,
     granted: isServerPowerGranted(role, power.key),
   }));
 }
 
-export function roleRiskNotice(
-  role: Role
-): { description: string; title: string } | null {
+export function roleRiskNotice(role: Role) {
   const { attributes } = role;
   if (attributes?.isSuperuser === true) {
     return {
       description:
         "This role is a superuser — it bypasses every permission check and can do anything on this server.",
       title: "Full administrative access",
-    };
+    } satisfies { description: string; title: string } | null;
   }
   if (attributes?.bypassesRls === true) {
     return {
       description:
         "This role ignores row-level security policies, so it can read and write rows that policies would normally hide.",
       title: "Bypasses row-level security",
-    };
+    } satisfies { description: string; title: string } | null;
   }
   return null;
 }
@@ -457,7 +426,7 @@ export function membershipOptionBadges(membership: {
   adminOption: boolean;
   inheritOption: boolean;
   setOption: boolean;
-}): MembershipOptionBadge[] {
+}) {
   const badges: MembershipOptionBadge[] = [];
   if (membership.adminOption) {
     badges.push({
@@ -484,9 +453,7 @@ export function membershipOptionBadges(membership: {
   return badges;
 }
 
-export function buildInverseMembershipIndex(
-  roles: Role[]
-): Map<string, MemberEntry[]> {
+export function buildInverseMembershipIndex(roles: Role[]) {
   const index = new Map<string, MemberEntry[]>();
   for (const child of roles) {
     for (const membership of child.memberOf) {
@@ -511,26 +478,32 @@ export function buildInverseMembershipIndex(
 export function passwordExpiryStatus(
   validUntil: Timestamp | undefined,
   now: Date = new Date()
-): PasswordExpiry {
+) {
   if (!validUntil) {
-    return { label: "No expiry", state: "none" };
+    return { label: "No expiry", state: "none" } satisfies PasswordExpiry;
   }
   const expiresAt = timestampDate(validUntil);
   const diffMs = expiresAt.getTime() - now.getTime();
   const relative = formatDistanceToNow(expiresAt, { addSuffix: true });
   if (diffMs <= 0) {
-    return { label: `Expired ${relative}`, state: "expired" };
+    return {
+      label: `Expired ${relative}`,
+      state: "expired",
+    } satisfies PasswordExpiry;
   }
   if (diffMs <= SOON_THRESHOLD_DAYS * MS_PER_DAY) {
-    return { label: `Expires ${relative}`, state: "soon" };
+    return {
+      label: `Expires ${relative}`,
+      state: "soon",
+    } satisfies PasswordExpiry;
   }
-  return { label: `Expires ${relative}`, state: "valid" };
+  return {
+    label: `Expires ${relative}`,
+    state: "valid",
+  } satisfies PasswordExpiry;
 }
 
-export function computeRoleRisk(
-  roles: Role[],
-  now: Date = new Date()
-): RoleRisk {
+export function computeRoleRisk(roles: Role[], now: Date = new Date()) {
   const { expired: expiredPasswords, soon: expiringSoon } = countPasswordExpiry(
     roles,
     now
@@ -557,10 +530,10 @@ export function computeRoleRisk(
     expiringSoon,
     severity,
     superusers,
-  };
+  } satisfies RoleRisk;
 }
 
-export function describeRoleRisk(risk: RoleRisk): string[] {
+export function describeRoleRisk(risk: RoleRisk) {
   const clauses: string[] = [];
   if (risk.superusers > 0) {
     clauses.push(`${risk.superusers} superuser${plural(risk.superusers)}`);
@@ -593,9 +566,7 @@ export function describeRoleRisk(risk: RoleRisk): string[] {
   return clauses;
 }
 
-export function expiryPresentation(
-  state: ExpiryState
-): "expiry-expired" | "expiry-soon" | undefined {
+export function expiryPresentation(state: ExpiryState) {
   if (state === "expired") {
     return "expiry-expired";
   }
@@ -605,7 +576,7 @@ export function expiryPresentation(
   return undefined;
 }
 
-export function formatConnectionLimit(limit: number): string {
+export function formatConnectionLimit(limit: number) {
   if (limit < 0) {
     return "Unlimited";
   }
@@ -615,7 +586,7 @@ export function formatConnectionLimit(limit: number): string {
   return `${limit} concurrent connection${plural(limit)}`;
 }
 
-export function buildRoleSql(role: Role): string {
+export function buildRoleSql(role: Role) {
   const name = quoteIdentifier(role.roleName);
   const options = roleAttributeOptions(role.attributes);
   return [

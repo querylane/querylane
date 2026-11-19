@@ -23,13 +23,7 @@ import { useSetupStore } from "@/stores/setup-store";
 
 const GENERIC_ERROR_TITLES = new Set(["Unexpected error", "Request failed"]);
 
-/**
- * Boot errors mean the frontend loaded but could not talk to the Querylane
- * server. When normalization produced only a generic title, reframe it as a
- * connectivity problem; specific titles (e.g. meta database unavailable) are
- * kept as-is. The original message stays visible in the details dialog.
- */
-function presentBootError(error: AppUiError): AppUiError {
+function presentBootError(error: AppUiError) {
   const isBootPathFailure =
     error.connectReason === null &&
     (error.code === Code.DeadlineExceeded ||
@@ -52,7 +46,7 @@ function presentBootError(error: AppUiError): AppUiError {
       "Check that the Querylane server is running and that your network or proxy can reach it, then retry.",
     summary,
     title: "Cannot reach Querylane",
-  };
+  } satisfies AppUiError;
 }
 
 function FullscreenMessage({
@@ -84,7 +78,7 @@ function shouldRenderBlockingRoute(
   hasBootError: boolean,
   blockingRoute: string | null,
   pathname: string
-): boolean {
+) {
   return hasBootError && blockingRoute !== null && pathname === blockingRoute;
 }
 
@@ -118,7 +112,6 @@ export function BootGate({ children }: { children: React.ReactNode }) {
     onRetry: bootstrap,
   });
 
-  // initialize app on mount
   useEffect(() => {
     if (bootstrappedRef.current) {
       return;

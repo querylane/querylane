@@ -63,9 +63,6 @@ interface TableDataGridProps {
 }
 
 const DEFAULT_PAGE_SIZE = 50;
-// Stable empties keep row/column derivations referentially equal across
-// renders while data is undefined, so the React Compiler can memoize
-// everything downstream of them.
 const EMPTY_RESULT_COLUMNS: TableResultColumn[] = [];
 const EMPTY_RESULT_ROWS: {
   rowKey: string;
@@ -101,7 +98,7 @@ function useAutoRefresh({
   });
 
   useEffect(
-    function scheduleAutoRefresh(): (() => void) | undefined {
+    function scheduleAutoRefresh() {
       if (intervalMs === null || isFetching) {
         return undefined;
       }
@@ -111,9 +108,9 @@ function useAutoRefresh({
         setManualRefreshAt(Date.now());
         Promise.resolve(refreshRef.current()).catch(reportAutoRefreshError);
       }, remaining);
-      return () => {
+      return (() => {
         globalThis.window.clearTimeout(timeoutId);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [intervalMs, isFetching, timerEpochMs]
   );
@@ -152,10 +149,6 @@ function useDataGridRefreshState({
   };
 }
 
-/**
- * Selections are page-scoped: prior keys don't map across page, page size,
- * filter or sort changes, so the grid resets them when this key changes.
- */
 function navigationStateKey({
   currentPageIndex,
   filterLogic,
@@ -170,16 +163,15 @@ function navigationStateKey({
   name: string;
   pageSize: number;
   sortColumns: SortColumn[];
-}): string {
+}) {
   return `${name}:${currentPageIndex}:${pageSize}:${
     serializeTableFilterSearch({ logic: filterLogic, rules: filterRules }) ?? ""
   }:${serializeSortSearch(sortColumns) ?? ""}`;
 }
 
-/** Truncated previews resolve through ReadCellValue on this table. */
-function useReadCellValueFetcher(name: string): FetchFullCell {
+function useReadCellValueFetcher(name: string) {
   const readCellValue = useReadCellValueMutation();
-  return async (fullValueToken) => {
+  return (async (fullValueToken) => {
     const awaitedResult1 = await readCellValue.mutateAsync(
       create(ReadCellValueRequestSchema, {
         fullValueToken,
@@ -188,7 +180,7 @@ function useReadCellValueFetcher(name: string): FetchFullCell {
       })
     );
     return awaitedResult1.value;
-  };
+  }) satisfies FetchFullCell;
 }
 
 function TableDataGridAlerts({
@@ -260,7 +252,7 @@ function TableDataGridAlerts({
 function buildAvailableColumns(
   columnCatalog: readonly TableColumn[],
   resultColumns: TableResultColumn[]
-): TableResultColumn[] {
+) {
   if (columnCatalog.length === 0) {
     return resultColumns;
   }
@@ -277,7 +269,7 @@ function buildAvailableColumns(
 function hasColumnMetadata(
   availableColumns: readonly TableResultColumn[],
   resultSet: unknown
-): boolean {
+) {
   return availableColumns.length > 0 || resultSet !== undefined;
 }
 
@@ -289,7 +281,7 @@ function availableNextPageToken({
   error: unknown;
   isFetching: boolean;
   response: ReadRowsResponse | undefined;
-}): string {
+}) {
   if (Boolean(error) || isFetching) {
     return "";
   }
@@ -321,7 +313,7 @@ function shouldSuppressStatusAndPagination({
   error: unknown;
   isPreviousRequestFallback: boolean;
   rowCount: number;
-}): boolean {
+}) {
   return isPreviousRequestFallback || (Boolean(error) && rowCount === 0);
 }
 function TableDataGrid({
@@ -379,9 +371,6 @@ function TableDataGrid({
     isPlaceholderData,
     lastSuccessfulData,
   } = rowsQuery;
-  // Use TanStack Query's successful data, including the most recent page for
-  // the same request shape. Filters, sorts, projections, and tables keep
-  // separate identities so a failure never displays unrelated rows.
   const queryError = queryStateError ?? error;
   const {
     data: visibleData,
@@ -399,12 +388,6 @@ function TableDataGrid({
   });
   const fetchFullCell = useReadCellValueFetcher(name);
   const gridLoading = isLoading || isQueryStateValidationLoading;
-  // A page/sort/filter change starts a new request while `placeholderData`
-  // keeps the prior rows on screen (isPlaceholderData). Dim those rows and
-  // float a refreshing pill so slow loads read as "loading" without losing
-  // continuity. Gated on isPlaceholderData rather than raw isFetching so a
-  // same-key refetch — the toolbar Refresh button or a reconnect — doesn't
-  // grey out and disable unchanged rows (the toolbar spinner covers those).
   const isRefetchingRows = isPlaceholderData && !gridLoading;
 
   const resultSet = visibleData?.resultSet ?? {

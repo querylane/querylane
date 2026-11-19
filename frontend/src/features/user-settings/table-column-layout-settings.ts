@@ -19,19 +19,16 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function parseStringArray(value: unknown): string[] | null {
+function parseStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return null;
   }
   return [
     ...new Set(value.filter((item): item is string => isNonEmptyString(item))),
-  ];
+  ] satisfies string[] | null;
 }
 
-function parsePersistedLayout(
-  tableName: string,
-  candidate: unknown
-): TableColumnLayout | undefined {
+function parsePersistedLayout(tableName: string, candidate: unknown) {
   if (!(tableName && isObjectRecord(candidate))) {
     return undefined;
   }
@@ -46,14 +43,12 @@ function parsePersistedLayout(
       : {}),
     hiddenColumns,
     order,
-  };
+  } satisfies TableColumnLayout | undefined;
 }
 
-function parsePersistedLayouts(
-  value: unknown
-): Record<string, TableColumnLayout> {
+function parsePersistedLayouts(value: unknown) {
   if (!(isObjectRecord(value) && isObjectRecord(value["layouts"]))) {
-    return {};
+    return {} satisfies Record<string, TableColumnLayout>;
   }
   const layouts: Record<string, TableColumnLayout> = {};
   const entries = Object.entries(value["layouts"]);
@@ -69,14 +64,14 @@ function parsePersistedLayouts(
 function uniqueKnownColumns(
   columns: readonly string[],
   knownColumns: ReadonlySet<string>
-): string[] {
+) {
   return [...new Set(columns)].filter((column) => knownColumns.has(column));
 }
 
 function resolveTableColumnLayout(
   columns: readonly string[],
   savedLayout?: TableColumnLayout
-): TableColumnLayout {
+) {
   const knownColumns = new Set(columns);
   const savedOrder = uniqueKnownColumns(savedLayout?.order ?? [], knownColumns);
   const savedOrderSet = new Set(savedOrder);
@@ -101,23 +96,18 @@ function resolveTableColumnLayout(
       : {}),
     hiddenColumns,
     order: orderedColumns,
-  };
+  } satisfies TableColumnLayout;
 }
 
-function resolveSelectedColumns(
-  layout: TableColumnLayout | undefined
-): string[] {
+function resolveSelectedColumns(layout: TableColumnLayout | undefined) {
   if (!layout?.fetchVisibleColumns) {
-    return [];
+    return [] satisfies string[];
   }
   const hiddenColumnKeys = new Set(layout.hiddenColumns);
   return layout.order.filter((column) => !hiddenColumnKeys.has(column));
 }
 
-function layoutsMatch(
-  first: TableColumnLayout,
-  second: TableColumnLayout
-): boolean {
+function layoutsMatch(first: TableColumnLayout, second: TableColumnLayout) {
   return (
     first.order.join("\0") === second.order.join("\0") &&
     first.hiddenColumns.join("\0") === second.hiddenColumns.join("\0") &&
@@ -135,7 +125,7 @@ function reorderVisibleTableColumns({
   order: readonly string[];
   sourceColumnKey: string;
   targetColumnKey: string;
-}): string[] {
+}) {
   const hiddenColumnKeys = new Set(hiddenColumns);
   const visibleOrder = order.filter(
     (columnName) => !hiddenColumnKeys.has(columnName)
@@ -143,11 +133,11 @@ function reorderVisibleTableColumns({
   const sourceIndex = visibleOrder.indexOf(sourceColumnKey);
   const targetIndex = visibleOrder.indexOf(targetColumnKey);
   if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-    return [...order];
+    return [...order] satisfies string[];
   }
   const [sourceColumn] = visibleOrder.splice(sourceIndex, 1);
   if (!isNonEmptyString(sourceColumn)) {
-    return [...order];
+    return [...order] satisfies string[];
   }
   visibleOrder.splice(targetIndex, 0, sourceColumn);
 

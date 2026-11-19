@@ -278,7 +278,6 @@ function StandardViewDetail({
   const qualifiedName = isNonEmptyString(schemaName)
     ? `${schemaName}.${viewName}`
     : viewName;
-  // The old uppercase kind eyebrow lives on as the subtitle.
   const subtitleDetails = [viewTypeLabel(view)];
   if (isNonEmptyString(view?.owner)) {
     subtitleDetails.push(`owner: ${view.owner}`);
@@ -349,7 +348,7 @@ function isMaterializedViewTab(value: string): value is MaterializedViewTab {
   );
 }
 
-function refreshErrorMessage(error: unknown, aborted: boolean): string {
+function refreshErrorMessage(error: unknown, aborted: boolean) {
   if (aborted) {
     return "Refresh canceled.";
   }
@@ -359,7 +358,7 @@ function refreshErrorMessage(error: unknown, aborted: boolean): string {
   return "PostgreSQL could not refresh this materialized view.";
 }
 
-function refreshReadinessLabel(readiness: ConcurrentRefreshReadiness): string {
+function refreshReadinessLabel(readiness: ConcurrentRefreshReadiness) {
   switch (readiness) {
     case "checking":
       return "Checking…";
@@ -384,14 +383,20 @@ function getConcurrentRefreshReadiness({
   indexesError: boolean;
   indexesLoaded: boolean;
   isPopulated: boolean;
-}): ConcurrentRefreshReadiness {
+}) {
   if (indexesError) {
-    return "unavailable";
+    return "unavailable" as const;
   }
   if (!indexesLoaded) {
-    return "checking";
+    return "checking" as const;
   }
-  return isConcurrentRefreshReady(isPopulated, indexes) ? "ready" : "standard";
+  const readiness: ConcurrentRefreshReadiness = isConcurrentRefreshReady(
+    isPopulated,
+    indexes
+  )
+    ? "ready"
+    : "standard";
+  return readiness;
 }
 
 function dependencyDirectionLabel(direction: ViewDependency_Direction) {
@@ -588,7 +593,7 @@ function MaterializedRefreshControl({
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   useEffect(
-    function updateRefreshElapsedTime(): (() => void) | undefined {
+    function updateRefreshElapsedTime() {
       if (!(refreshing && startedAt !== null)) {
         return undefined;
       }
@@ -597,9 +602,9 @@ function MaterializedRefreshControl({
           Math.floor((Date.now() - startedAt) / MILLISECONDS_PER_SECOND)
         );
       }, MILLISECONDS_PER_SECOND);
-      return () => {
+      return (() => {
         globalThis.clearInterval(intervalId);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [refreshing, startedAt]
   );

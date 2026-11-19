@@ -13,23 +13,23 @@ const JSON_PREVIEW_PARSE_MIN_LENGTH = 120;
 const JSON_PREVIEW_PARSE_MAX_LENGTH = 50_000;
 const JSON_PREVIEW_MAX_LENGTH = 4000;
 
-function truncateForAttribute(value: string, maxLength: number): string {
+function truncateForAttribute(value: string, maxLength: number) {
   if (value.length <= maxLength) {
     return value;
   }
   return `${value.slice(0, maxLength)}…`;
 }
 
-function parseJson(raw: string): JsonParseResult {
+function parseJson(raw: string) {
   try {
     const value: unknown = JSON.parse(raw);
-    return { ok: true, value };
+    return { ok: true, value } satisfies JsonParseResult;
   } catch {
-    return { ok: false };
+    return { ok: false } satisfies JsonParseResult;
   }
 }
 
-function formatJsonPreview(raw: string): string {
+function formatJsonPreview(raw: string) {
   const compactRaw = raw.replaceAll(/\s+/gu, " ").trim();
   if (raw.length <= JSON_PREVIEW_PARSE_MIN_LENGTH) {
     return compactRaw;
@@ -48,7 +48,7 @@ function formatJsonPreview(raw: string): string {
   );
 }
 
-function formatPrettyJson(raw: string): string {
+function formatPrettyJson(raw: string) {
   const parsed = parseJson(raw);
   if (!parsed.ok) {
     return raw;
@@ -56,7 +56,7 @@ function formatPrettyJson(raw: string): string {
   return JSON.stringify(parsed.value, null, 2) ?? raw;
 }
 
-function maybeFormatPrettyJson(raw: string): string | null {
+function maybeFormatPrettyJson(raw: string) {
   const parsed = parseJson(raw);
   if (!parsed.ok) {
     return null;

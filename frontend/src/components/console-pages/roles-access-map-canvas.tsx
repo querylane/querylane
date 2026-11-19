@@ -110,15 +110,15 @@ const DENSE_EDGE_VISIBILITY = {
   public: true,
 } satisfies Record<RolesAccessMapEdgeTone, boolean>;
 
-function roleY(index: number): number {
+function roleY(index: number) {
   return ROLE_TOP + index * ROLE_ROW_GAP;
 }
 
-function objectY(index: number): number {
+function objectY(index: number) {
   return OBJECT_TOP + index * OBJECT_ROW_GAP;
 }
 
-function canvasHeight(model: RolesAccessMapModel): number {
+function canvasHeight(model: RolesAccessMapModel) {
   return Math.max(
     CANVAS_BASE_HEIGHT,
     ROLE_TOP + model.roles.length * ROLE_ROW_GAP + ROLE_NODE_HEIGHT,
@@ -134,7 +134,7 @@ function edgePath({
   objectIndex: number | null;
   roleIndex: number;
   targetRoleIndex: number | null;
-}): string {
+}) {
   const startY = roleY(roleIndex) + ROLE_NODE_HEIGHT / 2;
   if (targetRoleIndex !== null) {
     const endY = roleY(targetRoleIndex) + ROLE_NODE_HEIGHT / 2;
@@ -147,7 +147,7 @@ function edgePath({
   return `M ${ROLE_ANCHOR_X} ${startY} C ${OBJECT_CURVE_START_X} ${startY}, ${OBJECT_CURVE_END_X} ${endY}, ${OBJECT_X} ${endY}`;
 }
 
-function edgeToneClass(tone: RolesAccessMapEdge["tone"]): string {
+function edgeToneClass(tone: RolesAccessMapEdge["tone"]) {
   switch (tone) {
     case "default":
       return "stroke-positive-500/80 [stroke-dasharray:2_4]";
@@ -164,7 +164,7 @@ function edgeToneClass(tone: RolesAccessMapEdge["tone"]): string {
   }
 }
 
-function roleDotClass(kind: RolesAccessMapRoleNode["kind"]): string {
+function roleDotClass(kind: RolesAccessMapRoleNode["kind"]) {
   switch (kind) {
     case "super":
       return "bg-warning-400";
@@ -188,7 +188,7 @@ function edgeIsActive({
 }: {
   edge: RolesAccessMapEdge;
   selectedNodeId: string | null;
-}): boolean {
+}) {
   return (
     selectedNodeId !== null &&
     (edge.source === selectedNodeId || edge.target === selectedNodeId)
@@ -552,7 +552,7 @@ function RolesAccessMapCanvas({
     onSelectNode(selectedNodeId === nodeId ? null : nodeId);
   }
 
-  function nodeIsDimmed(nodeId: string): boolean {
+  function nodeIsDimmed(nodeId: string) {
     return (
       selectedNodeId !== null &&
       selectedNodeId !== nodeId &&

@@ -4,7 +4,7 @@ import { MUTATION_DEFAULTS, QUERY_DEFAULTS } from "@/lib/query-policy";
 import { normalizeAppUiError, reportAppUiError } from "@/lib/ui-error";
 import type { AppErrorSurface } from "@/lib/ui-error-types";
 
-function getErrorSurface(meta: unknown): AppErrorSurface | null {
+function getErrorSurface(meta: unknown) {
   if (typeof meta !== "object" || meta === null) {
     return null;
   }

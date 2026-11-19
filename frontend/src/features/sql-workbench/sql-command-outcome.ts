@@ -12,7 +12,7 @@ function gridEmptyState({
 }: {
   rowCount: number;
   status: "cancelled" | "error" | "idle" | "running" | "success";
-}): GridEmptyMessage | undefined {
+}) {
   if (rowCount > 0 || status === "running") {
     return undefined;
   }
@@ -20,19 +20,14 @@ function gridEmptyState({
     return {
       description: "The statement was cancelled before PostgreSQL sent a row.",
       title: "No rows received",
-    };
+    } satisfies GridEmptyMessage | undefined;
   }
   return {
     description: "The statement ran and matched nothing.",
     title: "No rows returned",
-  };
+  } satisfies GridEmptyMessage | undefined;
 }
 
-/**
- * Command tags whose only effect is on the session. The workbench runs each
- * statement in a fresh read-only transaction, so these never reach the next
- * statement and a plain "completed" would mislead.
- */
 const SESSION_STATE_TAGS = new Set([
   "DEALLOCATE",
   "DEALLOCATE ALL",
@@ -65,7 +60,7 @@ function describeCommandOutcome({
 }: {
   commandTag: string | undefined;
   rowsAffected: number | undefined;
-}): CommandOutcome {
+}) {
   const tag =
     isNonEmptyString(commandTag) && commandTag.length > 0 ? commandTag : null;
   const affected = rowsAffected ?? 0;
@@ -75,20 +70,20 @@ function describeCommandOutcome({
         "This only changed session state, and it does not carry over: every statement runs in its own read-only transaction. Schema-qualify names (schema.table) instead of setting search_path.",
       tag,
       title: tag,
-    };
+    } satisfies CommandOutcome;
   }
   if (affected > 0) {
     return {
       description: `${formatCount(affected)} ${affected === 1 ? "row" : "rows"} affected. PostgreSQL returned no result set.`,
       tag,
       title: tag ?? "Statement completed",
-    };
+    } satisfies CommandOutcome;
   }
   return {
     description: "PostgreSQL ran the statement and returned no result set.",
     tag,
     title: tag ?? "Statement completed",
-  };
+  } satisfies CommandOutcome;
 }
 
 export type { CommandOutcome };

@@ -246,7 +246,7 @@ function resolveActivePage({
   pathname: string;
   paths: SidebarPaths;
   viewLevel: ScopeLevel;
-}): NavActiveState {
+}) {
   const pageParam = resolveRequestedAdminPageForScope(search.page, viewLevel);
   if (pageParam) {
     const blank: NavActiveState = {
@@ -418,12 +418,6 @@ function SidebarFooterContent({
     </Dialog>
   );
 }
-/**
- * Drill-in rail content for the Data Explorer: a "Back to workspace" row on
- * top and a slot the lazily loaded explorer page portals its object browser
- * into. The slot deliberately lives outside SidebarContent — that container
- * scrolls, and the explorer tree brings its own virtualized scroll area.
- */
 function ExplorerRailContent({
   backLink,
 }: {
@@ -446,9 +440,7 @@ function ExplorerRailContent({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {/* The explorer rail replaces the normal database-scoped nav, so it
-            carries its own copy of the database switcher — otherwise switching
-            databases is impossible from inside the explorer on lg+. */}
+
         <SidebarDatabaseSelector />
       </div>
       <div className="flex min-h-0 flex-1 flex-col" ref={registerSlotTarget} />
@@ -497,12 +489,6 @@ function renderSidebarNavigationItem({
   );
 }
 
-// Compact database switcher that heads the "Database" nav section, mirroring
-// the design's `DbCtxRow`. On lg+ it replaces the topbar's database
-// breadcrumb (which stays lg:hidden for small screens, where this rail is an
-// off-canvas drawer): the database is a child of its instance, so its
-// selector lives with the database-scoped nav rather than in the global
-// topbar.
 function SidebarDatabaseSelector() {
   const { databases, navigateToDatabase, queryStates, selectedDatabase } =
     useDb();
@@ -614,7 +600,6 @@ function SidebarNavigationContent({
       )}
 
       {sections.map((section, sectionIndex) => {
-        // The database-scoped section is headed by its own database switcher.
         const isDatabaseSection = section.items.some((item) =>
           item.key.startsWith("database.")
         );
@@ -688,9 +673,6 @@ function SidebarBrandHeader() {
   const { navigateToInstance, selectedInstance } = useDb();
   return (
     <div className="flex flex-col">
-      {/* Brand row matches the topbar height so the logo sits level with the
-          topbar content; no divider — the sidebar flows into search + nav. The
-          collapse trigger sits next to the wordmark, mirroring the design. */}
       <div className="flex h-12 shrink-0 items-center gap-1 pr-1.5 pl-2">
         <Button
           aria-description="Go to instance overview"
@@ -733,7 +715,7 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
   const router = useRouter();
   const { hoverRevealOpen, isMobile, setOpenMobile, state } = useSidebar();
   useEffect(
-    function dismissMobileSidebarAfterNavigation(): (() => void) | undefined {
+    function dismissMobileSidebarAfterNavigation() {
       if (!isMobile) {
         return undefined;
       }
@@ -768,7 +750,6 @@ export function AppSidebar({ page }: { page?: AdminPageId | undefined }) {
     scopeLevel,
   });
   const nextStepHint = getNextStepHint(scopeLevel);
-  // The explorer and the SQL workbench swap the nav for an object browser.
   const isDrillInMode =
     page === "database.explorer" ||
     page === "database.sql" ||

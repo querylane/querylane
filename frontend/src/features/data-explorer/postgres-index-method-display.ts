@@ -73,13 +73,11 @@ const INDEX_METHOD_META: Record<string, PostgresIndexMethodDisplay> = {
   },
 };
 
-function normalizeIndexMethod(method: string): string {
+function normalizeIndexMethod(method: string) {
   return method.trim().toLowerCase().replaceAll("-", "").replaceAll("_", "");
 }
 
-function describePostgresIndexMethod(
-  method: string
-): PostgresIndexMethodDisplay {
+function describePostgresIndexMethod(method: string) {
   const normalized = normalizeIndexMethod(method);
   const knownMethod = INDEX_METHOD_META[normalized];
   if (knownMethod) {
@@ -91,7 +89,7 @@ function describePostgresIndexMethod(
     label,
     source: "custom",
     summary: "Custom PostgreSQL index access method or extension method.",
-  };
+  } satisfies PostgresIndexMethodDisplay;
 }
 
 export type { PostgresIndexMethodDisplay };

@@ -34,11 +34,11 @@ const SORT_COLUMN_KEY_QUERY_META_PATTERN = /[&=+]/gu;
 const HEX_RADIX = 16;
 const FILTER_SEARCH_ERROR_ID = "filter-search";
 
-function encodeQueryMetaCharacter(value: string): string {
+function encodeQueryMetaCharacter(value: string) {
   return `%${(value.codePointAt(0) ?? 0).toString(HEX_RADIX).toUpperCase()}`;
 }
 
-function decodeSortColumnKey(value: string): string {
+function decodeSortColumnKey(value: string) {
   const querySafeValue = value.replaceAll(
     SORT_COLUMN_KEY_QUERY_META_PATTERN,
     encodeQueryMetaCharacter
@@ -50,9 +50,9 @@ function hasInvalidSortSeparator(separator: number, valueLength: number) {
   return separator <= 0 || separator === valueLength - 1;
 }
 
-function parseSortSearch(value: string | undefined): SortColumn[] {
+function parseSortSearch(value: string | undefined) {
   if (!isNonEmptyString(value)) {
-    return [];
+    return [] satisfies SortColumn[];
   }
 
   const seen = new Set<string>();
@@ -89,9 +89,7 @@ function parseSortSearch(value: string | undefined): SortColumn[] {
   return parsed;
 }
 
-function serializeSortSearch(
-  sortColumns: readonly SortColumn[]
-): string | undefined {
+function serializeSortSearch(sortColumns: readonly SortColumn[]) {
   if (sortColumns.length === 0) {
     return undefined;
   }
@@ -106,7 +104,7 @@ function serializeSortSearch(
 function filterSortColumnsForNames(
   sortColumns: readonly SortColumn[],
   columnNames: readonly string[]
-): SortColumn[] {
+) {
   const allowed = new Set(columnNames);
   return sortColumns.filter((sort) => allowed.has(sort.columnKey));
 }
@@ -114,9 +112,9 @@ function filterSortColumnsForNames(
 function filterSelectedColumnsForNames(
   selectedColumns: readonly string[],
   columnNames: readonly string[]
-): string[] {
+) {
   if (selectedColumns.length === 0) {
-    return [];
+    return [] satisfies string[];
   }
   const allowed = new Set(columnNames);
   const selectedKnownColumns = selectedColumns.filter((column) =>
@@ -137,20 +135,7 @@ function resolveTableDataQueryState({
   filterSearch?: string | undefined;
   selectedColumns?: readonly string[] | undefined;
   sortSearch?: string | undefined;
-}): {
-  filterColumns: FilterColumnMeta[];
-  filterLogic: TableFilterLogic;
-  filterRules: TableFilterRule[];
-  invalidFilterRules: {
-    id: string;
-    message: string;
-  }[];
-  normalizedFilterSearch?: string | undefined;
-  normalizedSortSearch?: string | undefined;
-  selectedColumns: string[];
-  shouldLoadColumnCatalog: boolean;
-  sortColumns: SortColumn[];
-} {
+}) {
   const parsedSortColumns = parseSortSearch(sortSearch);
   const parsedFilterSearch = parseTableFilterSearchResult(filterSearch);
   const parsedFilterState = parsedFilterSearch.state;
@@ -198,6 +183,19 @@ function resolveTableDataQueryState({
       : [...selectedColumns],
     shouldLoadColumnCatalog,
     sortColumns,
+  } satisfies {
+    filterColumns: FilterColumnMeta[];
+    filterLogic: TableFilterLogic;
+    filterRules: TableFilterRule[];
+    invalidFilterRules: {
+      id: string;
+      message: string;
+    }[];
+    normalizedFilterSearch?: string | undefined;
+    normalizedSortSearch?: string | undefined;
+    selectedColumns: string[];
+    shouldLoadColumnCatalog: boolean;
+    sortColumns: SortColumn[];
   };
 }
 
@@ -259,8 +257,6 @@ function useTableDataQuery({
           !columnCatalog.isError) ||
         columnCatalog.error
       ) && queryState.invalidFilterRules.length === 0,
-    // Keep the previous page rendered (dimmed, with a refreshing pill) while
-    // a page/sort/filter change loads, instead of blanking to a skeleton.
     keepPreviousData: true,
   });
 

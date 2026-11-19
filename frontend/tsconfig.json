@@ -29,7 +29,6 @@
   },
   "include": [
     "src",
-    "test/setup-globals.ts",
     "*.ts",
     "*.mts",
     "*.cts",

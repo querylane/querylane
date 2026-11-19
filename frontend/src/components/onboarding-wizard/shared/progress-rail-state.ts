@@ -15,7 +15,7 @@ export function getRailDoneCount(
   events: SetupProgressEvent[],
   cardCount: number,
   success: boolean
-): number {
+) {
   if (success) {
     return cardCount;
   }

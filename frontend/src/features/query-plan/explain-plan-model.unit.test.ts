@@ -55,7 +55,7 @@ describe("parseExplainPlan", () => {
       "Seq Scan",
       "Index Scan",
     ]);
-    // 10ms inclusive minus 6ms (seq scan) minus 2ms (index scan × 2 loops).
+
     expect(root?.exclusiveMs).toBeCloseTo(2);
     expect(root?.children[1]?.exclusiveMs).toBeCloseTo(2);
     expect(root?.children[1]?.indexName).toBe("orders_pkey");
@@ -107,7 +107,7 @@ describe("parseExplainPlan", () => {
     );
     expect(plan?.root.exclusiveMs).toBeUndefined();
     expect(plan?.root.children[0]?.exclusiveMs).toBeUndefined();
-    // Cumulative work may exceed the query's elapsed time. It is not a timeline.
+
     expect(plan?.root.children[0]?.inclusiveMs).toBe(18);
   });
 

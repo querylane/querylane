@@ -11,15 +11,11 @@ import {
 } from "@/features/sql-workbench/sql-statements";
 import type { SqlValidator } from "@/features/sql-workbench/use-sql-validation";
 
-// Wait for a pause in typing before asking the server; a check costs a
-// round trip and a pooled connection.
 const LINT_DELAY_MS = 600;
-// Results are memoized by statement text so re-linting after an edit to one
-// statement never re-checks the untouched ones.
 const RESULT_CACHE_LIMIT = 200;
 const MAX_CONCURRENT_CHECKS = 2;
 
-function renderProblem(problem: SqlProblem): Node {
+function renderProblem(problem: SqlProblem) {
   const root = document.createElement("div");
   const message = document.createElement("div");
   message.textContent = problem.message;
@@ -35,10 +31,7 @@ function renderProblem(problem: SqlProblem): Node {
   return root;
 }
 
-function toDiagnostic(
-  statement: SqlStatement,
-  problem: SqlProblem
-): Diagnostic {
+function toDiagnostic(statement: SqlStatement, problem: SqlProblem) {
   const range = problemRange(statement, problem);
   return {
     from: range.from,
@@ -46,22 +39,17 @@ function toDiagnostic(
     renderMessage: () => renderProblem(problem),
     severity: "error",
     to: range.to,
-  };
+  } satisfies Diagnostic;
 }
 
-/**
- * Memoizes validator results by statement text within the validator's scope
- * (its default schema): the same text can resolve differently per schema.
- * Failed checks (`undefined`) are not stored, so they are retried.
- */
-class ProblemCache {
+class ScopedSqlProblemCache {
   private readonly results = new Map<string, SqlProblem | null>();
 
   async lookup(
     statement: string,
     validator: SqlValidator,
     signal: AbortSignal
-  ): Promise<SqlProblem | null | undefined> {
+  ) {
     const key = `${validator.scopeKey}\u0000${statement}`;
     const cached = this.results.get(key);
     if (cached !== undefined) {
@@ -79,21 +67,14 @@ class ProblemCache {
   }
 }
 
-/**
- * Runs `task` for every item with at most `limit` in flight. Validation
- * shares the per-instance RPC cap with Run and Explain, so a long script must
- * not flood it.
- */
 async function mapWithConcurrency<T, R>(
   items: readonly T[],
   limit: number,
   task: (item: T) => Promise<R>
-): Promise<R[]> {
+) {
   const results: R[] = [];
-  // One iterator shared by every worker: each step takes the next unclaimed
-  // item, so no item runs twice.
   const pending = items.entries();
-  async function worker(): Promise<void> {
+  async function worker() {
     const next = pending.next();
     if (next.done === true) {
       return;
@@ -121,14 +102,14 @@ const refreshSqlLint = StateEffect.define();
  * `MAX_CONCURRENT_CHECKS` at a time). A new lint run aborts the previous one
  * so a fast typist never queues stale checks.
  */
-function sqlLinter(getValidator: () => SqlValidator | undefined): Extension {
-  const cache = new ProblemCache();
+function sqlLinter(getValidator: () => SqlValidator | undefined) {
+  const cache = new ScopedSqlProblemCache();
   let inFlight: AbortController | null = null;
 
-  async function lint(view: EditorView): Promise<Diagnostic[]> {
+  async function lint(view: EditorView) {
     const validator = getValidator();
     if (!validator) {
-      return [];
+      return [] satisfies Diagnostic[];
     }
     inFlight?.abort();
     const controller = new AbortController();
@@ -143,7 +124,7 @@ function sqlLinter(getValidator: () => SqlValidator | undefined): Extension {
           : cache.lookup(statement.text, validator, controller.signal)
     );
     if (controller.signal.aborted) {
-      return [];
+      return [] satisfies Diagnostic[];
     }
     return statements.flatMap((statement, index) => {
       const problem = problems[index];
@@ -160,7 +141,7 @@ function sqlLinter(getValidator: () => SqlValidator | undefined): Extension {
         ),
     }),
     keymap.of(lintKeymap),
-  ];
+  ] satisfies Extension;
 }
 
-export { mapWithConcurrency, ProblemCache, refreshSqlLint, sqlLinter };
+export { refreshSqlLint, sqlLinter };

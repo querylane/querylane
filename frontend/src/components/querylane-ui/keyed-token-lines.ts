@@ -1,19 +1,6 @@
 import type { ThemedTokenWithVariants } from "shiki";
 
-interface KeyedToken {
-  key: string;
-  token: ThemedTokenWithVariants;
-}
-
-interface KeyedTokenLine {
-  key: string;
-  tokens: KeyedToken[];
-  trailingNewline: boolean;
-}
-
-function keyedTokenLines(
-  tokenLines: ThemedTokenWithVariants[][]
-): KeyedTokenLine[] {
+function keyedTokenLines(tokenLines: ThemedTokenWithVariants[][]) {
   let keyOffset = 0;
   let remainingLines = tokenLines.length;
   return tokenLines.map((line) => {

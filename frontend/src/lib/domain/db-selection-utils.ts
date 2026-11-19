@@ -4,7 +4,7 @@ import { isNonEmptyString } from "@/lib/value-guards";
  * These have no side effects and are independently testable.
  */
 
-export function resolveValidSelectionId({
+export const resolveValidSelectionId: ({
   candidateId,
   items,
   loaded,
@@ -12,7 +12,7 @@ export function resolveValidSelectionId({
   candidateId?: string | undefined;
   items: readonly { readonly id: string }[];
   loaded: boolean;
-}>): string | undefined {
+}>) => string | undefined = ({ candidateId, items, loaded }) => {
   if (!isNonEmptyString(candidateId)) {
     return undefined;
   }
@@ -22,19 +22,19 @@ export function resolveValidSelectionId({
   return items.some((item) => item.id === candidateId)
     ? candidateId
     : undefined;
-}
+};
 
-export function pickSelectedResource<Item extends { readonly id: string }>(
+export const pickSelectedResource: <Item extends { readonly id: string }>(
   items: readonly Item[],
   selectedId?: string
-): Item | null {
+) => Item | null = (items, selectedId) => {
   if (!isNonEmptyString(selectedId)) {
     return null;
   }
   return items.find((item) => item.id === selectedId) ?? null;
-}
+};
 
-export function resolveSelectedResource<Item extends { readonly id: string }>({
+export const resolveSelectedResource: <Item extends { readonly id: string }>({
   fallbackItem,
   items,
   queryItem,
@@ -44,13 +44,10 @@ export function resolveSelectedResource<Item extends { readonly id: string }>({
   items: readonly Item[];
   queryItem: Item | null;
   selectedId?: string | undefined;
-}>): Item | null {
-  return (
-    queryItem ?? pickSelectedResource(items, selectedId) ?? fallbackItem ?? null
-  );
-}
+}>) => Item | null = ({ fallbackItem, items, queryItem, selectedId }) =>
+  queryItem ?? pickSelectedResource(items, selectedId) ?? fallbackItem ?? null;
 
-export function isSelectedResourceResolved({
+export const isSelectedResourceResolved: ({
   queryEnabled,
   queryPending,
   selectedId,
@@ -60,15 +57,20 @@ export function isSelectedResourceResolved({
   queryPending: boolean;
   selectedId?: string | undefined;
   selectedResource: unknown;
-}>): boolean {
+}>) => boolean = ({
+  queryEnabled,
+  queryPending,
+  selectedId,
+  selectedResource,
+}) => {
   if (!isNonEmptyString(selectedId)) {
     return true;
   }
 
   return Boolean(selectedResource) || (queryEnabled && !queryPending);
-}
+};
 
-export function shouldEnableDatabaseSelectionQuery({
+export const shouldEnableDatabaseSelectionQuery: ({
   effectiveDatabaseId,
   effectiveInstanceId,
   hydrateSelectedDatabaseFromQuery,
@@ -76,10 +78,13 @@ export function shouldEnableDatabaseSelectionQuery({
   effectiveDatabaseId?: string | undefined;
   effectiveInstanceId?: string | undefined;
   hydrateSelectedDatabaseFromQuery: boolean;
-}>): boolean {
-  return Boolean(
+}>) => boolean = ({
+  effectiveDatabaseId,
+  effectiveInstanceId,
+  hydrateSelectedDatabaseFromQuery,
+}) =>
+  Boolean(
     hydrateSelectedDatabaseFromQuery &&
       isNonEmptyString(effectiveInstanceId) &&
       effectiveDatabaseId
   );
-}

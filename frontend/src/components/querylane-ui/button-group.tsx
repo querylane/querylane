@@ -9,11 +9,6 @@ import { cn } from "@/lib/utils";
 const buttonGroupSeparatorPresentations = cva("", {
   variants: {
     presentation: {
-      // The registry separator uses the input border color, made for outline
-      // and secondary buttons; between two filled primary halves it reads as
-      // a white gap. The separator sits on the page background, so the
-      // primary color at reduced opacity gives a seam one shade off the
-      // buttons in both themes.
       "on-primary": "bg-primary/70",
     },
   },

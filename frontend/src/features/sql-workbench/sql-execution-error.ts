@@ -2,7 +2,6 @@ import type { AppUiError } from "@/lib/ui-error-types";
 import { isNonEmptyString } from "@/lib/value-guards";
 import { PostgreSqlErrorRetryGuidance } from "@/protogen/querylane/console/v1alpha1/errors_pb";
 
-/** PostgreSQL rejects writes inside the workbench's read-only transaction. */
 const READ_ONLY_TRANSACTION_SQLSTATE = "25006";
 
 /** Tags workbench failures for error reporting and the details dialog. */
@@ -11,14 +10,7 @@ const SQL_WORKBENCH_ERROR_CONTEXT = {
   source: "query",
 } as const;
 
-/**
- * Puts PostgreSQL's own words up front. The app-wide normalizer keeps server
- * text out of titles because connection and auth failures can echo secrets;
- * the backend only attaches these client fields for statement errors it deems
- * safe to show, and in a SQL client the server's message about the user's own
- * statement is the feedback.
- */
-function withServerMessage(error: AppUiError): AppUiError {
+function withServerMessage(error: AppUiError) {
   const fields = error.postgres?.serverFields;
   const message = fields?.["message"];
   if (fields === undefined || !isNonEmptyString(message)) {
@@ -34,14 +26,14 @@ function withServerMessage(error: AppUiError): AppUiError {
         ? `PostgreSQL error ${sqlstate}`
         : error.summary),
     title: message,
-  };
+  } satisfies AppUiError;
 }
 
 /**
  * Rewrites errors whose generic PostgreSQL copy hides what went wrong: the
  * workbench's read-only rule, or the server message itself.
  */
-function describeSqlExecutionError(error: AppUiError): AppUiError {
+function describeSqlExecutionError(error: AppUiError) {
   if (error.postgres?.sqlstate !== READ_ONLY_TRANSACTION_SQLSTATE) {
     return withServerMessage(error);
   }
@@ -52,7 +44,7 @@ function describeSqlExecutionError(error: AppUiError): AppUiError {
     summary:
       "The SQL workbench runs every statement in a read-only transaction. INSERT, UPDATE, DELETE and DDL are rejected before they change anything.",
     title: "Statement needs write access",
-  };
+  } satisfies AppUiError;
 }
 
 /**
@@ -60,7 +52,7 @@ function describeSqlExecutionError(error: AppUiError): AppUiError {
  * unknown names, the read-only rule) need an edit first, so offering Retry
  * there only repeats the failure; transient errors keep it.
  */
-function canRetrySqlExecution(error: AppUiError): boolean {
+function canRetrySqlExecution(error: AppUiError) {
   if (
     error.postgres?.retryGuidance ===
     PostgreSqlErrorRetryGuidance.POSTGRESQL_ERROR_RETRY_GUIDANCE_AFTER_CORRECTION

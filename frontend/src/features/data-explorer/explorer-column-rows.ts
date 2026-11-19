@@ -15,7 +15,7 @@ interface ColumnRow {
   isIndexed: boolean;
 }
 
-function parseReferencedTable(referencedTable: string): string {
+function parseReferencedTable(referencedTable: string) {
   if (!referencedTable) {
     return "";
   }
@@ -40,8 +40,6 @@ function foreignKeysByColumn(constraints: TableConstraint[]) {
       continue;
     }
     const referencedTable = parseReferencedTable(constraint.referencedTable);
-    // Composite foreign keys pair column_names[i] with
-    // referenced_column_names[i]; every pair gets its own label.
     for (const [pairIndex, localColumn] of constraint.columnNames.entries()) {
       const referencedColumn = constraint.referencedColumnNames[pairIndex];
       if (
@@ -65,7 +63,7 @@ function deriveColumnRows(
   columns: Column[],
   constraints: TableConstraint[],
   indexes: TableIndex[]
-): ColumnRow[] {
+) {
   const indexedColumns = new Set<string>();
   for (const index of indexes) {
     for (const columnName of index.keyColumns) {

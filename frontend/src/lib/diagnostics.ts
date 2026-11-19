@@ -10,7 +10,7 @@ interface DiagnosticLogger {
   warn: (message: string, payload?: LogPayload) => void;
 }
 
-function ignoreLog(_message: string, _payload?: LogPayload): null {
+function ignoreLog(_message: string, _payload?: LogPayload) {
   return null;
 }
 

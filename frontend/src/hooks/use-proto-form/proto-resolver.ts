@@ -82,7 +82,7 @@ function humanizeFieldIssues(
 function rootIssueMessages(
   issues: readonly NormalizedProtoIssue[],
   options: ProtoFormOptions
-): string[] {
+) {
   return issues.flatMap((issue) =>
     issue.path.length === 0
       ? [humanizeValidationError(issue.message, options.formatMessage)]
@@ -103,10 +103,10 @@ export function createProtoResolver<
   options?: ProtoFormOptions;
   source?: MessageShape<Desc> | undefined;
   validationMask?: FieldMask | undefined;
-}): Resolver<Values, unknown, MessageShape<Desc>> {
+}) {
   const standardSchema = createDescriptorAwareStandardSchema(desc, options);
 
-  return async (values, _context, resolverOptions) => {
+  return (async (values, _context, resolverOptions) => {
     const validationResult = await validateFormValuesAgainstProtoSchema({
       desc,
       values,
@@ -159,5 +159,5 @@ export function createProtoResolver<
       errors: nestedErrors,
       values: {},
     };
-  };
+  }) satisfies Resolver<Values, unknown, MessageShape<Desc>>;
 }

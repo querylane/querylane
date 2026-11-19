@@ -19,18 +19,15 @@ import type { GrantedObject } from "@/components/console-pages/role-grants-share
 import { predefinedRoleInfo } from "@/lib/role-display";
 import {
   GrantObjectType,
-  type RoleAttributes,
   RoleAttributesSchema,
   RoleSchema,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-function attributes(
-  init: MessageInitShape<typeof RoleAttributesSchema>
-): RoleAttributes {
+function attributes(init: MessageInitShape<typeof RoleAttributesSchema>) {
   return create(RoleAttributesSchema, init);
 }
 
-function capabilityByKeyword(list: Capability[], keyword: string): Capability {
+function capabilityByKeyword(list: Capability[], keyword: string) {
   const found = list.find((capability) => capability.keyword === keyword);
   if (!found) {
     throw new Error(`missing capability ${keyword}`);

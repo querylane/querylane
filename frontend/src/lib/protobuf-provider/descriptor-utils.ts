@@ -17,11 +17,11 @@ export type MessageField = Extract<DescField, { fieldKind: "message" }>;
 export type ListField = Extract<DescField, { fieldKind: "list" }>;
 export type MapField = Extract<DescField, { fieldKind: "map" }>;
 
-export function tracksPresence(field: DescField): boolean {
+export function tracksPresence(field: DescField) {
   return field.presence !== FeatureSet_FieldPresence.IMPLICIT;
 }
 
-export function is64BitScalar(scalar: ScalarType | undefined): boolean {
+export function is64BitScalar(scalar: ScalarType | undefined) {
   return (
     scalar === ScalarType.INT64 ||
     scalar === ScalarType.UINT64 ||

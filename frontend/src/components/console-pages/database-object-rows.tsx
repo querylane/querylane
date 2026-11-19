@@ -5,16 +5,18 @@ import type { Extension } from "@/protogen/querylane/console/v1alpha1/extension_
 const ROUTINE_SIGNATURE_RE = /^(?<capture1>[^(]+)(?<capture2>\(.*\))$/u;
 const QUALIFIED_NAME_RE = /^(?<capture1>[^.]+)\.(?<capture2>.+)$/u;
 
-// ————————————————————————————————————————————————————————————————
-// Row rendering
-
-/** Splits "schema.rest" for the muted-schema-prefix treatment. */
-function splitQualifiedName(name: string): { rest: string; schema: string } {
+function splitQualifiedName(name: string) {
   const match = QUALIFIED_NAME_RE.exec(name);
   if (!match) {
-    return { rest: name, schema: "" };
+    return { rest: name, schema: "" } satisfies {
+      rest: string;
+      schema: string;
+    };
   }
-  return { rest: match[2] ?? name, schema: match[1] ?? "" };
+  return { rest: match[2] ?? name, schema: match[1] ?? "" } satisfies {
+    rest: string;
+    schema: string;
+  };
 }
 
 function ObjectName({ name }: { name: string }) {

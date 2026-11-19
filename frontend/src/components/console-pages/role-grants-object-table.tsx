@@ -22,7 +22,6 @@ import {
 import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
 import { GrantObjectType } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// Object types in the order their tabs appear, matching the Owns view.
 const GRANT_TYPE_ORDER: GrantObjectType[] = [
   GrantObjectType.DATABASE,
   GrantObjectType.SCHEMA,
@@ -35,8 +34,6 @@ const GRANT_TYPE_ORDER: GrantObjectType[] = [
   GrantObjectType.LARGE_OBJECT,
 ];
 
-// Em dash as a JS expression (not JSX text) so it renders as the "no value"
-// glyph without tripping the no-em-dash-in-prose lint.
 const EM_DASH = "—";
 
 function RoleGrantsTableStatus({
@@ -73,8 +70,6 @@ function RoleGrantsTableStatus({
   );
 }
 
-// Schema-dimmed object name (e.g. "public.orders") for relation rows; bare name
-// for schema- and database-level grants.
 function ObjectNameCell({ object }: { object: GrantedObject }) {
   const showSchema =
     RELATION_TYPES.has(object.objectType) && Boolean(object.schemaName);
@@ -124,11 +119,6 @@ function GrantorCell({ object }: { object: GrantedObject }) {
   );
 }
 
-// Shared object table shell: a faceted Kind filter and a search box above a
-// single sortable, paginated DataTable. The kind facet filters the rows up-front
-// so the table only ever sorts/paginates the active slice — a role can hold
-// thousands of grants, so we never render them all at once. Used by the Owns,
-// schema, and PUBLIC grant views so they share one interaction pattern.
 function KindFilteredTable<T extends RowData>({
   activeKind,
   columns,
@@ -160,9 +150,6 @@ function KindFilteredTable<T extends RowData>({
   tableKey: string;
   typeOrder: GrantObjectType[];
 }) {
-  // Keep the search input urgent (always reflects the latest keystroke) while
-  // deferring the expensive filtering and kind-scan to a lower-priority render.
-  // This is a React Compiler–friendly INP fix: no manual useMemo/useCallback.
   const deferredSearch = useDeferredValue(search);
 
   const presentKinds = typeOrder.filter((type) =>
@@ -179,10 +166,6 @@ function KindFilteredTable<T extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* value stays urgent so the input reflects keystrokes immediately */}
-
-      {/* filterValue uses the deferred term so TanStack Table re-filters at
-          lower priority, keeping the input responsive on large grant lists */}
       <DataTable
         columns={columns}
         data={filtered}
@@ -224,8 +207,6 @@ function KindFilteredTable<T extends RowData>({
   );
 }
 
-// Granted-object inventory used by the schema and PUBLIC drill-ins: Object ·
-// Kind · Granted by · Privileges, on the shared kind facet + search shell.
 function GrantedObjectsTable({
   activeKind,
   facetObjects,

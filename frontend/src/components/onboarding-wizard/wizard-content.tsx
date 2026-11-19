@@ -233,45 +233,42 @@ function ProgressRail({ success = false }: { success?: boolean }) {
     </RailSurface>
   );
 }
-function getRailModel(
-  phase: WizardPhase,
-  selectedMethod: ConfigMethod | null
-): RailModel {
+function getRailModel(phase: WizardPhase, selectedMethod: ConfigMethod | null) {
   if (phase === "method_selection") {
     return {
       caption: "Your configuration hub for connections, queries, and history.",
       visual: <SelectionRail />,
-    };
+    } satisfies RailModel;
   }
   if (phase === "configure_ui") {
     return {
       caption: "We’ll handle the configuration for you.",
       visual: <ConfigRail />,
-    };
+    } satisfies RailModel;
   }
   if (phase === "configure_yaml") {
     return {
       caption: "Keep your configuration in versioned files and watched paths.",
       visual: <ConfigRail compact={true} />,
-    };
+    } satisfies RailModel;
   }
   if (phase === "configure_embedded") {
     return {
       caption: "Embedded PostgreSQL, managed by Querylane on this machine.",
       visual: <ConfigRail compact={true} />,
-    };
+    } satisfies RailModel;
   }
   if (phase === "progress_success") {
     return {
       caption: "Your Querylane instance is ready to explore.",
       visual: <ProgressRail success={true} />,
-    };
+    } satisfies RailModel;
   }
   if (phase === "progress_waiting_for_config") {
     return {
       caption: "Save your config file to continue setup.",
       visual: <ProgressRail />,
-    };
+    } satisfies RailModel;
   }
   return {
     caption:
@@ -279,7 +276,7 @@ function getRailModel(
         ? "Setting up embedded PostgreSQL and the Querylane metadata schema."
         : "Applying your database setup and finalizing configuration.",
     visual: <ProgressRail />,
-  };
+  } satisfies RailModel;
 }
 function LoadingContent({ onRefresh }: { onRefresh: () => Promise<void> }) {
   return (
@@ -339,7 +336,7 @@ const CONFIGURE_PHASES = new Set<WizardPhase>([
   "configure_embedded",
 ]);
 
-function isConfigurePhase(phase: WizardPhase): boolean {
+function isConfigurePhase(phase: WizardPhase) {
   return CONFIGURE_PHASES.has(phase);
 }
 

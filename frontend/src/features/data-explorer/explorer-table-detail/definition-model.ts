@@ -22,7 +22,6 @@ interface DefinitionSection {
   title: string;
 }
 
-/** Always quotes identifiers used in copy-paste DDL. */
 function formatSqlIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
@@ -197,10 +196,6 @@ function triggerSql(triggers: TableTrigger[], qualifiedTableName: string) {
           )};`,
         ];
       }
-      // The backend returns pg_get_triggerdef output, so this branch only
-      // sees unexpected data. A statement cannot be reconstructed faithfully
-      // from the remaining metadata (row vs statement level is not exposed),
-      // so surface that instead of guessing FOR EACH ROW.
       return [
         `-- Trigger ${formatSqlIdentifier(trigger.triggerName)}: full definition unavailable`,
       ];
@@ -253,7 +248,7 @@ function deriveDefinitionSections({
   tableComment: string;
   tableType: Table_TableType;
   triggers: TableTrigger[];
-}): DefinitionSection[] {
+}) {
   const { backingConstraintNames } = deriveConstraintKeyRows(constraints);
   const isForeignTable = tableType === Table_TableType.EXTERNAL;
   const sections: DefinitionSection[] = [

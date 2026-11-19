@@ -10,9 +10,7 @@ interface ExplorerSidebarSlotContextValue {
 const ExplorerSidebarSlotContext =
   createContext<ExplorerSidebarSlotContextValue | null>(null);
 
-function useExplorerSidebarSlotRegistration(): (
-  element: HTMLElement | null
-) => void {
+function useExplorerSidebarSlotRegistration() {
   const context = use(ExplorerSidebarSlotContext);
   if (!context) {
     throw new Error(

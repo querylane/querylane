@@ -3,7 +3,7 @@ import type {
   WizardPhase,
 } from "@/components/onboarding-wizard/types";
 
-export function getMethodLabel(method: ConfigMethod): string {
+export function getMethodLabel(method: ConfigMethod) {
   if (method === "ui_configured") {
     return "Configure via UI";
   }

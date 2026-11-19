@@ -14,8 +14,6 @@ type ColumnKeyFilter = "foreign" | "index" | "none" | "primary" | "unique";
 type ColumnNullabilityFilter = "not-null" | "nullable";
 type TriggerStateFilter = "disabled" | "enabled";
 
-// Multi-select facets: an empty selection means "no filter". Each facet keeps
-// only rows whose value is one of the selected values.
 interface ColumnDetailFilters {
   defaultKinds?: ColumnDefaultFilter[] | undefined;
   generationKinds?: ColumnGenerationFilter[] | undefined;
@@ -24,11 +22,11 @@ interface ColumnDetailFilters {
   typeCategories?: string[] | undefined;
 }
 
-function columnDefaultKind(row: ColumnRow): ColumnDefaultFilter {
+function columnDefaultKind(row: ColumnRow) {
   return row.column.defaultValue ? "has-default" : "no-default";
 }
 
-function columnGenerationKinds(row: ColumnRow): ColumnGenerationFilter[] {
+function columnGenerationKinds(row: ColumnRow) {
   const kinds: ColumnGenerationFilter[] = [];
   if (row.column.isIdentity) {
     kinds.push("identity");
@@ -39,11 +37,11 @@ function columnGenerationKinds(row: ColumnRow): ColumnGenerationFilter[] {
   return kinds.length > 0 ? kinds : ["regular"];
 }
 
-function columnTypeCategory(row: ColumnRow): string {
+function columnTypeCategory(row: ColumnRow) {
   return describePostgresType(row.column).category;
 }
 
-function columnKeyKinds(row: ColumnRow): ColumnKeyFilter[] {
+function columnKeyKinds(row: ColumnRow) {
   const kinds: ColumnKeyFilter[] = [];
   if (row.column.isPrimaryKey) {
     kinds.push("primary");
@@ -63,7 +61,7 @@ function columnKeyKinds(row: ColumnRow): ColumnKeyFilter[] {
   return kinds.length > 0 ? kinds : ["none"];
 }
 
-function columnNullability(row: ColumnRow): ColumnNullabilityFilter {
+function columnNullability(row: ColumnRow) {
   return row.column.isNullable ? "nullable" : "not-null";
 }
 
@@ -79,7 +77,7 @@ function matchesSelected<Value>(
 function filterColumnDetailRows(
   rows: ColumnRow[],
   filters: ColumnDetailFilters
-): ColumnRow[] {
+) {
   const types = new Set(filters.typeCategories);
   const keys = new Set(filters.keyKinds);
   const nullability = new Set(filters.nullability);
@@ -95,10 +93,7 @@ function filterColumnDetailRows(
   );
 }
 
-function filterIndexesByMethod(
-  indexes: TableIndex[],
-  methods: string[]
-): TableIndex[] {
+function filterIndexesByMethod(indexes: TableIndex[], methods: string[]) {
   if (methods.length === 0) {
     return indexes;
   }
@@ -108,10 +103,7 @@ function filterIndexesByMethod(
   );
 }
 
-function filterPoliciesByMode(
-  policies: TablePolicy[],
-  modes: PolicyMode[]
-): TablePolicy[] {
+function filterPoliciesByMode(policies: TablePolicy[], modes: PolicyMode[]) {
   if (modes.length === 0) {
     return policies;
   }
@@ -122,7 +114,7 @@ function filterPoliciesByMode(
 function filterTableTriggers(
   triggers: TableTrigger[],
   filters: { search: string; states: TriggerStateFilter[] }
-): TableTrigger[] {
+) {
   const search = filters.search.trim().toLowerCase();
   const stateSet = new Set(filters.states);
   return triggers.filter((trigger) => {

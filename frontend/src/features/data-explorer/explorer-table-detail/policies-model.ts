@@ -103,7 +103,7 @@ function emptyRlsPreview(
   command: PolicyCommand,
   role: string,
   matchingPolicies: TablePolicy[]
-): RlsPreviewModel {
+) {
   return {
     appliedPolicies: matchingPolicies,
     hasRows: false,
@@ -112,14 +112,14 @@ function emptyRlsPreview(
       command === PolicyCommand.INSERT
         ? `No permissive policy applies — RLS rejects every INSERT by ${role}.`
         : `No permissive policy applies — RLS returns zero rows for ${role} running ${formatPolicyCommand(command)}.`,
-  };
+  } satisfies RlsPreviewModel;
 }
 
 function combineRlsPredicates(
   permissivePolicies: TablePolicy[],
   restrictivePolicies: TablePolicy[],
   command: PolicyCommand
-): string {
+) {
   const permissivePredicate = joinPolicyPredicates(
     permissivePolicies.map((policy) =>
       policyPredicateForCommand(policy, command)
@@ -150,7 +150,7 @@ function rlsPreviewVerdict({
   permissiveCount: number;
   restrictiveCount: number;
   role: string;
-}): string {
+}) {
   const permissiveLabel =
     permissiveCount === 1
       ? "1 permissive policy applies"
@@ -179,7 +179,7 @@ function deriveRlsPreview({
   command: PolicyCommand;
   policies: TablePolicy[];
   role: string;
-}): RlsPreviewModel {
+}) {
   const matchingPolicies = policies.filter(
     (policy) =>
       policyAppliesToRole(policy, role) &&
@@ -209,7 +209,7 @@ function deriveRlsPreview({
       restrictiveCount: restrictivePolicies.length,
       role,
     }),
-  };
+  } satisfies RlsPreviewModel;
 }
 
 export type { PolicyPageSize, RlsPreviewModel };

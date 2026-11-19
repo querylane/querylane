@@ -15,7 +15,7 @@ interface ReactPerformanceMode {
   reactScanEnabled: boolean;
 }
 
-function resolveCompilerMode(value: string | undefined): ReactCompilerMode {
+function resolveCompilerMode(value: string | undefined) {
   const mode = (value ?? "") || "infer";
   if (mode === "annotation" || mode === "infer") {
     return mode;
@@ -29,7 +29,7 @@ function resolveCompilerMode(value: string | undefined): ReactCompilerMode {
 function resolveReactPerformanceMode({
   env,
   isProduction,
-}: ResolveReactPerformanceModeOptions): ReactPerformanceMode {
+}: ResolveReactPerformanceModeOptions) {
   const compilerMode = resolveCompilerMode(
     env["QUERYLANE_REACT_COMPILER_MODE"]
   );
@@ -49,7 +49,7 @@ function resolveReactPerformanceMode({
       target: "19",
     },
     reactScanEnabled,
-  };
+  } satisfies ReactPerformanceMode;
 }
 
 export { resolveReactPerformanceMode };

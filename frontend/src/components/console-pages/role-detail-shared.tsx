@@ -69,7 +69,7 @@ function RolePartialAccessAlert({ databaseName }: { databaseName: string }) {
   );
 }
 
-function capabilityTileClass(cap: Capability): string {
+function capabilityTileClass(cap: Capability) {
   return cn(
     "flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors",
     cap.on && cap.danger === true && "border-warning-500/30 bg-warning-500/5",
@@ -78,7 +78,7 @@ function capabilityTileClass(cap: Capability): string {
   );
 }
 
-function capabilityIconClass(cap: Capability): string {
+function capabilityIconClass(cap: Capability) {
   return cn(
     "flex size-8 shrink-0 items-center justify-center rounded-md",
     cap.on &&
@@ -91,7 +91,7 @@ function capabilityIconClass(cap: Capability): string {
   );
 }
 
-function capabilityKeywordClass(cap: Capability): string {
+function capabilityKeywordClass(cap: Capability) {
   return cn(
     "font-mono text-xs font-medium",
     cap.on && cap.danger === true && "text-warning-700 dark:text-warning-400",
@@ -99,7 +99,7 @@ function capabilityKeywordClass(cap: Capability): string {
   );
 }
 
-function capabilityValueClass(cap: Capability): string {
+function capabilityValueClass(cap: Capability) {
   if (!cap.on) {
     return "text-muted-foreground/60";
   }
@@ -108,8 +108,6 @@ function capabilityValueClass(cap: Capability): string {
     : "text-foreground";
 }
 
-// The trailing marker: a concrete value when one exists, else a check (on) or
-// an "Off" label. Split out as early-returns so CapabilityTile stays simple.
 function CapabilityMarker({ cap }: { cap: Capability }) {
   if (cap.value !== undefined) {
     return (
@@ -162,9 +160,6 @@ function CapabilityTile({ cap }: { cap: Capability }) {
   );
 }
 
-// Role attributes (pg_roles.rol* columns) — these belong to the role itself and
-// are never inherited through membership. Shown for every role, including
-// built-in pg_* roles (whose attributes are all off and fixed).
 function RoleAttributesCard({ role }: { role: Role }) {
   const caps = capabilities(role.attributes);
   return (
@@ -285,9 +280,6 @@ function RoleNotFound({ instanceId }: { instanceId: string }) {
     </div>
   );
 }
-
-// One row of the access-sources summary — a single way the role can gain access.
-// `scope` groups the row: cluster-wide sources apply everywhere; database
 
 export {
   AccessCard,

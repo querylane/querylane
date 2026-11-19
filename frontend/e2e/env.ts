@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const MAX_PORT = 65_535;
 
-const optionalPort = z.preprocess((value): number | undefined => {
+const optionalPort = z.preprocess((value) => {
   if (value === undefined || value === "") {
     return undefined;
   }
@@ -16,8 +16,6 @@ const booleanFlag = z.preprocess(
 );
 
 export const e2eEnv = createEnv({
-  // Playwright config always runs in Node, even when a DOM-environment unit
-  // test imports it to check config invariants.
   isServer: true,
   runtimeEnv: processEnv,
   server: {

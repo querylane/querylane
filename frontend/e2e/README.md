@@ -1,116 +1,26 @@
-# Querylane Playwright smoke tests
+# Querylane Playwright tests
 
-Playwright is a frontend UI-state harness for Querylane. It is not the backend end-to-end test layer.
+Playwright runs the built frontend in Chromium. Backend integration tests own PostgreSQL behavior and API correctness; Playwright owns workflows where browser state, navigation, or the Connect wire contract matters.
 
-## Contract
+- `journeys/*.e2e.test.ts` covers critical workflows across routes and reloads, including instance setup and mutations, catalog browsing, and SQL execution.
+- `visual/*.e2e.test.ts` keeps representative real routes, dialogs, and recovery states in both themes.
+- `docs/*.e2e.test.ts` covers built documentation search, runnable examples, and EPUB export.
 
-- CI starts the frontend only.
-- Querylane RPC traffic must be intercepted with `page.route()`.
-- Tests use `route.fulfill()` to model happy paths and unhappy paths.
-- A spec should not depend on a live backend, meta database, or user PostgreSQL instance.
-- Unhandled Querylane RPCs return a mocked 503 error and abort the test so missing scenarios are visible and deterministic.
-- Retries stay disabled. A flaky smoke test should be fixed, simplified, or moved down to a cheaper unit/integration layer.
+Querylane RPCs use MSW handlers from the scenario fixtures. The browser still uses the real Connect client. An unhandled RPC fails the test instead of reaching a backend. Register a Playwright request or response wait before the action that emits it; prefer visible UI outcomes when the request shape is not the contract. Keep retries disabled.
 
-## When to add a Playwright test
+Add one journey per distinct browser risk. Use narrower tests for pure models and individual component interactions, and don't replay the same contract across routes merely because they share an implementation.
 
-Use Playwright for smoke coverage of browser-visible behavior:
+## Running the suites
 
-- route boots into the expected page state
-- happy-path form or navigation flow
-- important empty/loading/error state
-- accessibility smoke (`@a11y`) when useful
-
-Use backend tests for API correctness, database behavior, migrations, and AIP semantics.
-
-## Test design principles
-
-- Treat each spec as a user-facing contract: test visible behavior plus the mocked RPC shape that matters for safety.
-- Keep each test under ~1s locally where possible; investigate any e2e test that repeatedly exceeds 2s.
-- Prefer 1 mocked browser journey per business risk. Do not add duplicate route-load tests for the same state.
-- Use `page.route()` and `route.fulfill()` for every backend condition. Never start a backend just to force an error state.
-- Prefer `getByRole()` / `getByLabel()` selectors. `getByText()` is fine for user-visible copy; test ids are only for layout/regression hooks.
-- Avoid fixed sleeps and polling loops. Wait on visible UI, URLs, or captured requests.
-- Put bulky wire fixtures and reusable route setup in helper modules next to the specs. Specs should read like scenarios.
-- Add short comments when a test protects a non-obvious release risk so future agents know why it exists.
-
-## Commands
-
-```bash
+```sh
 bun run test:browser:setup
 bun run test:e2e:list
 bun run test:e2e
-bun run test:e2e:repeat
 bun run test:accessibility
-bun run test:e2e:ui
-bun run test:e2e:debug
 bun run test:visual
+bun run test:visual:container
 ```
 
-## Conventions
+`test:e2e:ci` includes accessibility-tagged tests. `test:docs` expects the repository's documentation build or a `DOCS_BASE_URL` pointing to one.
 
-- Put behavior specs in `e2e/tests/*.spec.ts` and visual specs in `e2e/visual/*.spec.ts`.
-- Put reusable RPC scenarios in `e2e/tests/querylane-scenarios.ts`.
-- Prefer `getByRole`, then `getByLabel`, then visible text.
-- Keep scenario responses explicit so tests document frontend expectations.
-- Add unhappy paths by fulfilling RPC errors, not by starting a broken backend.
-
-## Visual regression
-
-Pixel comparisons live in `e2e/visual/*.spec.ts` and run in the `visual-light` and `visual-dark` projects. Rstest browser mode has no screenshot assertions, so pixels live here.
-
-- Prefer the real route with mocked RPCs (`page.goto()` plus `page.route()`). This is what users see.
-- For isolated states no route can reach, add a scenario component under `src/visual-harness/` and register it in `scenarios.tsx`. Specs open `/visual.html?scenario=<name>`. The entry only exists when `QUERYLANE_VISUAL_HARNESS=1`, which the Playwright web server sets. Production builds never include it.
-- Render the same scenario component from the matching `*.browser.test.tsx` so behavior checks and pixels cover identical markup.
-- Screenshot the smallest stable region (the page `main`, a dialog, or a section), not the whole viewport.
-- Baselines are Linux-only and are captured in the official Playwright image that CI also uses. `updateSnapshots` is `none`, so a missing baseline fails instead of writing a local one.
-
-```bash
-bun run test:visual                 # compare against baselines (macOS uses a looser threshold)
-bun run test:visual:update          # rewrite baselines in the Playwright container (needs Docker)
-bun run test:visual:update e2e/visual/console-roles.spec.ts   # one spec
-```
-
-## Playwright 1.64 diagnostics
-
-- A plain `playwright test --config=e2e/playwright.config.ts` runs functional
-  Chromium tests. Visual projects use `default: false`; `bun run test:visual`
-  still selects both explicitly, including in CI.
-- Failed tests retain DOM, accessibility, and screen snapshots in their trace.
-  Open the trace viewer's Display Aria mode to inspect accessible names beside
-  the action screenshot. Successful tests still discard traces; retries stay off.
-- Reduced motion uses the standalone test option, so individual suites can
-  override it with `test.use({ reducedMotion: "no-preference" })`.
-- `bun run test:e2e:profile` adds the Perfetto worker timeline without replacing
-  the configured reporters. Open `test-results/perfetto.json` in Perfetto to investigate slow or
-  uneven workers; it does not enable retries.
-- CI list and GitHub reporters omit repeated tags from titles; JSON and HTML
-  reports retain the complete test metadata. HTML now includes step waterfalls
-  and automatic locator/argument subtitles.
-- Browser setup uses `--no-remove` to preserve browsers needed by other workspaces.
-
-### Choosing the other new APIs
-
-Use features for real scenarios, not to expand smoke tests artificially:
-
-- `test.step(..., { params })`: instance-creation setup records the route and
-  empty-catalog scenario. Never put credentials in reporter parameters.
-- `locator.visible()`: prefer it over `:visible` when hidden duplicate elements
-  really need filtering. Existing role locators already exclude hidden elements.
-- Named test locks: only for unavoidable shared external resources. These tests
-  use isolated browser contexts and mocked RPCs, so no locks are needed.
-- Selector-free `frameLocator()`: only for cross-frame content; this app's smoke
-  flows do not use iframes.
-- `ariaSnapshotJSON()`: for consumers needing structured accessibility data;
-  failure traces already provide accessibility snapshots without extra attachments.
-- Typed request `json()`: for APIRequestContext consumers. Our frontend harness
-  fulfills mocked RPCs instead of issuing live API requests.
-- Standalone `forcedColors` and `contrast`: available for targeted accessibility
-  scenarios, not new blanket projects that multiply every smoke test.
-- Credential arrays and authenticated codegen: no HTTP Basic auth in this harness.
-- OPFS storage state: no persisted origin-private files to restore.
-- `dialogclosed`: no native JavaScript dialog lifecycle in these smoke flows.
-- Stories registry typing: no experimental Playwright component-testing packages;
-  component tests remain on Rstest.
-
-CI uses `ubuntu-latest`, not the removed Ubuntu 20.04 platform. Browser installation
-follows the pinned package's browser manifest; no manual browser version pins.
+Linux screenshot baselines are generated only in the pinned Playwright image via `bun run test:visual:update`. Other platforms can compare with a looser threshold, but their results are not authoritative. Use `PLAYWRIGHT_PORT` for simultaneous workspaces instead of reusing a preview.

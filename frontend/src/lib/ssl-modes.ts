@@ -52,15 +52,11 @@ type SslModeOptionValue = SslModeOption["value"];
 type SslNegotiationOption = (typeof SSL_NEGOTIATION_OPTIONS)[number];
 type SslNegotiationOptionValue = SslNegotiationOption["value"];
 
-function getSslModeOption(
-  value: string | undefined
-): SslModeOption | undefined {
+function getSslModeOption(value: string | undefined) {
   return SSL_MODE_OPTIONS.find((option) => option.value === value);
 }
 
-function getSslNegotiationOption(
-  value: string | undefined
-): SslNegotiationOption | undefined {
+function getSslNegotiationOption(value: string | undefined) {
   return SSL_NEGOTIATION_OPTIONS.find((option) => option.value === value);
 }
 

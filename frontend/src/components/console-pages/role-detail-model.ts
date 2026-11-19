@@ -104,14 +104,11 @@ function isSection(value: string): value is Section {
   }
 }
 
-// Map a facet query's flags to a FacetState. A disabled query (enabled=false, as
-// for system roles) is "ready" — its empty result is the answer, not a pending
-// fetch; only an enabled query can be loading or errored.
 function facetStateOf(
   enabled: boolean,
   query: { error: unknown; isPending: boolean },
   options?: { deferred?: boolean }
-): FacetState {
+) {
   if (!enabled) {
     return "ready";
   }
@@ -127,7 +124,7 @@ function facetStateOf(
   return "ready";
 }
 
-function shouldLoadRoleFacets(section: Section): boolean {
+function shouldLoadRoleFacets(section: Section) {
   return section === "grants" || section === "access-map";
 }
 
@@ -161,14 +158,12 @@ interface Capability {
   icon: ComponentType<{ className?: string }>;
   keyword: string;
   on: boolean;
-  // When set, this value is rendered instead of the on/off marker — used for
-  // the non-boolean CONNECTION LIMIT and VALID UNTIL attributes.
   value?: string;
 }
 
 const GRANTS_JUMP = { label: "Grants", section: "grants" } as const;
 
-function facetAccessActive(state: FacetState, count: number): boolean {
+function facetAccessActive(state: FacetState, count: number) {
   return state === "ready" && count > 0;
 }
 
@@ -176,14 +171,14 @@ function facetAccessJump(state: FacetState, count: number) {
   return state === "idle" || count > 0 ? GRANTS_JUMP : undefined;
 }
 
-function facetAccessStatus(state: FacetState, count: number): string {
+function facetAccessStatus(state: FacetState, count: number) {
   if (state === "idle") {
     return "Load";
   }
   return String(count);
 }
 
-function ownedAccessDetail(state: FacetState, count: number): string {
+function ownedAccessDetail(state: FacetState, count: number) {
   if (state === "idle") {
     return "Open Grants to load owned objects.";
   }
@@ -193,7 +188,7 @@ function ownedAccessDetail(state: FacetState, count: number): string {
   return "Owns no objects here.";
 }
 
-function publicAccessDetail(state: FacetState): string {
+function publicAccessDetail(state: FacetState) {
   if (state === "idle") {
     return "Open Grants to load PUBLIC grants.";
   }
@@ -206,7 +201,7 @@ function directAccessDetail({
 }: {
   deferred: boolean;
   effectiveDb: { id: string; name: string } | null;
-}): string {
+}) {
   if (deferred) {
     return "Open Grants to load direct grants.";
   }
@@ -224,7 +219,7 @@ function directAccessStatus({
   count: number;
   deferred: boolean;
   ready: boolean;
-}): string {
+}) {
   if (deferred) {
     return "Load";
   }
@@ -234,7 +229,7 @@ function directAccessStatus({
   return "—";
 }
 
-function capabilities(attributes: RoleAttributes | undefined): Capability[] {
+function capabilities(attributes: RoleAttributes | undefined) {
   const connLimit = attributes?.connectionLimit ?? -1;
   const validUntil = attributes?.validUntil;
   return [
@@ -302,10 +297,10 @@ function capabilities(attributes: RoleAttributes | undefined): Capability[] {
         ? timestampDate(validUntil).toLocaleDateString()
         : "Never",
     },
-  ];
+  ] satisfies Capability[];
 }
 
-function connLimitDescription(connLimit: number): string {
+function connLimitDescription(connLimit: number) {
   if (connLimit < 0) {
     return "No limit on concurrent connections.";
   }
@@ -315,7 +310,7 @@ function connLimitDescription(connLimit: number): string {
   return `Up to ${connLimit} concurrent connections.`;
 }
 
-function connLimitDisplay(connLimit: number): string {
+function connLimitDisplay(connLimit: number) {
   if (connLimit < 0) {
     return "Unlimited";
   }
@@ -328,7 +323,7 @@ function connLimitDisplay(connLimit: number): string {
 function builtinDetailText(
   builtinInfo: PredefinedRoleInfo | null,
   builtinParents: string[]
-): string {
+) {
   if (builtinInfo) {
     return builtinInfo.summary;
   }
@@ -350,7 +345,7 @@ function directGrantsSubText({
   error: unknown;
   grantSchemaCount: number;
   grantsReady: boolean;
-}): string | undefined {
+}) {
   if (effectiveDbId === null) {
     return "No databases";
   }
@@ -365,7 +360,6 @@ function directGrantsSubText({
     : undefined;
 }
 
-// KPI sub-label for the Owns tile, mirroring directGrantsSubText's states.
 function ownedSubText({
   databaseName,
   deferred,
@@ -380,7 +374,7 @@ function ownedSubText({
   error: unknown;
   ownedCount: number;
   ownedReady: boolean;
-}): string | undefined {
+}) {
   if (effectiveDbId === null) {
     return "No databases";
   }
@@ -397,8 +391,6 @@ function ownedSubText({
   return ownedReady ? ownedSummary : undefined;
 }
 
-// The RLS caveat shown under the access summary: superuser/BYPASSRLS overrides
-// it entirely, otherwise table access gets a "RLS may still apply" note.
 function rlsNoteText({
   bypassesRls,
   isSuperuser,
@@ -407,7 +399,7 @@ function rlsNoteText({
   bypassesRls: boolean;
   isSuperuser: boolean;
   tableAccessActive: boolean;
-}): string | null {
+}) {
   if (isSuperuser || bypassesRls) {
     return "Row-level security is bypassed entirely by this role.";
   }
@@ -417,12 +409,7 @@ function rlsNoteText({
   return null;
 }
 
-// Direct pg_* parents of a role (no recursive closure): both the bare names and
-// their doc summaries, in one pass over memberOf.
-function deriveBuiltinParents(role: Role): {
-  details: BuiltinParent[];
-  names: string[];
-} {
+function deriveBuiltinParents(role: Role) {
   const names: string[] = [];
   const details: BuiltinParent[] = [];
   for (const membership of role.memberOf) {
@@ -435,11 +422,12 @@ function deriveBuiltinParents(role: Role): {
       });
     }
   }
-  return { details, names };
+  return { details, names } satisfies {
+    details: BuiltinParent[];
+    names: string[];
+  };
 }
 
-// The access-sources spine for ordinary roles: one row per path by which the
-// role can reach objects (active or not), each with a jump to its detail.
 function buildAccessRows({
   belongsTo,
   builtinActive,
@@ -470,7 +458,7 @@ function buildAccessRows({
   ownedState?: FacetState | undefined;
   publicCount: number;
   publicGrantsState?: FacetState | undefined;
-}): AccessSourceRow[] {
+}) {
   return [
     {
       active: isSuperuser,
@@ -487,8 +475,6 @@ function buildAccessRows({
       active: builtinActive,
       detail: builtinDetail,
       icon: ShieldCheck,
-      // Self-built-in is explained by the Capabilities card; via-membership jumps
-      // to the Membership tab where the parent role is listed.
       jump:
         builtinInfo === null && builtinParents.length > 0
           ? { label: "Membership", section: "members" }
@@ -551,10 +537,8 @@ function buildAccessRows({
       status: facetAccessStatus(publicGrantsState, publicCount),
       tone: "active",
     },
-  ];
+  ] satisfies AccessSourceRow[];
 }
-
-// Hero block: avatar, name, kind/owner/expiry badges, and the built-in summary
 
 export type {
   AccessSourceRow,

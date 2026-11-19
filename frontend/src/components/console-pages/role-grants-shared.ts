@@ -23,9 +23,6 @@ import {
   type RoleDefaultPrivilege,
 } from "@/protogen/querylane/console/v1alpha1/role_pb";
 
-// ───────── Internal constants (kept before exports per useExportsLast) ─────────
-
-// Canonical relation privilege vocabulary, shared by table-like object types.
 const RELATION_PRIVILEGES = [
   "SELECT",
   "INSERT",
@@ -36,9 +33,6 @@ const RELATION_PRIVILEGES = [
   "TRIGGER",
 ];
 
-// Canonical privilege vocabulary per object type. The set rendered for a group
-// is this list plus any privilege actually present in the data, so newer
-// privileges (e.g. PostgreSQL 17 MAINTAIN) appear only when granted.
 const GRANT_VOCAB: Partial<Record<GrantObjectType, string[]>> = {
   [GrantObjectType.DATABASE]: ["CONNECT", "CREATE", "TEMPORARY"],
   [GrantObjectType.SCHEMA]: ["USAGE", "CREATE"],
@@ -55,7 +49,6 @@ const MIN_SAMPLE_ROWS = 8;
 const ABBR_FALLBACK_LENGTH = 3;
 const DATABASE_SCOPE_SCHEMA = "database";
 
-// Abbreviations keep the density strips legible (a popover explains them).
 const PRIV_ABBR: Record<string, string> = {
   CONNECT: "CON",
   CREATE: "CRT",
@@ -72,8 +65,6 @@ const PRIV_ABBR: Record<string, string> = {
   USAGE: "USE",
 };
 
-// Plain-language gloss per privilege, for the pill tooltips (the strips
-// abbreviate, e.g. SEL → "SELECT — read rows").
 const PRIV_DESCRIPTION: Record<string, string> = {
   CONNECT: "connect to the database",
   CREATE: "create objects",
@@ -99,7 +90,7 @@ const BREAKDOWN_ORDER: GrantObjectType[] = [
   GrantObjectType.FUNCTION,
 ];
 
-function databaseScopeBreakdownLabel(group: SchemaGrantGroup): string {
+function databaseScopeBreakdownLabel(group: SchemaGrantGroup) {
   const parts: string[] = [];
   if (group.byType.has(GrantObjectType.DATABASE)) {
     parts.push("database-level grant");
@@ -116,7 +107,7 @@ function databaseScopeBreakdownLabel(group: SchemaGrantGroup): string {
   return parts.join(" · ");
 }
 
-function schemaScopeBreakdownLabel(group: SchemaGrantGroup): string {
+function schemaScopeBreakdownLabel(group: SchemaGrantGroup) {
   const parts: string[] = [];
   for (const type of BREAKDOWN_ORDER) {
     const count = group.byType.get(type)?.length ?? 0;
@@ -147,7 +138,7 @@ function addObjectPrivilegeCounts(
   }
 }
 
-function presentOwnedStat(type: GrantObjectType, names: string[]): OwnedStat {
+function presentOwnedStat(type: GrantObjectType, names: string[]) {
   const extra = names.length - EXAMPLE_LIMIT;
   const examples =
     names.slice(0, EXAMPLE_LIMIT).join(", ") + (extra > 0 ? ` +${extra}` : "");
@@ -156,15 +147,9 @@ function presentOwnedStat(type: GrantObjectType, names: string[]): OwnedStat {
     examples,
     label: `${getObjectTypeLabel(type).toLowerCase()}${names.length === 1 ? "" : "s"}`,
     type,
-  };
+  } satisfies OwnedStat;
 }
 
-// ───────── Access-facet load state ─────────
-
-// The owned-objects / PUBLIC-grants / default-privileges facets are fetched as
-// queries independent of the direct grants, so each can be idle, loading, or
-// failed on its own. "ready" also covers the intentionally-disabled case (e.g.
-// system roles), where an empty result is the answer rather than a pending fetch.
 export type FacetState = "idle" | "loading" | "error" | "ready";
 
 export interface FacetStates {
@@ -173,10 +158,7 @@ export interface FacetStates {
   publicGrants: FacetState;
 }
 
-// ───────── Aggregated grant shape ─────────
-
 export interface GrantedObject {
-  // Distinct roles that granted any privilege on this object (the ACL grantor).
   grantors: string[];
   key: string;
   objectName: string;
@@ -188,8 +170,6 @@ export interface GrantedObject {
   schemaName: string;
 }
 
-// Relation-like object types (table / view / matview / foreign table) — used to
-// derive the role's read-vs-write access posture.
 export const TABLE_LIKE_TYPES = new Set<GrantObjectType>([
   GrantObjectType.TABLE,
   GrantObjectType.VIEW,
@@ -197,15 +177,10 @@ export const TABLE_LIKE_TYPES = new Set<GrantObjectType>([
   GrantObjectType.FOREIGN_TABLE,
 ]);
 
-// Aggregate the flat grant rows (one per object+privilege+grantor) into
-// per-object rows. Rows arrive pre-sorted (schema_name, object_name,
-// privilege), so insertion order yields a schema-grouped display order.
-export function aggregateGrants(grants: ObjectGrant[]): GrantedObject[] {
+export function aggregateGrants(grants: ObjectGrant[]) {
   const objects = new Map<string, GrantedObject>();
   const grantorsByObject = new Map<string, Set<string>>();
   for (const grant of grants) {
-    // Tuple key, not a delimiter-joined string: Postgres identifiers can contain
-    // spaces, so a JSON array keeps distinct (type, schema, object) triples apart.
     const key = JSON.stringify([
       grant.objectType,
       grant.schemaName,
@@ -234,10 +209,8 @@ export function aggregateGrants(grants: ObjectGrant[]): GrantedObject[] {
       object.grantors.push(grant.grantor);
     }
   }
-  return [...objects.values()];
+  return [...objects.values()] satisfies GrantedObject[];
 }
-
-// ───────── Object metadata ─────────
 
 export const GRANT_OBJECT_META: Record<
   GrantObjectType,
@@ -261,13 +234,12 @@ export const GRANT_OBJECT_META: Record<
   [GrantObjectType.LARGE_OBJECT]: { icon: Box, label: "Large object" },
 };
 
-export const getObjectTypeLabel = (objectType: GrantObjectType): string =>
+export const getObjectTypeLabel = (objectType: GrantObjectType) =>
   (
     GRANT_OBJECT_META[objectType] ??
     GRANT_OBJECT_META[GrantObjectType.UNSPECIFIED]
   ).label;
 
-// Ordered groups + plain-language hints shown as section headers.
 export const GRANT_GROUPS: {
   hint: string;
   title: string;
@@ -320,8 +292,6 @@ export const GRANT_GROUPS: {
   },
 ];
 
-// Object-type groups rendered flat (the rows ARE the objects) vs. grouped by
-// schema (one collapsible schema section per schema, with density rollups).
 export const FLAT_TYPES = new Set<GrantObjectType>([
   GrantObjectType.DATABASE,
   GrantObjectType.SCHEMA,
@@ -347,8 +317,6 @@ export const TYPE_UNIT: Partial<Record<GrantObjectType, string>> = {
   [GrantObjectType.LARGE_OBJECT]: "large object",
 };
 
-// Stable URL slug per object type — the Grants schema view encodes its active
-// type tab as `grantsType` so the drill-in is deep-linkable.
 export const SLUG_TO_OBJECT_TYPE: Record<GrantsType, GrantObjectType> = {
   database: GrantObjectType.DATABASE,
   "foreign-tables": GrantObjectType.FOREIGN_TABLE,
@@ -361,18 +329,14 @@ export const SLUG_TO_OBJECT_TYPE: Record<GrantsType, GrantObjectType> = {
   views: GrantObjectType.VIEW,
 };
 
-export function slugForObjectType(
-  type: GrantObjectType
-): GrantsType | undefined {
+export function slugForObjectType(type: GrantObjectType) {
   const slug = Object.entries(SLUG_TO_OBJECT_TYPE).find(
     ([, objectType]) => objectType === type
   )?.[0];
   return roleDetailSearchSchema.shape.grantsType.parse(slug);
 }
 
-export function grantObjectTypeFilterToken(
-  type: GrantObjectType
-): string | undefined {
+export function grantObjectTypeFilterToken(type: GrantObjectType) {
   switch (type) {
     case GrantObjectType.DATABASE:
       return "DATABASE";
@@ -398,9 +362,7 @@ export function grantObjectTypeFilterToken(
   }
 }
 
-export function grantObjectTypeFilterTokenForSlug(
-  slug: string
-): string | undefined {
+export function grantObjectTypeFilterTokenForSlug(slug: string) {
   const objectType = Object.entries(SLUG_TO_OBJECT_TYPE).find(
     ([candidate]) => candidate === slug
   )?.[1];
@@ -409,27 +371,21 @@ export function grantObjectTypeFilterTokenForSlug(
     : grantObjectTypeFilterToken(objectType);
 }
 
-// A schema at or under this size opens inline; above it stays collapsed and
-// gains an inline filter bar when opened. Baked-in (no user tweak).
 export const AUTO_EXPAND_THRESHOLD = 12;
 export const MAX_SAMPLE_ROWS = Math.max(AUTO_EXPAND_THRESHOLD, MIN_SAMPLE_ROWS);
 export const EXAMPLE_LIMIT = 4;
 
-export function privAbbr(name: string): string {
+export function privAbbr(name: string) {
   return PRIV_ABBR[name] ?? name.slice(0, ABBR_FALLBACK_LENGTH);
 }
 
-// Tooltip text for a privilege pill: full name + a plain-language gloss.
-export function privTooltip(name: string): string {
+export function privTooltip(name: string) {
   const description = PRIV_DESCRIPTION[name];
   return isNonEmptyString(description) ? `${name} — ${description}` : name;
 }
 
-// ───────── Privilege tone ─────────
-// Reads cool (emerald), writes warm (amber), destructive flagged (red), CREATE
-// distinct (violet). Matches the rest of the app's privilege colouring.
 export type PrivTone = "read" | "write" | "destructive" | "create" | "default";
-export function privTone(name: string): PrivTone {
+export function privTone(name: string) {
   if (
     name === "SELECT" ||
     name === "USAGE" ||
@@ -468,9 +424,7 @@ export const PRIV_TONE_CLASS: Record<PrivTone, string> = {
     "border-warning-500/30 bg-warning-500/10 text-warning-700 dark:text-warning-400",
 };
 
-// ───────── Data helpers ─────────
-
-export function objectDisplayName(object: GrantedObject): string {
+export function objectDisplayName(object: GrantedObject) {
   if (object.objectType === GrantObjectType.SCHEMA) {
     return object.schemaName;
   }
@@ -480,17 +434,12 @@ export function objectDisplayName(object: GrantedObject): string {
   return `${object.schemaName}.${object.objectName}`;
 }
 
-// Distinct, grant-option-aware privileges for one object (a privilege can
-// appear once per grantor; collapse to one pill, keeping any grant option).
 export function dedupePrivileges(
   privileges: {
     grantable: boolean;
     name: string;
   }[]
-): {
-  grantable: boolean;
-  name: string;
-}[] {
+) {
   const map = new Map<string, boolean>();
   for (const privilege of privileges) {
     map.set(
@@ -501,22 +450,23 @@ export function dedupePrivileges(
   return [...map.entries()].map(([name, grantable]) => ({ grantable, name }));
 }
 
-// Condense the distinct grantors of an object's privileges for display.
-export function grantorSummary(
-  grantors: string[]
-): { text: string; title: string | undefined } | null {
+export function grantorSummary(grantors: string[]) {
   if (grantors.length === 0) {
     return null;
   }
   if (grantors.length === 1) {
-    return { text: grantors[0] ?? "", title: undefined };
+    return { text: grantors[0] ?? "", title: undefined } satisfies {
+      text: string;
+      title: string | undefined;
+    } | null;
   }
-  return { text: `${grantors.length} roles`, title: grantors.join(", ") };
+  return {
+    text: `${grantors.length} roles`,
+    title: grantors.join(", "),
+  } satisfies { text: string; title: string | undefined } | null;
 }
 
-// Dominant grantor across a set of objects, with a "+N" suffix when several
-// roles granted access in the same schema.
-export function dominantGrantor(objects: GrantedObject[]): string | null {
+export function dominantGrantor(objects: GrantedObject[]) {
   const counts = new Map<string, number>();
   for (const object of objects) {
     for (const grantor of object.grantors) {
@@ -531,11 +481,7 @@ export function dominantGrantor(objects: GrantedObject[]): string | null {
   return sorted.length > 1 ? `${top} +${sorted.length - 1}` : top;
 }
 
-// Column set for a group = canonical vocabulary + any privilege present in data.
-export function columnsFor(
-  type: GrantObjectType,
-  objects: GrantedObject[]
-): string[] {
+export function columnsFor(type: GrantObjectType, objects: GrantedObject[]) {
   const columns = [...(GRANT_VOCAB[type] ?? [])];
   const columnSet = new Set(columns);
   for (const object of objects) {
@@ -549,11 +495,7 @@ export function columnsFor(
   return columns;
 }
 
-// For each column, how many objects in the set hold that privilege.
-export function densityCounts(
-  objects: GrantedObject[],
-  columns: string[]
-): Record<string, number> {
+export function densityCounts(objects: GrantedObject[], columns: string[]) {
   const counts = Object.fromEntries(columns.map((column) => [column, 0]));
   for (const object of objects) {
     addObjectPrivilegeCounts(counts, object);
@@ -562,7 +504,7 @@ export function densityCounts(
 }
 
 export type PillState = "held" | "full" | "partial" | "none";
-export function densityState(count: number, total: number): PillState {
+export function densityState(count: number, total: number) {
   if (count === 0) {
     return "none";
   }
@@ -572,10 +514,7 @@ export function densityState(count: number, total: number): PillState {
   return "partial";
 }
 
-// Group objects by schema, preserving the (pre-sorted) insertion order.
-export function groupBySchema(
-  objects: GrantedObject[]
-): [string, GrantedObject[]][] {
+export function groupBySchema(objects: GrantedObject[]) {
   const map = new Map<string, GrantedObject[]>();
   for (const object of objects) {
     const list = map.get(object.schemaName);
@@ -585,7 +524,7 @@ export function groupBySchema(
       map.set(object.schemaName, [object]);
     }
   }
-  return [...map.entries()];
+  return [...map.entries()] satisfies [string, GrantedObject[]][];
 }
 
 export function objectMatchesFilters({
@@ -598,7 +537,7 @@ export function objectMatchesFilters({
   needle: string;
   grantOnly: boolean;
   activePrivs: string[];
-}): boolean {
+}) {
   if (needle && !objectDisplayName(object).toLowerCase().includes(needle)) {
     return false;
   }
@@ -613,23 +552,17 @@ export function objectMatchesFilters({
   return true;
 }
 
-// ───────── Schema index (overview + schema drill-in) ─────────
-
 export interface SchemaGrantGroup {
   byType: Map<GrantObjectType, GrantedObject[]>;
-  // The synthetic database-level row (object_type DATABASE, no schema).
   database: boolean;
   objects: GrantedObject[];
   schema: string;
   total: number;
 }
 
-// Per-schema rollup of the role's direct grants. DATABASE-level grants (which
-// have no schema) collapse into a single synthetic database row; SCHEMA-level
-// grants belong to their own schema's group.
-export function buildSchemaIndex(objects: GrantedObject[]): SchemaGrantGroup[] {
+export function buildSchemaIndex(objects: GrantedObject[]) {
   const groups = new Map<string, SchemaGrantGroup>();
-  const ensure = (schema: string, database: boolean): SchemaGrantGroup => {
+  const ensure = (schema: string, database: boolean) => {
     const key = JSON.stringify([database ? "database" : "schema", schema]);
     let group = groups.get(key);
     if (!group) {
@@ -659,7 +592,6 @@ export function buildSchemaIndex(objects: GrantedObject[]): SchemaGrantGroup[] {
       group.byType.set(object.objectType, [object]);
     }
   }
-  // Database row first, then schemas in encounter order.
   return [...groups.values()].toSorted((a, b) => {
     if (a.database !== b.database) {
       return a.database ? -1 : 1;
@@ -668,15 +600,12 @@ export function buildSchemaIndex(objects: GrantedObject[]): SchemaGrantGroup[] {
   });
 }
 
-// "5 tables · 3 views · schema-level grant" — the per-schema breakdown sub-line.
-export function schemaBreakdownLabel(group: SchemaGrantGroup): string {
+export function schemaBreakdownLabel(group: SchemaGrantGroup) {
   if (group.database) {
     return databaseScopeBreakdownLabel(group);
   }
   return schemaScopeBreakdownLabel(group);
 }
-
-// ───────── Owned objects ─────────
 
 export const OWNED_TYPE_ORDER: GrantObjectType[] = [
   GrantObjectType.DATABASE,
@@ -690,7 +619,7 @@ export const OWNED_TYPE_ORDER: GrantObjectType[] = [
   GrantObjectType.LARGE_OBJECT,
 ];
 
-export function ownedObjectName(object: OwnedObject): string {
+export function ownedObjectName(object: OwnedObject) {
   if (
     object.objectType === GrantObjectType.SCHEMA ||
     object.objectType === GrantObjectType.DATABASE
@@ -707,7 +636,7 @@ export interface OwnedStat {
   type: GrantObjectType;
 }
 
-export function ownedStats(objects: OwnedObject[]): OwnedStat[] {
+export function ownedStats(objects: OwnedObject[]) {
   const byType = new Map<GrantObjectType, string[]>();
   for (const object of objects) {
     const list = byType.get(object.objectType);
@@ -727,8 +656,6 @@ export function ownedStats(objects: OwnedObject[]): OwnedStat[] {
   }
   return stats;
 }
-
-// ───────── Default privileges ─────────
 
 export const DEFAULT_PRIV_OBJECT_LABEL: Record<
   DefaultPrivilegeObjectType,
@@ -754,14 +681,9 @@ export interface DefaultPrivilegeRule {
   schemaName: string;
 }
 
-// Group the flat default-privilege rows into one rule per (creator, type,
-// schema) so each renders as a single sentence.
-export function groupDefaultPrivileges(
-  rows: RoleDefaultPrivilege[]
-): DefaultPrivilegeRule[] {
+export function groupDefaultPrivileges(rows: RoleDefaultPrivilege[]) {
   const rules = new Map<string, DefaultPrivilegeRule>();
   for (const row of rows) {
-    // Tuple key: creator/schema identifiers can contain ':' — see aggregateGrants.
     const key = JSON.stringify([
       row.creatorRoleName,
       row.objectType,
@@ -783,5 +705,5 @@ export function groupDefaultPrivileges(
       name: row.privilege,
     });
   }
-  return [...rules.values()];
+  return [...rules.values()] satisfies DefaultPrivilegeRule[];
 }

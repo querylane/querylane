@@ -114,7 +114,7 @@ function isRefreshIntervalMs(value: unknown): value is RefreshIntervalMs {
   );
 }
 
-function normalizeRefreshIntervalMs(value: unknown): RefreshIntervalMs {
+function normalizeRefreshIntervalMs(value: unknown) {
   return isRefreshIntervalMs(value) ? value : null;
 }
 
@@ -129,7 +129,7 @@ const FALLBACK_REFRESH_SETTINGS_STORAGE: StateStorage = {
   },
 };
 
-function getRefreshSettingsStorage(): StateStorage {
+function getRefreshSettingsStorage() {
   if (globalThis.window === undefined) {
     return FALLBACK_REFRESH_SETTINGS_STORAGE;
   }
@@ -141,7 +141,7 @@ function getRefreshSettingsStorage(): StateStorage {
   }
 }
 
-function durationUnitToMs(unit: string): number {
+function durationUnitToMs(unit: string) {
   const normalized = unit.toLowerCase();
   if (
     ["millisecond", "milliseconds", "msec", "msecs", "ms"].includes(normalized)
@@ -163,7 +163,7 @@ function durationUnitToMs(unit: string): number {
   return 0;
 }
 
-function parseDurationAmount(value: string): number {
+function parseDurationAmount(value: string) {
   const parsed = Number(value);
   if (!Number.isNaN(parsed)) {
     return parsed;
@@ -172,32 +172,33 @@ function parseDurationAmount(value: string): number {
   return wordIndex === -1 ? Number.NaN : wordIndex + NUMBER_WORD_VALUE_OFFSET;
 }
 
-function validateRefreshIntervalMs(
-  intervalMs: number
-): RefreshIntervalParseResult {
+function validateRefreshIntervalMs(intervalMs: number) {
   if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
     return {
       errors: ["Enter a future interval."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult;
   }
   const roundedMs = Math.round(intervalMs);
   if (roundedMs < MIN_REFRESH_INTERVAL_MS) {
     return {
       errors: ["Choose an interval of at least 1 minute."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult;
   }
   if (roundedMs > MAX_REFRESH_INTERVAL_MS) {
     return {
       errors: ["Choose an interval of 24 hours or less."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult;
   }
-  return { intervalMs: roundedMs, ok: true };
+  return {
+    intervalMs: roundedMs,
+    ok: true,
+  } satisfies RefreshIntervalParseResult;
 }
 
-function parseDurationInput(input: string): RefreshIntervalParseResult | null {
+function parseDurationInput(input: string) {
   const durationInput = input.replace(DURATION_PREFIX_PATTERN, "");
   const match =
     UNIT_ONLY_DURATION_INPUT_PATTERN.exec(input) ??
@@ -212,7 +213,7 @@ function parseDurationInput(input: string): RefreshIntervalParseResult | null {
     return {
       errors: ["Enter a valid refresh interval."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult | null;
   }
   const amount = parseDurationAmount(amountToken);
   const unitMs = durationUnitToMs(unitToken);
@@ -220,15 +221,12 @@ function parseDurationInput(input: string): RefreshIntervalParseResult | null {
     return {
       errors: ["Enter a valid refresh interval."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult | null;
   }
   return validateRefreshIntervalMs(amount * unitMs);
 }
 
-async function parseChronoInput(
-  input: string,
-  now: Date
-): Promise<RefreshIntervalParseResult | null> {
+async function parseChronoInput(input: string, now: Date) {
   const { casual } = await import("chrono-node");
   const parsedDate = casual.parseDate(input, now);
   if (!parsedDate) {
@@ -244,20 +242,17 @@ async function parseChronoInput(
   );
 }
 
-async function parseRefreshIntervalInput(
-  input: string,
-  now = new Date()
-): Promise<RefreshIntervalParseResult> {
+async function parseRefreshIntervalInput(input: string, now = new Date()) {
   const trimmed = input.trim();
   if (trimmed.length === 0) {
     return {
       errors: ["Enter a refresh interval or turn auto refresh off."],
       ok: false,
-    };
+    } satisfies RefreshIntervalParseResult;
   }
   const normalized = trimmed.toLowerCase();
   if (REFRESH_OFF_VALUES.has(normalized)) {
-    return { intervalMs: null, ok: true };
+    return { intervalMs: null, ok: true } satisfies RefreshIntervalParseResult;
   }
 
   const durationResult = parseDurationInput(trimmed);
@@ -273,10 +268,10 @@ async function parseRefreshIntervalInput(
   return {
     errors: ['Use a natural time like "every 5 minutes" or "in 15 minutes".'],
     ok: false,
-  };
+  } satisfies RefreshIntervalParseResult;
 }
 
-function refreshValueToIntervalMs(value: string): RefreshIntervalMs {
+function refreshValueToIntervalMs(value: string) {
   if (value === "never") {
     return null;
   }
@@ -284,15 +279,15 @@ function refreshValueToIntervalMs(value: string): RefreshIntervalMs {
   return normalizeRefreshIntervalMs(parsed);
 }
 
-function refreshIntervalMsToValue(value: RefreshIntervalMs): string {
+function refreshIntervalMsToValue(value: RefreshIntervalMs) {
   return value === null ? "never" : String(value);
 }
 
-function pluralizeDurationPart(value: number, unit: string): string {
+function pluralizeDurationPart(value: number, unit: string) {
   return `${value.toLocaleString()} ${unit}${value === 1 ? "" : "s"}`;
 }
 
-function formatRefreshDuration(intervalMs: number): string {
+function formatRefreshDuration(intervalMs: number) {
   const roundedMs =
     intervalMs >= ONE_HOUR_MS
       ? Math.round(intervalMs / ONE_MINUTE_MS) * ONE_MINUTE_MS
@@ -318,7 +313,7 @@ function formatRefreshDuration(intervalMs: number): string {
   return parts.join(" ") || pluralizeDurationPart(1, "second");
 }
 
-function formatRefreshIntervalLabel(value: RefreshIntervalMs): string {
+function formatRefreshIntervalLabel(value: RefreshIntervalMs) {
   const match = REFRESH_INTERVAL_OPTIONS.find(
     (option) => option.intervalMs === value
   );
@@ -331,10 +326,6 @@ function formatRefreshIntervalLabel(value: RefreshIntervalMs): string {
   return `Every ${formatRefreshDuration(value)}`;
 }
 
-// Why: refresh cadence is a personal local setting and intentionally does not
-// sync across already-open tabs. Cross-tab broadcast would reset active pollers
-// mid-countdown in surprising ways; a fresh tab still reads the latest stored
-// value on load.
 const useRefreshSettingsStore = create<RefreshSettingsState>()(
   persist(
     (set) => ({

@@ -74,7 +74,7 @@ function useGridColumns({
   /** Adds a frozen 1-based row-number column after the expand column. */
   showRowNumbers?: boolean | undefined;
   sortColumns: SortColumn[];
-}): { columns: Column<GridRow>[]; pkColumnSet: Set<string> } {
+}) {
   "use memo";
 
   const pkColumnSet = new Set(
@@ -103,10 +103,6 @@ function useGridColumns({
     onFrozenColumnsChange(next);
   }
 
-  // Always pin the action region (select → expand) to the left so the row
-  // checkbox and expand affordance stay reachable while the data columns scroll
-  // horizontally. Frozen data columns, when present, extend the same sticky
-  // block immediately to the right.
   const selectColumn: Column<GridRow>[] = rowSelection
     ? [
         {
@@ -188,7 +184,10 @@ function useGridColumns({
     }),
   ];
 
-  return { columns, pkColumnSet };
+  return { columns, pkColumnSet } satisfies {
+    columns: Column<GridRow>[];
+    pkColumnSet: Set<string>;
+  };
 }
 
 export { useGridColumns };

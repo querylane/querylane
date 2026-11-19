@@ -44,7 +44,7 @@ const FOCUS_ORDER = [
   "labels",
 ] as const satisfies readonly CreateInstanceInvalidFieldName[];
 
-function labelsToMap(labels: CreateInstanceLabel[]): Record<string, string> {
+function labelsToMap(labels: CreateInstanceLabel[]) {
   const entries: [string, string][] = [];
   for (const label of labels) {
     const key = label.key.trim();
@@ -79,7 +79,7 @@ function readCreateInstanceFormState({
   form: CreateInstanceProtoForm;
   instanceId: string;
   labels: CreateInstanceLabel[];
-}): CreateInstanceFormState {
+}) {
   const values = form.getValues();
   return {
     database: values.config?.database ?? "",
@@ -101,7 +101,7 @@ function readCreateInstanceFormState({
       values.config?.sslNegotiation ?? PostgresConfig_SslNegotiation.UNSPECIFIED
     ),
     username: values.config?.username ?? "",
-  };
+  } satisfies CreateInstanceFormState;
 }
 
 function setCreateInstanceProtoField(
@@ -190,7 +190,7 @@ function clearCreateInstanceProtoError(
   }
 }
 
-function errorMessage(error: unknown): string | undefined {
+function errorMessage(error: unknown) {
   return formErrorMessages(error).join("\n") || undefined;
 }
 
@@ -209,7 +209,7 @@ const PROTO_FIELDS = [
 function getCreateInstanceProtoErrors(
   form: CreateInstanceProtoForm,
   supplementalErrors: CreateInstanceFormErrors
-): CreateInstanceFormErrors {
+) {
   const protoErrors: CreateInstanceFormErrors = {};
   for (const [field, path] of PROTO_FIELDS) {
     const message = errorMessage(form.getFieldState(path).error);
@@ -217,7 +217,10 @@ function getCreateInstanceProtoErrors(
       protoErrors[field] = message;
     }
   }
-  return { ...protoErrors, ...supplementalErrors };
+  return {
+    ...protoErrors,
+    ...supplementalErrors,
+  } satisfies CreateInstanceFormErrors;
 }
 
 function syncCreateInstanceProtoValues(

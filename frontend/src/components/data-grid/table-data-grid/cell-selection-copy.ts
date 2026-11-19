@@ -33,14 +33,6 @@ import type {
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
-/**
- * Turning grid selections (checked rows, cell ranges, a single cell) into
- * clipboard text, resolving truncated previews through `fetchFullCell`.
- */
-
-// Cap how many ReadCellValue round trips a single selection copy/export may
-// fan out. Beyond this, the toolbar export (StreamRows in FULL mode) is the
-// right tool.
 const MAX_SELECTION_FULL_VALUE_FETCHES = 100;
 const NON_FORMULA_CELL_VALUE_CASES: ReadonlySet<string> = new Set([
   "boolValue",
@@ -60,9 +52,9 @@ function collectSelectedRows({
   resultColumns: TableResultColumn[];
   rows: GridRow[];
   selectedRows: ReadonlySet<string>;
-}): SelectedRow[] {
+}) {
   if (selectedRows.size === 0) {
-    return [];
+    return [] satisfies SelectedRow[];
   }
 
   const collected: SelectedRow[] = [];
@@ -138,7 +130,7 @@ function copyRowValues(
   );
 }
 
-function getDisplayedDataColumnKeys(columns: Column<GridRow>[]): string[] {
+function getDisplayedDataColumnKeys(columns: Column<GridRow>[]) {
   const dataColumns = columns.filter(
     (column) => !isGridActionColumnKey(column.key)
   );
@@ -163,7 +155,7 @@ function collectCellSelectionBlocks({
   dataColumnStart: number;
   resultColumns: TableResultColumn[];
   rows: GridRow[];
-}): CellSelectionBlocks {
+}) {
   const resultColumnByName = new Map(
     resultColumns.map((column) => [column.columnName, column])
   );
@@ -204,7 +196,7 @@ function collectCellSelectionBlock({
   range: CellSelectionRange;
   resultColumnByName: Map<string, TableResultColumn>;
   rows: GridRow[];
-}): CellSelectionBlocks[number] {
+}) {
   const bounds = getCellSelectionBounds(range);
   const selectedRows = rows.slice(
     Math.max(0, bounds.top),
@@ -213,7 +205,7 @@ function collectCellSelectionBlock({
   const left = Math.max(dataColumnStart, bounds.left);
   const right = Math.min(lastColumnIndex, bounds.right);
   if (left > right) {
-    return [];
+    return [] satisfies CellSelectionBlocks[number];
   }
   const selectedColumnKeys = dataColumnKeys.slice(
     left - dataColumnStart,
@@ -229,9 +221,7 @@ function collectCellSelectionBlock({
   );
 }
 
-function countCellsNeedingFullValueInBlocks(
-  blocks: CellSelectionBlocks
-): number {
+function countCellsNeedingFullValueInBlocks(blocks: CellSelectionBlocks) {
   let count = 0;
   for (const block of blocks) {
     for (const row of block) {
@@ -245,24 +235,25 @@ function countCellsNeedingFullValueInBlocks(
   return count;
 }
 
-function formatCellSelectionBlocks(blocks: CellSelectionBlocks): string {
+function formatCellSelectionBlocks(blocks: CellSelectionBlocks) {
   return formatCellSelectionForClipboard(
     blocks.map((block) =>
       block.map((row) =>
         row.map(
-          (cell): CellSelectionClipboardField => ({
-            neutralizeFormula:
-              cell?.value?.kind.case !== undefined &&
-              !NON_FORMULA_CELL_VALUE_CASES.has(cell.value.kind.case),
-            text: formatCellForClipboard(cell),
-          })
+          (cell) =>
+            ({
+              neutralizeFormula:
+                cell?.value?.kind.case !== undefined &&
+                !NON_FORMULA_CELL_VALUE_CASES.has(cell.value.kind.case),
+              text: formatCellForClipboard(cell),
+            }) satisfies CellSelectionClipboardField
         )
       )
     )
   );
 }
 
-function countCellsNeedingFullValue(rows: SelectedRow[]): number {
+function countCellsNeedingFullValue(rows: SelectedRow[]) {
   let count = 0;
   for (const row of rows) {
     for (const cell of row.cells.values()) {
@@ -274,13 +265,13 @@ function countCellsNeedingFullValue(rows: SelectedRow[]): number {
   return count;
 }
 
-function isNodeInside(parent: Node, child: Node | null): boolean {
+function isNodeInside(parent: Node, child: Node | null) {
   return child !== null && parent.contains(child);
 }
 
 function hasActiveTextSelectionInsideGrid(
   event: ClipboardEvent<HTMLDivElement> | undefined
-): boolean {
+) {
   if (!event) {
     return false;
   }

@@ -61,7 +61,7 @@ function RecordField({
   const isEmptyString = formatted.kind === "text" && formatted.display === "";
   const canCopy = !(formatted.isNull || isEmptyString);
   const canDownload = column.dataType === DataType.BINARY && !formatted.isNull;
-  async function fetchFullCell(): Promise<TableCell> {
+  async function fetchFullCell() {
     const token = effectiveCell?.fullValueToken ?? "";
     const response = await fullValueMutation.mutateAsync(
       create(ReadCellValueRequestSchema, {
@@ -107,8 +107,6 @@ function RecordField({
           rowIdentifier,
           table: parseTableQualifiedName(tableName).table,
         });
-        // Copy into a fresh ArrayBuffer-backed view: protobuf-es types its
-        // bytes as Uint8Array<ArrayBufferLike>, which BlobPart rejects.
         downloadBlob(
           filename,
           new Uint8Array(kind.value),
@@ -355,7 +353,7 @@ function JsonValue({ raw }: { raw: string }) {
     try {
       pretty = JSON.stringify(JSON.parse(raw), null, 2);
     } catch {
-      // not valid JSON — fall back to raw string
+      pretty = raw;
     }
   }
   return (

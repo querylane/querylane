@@ -33,7 +33,7 @@ type NavLinkProps = CanonicalAdminPageTarget & {
 function buildNavLinkSearch(
   link: NavLinkProps,
   previous: InstanceLayoutSearch
-): InstanceLayoutSearch {
+) {
   return buildCanonicalAdminSearch(previous, {
     currentPage: link.currentPage,
     targetPage: link.targetPage,
@@ -50,7 +50,7 @@ function buildNavLinkProps({
 }: {
   currentPage?: AdminPageId | undefined;
   ids: NavigationIds;
-}): Partial<Record<NavKey, NavLinkProps>> {
+}) {
   const links: Partial<Record<NavKey, NavLinkProps>> = {};
 
   function linkToPage({ page }: { page: AdminPageId }) {
@@ -92,7 +92,7 @@ function getInstanceNav({
 }: {
   active: NavActiveState;
   paths: SidebarPaths;
-}): NavSection[] {
+}) {
   const items: NavSection["items"] = [
     {
       icon: LayoutDashboard,
@@ -124,7 +124,7 @@ function getInstanceNav({
     },
   ];
 
-  return [{ items, title: "Instance" }];
+  return [{ items, title: "Instance" }] satisfies NavSection[];
 }
 
 function getDatabaseNav({
@@ -133,7 +133,7 @@ function getDatabaseNav({
 }: {
   active: NavActiveState;
   paths: SidebarPaths;
-}): NavSection[] {
+}) {
   return [
     {
       items: [
@@ -175,7 +175,7 @@ function getDatabaseNav({
       ],
       title: "Database",
     },
-  ];
+  ] satisfies NavSection[];
 }
 
 function getNavForScope({
@@ -186,7 +186,7 @@ function getNavForScope({
   active: NavActiveState;
   paths: SidebarPaths;
   scopeLevel: ScopeLevel;
-}): NavSection[] {
+}) {
   const sections: NavSection[] = [];
 
   if (scopeLevel === "instance" || scopeLevel === "database") {
@@ -200,7 +200,7 @@ function getNavForScope({
   return sections;
 }
 
-function getNextStepHint(scopeLevel: ScopeLevel): string | null {
+function getNextStepHint(scopeLevel: ScopeLevel) {
   switch (scopeLevel) {
     case "none":
       return "Select an instance to get started";

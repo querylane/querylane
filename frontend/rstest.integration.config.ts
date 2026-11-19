@@ -1,17 +1,17 @@
-import type { RstestConfig } from "@rstest/core";
+import { defineInlineProject, type RstestConfig } from "@rstest/core";
 import {
   createQuerylaneRstestBuildConfig,
+  RSTEST_DOM_ENVIRONMENT,
   RSTEST_MAX_WORKERS,
   RSTEST_PROJECT_NAMES,
   RSTEST_SETUP_FILE,
   RSTEST_SLOW_TEST_THRESHOLDS,
-  RSTEST_TIMEOUTS,
 } from "./rstest.shared";
 
+const transportTest = "src/lib/transport.integration.test.ts";
+
 export default {
-  ...createQuerylaneRstestBuildConfig(),
   clearMocks: true,
-  include: ["src/**/*.integration.{test,spec}.{ts,tsx}"],
   name: RSTEST_PROJECT_NAMES.integration,
   passWithNoTests: false,
   pool: {
@@ -19,11 +19,21 @@ export default {
     execArgv: ["--no-experimental-webstorage"],
     type: "threads",
   },
-  setupFiles: [RSTEST_SETUP_FILE],
+  projects: [
+    defineInlineProject({
+      ...createQuerylaneRstestBuildConfig(),
+      exclude: [transportTest],
+      include: ["src/**/*.integration.test.{ts,tsx}"],
+      name: "integration-dom",
+      setupFiles: [RSTEST_SETUP_FILE],
+      testEnvironment: RSTEST_DOM_ENVIRONMENT,
+    }),
+    defineInlineProject({
+      ...createQuerylaneRstestBuildConfig(),
+      include: [transportTest],
+      name: "integration-node",
+      testEnvironment: "node",
+    }),
+  ],
   slowTestThreshold: RSTEST_SLOW_TEST_THRESHOLDS.integration,
-  testEnvironment: {
-    name: "happy-dom",
-    prebundle: "auto",
-  },
-  testTimeout: RSTEST_TIMEOUTS.integration,
 } satisfies RstestConfig;

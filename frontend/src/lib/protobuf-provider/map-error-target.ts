@@ -5,9 +5,7 @@ interface FormErrorMessage {
   message: string;
 }
 
-// Keep map keys in criteria, never in RHF paths: valid keys can contain dots,
-// or names such as "constructor" that RHF deliberately refuses to assign.
-function mapEntryCriteriaPrefix(key: readonly (string | number)[]): string {
+function mapEntryCriteriaPrefix(key: readonly (string | number)[]) {
   return `map:${JSON.stringify(key)}:`;
 }
 

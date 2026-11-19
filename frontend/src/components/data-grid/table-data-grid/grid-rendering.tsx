@@ -75,11 +75,11 @@ const CellSelectionContext = createContext<CellSelectionStore>(
   EMPTY_CELL_SELECTION_STORE
 );
 
-function isDataCell(columnKey: string): boolean {
+function isDataCell(columnKey: string) {
   return !isGridActionColumnKey(columnKey);
 }
 
-function hasAppearance(appearance: string, flag: string): true | undefined {
+function hasAppearance(appearance: string, flag: string) {
   return appearance.includes(flag) ? true : undefined;
 }
 
@@ -87,7 +87,7 @@ function getCellSelectionAutoScrollDelta(
   position: number,
   start: number,
   end: number
-): number {
+) {
   if (position < start + CELL_SELECTION_AUTO_SCROLL_EDGE_SIZE) {
     return -Math.ceil(
       (Math.min(
@@ -111,15 +111,13 @@ function getCellSelectionAutoScrollDelta(
   return 0;
 }
 
-function getCellCoordinateFromElement(
-  cell: HTMLElement
-): CellCoordinate | undefined {
+function getCellCoordinateFromElement(cell: HTMLElement) {
   const columnIndex = Number(cell.dataset["cellSelectionColumnIndex"]);
   const rowIndex = Number(cell.dataset["cellSelectionRowIndex"]);
   if (Number.isNaN(columnIndex) || Number.isNaN(rowIndex)) {
     return undefined;
   }
-  return { columnIndex, rowIndex };
+  return { columnIndex, rowIndex } satisfies CellCoordinate | undefined;
 }
 
 function getCellSelectionAutoScroll(
@@ -141,10 +139,7 @@ function getCellSelectionAutoScroll(
   };
 }
 
-function cellCoordinatesEqual(
-  first: CellCoordinate,
-  second: CellCoordinate
-): boolean {
+function cellCoordinatesEqual(first: CellCoordinate, second: CellCoordinate) {
   return (
     first.columnIndex === second.columnIndex &&
     first.rowIndex === second.rowIndex
@@ -177,7 +172,7 @@ function extendCellSelectionToElement({
   cellSelectionStore.extendTo(coordinate);
 }
 
-function hasAutoScrollDelta(delta: { left: number; top: number }): boolean {
+function hasAutoScrollDelta(delta: { left: number; top: number }) {
   return delta.left !== 0 || delta.top !== 0;
 }
 
@@ -191,7 +186,7 @@ function runCellSelectionAutoScroll({
   extendSelectionAtPoint: (clientX: number, clientY: number) => void;
   grid: HTMLElement;
   pointerPosition: { clientX: number; clientY: number };
-}): boolean {
+}) {
   if (!cellSelectionStore.getState().isDragging) {
     return false;
   }
@@ -298,23 +293,17 @@ const DATA_GRID_RENDERERS = {
   renderCheckbox: DataGridCheckbox,
 } satisfies Renderers<GridRow, unknown>;
 
-function gridRowKeyGetter(row: GridRow): string {
+function gridRowKeyGetter(row: GridRow) {
   return row[ROW_KEY_FIELD];
 }
 
-/**
- * Centered message over the empty grid body. The grid itself stays mounted so
- * the header keeps showing the table's columns and types; this overlay starts
- * below the 36px header row and ignores pointer events, so header interactions
- * (resize, reorder, context menus) keep working.
- */
-function defaultEmptyMessage(hasActiveFilter: boolean): GridEmptyMessage {
+function defaultEmptyMessage(hasActiveFilter: boolean) {
   return {
     description: hasActiveFilter
       ? "Try a different search or filter."
       : "This table is empty.",
     title: "No rows found",
-  };
+  } satisfies GridEmptyMessage;
 }
 
 function NoRowsOverlay({
@@ -417,7 +406,7 @@ function GridBody({
     });
 
   useEffect(
-    function trackPointerCellSelection(): (() => void) | undefined {
+    function trackPointerCellSelection() {
       if (isLoading) {
         return undefined;
       }
@@ -554,7 +543,7 @@ function GridBody({
         passive: true,
       });
       globalThis.addEventListener("pointerup", finishPointerSelection);
-      return () => {
+      return (() => {
         finishSelection();
         activeGridRoot.removeEventListener(
           "pointerdown",
@@ -565,7 +554,7 @@ function GridBody({
         globalThis.removeEventListener("pointercancel", finishPointerSelection);
         globalThis.removeEventListener("pointermove", continuePointerSelection);
         globalThis.removeEventListener("pointerup", finishPointerSelection);
-      };
+      }) satisfies (() => void) | undefined;
     },
     [cellSelectionStore, isLoading]
   );
@@ -590,8 +579,6 @@ function GridBody({
           columns={columns}
           columnWidths={columnWidths}
           defaultColumnOptions={DATA_GRID_DEFAULT_COLUMN_OPTIONS}
-          // Keep RDG virtualization on. Wide/complex result sets otherwise mount
-          // every visible-page cell and stall the explorer.
           enableVirtualization={true}
           headerRowHeight={36}
           onCellContextMenu={onCellContextMenu}

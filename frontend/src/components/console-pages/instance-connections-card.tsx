@@ -42,11 +42,6 @@ interface InstanceConnectionsCardProps {
   isPending: boolean;
 }
 
-/**
- * The disjoint pg_stat_activity states the ledger has a column for. Lock
- * waiters are NOT a state — they are a subset of active backends — so they
- * surface as a signal row instead of a column.
- */
 const CONNECTION_STATES = [
   {
     className: "bg-chart-1",
@@ -70,9 +65,7 @@ const CONNECTION_STATES = [
 
 const PERCENT = 100;
 const MS_PER_SECOND = 1000;
-/** Rows beyond this fold into a "more on the Activity page" line. */
 const MAX_APPLICATION_ROWS = 10;
-/** Sentinel the backend emits for backends that set no application_name. */
 const UNNAMED_APPLICATION = "(unnamed)";
 const LEDGER_COLUMNS = [
   { id: "application", label: "Application", required: true },
@@ -80,11 +73,11 @@ const LEDGER_COLUMNS = [
   { id: "total", label: "Total" },
 ] satisfies ListColumnOption[];
 
-function sharePercent(count: number, total: number): number {
+function sharePercent(count: number, total: number) {
   return total <= 0 ? 0 : Math.round((count / total) * PERCENT);
 }
 
-function widthPercent(count: number, denominator: number): string {
+function widthPercent(count: number, denominator: number) {
   return denominator <= 0 ? "0%" : `${(count / denominator) * PERCENT}%`;
 }
 
@@ -100,7 +93,6 @@ function Swatch({ className }: { className: string }) {
   );
 }
 
-/** One sentence with a meter: how much of max_connections is spoken for. */
 function CapacityLine({ activity }: { activity: ConnectionActivityHealth }) {
   const label = `${activity.totalConnections} of ${activity.maxConnections} connections in use`;
   return (
@@ -143,7 +135,7 @@ interface ActivitySignal {
   toneClassName: string;
 }
 
-function collectSignals(activity: ConnectionActivityHealth): ActivitySignal[] {
+function collectSignals(activity: ConnectionActivityHealth) {
   const signals: ActivitySignal[] = [];
 
   const waiting = activity.waitingForLockConnections;
@@ -178,10 +170,6 @@ function collectSignals(activity: ConnectionActivityHealth): ActivitySignal[] {
   return signals;
 }
 
-/**
- * Lock waits and long-running transactions overlap the state counts, so they
- * render as tinted rows — loud when present, absent when healthy.
- */
 function ActivitySignals({ activity }: { activity: ConnectionActivityHealth }) {
   const signals = collectSignals(activity);
   if (signals.length === 0) {
@@ -206,7 +194,6 @@ function ActivitySignals({ activity }: { activity: ConnectionActivityHealth }) {
   );
 }
 
-/** Names the swatch-only column headers below. */
 function StateLegend({ visible }: { visible: ReadonlySet<string> }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -255,10 +242,6 @@ function Count({ bold = false, value }: { bold?: boolean; value: number }) {
   );
 }
 
-/**
- * Swatch-only state headers: at the card's fixed column width, text headers
- * left no room for application names.
- */
 function LedgerHeader({
   order,
   sortState,
@@ -448,13 +431,6 @@ function ApplicationLedger({
   );
 }
 
-/**
- * The card's one call to action, pinned to its bottom edge as a footer so it
- * reads as "where this leads" rather than a stray control in the title row.
- * Applications cut from the ledger are mentioned here, where the reader can
- * act on them. The focus ring is inset because the link bleeds to the card
- * edge and the card clips overflow.
- */
 function SessionsFooterLink({
   activity,
   instanceId,
@@ -500,9 +476,6 @@ function ConnectionsCardBody({
     );
   }
 
-  // The card only renders for connected instances, so a missing payload means
-  // the health check failed or pg_stat_activity was unreadable — never that
-  // the instance is disconnected.
   if (!activity) {
     return (
       <EmptyState

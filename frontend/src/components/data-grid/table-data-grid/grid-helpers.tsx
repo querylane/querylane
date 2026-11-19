@@ -36,9 +36,6 @@ interface BuildColumnArgs {
 }
 
 const MIN_COLUMN_WIDTH = 140;
-// Caps `width: "auto"` max-content measurement so a single long value (large
-// JSONB, long text) cannot stretch its column to thousands of pixels. Also the
-// upper bound for manual drag-resize in react-data-grid.
 const MAX_COLUMN_WIDTH = 500;
 
 function buildColumn({
@@ -57,7 +54,7 @@ function buildColumn({
   renderOpenReferencedTableLink,
   sortDirection,
   sortPriority,
-}: BuildColumnArgs): Column<GridRow> {
+}: BuildColumnArgs) {
   const columnKey = column.columnName;
   const isPrimaryKey = pkColumnSet.has(columnKey);
   const columnForeignKeyReferences = foreignKeyReferencesForColumn(
@@ -76,9 +73,6 @@ function buildColumn({
     }
 
     let preview: ForeignKeyReferencePreview | null = null;
-    // PostgreSQL allows a column to participate in multiple FK constraints.
-    // Render the first one that can produce a safe equality filter so the
-    // cell never shows a dead link for nullable, truncated, or binary values.
     for (const reference of columnForeignKeyReferences) {
       preview =
         buildForeignKeyReferencePreview({
@@ -140,7 +134,7 @@ function buildColumn({
     resizable: true,
     sortable: false,
     width: "auto",
-  };
+  } satisfies Column<GridRow>;
 }
 
 interface PageLabelArgs {
@@ -149,11 +143,7 @@ interface PageLabelArgs {
   rowCount: { status: RowCount_Status; value: bigint } | undefined;
 }
 
-function buildPageLabel({
-  pageIndex,
-  pageSize,
-  rowCount,
-}: PageLabelArgs): string {
+function buildPageLabel({ pageIndex, pageSize, rowCount }: PageLabelArgs) {
   const currentPage = pageIndex + 1;
   if (!rowCount) {
     return `Page ${currentPage}`;

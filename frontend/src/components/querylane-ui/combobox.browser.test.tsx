@@ -2,7 +2,6 @@ import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
-import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
 import {
   Combobox,
   ComboboxContent,
@@ -13,6 +12,7 @@ import {
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
 import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
+import { BrowserSurface } from "@/test/browser-surface.test-utils";
 
 interface DatabaseOption {
   id: string;
@@ -31,7 +31,7 @@ function AsyncDatabasePicker({
     getValue: (database) => database.id,
   });
   return (
-    <ScreenshotFrame>
+    <BrowserSurface>
       <Combobox
         autoHighlight={true}
         items={items}
@@ -52,7 +52,7 @@ function AsyncDatabasePicker({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
-    </ScreenshotFrame>
+    </BrowserSurface>
   );
 }
 
@@ -76,7 +76,7 @@ test("async results highlight after typing and duplicate labels retain distinct 
   );
   const options = page.getByRole("option", { name: "reports", exact: true });
   await expect.element(options.nth(0)).toHaveAttribute("data-highlighted", "");
-  // An empty-state live region stays mounted but must not leave a blank band.
+
   expect(
     getByRole(document.body, "status").getBoundingClientRect().height
   ).toBe(0);

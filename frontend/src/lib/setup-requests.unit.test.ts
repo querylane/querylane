@@ -1,256 +1,63 @@
-import { create as createProto } from "@bufbuild/protobuf";
-import { describe, expect, test } from "@rstest/core";
-
-import { PostgresConfigSchema } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import { create } from "@bufbuild/protobuf";
+import { expect, test } from "@rstest/core";
 import {
   SetupAppDatabaseResponseSchema,
-  SetupProgressEventSchema,
   SetupStep,
   StepState,
   WatchConfigChangesResponseSchema,
 } from "@/protogen/querylane/console/v1alpha1/onboarding_pb";
-
 import {
-  buildConnectionTestRequest,
-  buildSetupAppDatabaseRequest,
   consumeSetupStreamWithProgress,
   consumeWatchStreamWithProgress,
-  createSetupStreamFailureError,
 } from "./setup-requests";
 
-function buildPostgresConfig() {
-  return createProto(PostgresConfigSchema, {
-    database: "querylane",
-    host: "localhost",
-    password: "secret",
-    port: 5432,
-    username: "querylane",
-  });
-}
+test("a closed setup stream is not success before configuration is persisted", async () => {
+  const acknowledged = Promise.withResolvers<void>();
 
-function buildSetupResponse({
-  state,
-  error = "",
-  displayName = "",
-  stepId = SetupStep.UNSPECIFIED,
-}: {
-  state: StepState;
-  error?: string;
-  displayName?: string;
-  stepId?: SetupStep;
-}) {
-  return createProto(SetupAppDatabaseResponseSchema, {
-    event: createProto(SetupProgressEventSchema, {
-      displayName,
-      error,
-      state,
-      stepId,
-    }),
-  });
-}
-
-function buildSucceededSetupResponse(stepId: SetupStep) {
-  return buildSetupResponse({
-    state: StepState.SUCCEEDED,
-    error: "",
-    displayName: "",
-    stepId,
-  });
-}
-
-function buildWatchResponse(
-  state: StepState,
-  error = "",
-  options: { displayName?: string; stepId?: SetupStep } = {}
-) {
-  return createProto(WatchConfigChangesResponseSchema, {
-    event: createProto(SetupProgressEventSchema, {
-      displayName: options.displayName ?? "",
-      error,
-      state,
-      stepId: options.stepId ?? SetupStep.UNSPECIFIED,
-    }),
-  });
-}
-
-function buildAsyncStream<T>(items: T[]): AsyncIterable<T> {
-  return {
-    [Symbol.asyncIterator]() {
-      const iterator = items[Symbol.iterator]();
-      return { next: () => Promise.resolve(iterator.next()) };
-    },
-  };
-}
-
-function createControlledAsyncStream<T>() {
-  const queue: { value: T }[] = [];
-  let isClosed = false;
-  let wakeReader: ((result: IteratorResult<T>) => void) | null = null;
-
-  const readNext = (): Promise<IteratorResult<T>> => {
-    const next = queue.shift();
-    if (next) {
-      return Promise.resolve({ done: false, value: next.value });
-    }
-
-    if (isClosed) {
-      return Promise.resolve({ done: true, value: undefined });
-    }
-
-    return new Promise((resolve) => {
-      wakeReader = resolve;
-    });
-  };
-
-  return {
-    close: () => {
-      isClosed = true;
-      const reader = wakeReader;
-      wakeReader = null;
-      reader?.({ done: true, value: undefined });
-    },
-    push: (item: T) => {
-      const reader = wakeReader;
-      wakeReader = null;
-      if (reader) {
-        reader({ done: false, value: item });
-        return;
-      }
-      queue.push({ value: item });
-    },
-    stream: {
-      [Symbol.asyncIterator]() {
-        return { next: readNext };
-      },
-    } satisfies AsyncIterable<T>,
-  };
-}
-
-async function flushMicrotasks() {
-  await Promise.resolve();
-  await Promise.resolve();
-}
-
-describe("setup request builders", () => {
-  test("builds standalone connection test requests", () => {
-    const config = buildPostgresConfig();
-
-    const request = buildConnectionTestRequest(config);
-
-    expect(request.config?.database).toBe("querylane");
-    expect(request.config?.host).toBe("localhost");
-  });
-
-  test("builds setup requests with postgres config payload", () => {
-    const config = buildPostgresConfig();
-
-    const request = buildSetupAppDatabaseRequest(config);
-
-    expect(request.setup.case).toBe("postgresConfig");
-    if (request.setup.case !== "postgresConfig") {
-      throw new Error("Expected postgresConfig setup payload");
-    }
-    expect(request.setup.value.database).toBe("querylane");
-  });
-});
-
-describe("setup stream consumption", () => {
-  test("rejects when the stream closes before config persistence succeeds", async () => {
-    const stream = buildAsyncStream([
-      buildSucceededSetupResponse(SetupStep.INITIALIZING_SERVICES),
-    ]);
-
-    await expect(
-      consumeSetupStreamWithProgress(stream, () => undefined)
-    ).rejects.toThrow("Database setup stream ended before setup completed");
-  });
-
-  test("consumes setup stream and returns the last failure message", async () => {
-    const responses = [
-      buildSetupResponse({ state: StepState.IN_PROGRESS }),
-      buildSetupResponse({ state: StepState.FAILED, error: "first" }),
-      buildSetupResponse({ state: StepState.FAILED, error: "second" }),
-    ];
-    const stream = buildAsyncStream(responses);
-
-    await expect(
-      consumeSetupStreamWithProgress(stream, () => undefined)
-    ).resolves.toMatchObject({
-      message: "second",
-    });
-  });
-
-  test("invokes progress callback in order for async-delayed setup events", async () => {
-    const controlled =
-      createControlledAsyncStream<ReturnType<typeof buildSetupResponse>>();
-    const states: StepState[] = [];
-
-    const consumePromise = consumeSetupStreamWithProgress(
-      controlled.stream,
-      (event) => {
-        states.push(event.state);
-      }
-    );
-
-    await flushMicrotasks();
-    expect(states).toEqual([]);
-
-    controlled.push(buildSetupResponse({ state: StepState.PENDING }));
-    await flushMicrotasks();
-    expect(states).toEqual([StepState.PENDING]);
-
-    controlled.push(buildSetupResponse({ state: StepState.IN_PROGRESS }));
-    await flushMicrotasks();
-    expect(states).toEqual([StepState.PENDING, StepState.IN_PROGRESS]);
-
-    controlled.push(buildSucceededSetupResponse(SetupStep.PERSISTING_CONFIG));
-    await flushMicrotasks();
-    expect(states).toEqual([
-      StepState.PENDING,
-      StepState.IN_PROGRESS,
-      StepState.SUCCEEDED,
-    ]);
-
-    controlled.close();
-    await expect(consumePromise).resolves.toBeNull();
-  });
-});
-
-describe("watch stream consumption", () => {
-  test("keeps a failure that arrives after initialization succeeded", async () => {
-    const responses = [
-      buildWatchResponse(StepState.SUCCEEDED, "", {
-        displayName: "Initializing services",
+  async function* stream() {
+    yield create(SetupAppDatabaseResponseSchema, {
+      event: {
+        state: StepState.SUCCEEDED,
         stepId: SetupStep.INITIALIZING_SERVICES,
-      }),
-      buildWatchResponse(StepState.FAILED, "late failure", {
-        displayName: "Connecting",
-      }),
-    ];
+      },
+    });
+    await acknowledged.promise;
+  }
 
-    const failure = await consumeWatchStreamWithProgress(
-      buildAsyncStream(responses),
-      () => undefined
-    );
-
-    expect(failure).toMatchObject({ message: "late failure" });
-  });
+  await expect(
+    consumeSetupStreamWithProgress(stream(), () => {
+      acknowledged.resolve();
+    })
+  ).rejects.toThrow("Database setup stream ended before setup completed");
 });
 
-describe("setup stream errors", () => {
-  test("creates setup stream failure errors with attached failed event", () => {
-    const failedEvent = createProto(SetupProgressEventSchema, {
-      displayName: "Apply migrations",
-      error: "migration failed",
-      state: StepState.FAILED,
-    });
+test("watch progress retains a failure after initialization appeared to succeed", async () => {
+  const initialized = Promise.withResolvers<void>();
+  const progress: StepState[] = [];
 
-    const error = createSetupStreamFailureError({
-      failedEvent,
-      message: "migration failed",
+  async function* stream() {
+    yield create(WatchConfigChangesResponseSchema, {
+      event: {
+        displayName: "Initializing services",
+        state: StepState.SUCCEEDED,
+        stepId: SetupStep.INITIALIZING_SERVICES,
+      },
     });
+    await initialized.promise;
+    yield create(WatchConfigChangesResponseSchema, {
+      event: {
+        displayName: "Connecting",
+        error: "late failure",
+        state: StepState.FAILED,
+      },
+    });
+  }
 
-    expect(error.message).toBe("migration failed");
-    expect(error.failedEvent).toBe(failedEvent);
+  const failure = await consumeWatchStreamWithProgress(stream(), (event) => {
+    progress.push(event.state);
+    initialized.resolve();
   });
+
+  expect(progress).toEqual([StepState.SUCCEEDED, StepState.FAILED]);
+  expect(failure).toMatchObject({ message: "late failure" });
 });

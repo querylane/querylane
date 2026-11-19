@@ -34,7 +34,7 @@ interface UseTableColumnLayoutOptions {
   tableName: string;
 }
 
-function useSelectedTableColumns(tableName: string): string[] {
+function useSelectedTableColumns(tableName: string) {
   const { selection } = useListColumns(`table-data:${tableName}`);
   const savedLayout = useTableColumnLayoutSettingsStore(
     (state) => state.layouts[tableName]
@@ -49,7 +49,7 @@ function useTableColumnLayout({
   columns,
   hasColumnMetadata,
   tableName,
-}: UseTableColumnLayoutOptions): TableColumnLayoutController {
+}: UseTableColumnLayoutOptions) {
   const { selection, setSelection } = useListColumns(`table-data:${tableName}`);
   const sharedLayout = useListLayout(`table-data:${tableName}`);
   const savedLayout = useTableColumnLayoutSettingsStore(
@@ -136,8 +136,6 @@ function useTableColumnLayout({
   }
 
   function setColumnOrder(order: string[]) {
-    // An explicit catalog order must also override another viewer's personal
-    // order. Only Reset columns returns to the personal/default fallback.
     sharedLayout.setOrder(order);
     setLayout(tableName, {
       ...nextProjectionSetting(),
@@ -192,13 +190,13 @@ function useTableColumnLayout({
     setColumnOrder,
     setColumnVisibility,
     setFetchVisibleColumns,
-  };
+  } satisfies TableColumnLayoutController;
 }
 
 const NO_HIDDEN_COLUMNS: ReadonlySet<string> = new Set();
 
 function ignoreLayoutChange() {
-  // Static layouts have no column controls to call this.
+  return undefined;
 }
 
 /**
@@ -206,9 +204,7 @@ function ignoreLayoutChange() {
  * no hidden columns. SQL results override presentation visibility while
  * retaining the complete backing result. These setters are not UI actions.
  */
-function staticColumnLayout(
-  columns: readonly TableResultColumn[]
-): TableColumnLayoutController {
+function staticColumnLayout(columns: readonly TableResultColumn[]) {
   return {
     columnOrder: columns.map((column) => column.columnName),
     displayColumns: [...columns],
@@ -219,7 +215,7 @@ function staticColumnLayout(
     reset: ignoreLayoutChange,
     setColumnOrder: ignoreLayoutChange,
     setColumnVisibility: ignoreLayoutChange,
-  };
+  } satisfies TableColumnLayoutController;
 }
 
 export type { TableColumnLayoutController };

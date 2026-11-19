@@ -28,7 +28,7 @@ const WATCH_RETRY_BACKOFF_MS = [
   WATCH_RETRY_BACKOFF_THIRD_MS,
 ] as const;
 
-function toError(error: unknown): Error {
+function toError(error: unknown) {
   if (error instanceof Error) {
     return error;
   }
@@ -36,7 +36,7 @@ function toError(error: unknown): Error {
   return new Error("Onboarding request failed");
 }
 
-function sleep(ms: number): Promise<void> {
+function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
@@ -81,16 +81,14 @@ interface WatchStreamRunOptions {
   setManualRetryRequired: (required: boolean) => void;
 }
 
-async function runWatchStreamWithRetries(
-  options: WatchStreamRunOptions
-): Promise<void> {
+async function runWatchStreamWithRetries(options: WatchStreamRunOptions) {
   await runWatchAttempt(options, 0);
 }
 
 async function runWatchAttempt(
   options: WatchStreamRunOptions,
   attempt: number
-): Promise<void> {
+) {
   const {
     onboardingStreamingClient,
     controller,
@@ -110,8 +108,6 @@ async function runWatchAttempt(
         {},
         {
           signal: controller.signal,
-          // Long-lived watch stream; timeoutMs: 0 disables the transport's
-          // default deadline so it is not severed every 30s.
           timeoutMs: 0,
         }
       ),
@@ -130,9 +126,6 @@ async function runWatchAttempt(
       return;
     }
 
-    // The backend rejects a watch subscription with FailedPrecondition once
-    // the database is initialized — e.g. setup finished in the background
-    // after a failed attempt, and the user hit Retry. That is success.
     if (isAlreadyConfigured(toConnectError(error))) {
       onComplete?.();
       return;
@@ -187,8 +180,6 @@ function useSetupAppDatabaseMutation(
       const setupFailedMessage = await consumeSetupStreamWithProgress(
         onboardingStreamingClient.setupAppDatabase(
           request,
-          // Setup (migrations, seeding) may stream progress for longer than
-          // the transport's default deadline; timeoutMs: 0 disables it.
           signal === undefined ? { timeoutMs: 0 } : { signal, timeoutMs: 0 }
         ),
         (event) => options?.onProgress?.(event)
@@ -206,7 +197,7 @@ function useWatchConfigChanges({
   onComplete,
   onError,
   onProgress,
-}: UseWatchConfigChangesOptions): UseWatchConfigChangesResult {
+}: UseWatchConfigChangesOptions) {
   const onboardingStreamingClient = useOnboardingStreamingClient();
   const [run, setRun] = useState({
     enabled,
@@ -255,13 +246,11 @@ function useWatchConfigChanges({
     return retryPromise;
   };
 
-  // sync form field from server response
   useEffect(() => {
     retryTickRef.current = retryTick;
   }, [retryTick]);
 
-  // sync form field from server response
-  useEffect((): (() => void) | undefined => {
+  useEffect(() => {
     if (!enabled) {
       settleRetryState({
         retryPromiseRef,
@@ -323,9 +312,9 @@ function useWatchConfigChanges({
         })
     )();
 
-    return () => {
+    return (() => {
       controller.abort();
-    };
+    }) satisfies (() => void) | undefined;
   }, [enabled, onboardingStreamingClient, retryTick]);
 
   return {
@@ -333,7 +322,7 @@ function useWatchConfigChanges({
     manualRetryRequired,
     retry,
     retryPending,
-  };
+  } satisfies UseWatchConfigChangesResult;
 }
 
 export type { SetupAppDatabaseMutationVariables, WatchErrorReason };
