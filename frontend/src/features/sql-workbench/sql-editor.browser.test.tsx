@@ -1,16 +1,19 @@
 import { page } from "@rstest/browser";
 import { render } from "@rstest/browser-react";
-import { expect, rs, test } from "@rstest/core";
-import userEvent from "@testing-library/user-event";
+import { afterEach, expect, rs, test } from "@rstest/core";
 import { SqlEditor } from "@/features/sql-workbench/sql-editor";
+
+afterEach(() => {
+  rs.useRealTimers();
+});
 
 test.each([
   { selectionKeys: "", table: "orders" },
-  { selectionKeys: "{ArrowDown}", table: "orders_archive" },
+  { selectionKeys: "ArrowDown", table: "orders_archive" },
 ])(
   "tab completes the highlighted table $table without indenting SQL",
   async ({ selectionKeys, table }) => {
-    const user = userEvent.setup();
+    rs.useFakeTimers({ now: 0, toFake: ["Date"] });
     const onChange = rs.fn();
     await render(
       <SqlEditor
@@ -29,15 +32,16 @@ test.each([
       .element(page.getByRole("option", { name: "orders", exact: true }))
       .toHaveAttribute("aria-selected", "true");
 
-    // Skip CodeMirror's brief accidental-keypress guard without a timed wait.
-    rs.spyOn(Date, "now").mockReturnValue(Date.now() + 1000);
+    // Model the pinned CodeMirror 6.20.4 interaction guard with a clock
+    // installed before mounting. Timer/event APIs stay real; no wall-time wait.
+    rs.advanceTimersByTime(75);
     if (selectionKeys) {
-      await user.keyboard(selectionKeys);
+      await page.keyboard.press(selectionKeys);
     }
     await expect
       .element(page.getByRole("option", { name: table, exact: true }))
       .toHaveAttribute("aria-selected", "true");
-    await user.keyboard("{Tab}");
+    await page.keyboard.press("Tab");
 
     await expect.element(editor).toHaveText(`SELECT * FROM ${table}`);
     expect(onChange).toHaveBeenLastCalledWith(`SELECT * FROM ${table}`);
@@ -47,7 +51,6 @@ test.each([
 );
 
 test("tab and Shift+Tab still indent when no completion is open", async () => {
-  const user = userEvent.setup();
   const onChange = rs.fn();
   await render(
     <SqlEditor
@@ -64,8 +67,17 @@ test("tab and Shift+Tab still indent when no completion is open", async () => {
   await editor.fill("SELECT 1;");
   await expect.element(page.getByRole("listbox")).toBeDetached();
 
-  await user.keyboard("{Tab}");
-  expect(onChange).toHaveBeenLastCalledWith("  SELECT 1;");
-  await user.keyboard("{Shift>}{Tab}{/Shift}");
-  expect(onChange).toHaveBeenLastCalledWith("SELECT 1;");
+  const keydown = rs.fn<(event: KeyboardEvent) => void>();
+  document.addEventListener("keydown", keydown, { once: true });
+  await page.keyboard.press("Tab");
+  expect(keydown).toHaveBeenCalledWith(
+    expect.objectContaining({ isTrusted: true })
+  );
+  await rs.waitFor(() => {
+    expect(onChange).toHaveBeenLastCalledWith("  SELECT 1;");
+  });
+  await page.keyboard.press("Shift+Tab");
+  await rs.waitFor(() => {
+    expect(onChange).toHaveBeenLastCalledWith("SELECT 1;");
+  });
 });
