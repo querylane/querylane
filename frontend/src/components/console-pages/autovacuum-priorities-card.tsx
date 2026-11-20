@@ -68,7 +68,7 @@ export function AutovacuumPrioritiesCard({
                   </TableCell>
                   <TableCell className="min-w-48 whitespace-normal">
                     <div>{autovacuumEligibility(table)}</div>
-                    <div className="text-muted-foreground mt-1 text-xs">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       XID {formatAutovacuumScore(table.xidScore)} · MXID{" "}
                       {formatAutovacuumScore(table.mxidScore)} · Vacuum{" "}
                       {formatAutovacuumScore(table.vacuumScore)} · Inserts{" "}
@@ -81,7 +81,7 @@ export function AutovacuumPrioritiesCard({
             </TableBody>
           </Table>
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {available
               ? "No visible vacuumable tables in this database."
               : priorities.summary || "Autovacuum priorities are unavailable."}

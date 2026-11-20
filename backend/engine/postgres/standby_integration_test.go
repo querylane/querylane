@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -179,6 +180,25 @@ INSERT INTO replication_health_marker VALUES (1);`)
 			}, 10*time.Second, 25*time.Millisecond)
 			_, insertErr := primary.ExecContext(ctx, "INSERT INTO replication_health_marker VALUES (2)")
 			require.NoError(t, insertErr)
+			// Read the LSN after the commit. WAIT must not confuse WAL
+			// reception with replay or turn a timeout into success.
+			var lsn string
+			require.NoError(t, primary.QueryRowContext(ctx, "SELECT pg_current_wal_insert_lsn()").Scan(&lsn))
+			waitForReplay := func(timeout string) string {
+				statement := fmt.Sprintf("WAIT FOR LSN '%s' WITH (TIMEOUT '%s', NO_THROW)", lsn, timeout)
+				stream, waitErr := eng.ExecuteQuery(ctx, standby, engine.ExecuteQueryParams{
+					Statement: statement,
+					Timeout:   6 * time.Second,
+				})
+				require.NoError(t, waitErr)
+				defer stream.Close()
+				require.True(t, stream.Next(), "WAIT status row: %v", stream.Err())
+				status := stream.Row().GetValues()[0].GetValue().GetStringValue()
+				require.False(t, stream.Next())
+				require.NoError(t, stream.Err())
+				return status
+			}
+			assert.Equal(t, "timeout", waitForReplay("50ms"))
 			var rows int
 			require.NoError(t, standby.QueryRowContext(ctx, "SELECT count(*) FROM replication_health_marker").Scan(&rows))
 			assert.Equal(t, 1, rows, "paused standby has not applied the new primary transaction")
@@ -192,6 +212,7 @@ INSERT INTO replication_health_marker VALUES (1);`)
 			assert.Contains(t, health.Replication.Summary, "WAL replay is paused")
 			_, resumeErr := standby.ExecContext(ctx, "SELECT pg_wal_replay_resume()")
 			require.NoError(t, resumeErr)
+			require.Equal(t, "success", waitForReplay("5s"))
 			require.Eventually(t, func() bool {
 				return standby.QueryRowContext(ctx, "SELECT count(*) FROM replication_health_marker").Scan(&rows) == nil && rows == 2
 			}, 10*time.Second, 25*time.Millisecond)

@@ -176,6 +176,31 @@ func TestExplainQueryUsesSQLConsolePostgresProfile(t *testing.T) {
 	require.Equal(t, postgreserrors.KindInvalidArgument, classified.Classification().Kind)
 }
 
+func TestBuildExplainStatementAddsOnlySupportedOptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		analyze  bool
+		features explainFeatures
+		want     string
+	}{
+		{"plan only", false, explainFeatures{scanIO: true}, "EXPLAIN (FORMAT TEXT) SELECT 1"},
+		{"older server analyze", true, explainFeatures{}, "EXPLAIN (FORMAT TEXT, ANALYZE) SELECT 1"},
+		{"PG19 analyze", true, explainFeatures{scanIO: true}, "EXPLAIN (FORMAT TEXT, ANALYZE, IO) SELECT 1"},
+		{"module already loaded", false, explainFeatures{planAdvice: true}, "EXPLAIN (FORMAT TEXT, PLAN_ADVICE) SELECT 1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, buildExplainStatement(engine.ExplainQueryParams{
+				Statement: "SELECT 1",
+				Analyze:   tt.analyze,
+			}, tt.features))
+		})
+	}
+}
+
 func TestExecuteQueryStreamTruncationStats(t *testing.T) {
 	t.Parallel()
 

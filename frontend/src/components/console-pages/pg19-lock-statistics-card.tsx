@@ -39,7 +39,7 @@ function formatLockStatisticsReset(reset: LockTypeStatistics["statsResetAt"]) {
 function LockStatisticsTable({ rows }: { rows: LockTypeStatistics[] }) {
   if (rows.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         No lock counters were returned.
       </p>
     );
@@ -117,7 +117,7 @@ function Pg19LockStatisticsCard({
         {available ? (
           <LockStatisticsTable rows={statistics.byType} />
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             {statistics.summary.trim() ||
               "Lock statistics could not be observed. No zero counts have been assumed."}
           </p>
