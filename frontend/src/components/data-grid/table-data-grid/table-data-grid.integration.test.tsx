@@ -886,7 +886,7 @@ describe("table data grid row interactions", () => {
   beforeEach(setupTableDataGridIntegrationTest);
   afterEach(teardownTableDataGridIntegrationTest);
 
-  test("keeps the row drawer number field digit-only without inline steppers", async () => {
+  test("keeps the row drawer number field digit-only with localized digits and no inline steppers", async () => {
     const user = userEvent.setup();
     seedRowsQuery(12);
 
@@ -911,7 +911,7 @@ describe("table data grid row interactions", () => {
 
     const rowNumber = screen.getByRole("textbox", { name: "Row number" });
     await user.clear(rowNumber);
-    await user.type(rowNumber, "a6b{Enter}");
+    await user.type(rowNumber, "a６b{Enter}");
 
     if (!(rowNumber instanceof HTMLInputElement)) {
       throw new TypeError("Expected row-number input");
