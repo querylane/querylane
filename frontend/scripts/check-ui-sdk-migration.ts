@@ -10,8 +10,8 @@ const REPLACED_PACKAGES = [
 ];
 const REQUIRED_PACKAGES = {
   "@base-ui/react": "1.9.0",
-  "@ui-sdk/react": "0.1.0-beta.5",
-  "@ui-sdk/core": "0.1.0-beta.5",
+  "@ui-sdk/react": "0.1.0-beta.13",
+  "@ui-sdk/core": "0.1.0-beta.13",
 };
 const BASE_UI_FOUNDATIONS = [
   "button",

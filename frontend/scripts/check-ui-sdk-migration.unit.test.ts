@@ -3,8 +3,8 @@ import { migrationViolations } from "./check-ui-sdk-migration";
 
 const dependencies = {
   "@base-ui/react": "1.9.0",
-  "@ui-sdk/core": "0.1.0-beta.5",
-  "@ui-sdk/react": "0.1.0-beta.5",
+  "@ui-sdk/core": "0.1.0-beta.13",
+  "@ui-sdk/react": "0.1.0-beta.13",
 };
 
 test("accepts pinned Base UI foundations and SDK enhancements", () => {
@@ -27,14 +27,14 @@ test("rejects unpinned adapters, legacy dependencies, and feature imports", () =
       {
         dependencies: {
           ...dependencies,
-          "@ui-sdk/react": "^0.1.0-beta.5",
+          "@ui-sdk/react": "^0.1.0-beta.13",
           cmdk: "1.1.1",
         },
       },
       new Map([["src/feature.tsx", 'import { Command } from "cmdk";']])
     )
   ).toEqual([
-    "@ui-sdk/react must be pinned to 0.1.0-beta.5",
+    "@ui-sdk/react must be pinned to 0.1.0-beta.13",
     "Remove replaced dependency cmdk",
     "src/feature.tsx still references cmdk",
   ]);

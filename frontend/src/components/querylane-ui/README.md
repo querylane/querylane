@@ -2,7 +2,7 @@
 
 Base UI 1.9.0 is the foundation for standard controls: buttons, inputs, selection, tabs, menus, dialogs, popovers, tooltips, disclosure, radio, switches, and the navigation drawer. Base UI owns their keyboard, focus, popup, and interaction state. `src/components/ui` styles those foundations; this directory owns Querylane-specific variants and compositions. Both directories are authored code and receive the full quality gates.
 
-UI SDK beta.5 enhances that foundation with its seven public React hooks, source-aware changes, custom non-secret draft primitives, observation/history, native WebMCP, and specialized Command, Toast, Resizable, Field, and textarea compositions. Do not install a second focus, keyboard, or popup state machine over a Base UI control. Preserve the existing `variant`, `size`, and finite `presentation` APIs; consumer classes should describe layout.
+UI SDK beta.13 enhances that foundation with its seven public React hooks, source-aware changes, custom non-secret draft primitives, observation/history, native WebMCP, and specialized Command, Toast, Resizable, Field, and textarea compositions. Do not install a second focus, keyboard, or popup state machine over a Base UI control. Preserve the existing `variant`, `size`, and finite `presentation` APIs; consumer classes should describe layout.
 
 UI SDK owns `data-slot`; Querylane styling and test hooks use `data-querylane-slot`. Native state selectors follow their owner: Base UI tabs expose `data-active`, for example, while SDK components may expose `data-selected`. Preserve native ARIA roles rather than forcing the two libraries to produce identical markup.
 

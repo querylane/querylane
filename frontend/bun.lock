@@ -35,8 +35,8 @@
         "@tanstack/react-table": "9.3.1",
         "@tanstack/router-plugin": "1.168.48",
         "@tanstack/virtual-core": "3.19.11",
-        "@ui-sdk/core": "0.1.0-beta.5",
-        "@ui-sdk/react": "0.1.0-beta.5",
+        "@ui-sdk/core": "0.1.0-beta.13",
+        "@ui-sdk/react": "0.1.0-beta.13",
         "@xyflow/react": "12.12.1",
         "chrono-node": "2.10.3",
         "class-variance-authority": "0.7.1",
@@ -814,9 +814,9 @@
 
     "@typescript/typescript-win32-x64": ["@typescript/typescript-win32-x64@7.1.0-dev.20261104.1", "", { "os": "win32", "cpu": "x64" }, "sha512-Hoow535UrsLfaVui6Dxhkw0hNiUw2H6ZE9h3/shtfJ5qVFl8jCpotFW0wEOq5o/9maw2sbn/Bxyrm2XaeR7QSw=="],
 
-    "@ui-sdk/core": ["@ui-sdk/core@0.1.0-beta.5", "", {}, "sha512-dmunrxWrZ+vwldKJ6THQNYyyfbLFY6K82hBvIZSnuGwpEQmXKmM0iuANgGXtaqw8unSB2p9E5s3y7zfE9rgP6Q=="],
+    "@ui-sdk/core": ["@ui-sdk/core@0.1.0-beta.13", "", {}, "sha512-URjk9hqdc/cZKDtw6Gb9NqjY48U8l0EgoP4d5ghlooa3av+GrR0iSmsav133UU4oelcuKIO1ZPJ4j7gIPMr1Vg=="],
 
-    "@ui-sdk/react": ["@ui-sdk/react@0.1.0-beta.5", "", { "peerDependencies": { "@types/react": ">=19.2.10", "@ui-sdk/core": "^0.1.0-beta.5", "react": ">=19", "react-dom": ">=19" }, "optionalPeers": ["@types/react"] }, "sha512-Zfvl94ulACX511lQKQDnK7wVjhYUYsR5LLnCZ800NzQ3983TxZasHxXyC+KYNlvppkYfpELPlAbVslsSIGQ9/A=="],
+    "@ui-sdk/react": ["@ui-sdk/react@0.1.0-beta.13", "", { "peerDependencies": { "@types/react": ">=19.2.10", "@ui-sdk/core": "^0.1.0-beta.13", "react": ">=19", "react-dom": ">=19" }, "optionalPeers": ["@types/react"] }, "sha512-Gz85tAcPJHwnv90WMIAtED3fDamqVD3F3FF3uKsA/TsL+KbaeHSgX1gGdIpNcnzkmDO8YZk9aZBKgCFgpaCcHA=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.4.0", "", {}, "sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ=="],
 
