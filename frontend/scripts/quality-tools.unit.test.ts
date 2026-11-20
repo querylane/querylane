@@ -941,7 +941,32 @@ test.each([
     valid:
       "export function read(value: { name: string }): string { return value.name; }\n",
   },
-])("oxlint with tsrs-lint enforces $rule", ({ rule, invalid, valid }) => {
+  {
+    rule: "no-chained-type-assertions",
+    invalid:
+      "export function read(value: number): string { return (value as unknown) as string; }\n",
+    valid:
+      "export function read(value: number): string { return value.toFixed(0); }\n",
+  },
+  {
+    rule: "no-reduce-accumulator-copy",
+    invalid:
+      "export const items = [1, 2].reduce<number[]>((result, value) => result.concat(value), []);\n",
+    valid: "export const items = [1, 2];\n",
+  },
+  {
+    rule: "no-unknown-type-aliases",
+    invalid: "export type Payload = unknown;\n",
+    valid:
+      'export function isLabel(payload: unknown): payload is string { return typeof payload === "string"; }\n',
+  },
+  {
+    rule: "no-widen-then-assert",
+    invalid:
+      'const name: unknown = "querylane";\nexport const label = name as string;\n',
+    valid: 'const name = "querylane";\nexport const label = name;\n',
+  },
+])("type-aware Oxlint enforces $rule", ({ rule, invalid, valid }) => {
   const directory = mkdtempSync(join(root, "src", "quality-probe-"));
   const source = join(directory, "probe.unit.test.ts");
   try {

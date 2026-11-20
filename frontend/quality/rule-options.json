@@ -361,6 +361,12 @@
         }
       ]
     },
+    "cloudflareRules": {
+      "quality/no-chained-type-assertions": "error",
+      "quality/no-reduce-accumulator-copy": "error",
+      "quality/no-unknown-type-aliases": "error",
+      "quality/no-widen-then-assert": "error"
+    },
     "overrides": [
       {
         "scope": ["src/lib/domain/**/*.ts", "src/lib/pagination.ts"],

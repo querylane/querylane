@@ -166,4 +166,20 @@ The frontend is now the Biome project root. The former repository-level wrapper 
 
 The review also enables the older `noUnreadableForOfExpression` rule; compound iterable expressions get descriptive locals. Explicit known switch cases remain because removing them conflicts with typed exhaustiveness enforcement, even when they share a default fallback for unknown protobuf values. Existing Tailwind class sorting is applied consistently now that its project scan runs. CLI probes reject violations and accept supported alternatives.
 
-Native disabled controls, nullable DOM/RPC values, external callback vocabulary, and independent post-await lifecycle writes remain valid. TypeScript Bundler resolution intentionally permits extensionless imports. Runtime CSS variables and generated/dynamic CSS classes are not constrained by a closed stylesheet-declaration graph. No new source exclusions, per-file waivers, or custom plugins are introduced.
+Native disabled controls, nullable DOM/RPC values, external callback vocabulary, and independent post-await lifecycle writes remain valid. TypeScript Bundler resolution intentionally permits extensionless imports. Runtime CSS variables and generated/dynamic CSS classes are not constrained by a closed stylesheet-declaration graph. No new source exclusions, per-file waivers, or custom plugins accompany this Biome update.
+
+### Cloudflare Oxlint preset (initial adoption)
+
+[Cloudflare's Oxlint preset](https://github.com/cloudflare/oxlint-config) provides the
+`quality` plugin from nkzw. Querylane enables four reviewed errors: chained type
+assertions, widening a known value and then casting it back, aliases that hide
+`unknown`, and per-iteration copies of a growing reducer accumulator. Explicit
+`unknown` at external input boundaries is still allowed. The real Oxlint CLI
+regressions exercise each rule with rejected and accepted examples.
+
+The preset's categories, native rule options, other plugins, overrides, and ignores
+are not inherited. A trial of all preset rules flagged valid Querylane contracts such as
+unparsed RPC/JSON boundary values, runtime guards, and optional property construction.
+The existing checks and file coverage still apply. Oxlint stays on 1.94; tsrs moves
+to 0.25.0-ts7.1.0-beta to satisfy the preset's peer minimum. The separate TypeScript
+nightly cross-check is unchanged.

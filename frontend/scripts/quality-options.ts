@@ -78,6 +78,7 @@ async function currentOptions(root: string): Promise<unknown> {
     configuration(root, "doctor.config.ts"),
   ]);
   const scripts = record(record(jsonFile(root, "package.json"))["scripts"]);
+  const oxlintRules = record(oxlint["rules"]);
   const snapshot = {
     biome: {
       root: biome["root"],
@@ -87,7 +88,12 @@ async function currentOptions(root: string): Promise<unknown> {
       jsonAssist: record(biome["json"])["assist"],
     },
     oxlint: {
-      rules: options(record(oxlint["rules"])),
+      rules: options(oxlintRules),
+      cloudflareRules: Object.fromEntries(
+        Object.entries(oxlintRules).filter(([name]) =>
+          name.startsWith("quality/")
+        )
+      ),
       overrides: overrides(oxlint, false),
       settings: oxlint["settings"],
     },
