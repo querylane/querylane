@@ -29,5 +29,9 @@ export const e2eEnv = createEnv({
     PORT: optionalPort,
     QUERYLANE_API_URL: z.url().optional(),
     QUERYLANE_E2E_SKIP_BUILD: booleanFlag,
+    QUERYLANE_REACT_PROFILE: z.enum(["0", "1"]).optional(),
+    QUERYLANE_REACT_PROFILE_CONFIG_DIGEST: z.string().optional(),
+    QUERYLANE_REACT_PROFILE_REVISION: z.string().optional(),
+    QUERYLANE_REACT_PROFILE_SOURCE_DIGEST: z.string().optional(),
   },
 });

@@ -2,12 +2,11 @@ import { TransportProvider } from "@connectrpc/connect-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { lazy, StrictMode, Suspense } from "react";
-import { createRoot } from "react-dom/client";
-
 import { RouteErrorView } from "@/components/route-error-view";
 import { logger } from "@/lib/diagnostics";
 import { queryClient } from "@/lib/query-client";
 import { createReactRootErrorHandlers } from "@/lib/react-root-errors";
+import { renderRoot } from "@/lib/render-root";
 import {
   getDefaultPreload,
   getDefaultPreloadStaleTime,
@@ -69,7 +68,9 @@ if (!rootElement) {
   throw new Error("Missing #root element in index.html");
 }
 
-createRoot(rootElement, createReactRootErrorHandlers()).render(
+renderRoot(
+  rootElement,
+  createReactRootErrorHandlers(),
   <StrictMode>
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>
