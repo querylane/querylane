@@ -76,7 +76,10 @@ const MAX_INITIAL_SCRIPT_GZIP_KIB = 400;
 // Bun 1.4.4 measures 1086.5 KiB after sharing both libraries in ui-vendor
 // (1104.0 KiB before removing duplication). Previous SDK-only core: 1046.6 KiB.
 // Initial is 368.9 KiB; initial, async, SQL, agent and route/latency caps stay put.
-const MAX_TOTAL_GZIP_KIB = 1090;
+// 1100 (was 1090): SDK Token Input for Data Explorer list filters.
+// Paired Bun 1.4.4 builds: 1089.3 -> 1099.1 KiB core gzip.
+// All other caps and chunk accounting stay unchanged.
+const MAX_TOTAL_GZIP_KIB = 1100;
 
 interface BundleBudgetAsset {
   brotli: number;

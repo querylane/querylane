@@ -9,3 +9,5 @@ Add source-aware instance draft coordination, tab-local non-secret history with 
 Preserve generic control discovery with explicit passive Base UI adapters, source-aware cancellation, safe portaled metadata, exact multi-selection, and async completion/refusal reporting. Base UI remains the single owner of native keyboard, focus, popup, and selection behavior.
 
 Data Explorer row navigation accepts localized decimal digits through the UI SDK number parser while keeping the existing Base UI input and row bounds.
+
+Edit Data Explorer’s list filters as tokens: paste comma-separated values, remove individual values, and apply with Enter. Existing filter serialization stays compatible.
