@@ -105,7 +105,7 @@ All commits must follow: `type(scope): description`
 - Preserve generic SDK/WebMCP discovery through the explicit passive adapters in `features/ui-agent`. Bind the actual native control, declare exact actions, publish async pending/error state, and carry secret/hidden/manual markers through portals.
 
 - Keep shadcn’s `base-vega` preset and the Protoform registry in `components.json`. From `frontend/`, preview a registry import with `bun run registry:preview <item>`. Add new components or stage updates outside the app and merge them manually. Never pass `--overwrite` against the app: both UI directories contain Querylane-owned styling and agent adapters.
-- Read `node_modules/@ui-sdk/react/docs/llms.txt` and the relevant component docs before changing UI SDK usage. For a new behavior, also read the relevant headings in `docs/core.md` and `docs/rendering.md`.
+- Before changing UI SDK usage, follow the [Querylane UI guide](src/components/querylane-ui/README.md) and read the relevant installed SDK docs via `node_modules/@ui-sdk/react/docs/llms.txt`.
 - UI SDK owns `data-slot`; app-owned styling hooks use `data-querylane-slot`.
 - SDK primitives and adapted Input/Select changes use source-aware SDK callbacks, honoring cancellation while updating the real application state. Keep credentials secret, query results hidden, and sensitive final actions marked `data-agent-confirm`.
 

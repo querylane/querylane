@@ -10,6 +10,14 @@ The sidebar picker uses Base UI Combobox with an in-popup search field and a nat
 
 Version-matched SDK documentation ships in `node_modules/@ui-sdk/react/docs/llms.txt`; Base UI documentation is at https://base-ui.com/react. Upgrades must rerun keyboard, focus, accessibility, native WebMCP, and visual checks.
 
+### Applying patterns from the SDK gallery
+
+Start with the matching example in the [UI SDK sink](https://ui-sdk.dev/sink) and confirm its API in the installed docs. Reuse the smallest behavior that solves the workflow. For example, Data Explorer uses the SDK's locale-aware number parser under the existing Base UI row input; it keeps row bounds and integer validation in Querylane. Keep database filter values canonical even when the input displays a localized value.
+
+- For a new composition, put reusable behavior in a Core primitive and render it with React parts and Querylane tokens. Name the actual focusable control, retain the SDK part's props and ref when customizing its render, and use the owner's state attributes for styling.
+- Use one state owner per interaction. Reflect controlled values and route edits through source-aware, cancelable callbacks. Keep selection, focus return, and scroll locking with the existing Base UI overlay rather than layering an SDK overlay inside it.
+- Verify the real consumer with keyboard and pointer input and an invalid or canceled edit. For custom primitives, use `checkPattern`, `checkDirection`, and `checkServer` where applicable; for agent-facing controls, also verify approval/refusal and any secret or hidden boundaries through the native bridge.
+
 ### Explicit Base UI agent adapters
 
 SDK discovery does not automatically cover Base UI. `features/ui-agent` binds passive SDK primitives to the actual Base UI DOM using `usePrimitive` and `usePart`, without extra wrapper elements or interaction handlers. Each adapter declares an action allowlist. Reflected value/checked/open state is read-only metadata, not another owner of control state.
