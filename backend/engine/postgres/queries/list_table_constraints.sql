@@ -19,7 +19,11 @@ SELECT
 	),
 	COALESCE(con.confupdtype, ' '),
 	COALESCE(con.confdeltype, ' '),
-	pg_get_constraintdef(con.oid)
+	pg_get_constraintdef(con.oid),
+	-- Before conenforced existed, all catalog constraints were enforced.
+	-- JSON field access avoids referring to an absent column on PostgreSQL 14-17.
+	COALESCE((to_jsonb(con)->>'conenforced')::boolean, true),
+	con.convalidated
 FROM pg_constraint con
 JOIN pg_class cl ON cl.oid = con.conrelid
 JOIN pg_namespace ns ON ns.oid = cl.relnamespace

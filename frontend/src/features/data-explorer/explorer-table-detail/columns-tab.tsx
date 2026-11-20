@@ -44,7 +44,10 @@ import type {
   useListTableConstraintsQuery,
   useListTableIndexesQuery,
 } from "@/hooks/api/table";
-import type { Column as TableColumn } from "@/protogen/querylane/console/v1alpha1/table_pb";
+import {
+  GeneratedColumnKind,
+  type Column as TableColumn,
+} from "@/protogen/querylane/console/v1alpha1/table_pb";
 
 const UNAVAILABLE_COLUMN_STATISTIC_LABEL =
   "Not available from the current column metadata API";
@@ -87,6 +90,23 @@ function filterColumnRowsBySearch(rows: ColumnRow[], searchValue: string) {
   return rows.filter((row) => columnMatchesSearch(row, needle));
 }
 
+function GeneratedColumnBadge({ column }: { column: TableColumn }) {
+  if (!column.isGenerated) {
+    return null;
+  }
+  let label = "GENERATED";
+  if (column.generatedKind === GeneratedColumnKind.STORED) {
+    label = "GENERATED STORED";
+  } else if (column.generatedKind === GeneratedColumnKind.VIRTUAL) {
+    label = "GENERATED VIRTUAL";
+  }
+  return (
+    <Pill size="sm" tone="emerald">
+      {label}
+    </Pill>
+  );
+}
+
 function ColumnBadges({ row }: { row: ColumnRow }) {
   const { column, fks, isIndexed } = row;
   const identityLabel = IDENTITY_GENERATION_LABELS[column.identityGeneration];
@@ -119,11 +139,7 @@ function ColumnBadges({ row }: { row: ColumnRow }) {
           Index
         </Pill>
       ) : null}
-      {column.isGenerated ? (
-        <Pill size="sm" tone="emerald">
-          GENERATED
-        </Pill>
-      ) : null}
+      <GeneratedColumnBadge column={column} />
       {column.isIdentity ? (
         <Pill size="sm" tone="amber">
           IDENTITY

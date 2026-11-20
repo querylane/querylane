@@ -2848,6 +2848,74 @@ components:
       description: |-
         Autovacuum worker saturation and most recent auto-maintenance activity from
          pg_stat_activity and pg_stat_all_tables.
+    querylane.console.v1alpha1.AutovacuumPriorities:
+      type: object
+      properties:
+        availability:
+          title: availability
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ObservationAvailability'
+        summary:
+          type: string
+          title: summary
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.AutovacuumTablePriority'
+          title: tables
+          maxItems: 10
+      title: AutovacuumPriorities
+      additionalProperties: false
+      description: Bounded PostgreSQL 19 autovacuum-priority observations for visible tables.
+    querylane.console.v1alpha1.AutovacuumTablePriority:
+      type: object
+      properties:
+        schemaName:
+          type: string
+          title: schema_name
+        tableName:
+          type: string
+          title: table_name
+        score:
+          type: number
+          title: score
+          minimum: 0
+          format: double
+        xidScore:
+          type: number
+          title: xid_score
+          minimum: 0
+          format: double
+        mxidScore:
+          type: number
+          title: mxid_score
+          minimum: 0
+          format: double
+        vacuumScore:
+          type: number
+          title: vacuum_score
+          minimum: 0
+          format: double
+        vacuumInsertScore:
+          type: number
+          title: vacuum_insert_score
+          minimum: 0
+          format: double
+        analyzeScore:
+          type: number
+          title: analyze_score
+          minimum: 0
+          format: double
+        doVacuum:
+          type: boolean
+          title: do_vacuum
+        doAnalyze:
+          type: boolean
+          title: do_analyze
+        forWraparound:
+          type: boolean
+          title: for_wraparound
+      title: AutovacuumTablePriority
+      additionalProperties: false
     querylane.console.v1alpha1.BuildInfo:
       type: object
       properties:
@@ -2998,6 +3066,10 @@ components:
         activity:
           title: activity
           $ref: '#/components/schemas/querylane.console.v1alpha1.ConnectionActivityHealth'
+        lockStatistics:
+          title: lock_statistics
+          description: PostgreSQL 19 cumulative completed lock-wait counters.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.LockStatistics'
         partialErrors:
           type: array
           items:
@@ -3006,7 +3078,7 @@ components:
           description: |-
             Errors encountered fetching connection activity. The RPC succeeds (OK)
              when activity is unavailable so the page can show the category reason.
-             ErrorInfo metadata key "check" is "connection_activity".
+             ErrorInfo metadata key "check" is "connection_activity" or "lock_statistics".
       title: CheckInstanceActivityResponse
       additionalProperties: false
     querylane.console.v1alpha1.CheckInstanceHealthRequest:
@@ -3041,7 +3113,7 @@ components:
              Each Status identifies the failed category via google.rpc.ErrorInfo
              in its details, with metadata key "check" set to the category name
              (one of: "connection_activity", "replication", "stats_access",
-             "pg_stat_statements", "autovacuum").
+             "pg_stat_statements", "autovacuum", "lock_statistics", "recovery").
       title: CheckInstanceHealthResponse
       additionalProperties: false
     querylane.console.v1alpha1.Column:
@@ -3111,6 +3183,12 @@ components:
           title: identity_generation
           description: Output-only. The identity generation strategy, if applicable.
           $ref: '#/components/schemas/querylane.console.v1alpha1.IdentityGeneration'
+        generatedKind:
+          title: generated_kind
+          description: |-
+            Output-only. Storage kind of a generated column. Unspecified for ordinary
+             columns or when the server's generation kind is not recognized.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.GeneratedColumnKind'
       title: Column
       additionalProperties: false
       description: A Column is bounded table metadata embedded in ListTableColumnsResponse. It is not a resource.
@@ -3507,6 +3585,10 @@ components:
           type: boolean
           title: table_stats_available
           description: Whether table statistics views could be queried.
+        autovacuumPriorities:
+          title: autovacuum_priorities
+          description: Current database-local scores, not a guaranteed autovacuum processing queue.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.AutovacuumPriorities'
       title: DatabaseQueryInsights
       required:
         - observedAt
@@ -3738,6 +3820,14 @@ components:
       title: Extension
       additionalProperties: false
       description: A PostgreSQL extension available in a Database.
+    querylane.console.v1alpha1.GeneratedColumnKind:
+      type: string
+      title: GeneratedColumnKind
+      enum:
+        - GENERATED_COLUMN_KIND_UNSPECIFIED
+        - GENERATED_COLUMN_KIND_STORED
+        - GENERATED_COLUMN_KIND_VIRTUAL
+      description: GeneratedColumnKind specifies when a generated column's expression is evaluated.
     querylane.console.v1alpha1.GetConsoleConfigRequest:
       type: object
       title: GetConsoleConfigRequest
@@ -3789,12 +3879,12 @@ components:
           items:
             $ref: '#/components/schemas/google.rpc.Status'
           title: partial_errors
-          maxItems: 2
+          maxItems: 3
           description: |-
             Errors encountered fetching individual insight categories.
              The RPC succeeds even when some categories are unavailable. Each Status
              identifies the failed category via google.rpc.ErrorInfo with metadata key
-             "metric" set to "query_stats" or "table_stats".
+             "metric" set to "query_stats", "table_stats", or "autovacuum_priorities".
       title: GetDatabaseQueryInsightsResponse
       required:
         - queryInsights
@@ -4321,6 +4411,10 @@ components:
           title: autovacuum
           description: Autovacuum worker saturation and most recent auto-maintenance activity.
           $ref: '#/components/schemas/querylane.console.v1alpha1.AutovacuumHealth'
+        lockStatistics:
+          title: lock_statistics
+          description: Cumulative completed lock waits, not the number of current waiters.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.LockStatistics'
       title: InstanceHealth
       additionalProperties: false
       description: Live health checks for a PostgreSQL instance.
@@ -5447,6 +5541,59 @@ components:
           title: next_page_token
       title: ListViewsResponse
       additionalProperties: false
+    querylane.console.v1alpha1.LockStatistics:
+      type: object
+      properties:
+        status:
+          title: status
+          $ref: '#/components/schemas/querylane.console.v1alpha1.HealthCheckStatus'
+        summary:
+          type: string
+          title: summary
+        availability:
+          title: availability
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ObservationAvailability'
+        byType:
+          type: array
+          items:
+            $ref: '#/components/schemas/querylane.console.v1alpha1.LockTypeStatistics'
+          title: by_type
+          maxItems: 64
+      title: LockStatistics
+      additionalProperties: false
+      description: Cumulative instance-wide lock statistics, sampled without resetting counters.
+    querylane.console.v1alpha1.LockTypeStatistics:
+      type: object
+      properties:
+        lockType:
+          type: string
+          title: lock_type
+        waits:
+          type:
+            - integer
+            - string
+          title: waits
+          minimum: 0
+          format: int64
+        waitTimeMs:
+          type: number
+          title: wait_time_ms
+          minimum: 0
+          format: double
+          description: Milliseconds spent in completed waits exceeding deadlock_timeout.
+        fastpathExceeded:
+          type:
+            - integer
+            - string
+          title: fastpath_exceeded
+          minimum: 0
+          format: int64
+        statsResetAt:
+          title: stats_reset_at
+          type: string
+          format: date-time
+      title: LockTypeStatistics
+      additionalProperties: false
     querylane.console.v1alpha1.MetricId:
       type: string
       title: MetricId
@@ -5583,6 +5730,19 @@ components:
          the RPC that returns it: ListRoleGrants returns privileges held directly by a
          specific role, while ListPublicGrants returns privileges held by PUBLIC.
          Owner-implicit privileges and membership inheritance are never reported here.
+    querylane.console.v1alpha1.ObservationAvailability:
+      type: string
+      title: ObservationAvailability
+      enum:
+        - OBSERVATION_AVAILABILITY_UNSPECIFIED
+        - OBSERVATION_AVAILABILITY_AVAILABLE
+        - OBSERVATION_AVAILABILITY_UNSUPPORTED
+        - OBSERVATION_AVAILABILITY_RESTRICTED
+        - OBSERVATION_AVAILABILITY_UNAVAILABLE
+        - OBSERVATION_AVAILABILITY_NOT_APPLICABLE
+      description: |-
+        Whether a read-only diagnostic can be observed. Missing capabilities,
+         inaccessible data, and failed collection must not be reported as zero.
     querylane.console.v1alpha1.OwnedObject:
       type: object
       properties:
@@ -6166,6 +6326,31 @@ components:
           $ref: '#/components/schemas/querylane.console.v1alpha1.ResponseLimits'
       title: ReadRowsResponse
       additionalProperties: false
+    querylane.console.v1alpha1.RecoveryHealth:
+      type: object
+      properties:
+        availability:
+          title: availability
+          $ref: '#/components/schemas/querylane.console.v1alpha1.ObservationAvailability'
+        pauseState:
+          type: string
+          title: pause_state
+        promotionTriggered:
+          type: boolean
+          title: promotion_triggered
+        replayEndLsn:
+          type: string
+          title: replay_end_lsn
+        replayTimeline:
+          type: integer
+          title: replay_timeline
+          minimum: 0
+          format: int32
+      title: RecoveryHealth
+      additionalProperties: false
+      description: |-
+        PostgreSQL 19 recovery observation. On a primary the view is inapplicable;
+         on a restricted standby an empty view is not evidence of healthy recovery.
     querylane.console.v1alpha1.ReferentialAction:
       type: string
       title: ReferentialAction
@@ -6312,6 +6497,19 @@ components:
           title: replay_lag_seconds
           minimum: 0
           format: int64
+          description: Age of the last replayed transaction, not a measure of idle-primary lag.
+        statisticsVisible:
+          type: boolean
+          title: statistics_visible
+          description: Whether the connected role can observe detailed replication statistics.
+        replayLagKnown:
+          type: boolean
+          title: replay_lag_known
+          description: False when no transaction replay timestamp has been observed yet.
+        recovery:
+          title: recovery
+          description: PostgreSQL 19 recovery state; unavailable states are explicit.
+          $ref: '#/components/schemas/querylane.console.v1alpha1.RecoveryHealth'
       title: ReplicationHealth
       additionalProperties: false
       description: |-
@@ -7137,9 +7335,13 @@ components:
         pgMonitorMember:
           type: boolean
           title: pg_monitor_member
+          description: |-
+            Whether pg_monitor privileges are effective in the current session (USAGE).
+             The legacy field name does not mean SET ROLE-only membership (MEMBER).
         pgReadAllStatsMember:
           type: boolean
           title: pg_read_all_stats_member
+          description: Whether pg_read_all_stats privileges are effective in the current session.
         canReadPgStatActivity:
           type: boolean
           title: can_read_pg_stat_activity
@@ -7526,6 +7728,22 @@ components:
           type: string
           title: definition
           description: Output-only. Raw database definition or normalized SQL snippet.
+        isEnforced:
+          type:
+            - boolean
+            - "null"
+          title: is_enforced
+          description: |-
+            Output-only. Whether PostgreSQL enforces this constraint for new writes.
+             Absent when enforcement metadata is unavailable, including older API servers.
+        isValidated:
+          type:
+            - boolean
+            - "null"
+          title: is_validated
+          description: |-
+            Output-only. Whether PostgreSQL has validated existing rows against this
+             constraint. Absent when validation metadata is unavailable.
       title: TableConstraint
       additionalProperties: false
     querylane.console.v1alpha1.TableIndex:

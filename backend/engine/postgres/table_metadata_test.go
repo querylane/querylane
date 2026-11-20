@@ -15,7 +15,27 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/querylane/querylane/backend/postgreserrors"
+	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
+
+func TestGeneratedColumnKinds(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		raw  string
+		want api.GeneratedColumnKind
+	}{
+		{"s", api.GeneratedColumnKind_GENERATED_COLUMN_KIND_STORED},
+		{"v", api.GeneratedColumnKind_GENERATED_COLUMN_KIND_VIRTUAL},
+		{"", api.GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED},
+		{"future-kind", api.GeneratedColumnKind_GENERATED_COLUMN_KIND_UNSPECIFIED},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.want, pgGeneratedCharToEnum(tc.raw))
+		})
+	}
+}
 
 type tableMetadataErrorDriver struct{ err error }
 

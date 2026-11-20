@@ -20,6 +20,7 @@ import {
   presentActivityStats,
   presentSessionTimeline,
 } from "@/components/console-pages/instance-activity-model";
+import { Pg19LockStatisticsCard } from "@/components/console-pages/pg19-lock-statistics-card";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Button } from "@/components/querylane-ui/button";
@@ -58,7 +59,10 @@ import {
 import { cn } from "@/lib/utils";
 import { isNonEmptyString } from "@/lib/value-guards";
 import type { Status } from "@/protogen/google/rpc/status_pb";
-import type { ConnectionActivityHealth } from "@/protogen/querylane/console/v1alpha1/instance_pb";
+import type {
+  ConnectionActivityHealth,
+  LockStatistics,
+} from "@/protogen/querylane/console/v1alpha1/instance_pb";
 
 type ActivityStat = ReturnType<typeof presentActivityStats>[number];
 type ActivitySessionRow = ReturnType<typeof presentActivitySessionRows>[number];
@@ -736,6 +740,7 @@ function ActivityPageHeader({
 
 function InstanceActivityPage({
   activity,
+  lockStatistics,
   connectionStatus,
   lastRefreshedLabel,
   onRefresh,
@@ -745,6 +750,7 @@ function InstanceActivityPage({
   searchRoute,
 }: {
   activity: ConnectionActivityHealth | undefined;
+  lockStatistics?: LockStatistics | undefined;
   connectionStatus: DbConnectionStatus;
   lastRefreshedLabel: string | null;
   onRefresh: () => void;
@@ -879,6 +885,10 @@ function InstanceActivityPage({
           />
         </section>
       </AsyncSectionState>
+
+      {connectionStatus === "connected" ? (
+        <Pg19LockStatisticsCard statistics={lockStatistics} />
+      ) : null}
 
       <ActivitySessionSheet
         onRefresh={onRefresh}

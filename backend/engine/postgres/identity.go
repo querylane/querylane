@@ -60,12 +60,24 @@ func discoverRowIdentity(ctx context.Context, db *sql.DB, schemaName, tableName 
 		}, cols, nil
 	}
 
-	// Fallback: ctid is the physical row pointer; valid only within a single
-	// VACUUM-FULL/CLUSTER-stable window. The proto field stays consistent
-	// with the engine's bookkeeping so downstream code can use the same
-	// `[]identityColumn` slice for projection/scanning.
+	// Foreign tables (including inherited foreign partitions) have no local
+	// storage/tuple generation we can bind a physical identity to. In particular,
+	// postgres_fdw can expose ctid with xmin=0 and no filenode: not a safe token.
+	var hasForeignRelation bool
+	if err := db.QueryRowContext(ctx, hasForeignDescendantQuery, schemaName, tableName).Scan(&hasForeignRelation); err != nil {
+		return nil, nil, classifyQueryError("discover physical row identity capability", err)
+	}
+	if hasForeignRelation {
+		return &api.RowIdentity{}, nil, nil
+	}
+
+	// Fallback: expose one opaque ctid identity column. The cursor projection
+	// binds its value to tableoid, filenode, xmin and ctid so cell tokens reject
+	// physical rewrites and tuple replacement rather than reading another row.
 	ctidCols := []identityColumn{
 		{name: ctidColumn, rawType: "tid"},
+		// ctids can collide across partitions/inherited relations.
+		{name: "tableoid", rawType: "oid"},
 	}
 
 	return &api.RowIdentity{

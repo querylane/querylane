@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/querylane/querylane/backend/engine"
 	api "github.com/querylane/querylane/backend/protogen/querylane/console/v1alpha1"
 )
 
@@ -83,4 +84,23 @@ func TestBuildPredicate_AdvancedOperators(t *testing.T) {
 			assert.Equal(t, tt.wantArgs, args.values())
 		})
 	}
+}
+
+func TestBuildReadRowsQueryQualifiesSourceOrder(t *testing.T) {
+	t.Parallel()
+	if !testing.Short() {
+		t.Skip("unit test: run with -short")
+	}
+	query, _, err := buildReadRowsQuery(engine.ReadRowsParams{
+		SchemaName: "public", TableName: `odd"table`, PageSize: 1,
+	}, &paginationPlan{
+		publicColumns: []engine.Column{{Name: "payload"}},
+		order: []orderEntry{
+			{column: "payload", dirAsc: true},
+			{column: "document", asText: true, nullOrder: api.RowOrder_NULL_ORDER_LAST},
+			{column: ctidColumn, dirAsc: true},
+		},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, query, `ORDER BY "odd""table"."payload" ASC, "odd""table"."document"::text DESC NULLS LAST, "odd""table"."ctid" ASC`)
 }

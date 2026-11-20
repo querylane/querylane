@@ -36,6 +36,7 @@ type catalogColumnTable struct {
 	GenerationExpression   postgres.ColumnString
 	IsIdentity             postgres.ColumnBool
 	IdentityGeneration     postgres.ColumnInteger
+	GeneratedKind          postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -96,9 +97,10 @@ func newCatalogColumnTableImpl(schemaName, tableName, alias string) catalogColum
 		GenerationExpressionColumn   = postgres.StringColumn("generation_expression")
 		IsIdentityColumn             = postgres.BoolColumn("is_identity")
 		IdentityGenerationColumn     = postgres.IntegerColumn("identity_generation")
-		allColumns                   = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, DefaultValueColumn, CharacterMaximumLengthColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn}
-		mutableColumns               = postgres.ColumnList{OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, DefaultValueColumn, CharacterMaximumLengthColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn}
-		defaultColumns               = postgres.ColumnList{OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn}
+		GeneratedKindColumn          = postgres.IntegerColumn("generated_kind")
+		allColumns                   = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, DefaultValueColumn, CharacterMaximumLengthColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn, GeneratedKindColumn}
+		mutableColumns               = postgres.ColumnList{OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, DefaultValueColumn, CharacterMaximumLengthColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn, GeneratedKindColumn}
+		defaultColumns               = postgres.ColumnList{OrdinalPositionColumn, DataTypeColumn, RawTypeColumn, IsNullableColumn, IsPrimaryKeyColumn, IsUniqueColumn, CommentColumn, SyncedAtColumn, IsGeneratedColumn, GenerationExpressionColumn, IsIdentityColumn, IdentityGenerationColumn, GeneratedKindColumn}
 	)
 
 	return catalogColumnTable{
@@ -124,6 +126,7 @@ func newCatalogColumnTableImpl(schemaName, tableName, alias string) catalogColum
 		GenerationExpression:   GenerationExpressionColumn,
 		IsIdentity:             IsIdentityColumn,
 		IdentityGeneration:     IdentityGenerationColumn,
+		GeneratedKind:          GeneratedKindColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

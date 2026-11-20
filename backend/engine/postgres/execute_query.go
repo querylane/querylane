@@ -129,9 +129,20 @@ func (*Postgres) ExplainQuery(ctx context.Context, db *sql.DB, params engine.Exp
 		}
 	}
 
+	// Inspect this transaction's connection: PLAN_ADVICE is registered by
+	// pg_plan_advice in the current session. Merely available or installed
+	// libraries are not loaded by Querylane.
+	var features explainFeatures
+	err = tx.QueryRowContext(ctx, `SELECT current_setting('server_version_num')::int >= 190000,
+		EXISTS (SELECT 1 FROM pg_catalog.pg_settings WHERE name = 'pg_plan_advice.advice')`).
+		Scan(&features.scanIO, &features.planAdvice)
+	if err != nil {
+		return nil, classifySQLConsoleError("detect explain features", err)
+	}
+
 	start := time.Now()
 
-	rows, err := tx.QueryContext(ctx, buildExplainStatement(params))
+	rows, err := tx.QueryContext(ctx, buildExplainStatement(params, features))
 	if err != nil {
 		return nil, classifySQLConsoleError("explain query", err)
 	}
@@ -253,8 +264,10 @@ func (s *queryStream) finalize() {
 
 	s.finalized = true
 	latency := time.Since(s.start)
-	notices := s.notices.Notices()
 	s.closeResources()
+	// Closing rows drains the protocol and can deliver notices after the last
+	// row the caller consumed (including early-close and row-limit paths).
+	notices := s.notices.Notices()
 
 	s.stats = engine.ExecuteQueryStats{
 		RowCount:  s.rowCount,
@@ -339,7 +352,12 @@ func scanResultRow(rows *sql.Rows, columns []*api.TableResultColumn) (*api.Table
 	return &api.TableResultRow{Values: cells}, nil
 }
 
-func buildExplainStatement(params engine.ExplainQueryParams) string {
+type explainFeatures struct {
+	scanIO     bool
+	planAdvice bool
+}
+
+func buildExplainStatement(params engine.ExplainQueryParams, features explainFeatures) string {
 	var opts []string
 
 	switch params.Format {
@@ -353,6 +371,12 @@ func buildExplainStatement(params engine.ExplainQueryParams) string {
 
 	if params.Analyze {
 		opts = append(opts, "ANALYZE")
+		if features.scanIO {
+			opts = append(opts, "IO")
+		}
+	}
+	if features.planAdvice {
+		opts = append(opts, "PLAN_ADVICE")
 	}
 
 	if params.Buffers {

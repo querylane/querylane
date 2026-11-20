@@ -17,6 +17,7 @@ import {
   formatPlanMs,
 } from "@/features/sql-workbench/sql-workbench-format";
 import { cn } from "@/lib/utils";
+import { isNonEmptyString } from "@/lib/value-guards";
 
 const PERCENT = 100;
 
@@ -149,7 +150,42 @@ function PlanOverview({
           </DropdownMenu>
         </fieldset>
       ) : null}
+      <PlannerAdvice plan={plan} />
     </div>
+  );
+}
+
+function PlannerAdvice({ plan }: { plan: ExplainPlan }) {
+  if (
+    !(
+      isNonEmptyString(plan.generatedAdvice) ||
+      isNonEmptyString(plan.suppliedAdvice)
+    )
+  ) {
+    return null;
+  }
+  return (
+    <details className="mt-3 border-t pt-3 text-xs">
+      <summary className="cursor-pointer font-medium">Planner advice</summary>
+      <p className="mt-2 text-muted-foreground">
+        Reported by PostgreSQL. Querylane does not apply advice.
+      </p>
+      <dl className="mt-3 space-y-3">
+        {[
+          { label: "Generated plan advice", value: plan.generatedAdvice },
+          { label: "Supplied plan advice", value: plan.suppliedAdvice },
+        ].map(({ label, value }) =>
+          isNonEmptyString(value) ? (
+            <div key={label}>
+              <dt className="mb-1 text-muted-foreground">{label}</dt>
+              <dd className="rounded-md bg-muted/60 p-2 font-mono wrap-break-word whitespace-pre-wrap">
+                {value}
+              </dd>
+            </div>
+          ) : null
+        )}
+      </dl>
+    </details>
   );
 }
 

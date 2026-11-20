@@ -28,4 +28,6 @@ type CatalogTableConstraint struct {
 	OnDelete              int32
 	Definition            string
 	SyncedAt              time.Time
+	IsEnforced            *bool
+	IsValidated           *bool
 }

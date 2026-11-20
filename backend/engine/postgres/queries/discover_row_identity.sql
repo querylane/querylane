@@ -11,8 +11,8 @@ SELECT
 FROM   pg_index i
 JOIN   pg_attribute a
        ON a.attrelid = i.indrelid
-      AND a.attnum   = ANY(i.indkey)
-WHERE  i.indrelid = format('%I.%I', $1::text, $2::text)::regclass
+      AND a.attnum   = ANY((i.indkey::smallint[])[0:i.indnkeyatts - 1])
+WHERE  i.indrelid = pg_catalog.to_regclass(format('%I.%I', $1::text, $2::text))
   AND  i.indisprimary
   AND  i.indisvalid
   AND  i.indisready

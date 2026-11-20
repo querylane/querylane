@@ -67,7 +67,28 @@ For a slow database:
 4. Inspect table indexes, size, partitions, and sequential-scan evidence.
 5. Write a testable diagnosis before changing PostgreSQL.
 
-Query insights requires `pg_stat_statements` and sufficient statistics visibility. Missing data is reported as unavailable rather than displayed as zero.
+Statement-level insights require `pg_stat_statements` and sufficient statistics visibility. Missing data is reported as unavailable rather than displayed as zero.
+
+### PostgreSQL 19 operations
+
+Connect to a PostgreSQL 19 instance to see cumulative lock counters in **Activity**, table scores and eligibility in **Query insights**, and replay and promotion details in the **Replication** health check. These diagnostics do not require upgrading other instances or Querylane's meta database.
+
+In **Explain Analyze**, select a scan operation to see **Scan I/O** when PostgreSQL reports it. Plain **Explain** does not execute the statement. If your administrator already loads [pg_plan_advice](https://www.postgresql.org/docs/19/pgplanadvice.html) in Querylane's database sessions, expand **Planner advice** to see generated advice separately from supplied advice and feedback. Querylane does not load the library or apply advice.
+
+To inspect a rewrite started by a database administrator, connect the read-only workbench to the target database and run:
+
+```sql
+SELECT pid, relid::regclass AS relation, command, phase, heap_blks_scanned, heap_blks_total
+FROM pg_catalog.pg_stat_progress_repack
+WHERE datname = current_database()
+ORDER BY pid;
+```
+
+The view also reports `CLUSTER` and `VACUUM FULL`. PostgreSQL must expose the session's statistics to the connected role. Querylane does not start these operations. Run [concurrent REPACK](https://www.postgresql.org/docs/19/sql-repack.html) through a separate, authorized admin session after reviewing table eligibility, disk and WAL capacity, and the final exclusive lock.
+
+On a physical standby, the workbench can run a single [bounded WAL wait](https://www.postgresql.org/docs/19/sql-wait.html), for example `WAIT FOR LSN '0/0306EE20' WITH (TIMEOUT '2s', NO_THROW)`. Use the actual post-commit LSN from the primary and check for `success` before issuing a separate read against that same standby. This is not automatic replica routing, and a timeline change requires rechecking the target.
+
+For logical migration cutovers, PostgreSQL 19 [copies and refreshes sequence values](https://www.postgresql.org/docs/19/logical-replication-sequences.html); it does **not** continuously apply sequence increments. Use a separate admin session to refresh, then verify the subscriber before allowing it to allocate IDs. Querylane does not create subscriptions or change sequence values. Database-native JSON `COPY` uses a separate PostgreSQL client; Querylane's JSON export still exports the selected, loaded result rows.
 
 ## Explore structure and rows
 

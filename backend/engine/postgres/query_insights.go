@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -32,11 +33,24 @@ func (d *Postgres) GetDatabaseQueryInsights(ctx context.Context, db *sql.DB) (*e
 		recordQueryInsightsPartialError(ctx, insights, tableInsightsMetricTableStats, "failed to query table statistics", "query table statistics", err)
 	}
 
+	priorities, err := queryAutovacuumPriorities(ctx, db)
+	insights.AutovacuumPriorities = priorities
+	if err != nil {
+		recordQueryInsightsPartialError(ctx, insights, "autovacuum_priorities", "failed to query autovacuum priorities", "query autovacuum priorities", err)
+	}
+
 	return insights, nil
 }
 
 func (d *Postgres) populateTopQueries(ctx context.Context, db *sql.DB, insights *engine.DatabaseQueryInsights) error {
-	rows, err := db.QueryContext(ctx, getTopQueriesQuery)
+	var schema string
+	if err := db.QueryRowContext(ctx, `SELECT n.nspname
+ FROM pg_catalog.pg_extension e
+ JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
+ WHERE e.extname = 'pg_stat_statements'`).Scan(&schema); err != nil {
+		return fmt.Errorf("%w: discover pg_stat_statements: %w", engine.ErrQueryFailedPrecondition, err)
+	}
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(getTopQueriesQuery, quoteIdentifier(schema)))
 	if err != nil {
 		return err
 	}

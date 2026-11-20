@@ -28,6 +28,7 @@ interface PlanNode {
   parallel?: boolean | undefined;
   planRows?: number | undefined;
   relationName?: string | undefined;
+  scanIo: { label: string; value: number }[];
   sharedHitBlocks?: number | undefined;
   sharedReadBlocks?: number | undefined;
   totalCost?: number | undefined;
@@ -35,11 +36,23 @@ interface PlanNode {
 
 interface ExplainPlan {
   executionTimeMs?: number | undefined;
+  generatedAdvice?: string | undefined;
   planningTimeMs?: number | undefined;
   root: PlanNode;
+  suppliedAdvice?: string | undefined;
 }
 
 type JsonRecord = Record<string, unknown>;
+
+const SCAN_IO_KEYS = [
+  "I/O Count",
+  "I/O Waits",
+  "Average I/O Size",
+  "Average I/Os In Progress",
+  "Average Prefetch Distance",
+  "Max Prefetch Distance",
+  "Prefetch Capacity",
+];
 
 const DETAIL_KEYS_TO_SKIP = new Set([
   "Actual Loops",
@@ -51,6 +64,7 @@ const DETAIL_KEYS_TO_SKIP = new Set([
   "Plans",
   "Relation Name",
   "Total Cost",
+  ...SCAN_IO_KEYS,
 ]);
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -139,6 +153,10 @@ function buildNode(record: JsonRecord, id: string): PlanNode {
     nodeType: stringField(record, "Node Type") ?? "Unknown",
     planRows: numberField(record, "Plan Rows"),
     relationName: stringField(record, "Relation Name"),
+    scanIo: SCAN_IO_KEYS.flatMap((label) => {
+      const value = numberField(record, label);
+      return value !== undefined && value >= 0 ? [{ label, value }] : [];
+    }),
     totalCost: numberField(record, "Total Cost"),
   };
 }
@@ -168,8 +186,10 @@ function parseExplainPlan(planJson: string): ExplainPlan | null {
   }
   return {
     executionTimeMs: numberField(first, "Execution Time"),
+    generatedAdvice: stringField(first, "Generated Plan Advice")?.trim(),
     planningTimeMs: numberField(first, "Planning Time"),
     root,
+    suppliedAdvice: stringField(first, "Supplied Plan Advice")?.trim(),
   };
 }
 

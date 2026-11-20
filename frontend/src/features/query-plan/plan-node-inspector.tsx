@@ -147,6 +147,23 @@ function PlanNodeInspector({
           </div>
         ))}
       </dl>
+      {node.scanIo.length > 0 ? (
+        <section aria-label="Scan I/O" className="space-y-3 border-b p-5">
+          <h4 className="text-xs font-medium">Scan I/O</h4>
+          <p className="text-xs text-muted-foreground">
+            PostgreSQL scan and prefetch statistics for this operation. Average
+            I/O size is in blocks.
+          </p>
+          <dl className="space-y-2.5 text-xs">
+            {node.scanIo.map(({ label, value }) => (
+              <div className="flex justify-between gap-3" key={label}>
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="font-mono tabular-nums">{formatCount(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
       {parallel ? (
         <p className="border-b px-5 py-3 text-xs text-muted-foreground">
           Parallel or async plan. Self time is unavailable; total time includes

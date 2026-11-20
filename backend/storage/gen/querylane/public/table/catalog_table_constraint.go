@@ -31,6 +31,8 @@ type catalogTableConstraintTable struct {
 	OnDelete              postgres.ColumnInteger
 	Definition            postgres.ColumnString
 	SyncedAt              postgres.ColumnTimestampz
+	IsEnforced            postgres.ColumnBool
+	IsValidated           postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -86,8 +88,10 @@ func newCatalogTableConstraintTableImpl(schemaName, tableName, alias string) cat
 		OnDeleteColumn              = postgres.IntegerColumn("on_delete")
 		DefinitionColumn            = postgres.StringColumn("definition")
 		SyncedAtColumn              = postgres.TimestampzColumn("synced_at")
-		allColumns                  = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, TypeColumn, ColumnNamesColumn, ReferencedSchemaNameColumn, ReferencedTableNameColumn, ReferencedColumnNamesColumn, OnUpdateColumn, OnDeleteColumn, DefinitionColumn, SyncedAtColumn}
-		mutableColumns              = postgres.ColumnList{TypeColumn, ColumnNamesColumn, ReferencedSchemaNameColumn, ReferencedTableNameColumn, ReferencedColumnNamesColumn, OnUpdateColumn, OnDeleteColumn, DefinitionColumn, SyncedAtColumn}
+		IsEnforcedColumn            = postgres.BoolColumn("is_enforced")
+		IsValidatedColumn           = postgres.BoolColumn("is_validated")
+		allColumns                  = postgres.ColumnList{InstanceIDColumn, DatabaseNameColumn, SchemaName_Column, TableName_Column, NameColumn, TypeColumn, ColumnNamesColumn, ReferencedSchemaNameColumn, ReferencedTableNameColumn, ReferencedColumnNamesColumn, OnUpdateColumn, OnDeleteColumn, DefinitionColumn, SyncedAtColumn, IsEnforcedColumn, IsValidatedColumn}
+		mutableColumns              = postgres.ColumnList{TypeColumn, ColumnNamesColumn, ReferencedSchemaNameColumn, ReferencedTableNameColumn, ReferencedColumnNamesColumn, OnUpdateColumn, OnDeleteColumn, DefinitionColumn, SyncedAtColumn, IsEnforcedColumn, IsValidatedColumn}
 		defaultColumns              = postgres.ColumnList{TypeColumn, ColumnNamesColumn, ReferencedSchemaNameColumn, ReferencedTableNameColumn, ReferencedColumnNamesColumn, OnUpdateColumn, OnDeleteColumn, DefinitionColumn, SyncedAtColumn}
 	)
 
@@ -109,6 +113,8 @@ func newCatalogTableConstraintTableImpl(schemaName, tableName, alias string) cat
 		OnDelete:              OnDeleteColumn,
 		Definition:            DefinitionColumn,
 		SyncedAt:              SyncedAtColumn,
+		IsEnforced:            IsEnforcedColumn,
+		IsValidated:           IsValidatedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

@@ -155,3 +155,6 @@ func hydrateTableQuery(query, tableTypeExpr, tableSizeExpr string) string {
 
 	return query
 }
+
+//go:embed queries/has_foreign_descendant.sql
+var hasForeignDescendantQuery string

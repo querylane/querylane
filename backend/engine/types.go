@@ -28,6 +28,7 @@ type InstanceHealth struct {
 	StatsAccess        *StatsAccessHealth
 	PGStatStatements   *PGStatStatementsHealth
 	Autovacuum         *AutovacuumHealth
+	LockStatistics     *LockStatistics
 
 	// PartialErrors carries the classified cause for nil health fields or
 	// degraded subqueries. PostgreSQL causes may unwrap to postgreserrors.Error.
@@ -43,6 +44,34 @@ const (
 	HealthStatusUnknown       HealthStatus = "unknown"
 	HealthStatusNotApplicable HealthStatus = "not_applicable"
 )
+
+// LockStatisticsAvailability separates missing server capabilities, permission
+// gaps, and failed observations from an actual all-zero statistics sample.
+type LockStatisticsAvailability string
+
+const (
+	LockStatisticsAvailable   LockStatisticsAvailability = "available"
+	LockStatisticsUnsupported LockStatisticsAvailability = "unsupported"
+	LockStatisticsRestricted  LockStatisticsAvailability = "restricted"
+	LockStatisticsUnavailable LockStatisticsAvailability = "unavailable"
+)
+
+// LockStatistics holds cumulative, instance-wide PostgreSQL 19 lock counters.
+// These are completed waits exceeding deadlock_timeout, not current waiters.
+type LockStatistics struct {
+	Status       HealthStatus
+	Summary      string
+	Availability LockStatisticsAvailability
+	ByType       []LockTypeStatistics
+}
+
+type LockTypeStatistics struct {
+	LockType         string
+	Waits            int64
+	WaitTimeMs       float64
+	FastpathExceeded int64
+	StatsResetAt     *time.Time
+}
 
 // ConnectionActivityHealth describes connection pressure and activity risks
 // from pg_stat_activity.
@@ -111,6 +140,14 @@ const (
 // ReplicationHealth describes primary/replica state from pg_is_in_recovery,
 // pg_stat_replication, and pg_stat_wal_receiver.
 type ReplicationHealth struct {
+	// StatisticsVisible reports effective access to details protected by
+	// pg_read_all_stats. Public receiver presence and replica counts are still
+	// useful when the corresponding status and LSN fields are masked.
+	StatisticsVisible bool
+	// ReplayLagKnown distinguishes a transaction replay timestamp from no
+	// timestamp yet. ReplayLagSeconds is age since that timestamp, not a
+	// measure of outstanding WAL when the primary is idle.
+	ReplayLagKnown         bool
 	Status                 HealthStatus
 	Summary                string
 	Role                   ReplicationRole
@@ -120,6 +157,31 @@ type ReplicationHealth struct {
 	MaxReplicationLagBytes int64
 	WALReceiverActive      bool
 	ReplayLagSeconds       int64
+	Recovery               *RecoveryHealth
+}
+
+// RecoveryAvailability identifies whether PostgreSQL 19 recovery state was
+// observed. Unavailable and restricted never imply normal or unpaused replay.
+type RecoveryAvailability string
+
+const (
+	RecoveryAvailable     RecoveryAvailability = "available"
+	RecoveryUnsupported   RecoveryAvailability = "unsupported"
+	RecoveryRestricted    RecoveryAvailability = "restricted"
+	RecoveryNotApplicable RecoveryAvailability = "not_applicable"
+	RecoveryUnavailable   RecoveryAvailability = "unavailable"
+)
+
+// RecoveryHealth is a read-only observation of PostgreSQL 19 pg_stat_recovery.
+// State fields are meaningful only when Availability is RecoveryAvailable.
+// ReplayEndLSN and ReplayTimeline identify the record currently being replayed,
+// or the last replayed record when idle; they are not a freshness estimate.
+type RecoveryHealth struct {
+	Availability       RecoveryAvailability
+	PauseState         string
+	PromotionTriggered bool
+	ReplayEndLSN       string
+	ReplayTimeline     int32
 }
 
 // StatsAccessHealth describes whether the connected role has enough catalog
@@ -425,9 +487,41 @@ type DatabaseQueryInsights struct {
 	TopQueries             []QueryRuntimeInsight
 	SequentialScanHotspots []SequentialScanHotspot
 	TableCacheHits         []TableCacheHitInsight
+	AutovacuumPriorities   *AutovacuumPriorities
 	QueryStatsAvailable    bool
 	TableStatsAvailable    bool
 	PartialErrors          []OverviewMetricError
+}
+
+type AutovacuumPrioritiesAvailability string
+
+const (
+	AutovacuumPrioritiesAvailable   AutovacuumPrioritiesAvailability = "available"
+	AutovacuumPrioritiesUnsupported AutovacuumPrioritiesAvailability = "unsupported"
+	AutovacuumPrioritiesRestricted  AutovacuumPrioritiesAvailability = "restricted"
+	AutovacuumPrioritiesUnavailable AutovacuumPrioritiesAvailability = "unavailable"
+)
+
+// AutovacuumPriorities is a bounded observation of current scores in the
+// connected database, not a prediction of the autovacuum worker's queue.
+type AutovacuumPriorities struct {
+	Availability AutovacuumPrioritiesAvailability
+	Summary      string
+	Tables       []AutovacuumTablePriority
+}
+
+type AutovacuumTablePriority struct {
+	SchemaName        string
+	TableName         string
+	Score             float64
+	XIDScore          float64
+	MXIDScore         float64
+	VacuumScore       float64
+	VacuumInsertScore float64
+	AnalyzeScore      float64
+	DoVacuum          bool
+	DoAnalyze         bool
+	ForWraparound     bool
 }
 
 // QueryRuntimeInsight represents one pg_stat_statements entry.
@@ -493,6 +587,7 @@ type Column struct {
 	IsUnique               bool
 	IsGenerated            bool
 	GenerationExpression   string
+	GeneratedKind          api.GeneratedColumnKind
 	IsIdentity             bool
 	IdentityGeneration     api.IdentityGeneration
 }
@@ -537,6 +632,8 @@ type TableConstraint struct {
 	OnUpdate              api.ReferentialAction
 	OnDelete              api.ReferentialAction
 	Definition            string
+	IsEnforced            *bool
+	IsValidated           *bool
 }
 
 // TableIndex represents an index on a table.

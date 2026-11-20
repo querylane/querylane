@@ -30,7 +30,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
-import { PaginationFooter } from "@/components/data-grid/table-data-grid/pagination-footer";
+import { PaginationFooter } from "@/components/querylane-ui/pagination-footer";
 import { SearchEmptyState } from "@/components/search-empty-state";
 import { ListColumnSelector } from "@/components/ui/list-column-selector";
 import {
