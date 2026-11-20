@@ -351,3 +351,37 @@ test("hotspot navigation follows the active metric rather than always selecting 
     ).getByRole("heading", { name: "Sort" })
   ).not.toBeNull();
 });
+
+test("surfaces PostgreSQL 19 advice and scan I/O without opening JSON", async () => {
+  const user = userEvent.setup();
+  const plan = JSON.stringify([
+    {
+      "Generated Plan Advice": "SEQ_SCAN(events)\nNO_GATHER(events)",
+      "Supplied Plan Advice": "SEQ_SCAN(events) /* matched */",
+      Plan: {
+        "Node Type": "Seq Scan",
+        "Relation Name": "events",
+        "I/O Count": 4,
+        "I/O Waits": 0,
+        "Prefetch Capacity": 94,
+        "Average I/O Size": 1.25,
+      },
+    },
+  ]);
+  const view = render(<ExplainPlanView analyze={true} rawPlan={plan} />);
+  const scan = within(screen.getByRole("region", { name: "Scan I/O" }));
+  expect(scan.getByText("I/O Count")).not.toBeNull();
+  expect(scan.getByText("0")).not.toBeNull();
+  expect(scan.getByText("1.25")).not.toBeNull();
+
+  await user.click(screen.getByText("Planner advice"));
+  expect(screen.getByText("Generated plan advice")).not.toBeNull();
+  expect(screen.getByText("Supplied plan advice")).not.toBeNull();
+  expect(screen.getByText("SEQ_SCAN(events) /* matched */")).not.toBeNull();
+
+  view.rerender(
+    <ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />
+  );
+  expect(screen.queryByText("Planner advice")).toBeNull();
+  expect(screen.queryByRole("region", { name: "Scan I/O" })).toBeNull();
+});

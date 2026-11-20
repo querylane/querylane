@@ -71,7 +71,9 @@ Statement-level insights require `pg_stat_statements` and sufficient statistics 
 
 ### PostgreSQL 19 operations
 
-Connect to a PostgreSQL 19 instance to see cumulative lock counters in **Activity**, table scores and eligibility in **Query insights**, and replay and promotion details in the **Replication** health check. These diagnostics do not require upgrading other instances or Querylane's meta database. **Explain Analyze** on PostgreSQL 19 also requests native scan I/O statistics when the plan has them; plain **Explain** does not execute the statement. If your administrator already loads [pg_plan_advice](https://www.postgresql.org/docs/19/pgplanadvice.html) in Querylane's database sessions, Explain requests generated advice too. Querylane does not load the library or apply advice.
+Connect to a PostgreSQL 19 instance to see cumulative lock counters in **Activity**, table scores and eligibility in **Query insights**, and replay and promotion details in the **Replication** health check. These diagnostics do not require upgrading other instances or Querylane's meta database.
+
+In **Explain Analyze**, select a scan operation to see **Scan I/O** when PostgreSQL reports it. Plain **Explain** does not execute the statement. If your administrator already loads [pg_plan_advice](https://www.postgresql.org/docs/19/pgplanadvice.html) in Querylane's database sessions, expand **Planner advice** to see generated advice separately from supplied advice and feedback. Querylane does not load the library or apply advice.
 
 To inspect a rewrite started by a database administrator, connect the read-only workbench to the target database and run:
 
