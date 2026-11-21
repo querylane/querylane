@@ -133,7 +133,7 @@ function useTableDataController({
           ? prev
           : resetPageTokenState(queryShapeKey);
       const tokens = pushPageToken(base.tokens, fromIndex, token);
-      if (tokens === base.tokens) {
+      if (tokens === base.tokens && base.currentPageIndex === fromIndex + 1) {
         return base;
       }
       return {
