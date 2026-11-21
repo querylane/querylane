@@ -188,7 +188,7 @@ function SelectItem({
   className,
   children,
   ...props
-}: SelectPrimitive.Item.Props) {
+}: Omit<SelectPrimitive.Item.Props, "value"> & { value?: unknown }) {
   return (
     <BaseUiChoiceItem value={props.value}>
       <SelectPrimitive.Item

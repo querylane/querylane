@@ -166,7 +166,10 @@ function ComboboxItem({
   children,
   label,
   ...props
-}: ComboboxPrimitive.Item.Props & { label?: string }) {
+}: Omit<ComboboxPrimitive.Item.Props, "value"> & {
+  label?: string;
+  value?: unknown;
+}) {
   return (
     <BaseUiChoiceItem value={props.value}>
       <ComboboxPrimitive.Item
