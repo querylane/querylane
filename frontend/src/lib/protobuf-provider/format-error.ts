@@ -1,3 +1,5 @@
+import { Code, ConnectError } from "@connectrpc/connect";
+import { isNonEmptyString } from "@/lib/value-guards";
 import {
   BadRequestSchema,
   DebugInfoSchema,
@@ -9,9 +11,7 @@ import {
   RequestInfoSchema,
   ResourceInfoSchema,
   RetryInfoSchema,
-} from "@buf/googleapis_googleapis.bufbuild_es/google/rpc/error_details_pb.js";
-import { Code, ConnectError } from "@connectrpc/connect";
-import { isNonEmptyString } from "@/lib/value-guards";
+} from "@/protogen/google/rpc/error_details_pb";
 
 const NANOSECONDS_PER_SECOND = 1_000_000_000;
 

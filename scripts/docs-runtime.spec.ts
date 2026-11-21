@@ -6,7 +6,7 @@ import { parse } from "node-html-parser";
 
 // Exercise the production Node adapter, not the dev server or config objects.
 const server = Bun.spawn(["node", "dist/server/entry.mjs"], {
-	cwd: new URL("..", import.meta.url).pathname,
+	cwd: process.env.DOCS_RUNTIME_ROOT ?? new URL("..", import.meta.url).pathname,
 	env: { ...process.env, HOST: "127.0.0.1", PORT: "0" },
 	stdout: "pipe",
 	stderr: "inherit",
@@ -15,7 +15,7 @@ let baseUrl: string;
 
 beforeAll(async () => {
 	const timeout = setTimeout(() => server.kill(), 30_000);
-	const lines = createInterface({ input: Readable.fromWeb(server.stdout) });
+	const lines = createInterface({ input: Readable.from(server.stdout) });
 	try {
 		for await (const line of lines) {
 			const address = line.match(
@@ -119,6 +119,72 @@ test("unknown docs pages fail with 404 rather than a successful fallback", async
 		`${baseUrl}/api/docs/pages/not-a-querylane-page.json`,
 	);
 	expect(response.status).toBe(404);
+});
+
+test("MCP initializes, searches and reads pages through its production transport", async () => {
+	const call = async (method: string, params: object) => {
+		const response = await fetch(`${baseUrl}/mcp`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json, text/event-stream",
+			},
+			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+		});
+		expect(response.status).toBe(200);
+		const payload = await response.json();
+		expect(payload.error).toBeUndefined();
+		return payload.result;
+	};
+	const initialized = await call("initialize", {
+		protocolVersion: "2025-03-26",
+		capabilities: {},
+		clientInfo: { name: "querylane-runtime-test", version: "1.0.0" },
+	});
+	expect(initialized.capabilities).toHaveProperty("tools");
+	const search = await call("tools/call", {
+		name: "search_docs",
+		arguments: { query: "PRODUCTION_DATABASE_PASSWORD" },
+	});
+	expect(search.isError).not.toBe(true);
+	expect(JSON.stringify(search.content)).toContain(
+		"/get-started/configure-querylane",
+	);
+	const page = await call("tools/call", {
+		name: "get_page",
+		arguments: { route: "/get-started/configure-querylane" },
+	});
+	expect(page.isError).not.toBe(true);
+	expect(JSON.stringify(page.content)).toContain(
+		"PRODUCTION_DATABASE_PASSWORD",
+	);
+	const invalid = await call("tools/call", {
+		name: "get_page",
+		arguments: { route: "/not-a-querylane-page" },
+	});
+	expect(invalid.isError).toBe(true);
+	const oversized = await fetch(`${baseUrl}/mcp`, {
+		method: "POST",
+		body: "x".repeat(65_537),
+	});
+	expect(oversized.status).toBe(413);
+});
+
+test("the packaged image endpoint can load its platform-native Sharp dependency", async () => {
+	const html = parse(await (await fetch(`${baseUrl}/get-started`)).text());
+	const image = html
+		.querySelector('meta[property="og:image"]')
+		?.getAttribute("content");
+	expect(image).toBeTruthy();
+	const href = new URL(image ?? "", baseUrl).pathname;
+	const response = await fetch(
+		`${baseUrl}/_image?href=${encodeURIComponent(href)}&w=32&h=32&f=png`,
+	);
+	expect(response.status).toBe(200);
+	expect(response.headers.get("content-type")).toBe("image/png");
+	expect(new Uint8Array(await response.arrayBuffer()).slice(0, 8)).toEqual(
+		new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+	);
 });
 
 test("docs pages expose browser narration, both exports, and the real source edit link", async () => {

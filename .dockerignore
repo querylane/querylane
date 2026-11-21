@@ -6,6 +6,8 @@
 .env
 .env.*
 postgres_data
+node_modules
+dist
 
 frontend/.claude
 frontend/.env*

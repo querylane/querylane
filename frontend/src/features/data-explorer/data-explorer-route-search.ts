@@ -1,4 +1,7 @@
-import { z } from "zod";
+import { en } from "zod/locales";
+import { z } from "zod/mini";
+
+z.config(en());
 
 const dataExplorerSearchSchema = z.object({
   category: z.optional(z.string()),
