@@ -66,6 +66,13 @@ test.each([
   },
   {
     config: "oxlint.config.ts",
+    original: '"quality/no-widen-then-assert": "error"',
+    replacement: '"quality/no-widen-then-assert": "off"',
+    rule: "disabled Cloudflare rule",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "oxlint.config.ts",
     original: 'group: ["@/**", "!@/lib/domain/**", "!@/lib/value-guards"]',
     replacement: 'group: ["unreachable-import-prefix/**"]',
     rule: "emptied pure dependency restrictions",

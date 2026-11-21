@@ -1,3 +1,4 @@
+import cloudflare from "@cloudflare/oxlint-config";
 import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
@@ -30,6 +31,9 @@ export default defineConfig({
   plugins: [...(core.plugins ?? []), ...(react.plugins ?? []), "jest"],
   // Expose the plugin dependency without requiring preset evaluation.
   jsPlugins: [
+    ...(cloudflare.jsPlugins ?? []).filter(
+      (plugin) => typeof plugin !== "string" && plugin.name === "quality"
+    ),
     { name: "shadcn", specifier: "@shadcn/lint" },
     { name: "querylane", specifier: "./scripts/querylane-lint.config.ts" },
   ],
@@ -38,6 +42,11 @@ export default defineConfig({
     ...core.rules,
     ...react.rules,
     ...shadcn.rules,
+    // Adopt the reviewed anti-slop checks without importing preset-wide policy.
+    "quality/no-chained-type-assertions": "error",
+    "quality/no-reduce-accumulator-copy": "error",
+    "quality/no-unknown-type-aliases": "error",
+    "quality/no-widen-then-assert": "error",
     // Newly recommended in 1.94; retain fatal enforcement independently of presets.
     "oxc/misrefactored-assign-op": "error",
     "oxc/no-this-in-exported-function": "error",
