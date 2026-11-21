@@ -35,6 +35,7 @@ export function DataValueDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent
         className="!flex max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100vw-2rem))] !max-w-[calc(100vw-2rem)] flex-col overflow-hidden"
+        data-agent-hidden={true}
         presentation="spacious"
       >
         <DialogHeader className="shrink-0" presentation="closeable">

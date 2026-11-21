@@ -8,7 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { type RefObject, useId, useRef, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import {
   type ConnectionTestStatus,
   useConnectionTest,
@@ -330,15 +330,16 @@ function ConnectionStringPasteForm({
             }
             autoComplete="off"
             className="h-9 flex-1"
+            data-agent-secret={true}
             id={connectionStringId}
-            onChange={(e) => {
-              onValueChange(e.target.value);
-              onErrorReset();
-            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 onApply();
               }
+            }}
+            onValueChange={(value) => {
+              onValueChange(value);
+              onErrorReset();
             }}
             placeholder="postgres://user:password@host:5432/database"
             presentation="onboarding-connection"
@@ -438,6 +439,7 @@ function UiConfiguredContinueAction({
       aria-describedby={canContinue ? undefined : disabledReasonId}
       className="h-9"
       disabled={!canContinue}
+      focusableWhenDisabled={true}
       onClick={onContinue}
       presentation="onboarding-primary"
     >
@@ -453,11 +455,7 @@ function UiConfiguredContinueAction({
   return (
     <>
       <Tooltip>
-        <TooltipTrigger
-          render={<span className="inline-flex cursor-not-allowed" />}
-        >
-          {button}
-        </TooltipTrigger>
+        <TooltipTrigger render={button} />
         <TooltipContent>{disabledReason}</TooltipContent>
       </Tooltip>
       <span className="sr-only" id={disabledReasonId}>
@@ -467,11 +465,66 @@ function UiConfiguredContinueAction({
   );
 }
 
+function MetadataHostFields({
+  form,
+}: {
+  form: UseProtoFormReturn<typeof PostgresConfigSchema>;
+}) {
+  const hostId = useId();
+  const portId = useId();
+  const {
+    control,
+    formState: { errors },
+  } = form;
+  return (
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
+      <Controller
+        control={control}
+        name="host"
+        render={({ field }) => (
+          <LabeledInput
+            error={errors.host?.message}
+            id={hostId}
+            label="Host"
+            name={field.name}
+            onBlur={() => {
+              field.onBlur();
+            }}
+            onValueChange={(value) => {
+              field.onChange(value);
+            }}
+            ref={field.ref}
+            value={field.value ?? ""}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="port"
+        render={({ field }) => (
+          <LabeledInput
+            error={errors.port?.message}
+            id={portId}
+            label="Port"
+            name={field.name}
+            onBlur={() => {
+              field.onBlur();
+            }}
+            onValueChange={(value) => {
+              field.onChange(value === "" ? Number.NaN : Number(value));
+            }}
+            ref={field.ref}
+            value={Number.isFinite(field.value) ? String(field.value) : ""}
+          />
+        )}
+      />
+    </div>
+  );
+}
+
 export function UiConfiguredPhase() {
   const connectionStringId = useId();
   const connectionStringErrorId = useId();
-  const hostId = useId();
-  const portId = useId();
   const databaseId = useId();
   const usernameId = useId();
   const passwordId = useId();
@@ -497,7 +550,7 @@ export function UiConfiguredPhase() {
     },
     mode: "all",
   });
-  const { control, formState, register, setValue } = form;
+  const { control, formState, setValue } = form;
   const { errors, isValid } = formState;
   const watchedValues = useWatch({ control });
   const sslMode = useWatch({ control, name: "sslMode" });
@@ -631,44 +684,71 @@ export function UiConfiguredPhase() {
             </TabsTrigger>
           </TabsList>
           <TabsContent presentation="onboarding-form" value="manual_fields">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_200px]">
-              <LabeledInput
-                error={errors.host?.message}
-                id={hostId}
-                label="Host"
-                {...register("host")}
-              />
-              <LabeledInput
-                error={errors.port?.message}
-                id={portId}
-                label="Port"
-                {...register("port", {
-                  valueAsNumber: true,
-                })}
-              />
-            </div>
+            <MetadataHostFields form={form} />
             <div className="grid gap-4 md:grid-cols-2">
-              <LabeledInput
-                error={errors.database?.message}
-                id={databaseId}
-                label="Database"
-                {...register("database")}
+              <Controller
+                control={control}
+                name="database"
+                render={({ field }) => (
+                  <LabeledInput
+                    error={errors.database?.message}
+                    id={databaseId}
+                    label="Database"
+                    name={field.name}
+                    onBlur={() => {
+                      field.onBlur();
+                    }}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                    }}
+                    ref={field.ref}
+                    value={field.value ?? ""}
+                  />
+                )}
               />
-              <LabeledInput
-                autoComplete="username"
-                error={errors.username?.message}
-                id={usernameId}
-                label="Username"
-                {...register("username")}
+              <Controller
+                control={control}
+                name="username"
+                render={({ field }) => (
+                  <LabeledInput
+                    autoComplete="username"
+                    error={errors.username?.message}
+                    id={usernameId}
+                    label="Username"
+                    name={field.name}
+                    onBlur={() => {
+                      field.onBlur();
+                    }}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                    }}
+                    ref={field.ref}
+                    value={field.value ?? ""}
+                  />
+                )}
               />
             </div>
-            <LabeledInput
-              autoComplete="current-password"
-              error={errors.password?.message}
-              id={passwordId}
-              label="Password"
-              type="password"
-              {...register("password")}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field }) => (
+                <LabeledInput
+                  autoComplete="current-password"
+                  error={errors.password?.message}
+                  id={passwordId}
+                  label="Password"
+                  name={field.name}
+                  onBlur={() => {
+                    field.onBlur();
+                  }}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                  }}
+                  ref={field.ref}
+                  type="password"
+                  value={field.value ?? ""}
+                />
+              )}
             />
             <InternalStorageSslOptions
               contentId={advancedConnectionOptionsId}

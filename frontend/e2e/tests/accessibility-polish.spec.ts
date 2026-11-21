@@ -68,7 +68,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(
       "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders&tab=definition"
     );
-    const constraints = page.locator('[data-slot="card"]').filter({
+    const constraints = page.locator('[data-querylane-slot="card"]').filter({
       has: page.getByRole("heading", { name: "Constraints", exact: true }),
     });
     const sql = constraints.locator("pre");

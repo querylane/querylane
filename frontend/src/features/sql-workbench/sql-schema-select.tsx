@@ -1,7 +1,9 @@
 "use client";
 
-import { useQuery } from "@connectrpc/connect-query";
-import { keepPreviousData } from "@tanstack/react-query";
+import { useTransport } from "@connectrpc/connect-query";
+import { callUnaryMethod } from "@connectrpc/connect-query-core";
+import { useAsyncOptions } from "@ui-sdk/react/async-options";
+import { useFieldControl } from "@ui-sdk/react/field";
 import { Check, ChevronDown, Folder } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/querylane-ui/button";
@@ -13,13 +15,13 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  CommandStatus,
 } from "@/components/querylane-ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/querylane-ui/popover";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { buildDatabaseName } from "@/lib/console-resources";
 import {
   quoteFilterValue,
@@ -123,55 +125,128 @@ function SchemaResults({
   );
 }
 
-/**
- * Picks the schema unqualified names resolve against for the active tab. The
- * workbench runs every statement in its own transaction, so `SET search_path`
- * cannot carry over; this is sent with each statement instead.
- *
- * Searches the server rather than the catalog snapshot: the catalog stops at
- * 100 schemas, and schema-per-tenant databases can have thousands.
- */
-function SqlSchemaSelect({
-  databaseId,
-  instanceId,
-  onChange,
-  value,
-}: {
+interface SqlSchemaSelectProps {
   databaseId: string;
   instanceId: string;
   onChange: (schema: string | undefined) => void;
   value: string | undefined;
+}
+
+function SchemaSearch({
+  databaseId,
+  instanceId,
+  onChoose,
+  value,
+}: Omit<SqlSchemaSelectProps, "onChange"> & {
+  onChoose: SqlSchemaSelectProps["onChange"];
 }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const term = useDebouncedValue(search.trim(), SERVER_FILTER_DEBOUNCE_MS);
-  const schemas = useQuery(
-    listSchemas,
-    {
-      filter: term ? `name:${quoteFilterValue(term)}` : "",
-      orderBy: "name asc",
-      pageSize: SCHEMA_RESULT_LIMIT,
-      parent: buildDatabaseName(instanceId, databaseId),
+  const transport = useTransport();
+  // This transient popup owns its async options. Connect still owns the typed
+  // RPC transport; no second query observer or debounce runs alongside it.
+  const schemas = useAsyncOptions(
+    async (query, { signal }) => {
+      const term = query.trim();
+      const response = await callUnaryMethod(
+        transport,
+        listSchemas,
+        {
+          filter: term ? `name:${quoteFilterValue(term)}` : "",
+          orderBy: "name asc",
+          pageSize: SCHEMA_RESULT_LIMIT,
+          parent: buildDatabaseName(instanceId, databaseId),
+        },
+        { signal }
+      );
+      return {
+        items: response.schemas.filter(
+          (schema) => !INTERNAL_SCHEMA_PATTERN.test(schema.displayName)
+        ),
+        hasMore: response.nextPageToken !== "",
+      };
     },
-    { enabled: open, placeholderData: keepPreviousData }
+    { debounce: SERVER_FILTER_DEBOUNCE_MS, immediate: true }
   );
-  const results = (schemas.data?.schemas ?? []).filter(
-    (schema) => !INTERNAL_SCHEMA_PATTERN.test(schema.displayName)
+
+  const resultLabel = schemas.items.length === 1 ? "schema" : "schemas";
+
+  return (
+    <Command
+      filter={false}
+      onQueryChange={(next) => {
+        schemas.setQuery(next);
+      }}
+      query={schemas.query}
+      status={schemas.status}
+    >
+      <CommandInput placeholder="Search schemas…" />
+      <CommandStatus aria-label="Schema search status">
+        {schemas.status === "error" ? "Couldn't load schemas." : null}
+        {schemas.status === "loading" ? "Loading schemas…" : null}
+        {schemas.status === "idle"
+          ? `${schemas.items.length} ${resultLabel} loaded.`
+          : null}
+      </CommandStatus>
+      {schemas.status === "error" ? (
+        <div className="px-3 pb-2">
+          <Button
+            onClick={() => {
+              schemas.reload();
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Retry schema search
+          </Button>
+        </div>
+      ) : null}
+      <CommandList presentation="search">
+        {schemas.status === "idle" &&
+        schemas.items.length === 0 &&
+        schemas.query.trim() !== "" ? (
+          <CommandEmpty presentation="compact">
+            No matching schema.
+          </CommandEmpty>
+        ) : null}
+        <SchemaResults
+          onChoose={onChoose}
+          schemas={schemas.items}
+          searching={schemas.query.trim() !== ""}
+          value={value}
+        />
+      </CommandList>
+      {schemas.status === "idle" && schemas.hasMore ? (
+        <p className="px-3 py-2 text-xs text-muted-foreground">
+          Showing the first {SCHEMA_RESULT_LIMIT}. Type to search all schemas.
+        </p>
+      ) : null}
+    </Command>
   );
-  const hasMore = Boolean(schemas.data?.nextPageToken);
+}
+
+function SchemaPicker({
+  databaseId,
+  field,
+  instanceId,
+  onChange,
+  value,
+}: SqlSchemaSelectProps & { field: ReturnType<typeof useFieldControl> }) {
+  const [open, setOpen] = useState(false);
+  const disabled = field?.disabled === true;
+  const controlProps = { "aria-label": "Default schema", name: field?.name };
 
   function choose(next: string | undefined) {
     onChange(next);
     setOpen(false);
-    setSearch("");
   }
 
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
+        {...(field ? field.props(controlProps) : controlProps)}
+        disabled={disabled}
         render={
           <Button
-            aria-label="Default schema"
             className="h-8 max-w-48"
             presentation="compact"
             size="sm"
@@ -190,33 +265,39 @@ function SqlSchemaSelect({
           </Button>
         }
       />
-      <PopoverContent align="end" className="w-72" presentation="detail">
-        <Command shouldFilter={false}>
-          <CommandInput
-            onValueChange={setSearch}
-            placeholder="Search schemas…"
-            value={search}
+      <PopoverContent
+        align="end"
+        aria-label="Choose default schema"
+        className="w-72"
+        presentation="detail"
+      >
+        {open ? (
+          <SchemaSearch
+            databaseId={databaseId}
+            instanceId={instanceId}
+            onChoose={choose}
+            value={value}
           />
-          <CommandList presentation="search">
-            <CommandEmpty presentation="compact">
-              {schemas.isPending ? "Loading schemas…" : "No matching schema."}
-            </CommandEmpty>
-            <SchemaResults
-              onChoose={choose}
-              schemas={results}
-              searching={term !== ""}
-              value={value}
-            />
-            {hasMore ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground">
-                Showing the first {SCHEMA_RESULT_LIMIT}. Type to search all
-                schemas.
-              </p>
-            ) : null}
-          </CommandList>
-        </Command>
+        ) : null}
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * Picks the schema unqualified names resolve against for the active SQL tab.
+ * Search is server-backed, not limited to the first catalog snapshot. A new
+ * database or disabled field ends the popup session and aborts its work.
+ */
+function SqlSchemaSelect(props: SqlSchemaSelectProps) {
+  const field = useFieldControl();
+  const parent = buildDatabaseName(props.instanceId, props.databaseId);
+  return (
+    <SchemaPicker
+      key={`${parent}:${field?.disabled === true ? "disabled" : "enabled"}`}
+      {...props}
+      field={field}
+    />
   );
 }
 

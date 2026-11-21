@@ -42,6 +42,8 @@ const ORDERS_HEADING_RE = /public\.orders/u;
 const SORT_WITH_ONE_COLUMN_RE = /Sort 1/u;
 const TIER_ENTERPRISE_JSON_RE = /"tier":"enterprise"/u;
 const COPY_BUTTON_RE = /Copy/u;
+const FILTER_BUTTON_RE = /^Filter(?: \d+)?$/u;
+const EMAIL_FILTER_OPTION_RE = /^email /u;
 const DB_OVERVIEW_URL_RE =
   /\/instances\/production\/databases\/appdb(?:[?#]|$)/u;
 // The shared sidebar renders as an 18rem sheet on phone viewports.
@@ -408,6 +410,66 @@ test("data explorer: switching schema clears stale table search state", {
   await expect(page.getByRole("heading", { name: "billing" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "invoices" })).toBeVisible();
 });
+
+for (const { label, operator } of [
+  { label: "Is one of", operator: "OPERATOR_IN" },
+  { label: "Is not one of", operator: "OPERATOR_NOT_IN" },
+]) {
+  test(`data explorer: ${operator} filter tokens round-trip through the query`, async ({
+    page,
+  }) => {
+    await mockExplorerShell(page);
+    await mockTableCatalog(page);
+    let queryFilter: unknown;
+    await mockReadRowsWithObserver(page, ({ filter }) => {
+      queryFilter = filter;
+    });
+    await page.goto(
+      "/instances/production/databases/appdb/explorer?schema=public&category=tables&name=orders"
+    );
+    const filterButton = page.getByRole("button", { name: FILTER_BUTTON_RE });
+    await filterButton.click();
+    await page.getByRole("combobox", { name: "Filter column" }).click();
+    await page.getByRole("option", { name: EMAIL_FILTER_OPTION_RE }).click();
+    await page.getByRole("combobox", { name: "Filter operator" }).click();
+    await page.getByRole("option", { name: label, exact: true }).click();
+
+    const editor = page.getByRole("textbox", { name: "Filter values" });
+    await editor.focus();
+    await editor.evaluate((element) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", "ada@example.com, grace@example.com");
+      element.dispatchEvent(
+        new ClipboardEvent("paste", {
+          bubbles: true,
+          cancelable: true,
+          clipboardData: data,
+        })
+      );
+    });
+    await expect(
+      editor.getByText("ada@example.com", { exact: true })
+    ).toBeVisible();
+    await expect(
+      editor.getByText("grace@example.com", { exact: true })
+    ).toBeVisible();
+    await editor.press("End");
+    await editor.press("Backspace");
+    await expect(
+      editor.getByText("grace@example.com", { exact: true })
+    ).toHaveCount(0);
+    await editor.press("Enter");
+
+    await expect
+      .poll(() => JSON.stringify(queryFilter))
+      .toContain("ada@example.com");
+    expect(JSON.stringify(queryFilter)).not.toContain("grace@example.com");
+    await filterButton.click();
+    await expect(
+      editor.getByText("ada@example.com", { exact: true })
+    ).toBeVisible();
+  });
+}
 
 test("data explorer: row drawer fetches a truncated cell full value", {
   tag: ["@feat:data-explorer", "@flow:query"],

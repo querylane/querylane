@@ -14,7 +14,7 @@ function SelectValue({
   return (
     <OverflowTooltip
       className={cn("flex flex-1 text-left", className)}
-      data-slot="select-value"
+      data-querylane-slot="select-value"
       presentation={presentation}
     >
       <NativeSelectValue {...props} />
@@ -32,7 +32,7 @@ function SelectItemDescription({
         "block text-xs leading-snug text-muted-foreground",
         className
       )}
-      data-slot="select-item-description"
+      data-querylane-slot="select-item-description"
       {...props}
     />
   );

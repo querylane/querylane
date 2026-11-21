@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@ui-sdk/react/toast";
 
 function writeClipboard(value: string) {
   if (!Boolean(navigator.clipboard)) {

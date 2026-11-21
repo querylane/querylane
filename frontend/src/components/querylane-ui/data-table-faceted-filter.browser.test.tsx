@@ -1,9 +1,9 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
 import { useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 
 const RGBA_RED_GREEN_BLUE_PATTERN =
@@ -205,7 +205,10 @@ test("searchable facets announce checked state, match accents, and reset after c
   await search.fill("missing owner");
   await expect.element(page.getByText("No options found.")).toBeVisible();
   await search.press("Escape");
-  const trigger = page.getByRole("button", { name: "Owner Café", exact: true });
+  const trigger = page.getByRole("button", {
+    name: "Owner Café",
+    exact: true,
+  });
   await expect.element(trigger).toBeFocused();
   await trigger.click();
   await expect.element(search).toHaveValue("");
@@ -259,10 +262,10 @@ test("selected filter checkbox checkmark remains visible while hovered", async (
   expect(optionElement.hasAttribute("data-highlighted")).toBe(true);
 
   const checkbox = optionElement.querySelector(
-    '[data-slot="faceted-filter-checkbox"]'
+    '[data-querylane-slot="faceted-filter-checkbox"]'
   );
   const checkmark = checkbox?.querySelector(
-    '[data-slot="faceted-filter-checkbox-check"]'
+    '[data-querylane-slot="faceted-filter-checkbox-check"]'
   );
   if (!(checkbox && checkmark)) {
     throw new Error(
@@ -337,7 +340,9 @@ test("fixed enum filters omit search without changing option behavior", async ()
     name: "Active",
   });
   expect(activeOption.getAttribute("aria-checked")).toBe("false");
-  await expect.element(page.getByRole("combobox")).toBeDetached();
+  await expect
+    .element(page.getByRole("searchbox", { name: "Search status…" }))
+    .toBeDetached();
 
   await page.getByRole("menuitemcheckbox", { name: "Active" }).click();
   await expect
@@ -350,7 +355,9 @@ test("fixed enum filters support keyboard selection and restore trigger focus", 
 
   const trigger = page.getByRole("button", { name: "Status" });
   await expect.element(trigger).toBeVisible();
-  const triggerElement = getByRole(document.body, "button", { name: "Status" });
+  const triggerElement = getByRole(document.body, "button", {
+    name: "Status",
+  });
   await trigger.focus();
   await trigger.press("Enter");
   await expect
@@ -436,6 +443,6 @@ test("empty facets explain unavailable options and restore focus on Escape", asy
   const trigger = page.getByRole("button", { name: "Owner", exact: true });
   await trigger.click();
   await expect.element(page.getByText("No owners available.")).toBeVisible();
-  await page.getByRole("menu", { name: "Owner options" }).press("Escape");
+  await page.getByRole("menu").press("Escape");
   await expect.element(trigger).toBeFocused();
 });

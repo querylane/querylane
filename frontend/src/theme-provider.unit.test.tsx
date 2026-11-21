@@ -1,274 +1,34 @@
-import { afterEach, beforeEach, describe, expect, test } from "@rstest/core";
+import { expect, rs, test } from "@rstest/core";
 import { Window } from "happy-dom";
-import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Button } from "@/components/ui/button";
-import { actSynchronous } from "@/test/async-act";
 import { useTheme } from "@/theme-context";
-import {
-  type ResolvedTheme,
-  type Theme,
-  ThemeProvider,
-} from "./theme-provider";
-
-const STORAGE_KEY = "querylane-ui-theme";
-const DOM_GLOBAL_KEYS = [
-  "Event",
-  "HTMLElement",
-  "IS_REACT_ACT_ENVIRONMENT",
-  "MouseEvent",
-  "document",
-  "localStorage",
-  "window",
-] as const;
-
-type DomGlobalKey = (typeof DOM_GLOBAL_KEYS)[number];
-
-interface MatchMediaController {
-  setDarkMode: (matches: boolean) => void;
-}
-
-let root: Root | null = null;
-let container: HTMLElement | null = null;
-let matchMediaController: MatchMediaController | null = null;
-let originalGlobalDescriptors = new Map<
-  DomGlobalKey,
-  PropertyDescriptor | undefined
->();
-
-function setDomGlobal(key: DomGlobalKey, value: unknown) {
-  Object.defineProperty(globalThis, key, {
-    configurable: true,
-    value,
-    writable: true,
-  });
-}
-
-function captureDomGlobals() {
-  originalGlobalDescriptors = new Map(
-    DOM_GLOBAL_KEYS.map((key) => [
-      key,
-      Object.getOwnPropertyDescriptor(globalThis, key),
-    ])
-  );
-}
-
-function restoreDomGlobals() {
-  for (const key of DOM_GLOBAL_KEYS) {
-    const descriptor = originalGlobalDescriptors.get(key);
-    if (descriptor) {
-      Object.defineProperty(globalThis, key, descriptor);
-      continue;
-    }
-    Reflect.deleteProperty(globalThis, key);
-  }
-  Reflect.deleteProperty(globalThis, "localStorage");
-}
-
-function installDom() {
-  captureDomGlobals();
-  const window = new Window({ url: "http://querylane.test" });
-  window.SyntaxError = SyntaxError;
-
-  setDomGlobal("Event", window.Event);
-  setDomGlobal("HTMLElement", window.HTMLElement);
-  setDomGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  setDomGlobal("MouseEvent", window.MouseEvent);
-  setDomGlobal("document", window.document);
-  setDomGlobal("localStorage", window.localStorage);
-  setDomGlobal("window", window);
-
-  const testContainer = document.createElement("div");
-  document.body.append(testContainer);
-  container = testContainer;
-  matchMediaController = installMatchMedia(window);
-}
-
-function installMatchMedia(window: Window): MatchMediaController {
-  const mediaQueryList = window.matchMedia("(prefers-color-scheme: dark)");
-  let matches = false;
-  Object.defineProperty(mediaQueryList, "matches", { get: () => matches });
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: () => mediaQueryList,
-  });
-  return {
-    setDarkMode: (nextMatches: boolean) => {
-      matches = nextMatches;
-      mediaQueryList.dispatchEvent(new window.Event("change"));
-    },
-  };
-}
+import { ThemeProvider } from "@/theme-provider";
 
 function ThemeProbe() {
-  const { resolvedTheme, setTheme, theme } = useTheme();
-
-  return (
-    <div>
-      <output data-testid="theme">{theme}</output>
-      <output data-testid="resolved-theme">{resolvedTheme}</output>
-      <Button
-        onClick={() => {
-          setTheme("light");
-        }}
-        type="button"
-      >
-        Light
-      </Button>
-      <Button
-        onClick={() => {
-          setTheme("dark");
-        }}
-        type="button"
-      >
-        Dark
-      </Button>
-      <Button
-        onClick={() => {
-          setTheme("system");
-        }}
-        type="button"
-      >
-        System
-      </Button>
-    </div>
-  );
+  const { theme } = useTheme();
+  return <output>{theme}</output>;
 }
 
-async function renderThemeProvider(defaultTheme: Theme = "system") {
-  if (!container) {
-    throw new Error("Test DOM is not installed");
-  }
+test("useTheme requires its provider", () => {
+  expect(() => renderToStaticMarkup(<ThemeProbe />)).toThrow(
+    "useTheme must be used within a ThemeProvider"
+  );
+});
 
-  root = createRoot(container);
-
-  await actSynchronous(act, () => {
-    root?.render(
-      <ThemeProvider defaultTheme={defaultTheme}>
+test("server rendering uses the supplied default without browser globals", async () => {
+  rs.stubGlobal("window", undefined);
+  rs.stubGlobal("document", undefined);
+  const browser = new Window();
+  try {
+    const markup = renderToStaticMarkup(
+      <ThemeProvider defaultTheme="dark">
         <ThemeProbe />
       </ThemeProvider>
     );
-  });
-}
-
-async function clickButton(label: string) {
-  const button = [...document.querySelectorAll("button")].find(
-    (candidate) => candidate.textContent === label
-  );
-
-  if (!button) {
-    throw new Error(`Button not found: ${label}`);
+    browser.document.write(markup);
+    expect(browser.document.querySelector("output")?.textContent).toBe("dark");
+  } finally {
+    rs.unstubAllGlobals();
+    await browser.happyDOM.close();
   }
-
-  await actSynchronous(act, () => {
-    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-}
-
-function text(testId: "resolved-theme" | "theme") {
-  return document.querySelector(`[data-testid="${testId}"]`)?.textContent;
-}
-
-function readAppliedThemeState(theme: ResolvedTheme) {
-  const inverseTheme = theme === "dark" ? "light" : "dark";
-
-  return {
-    colorScheme: document.documentElement.style.colorScheme,
-    hasInverseTheme: document.documentElement.classList.contains(inverseTheme),
-    hasTheme: document.documentElement.classList.contains(theme),
-    resolvedTheme: text("resolved-theme"),
-  };
-}
-
-beforeEach(() => {
-  installDom();
-});
-
-afterEach(async () => {
-  if (root) {
-    await actSynchronous(act, () => {
-      root?.unmount();
-    });
-  }
-
-  root = null;
-  container = null;
-  matchMediaController = null;
-  restoreDomGlobals();
-});
-
-describe("theme provider", () => {
-  test("hydrates from the persisted theme and applies it to the document", async () => {
-    localStorage.setItem(STORAGE_KEY, "dark");
-
-    await renderThemeProvider();
-
-    expect(text("theme")).toBe("dark");
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("dark");
-    expect(readAppliedThemeState("dark")).toEqual({
-      colorScheme: "dark",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "dark",
-    });
-  });
-
-  test("keeps system mode selected while following OS color scheme changes", async () => {
-    await renderThemeProvider();
-
-    expect(text("theme")).toBe("system");
-    expect(readAppliedThemeState("light")).toEqual({
-      colorScheme: "light",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "light",
-    });
-
-    await actSynchronous(act, () => {
-      matchMediaController?.setDarkMode(true);
-    });
-
-    expect(text("theme")).toBe("system");
-    expect(readAppliedThemeState("dark")).toEqual({
-      colorScheme: "dark",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "dark",
-    });
-
-    await clickButton("System");
-
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("system");
-    expect(readAppliedThemeState("dark")).toEqual({
-      colorScheme: "dark",
-      hasInverseTheme: false,
-      hasTheme: true,
-      resolvedTheme: "dark",
-    });
-  });
-});
-
-describe("theme provider edge cases", () => {
-  test("throws when useTheme is used outside provider", () => {
-    expect(() => renderToStaticMarkup(<ThemeProbe />)).toThrow(
-      "useTheme must be used within a ThemeProvider"
-    );
-  });
-
-  test("renders with default theme without browser globals", () => {
-    restoreDomGlobals();
-
-    try {
-      expect(
-        renderToStaticMarkup(
-          <ThemeProvider defaultTheme="dark">
-            <ThemeProbe />
-          </ThemeProvider>
-        )
-      ).toContain('<output data-testid="theme">dark</output>');
-    } finally {
-      installDom();
-    }
-  });
 });

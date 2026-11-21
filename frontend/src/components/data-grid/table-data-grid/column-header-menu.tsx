@@ -98,14 +98,14 @@ function ColumnHeaderMenu({
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem
           checked={sortDirection === "ASC"}
-          onClick={handleSortAsc}
+          onCheckedChange={handleSortAsc}
         >
           <ArrowUp className="size-3.5" />
           Sort ascending
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
           checked={sortDirection === "DESC"}
-          onClick={handleSortDesc}
+          onCheckedChange={handleSortDesc}
         >
           <ArrowDown className="size-3.5" />
           Sort descending

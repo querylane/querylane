@@ -13,13 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { BaseUiAgent } from "@/features/ui-agent/base-ui-adapter";
 import { cn } from "@/lib/utils";
 
-interface FacetedFilterOption {
-  count?: number | undefined;
-  label: string;
-  value: string;
-}
+import type { FacetedFilterOption } from "./data-table-faceted-filter-types";
 
 // Beyond this many selected values the trigger collapses the chips into a
 // single "{n} selected" badge so the button stays compact.
@@ -30,6 +27,82 @@ const SEARCH_MIN_OPTIONS = 6;
 
 // Facets are toggle actions, so a filterable menu exposes their checked state
 // without pretending that the highlighted option is the selected value.
+function nextFacetSelection(
+  selected: Set<string>,
+  value: string,
+  singleSelect: boolean | undefined
+) {
+  if (singleSelect === true) {
+    return selected.has(value) ? [] : [value];
+  }
+  const next = new Set(selected);
+  if (next.has(value)) {
+    next.delete(value);
+  } else {
+    next.add(value);
+  }
+  return [...next];
+}
+
+function FacetOption({
+  option,
+  isSelected,
+  onToggle,
+}: {
+  option: FacetedFilterOption;
+  isSelected: boolean;
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <BaseUiAgent kind="checkbox">
+      <Menu.CheckboxItem
+        checked={isSelected}
+        className="relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground"
+        label={option.label}
+        onCheckedChange={() => {
+          onToggle(option.value);
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className={cn(
+            "flex size-4 items-center justify-center rounded-sm border",
+            isSelected
+              ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
+              : "border-primary opacity-50 [&_svg]:invisible"
+          )}
+          data-querylane-slot="faceted-filter-checkbox"
+        >
+          <Check
+            className="size-3.5"
+            data-querylane-slot="faceted-filter-checkbox-check"
+          />
+        </div>
+        <span>{option.label}</span>
+        {option.count === undefined ? null : (
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            {option.count}
+          </span>
+        )}
+      </Menu.CheckboxItem>
+    </BaseUiAgent>
+  );
+}
+
+function FacetSearchScope({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: React.ReactNode;
+}) {
+  return enabled ? (
+    <Menu.FilterProvider autoHighlight={true}>{children}</Menu.FilterProvider>
+  ) : (
+    children
+  );
+}
+
 function DataTableFacetedFilter({
   emptyText = "No options found.",
   onSelectedValuesChange,
@@ -51,32 +124,16 @@ function DataTableFacetedFilter({
   const [open, setOpen] = useState(false);
   const selected = new Set(selectedValues);
   const availableValues = new Set(options.map((option) => option.value));
-  const selectedOptions: FacetedFilterOption[] = [];
-  for (const option of options) {
-    if (selected.has(option.value)) {
-      selectedOptions.push(option);
-    }
-  }
-  for (const value of selected) {
-    if (!availableValues.has(value)) {
-      selectedOptions.push({ label: "Unavailable", value });
-    }
-  }
+  const selectedOptions = [
+    ...options.filter((option) => selected.has(option.value)),
+    ...selectedValues.flatMap((value) =>
+      availableValues.has(value) ? [] : [{ label: "Unavailable", value }]
+    ),
+  ];
 
-  function toggle(value: string) {
-    if (singleSelect) {
-      onSelectedValuesChange(selected.has(value) ? [] : [value]);
-      return;
-    }
-
-    const next = new Set(selected);
-    if (next.has(value)) {
-      next.delete(value);
-    } else {
-      next.add(value);
-    }
-    onSelectedValuesChange(Array.from(next));
-  }
+  const toggle = (value: string) => {
+    onSelectedValuesChange(nextFacetSelection(selected, value, singleSelect));
+  };
 
   const menu = (
     <DropdownMenu modal={false} onOpenChange={setOpen} open={open}>
@@ -160,46 +217,20 @@ function DataTableFacetedFilter({
           {!showSearch && options.length === 0 && selected.size === 0 ? (
             <DropdownMenuItem
               className="justify-center py-6 text-center"
-              disabled
+              disabled={true}
             >
               {emptyText}
             </DropdownMenuItem>
           ) : null}
           <Menu.Group>
-            {options.map((option) => {
-              const isSelected = selected.has(option.value);
-              return (
-                <Menu.CheckboxItem
-                  checked={isSelected}
-                  className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden data-highlighted:bg-muted data-highlighted:text-foreground"
-                  key={option.value}
-                  label={option.label}
-                  onCheckedChange={() => toggle(option.value)}
-                >
-                  <div
-                    aria-hidden="true"
-                    className={cn(
-                      "flex size-4 items-center justify-center rounded-sm border",
-                      isSelected
-                        ? "border-foreground/70 bg-background text-foreground [&_svg]:text-foreground"
-                        : "border-primary opacity-50 [&_svg]:invisible"
-                    )}
-                    data-slot="faceted-filter-checkbox"
-                  >
-                    <Check
-                      className="size-3.5"
-                      data-slot="faceted-filter-checkbox-check"
-                    />
-                  </div>
-                  <span>{option.label}</span>
-                  {option.count !== undefined ? (
-                    <span className="font-mono text-muted-foreground text-xs tabular-nums">
-                      {option.count}
-                    </span>
-                  ) : null}
-                </Menu.CheckboxItem>
-              );
-            })}
+            {options.map((option) => (
+              <FacetOption
+                isSelected={selected.has(option.value)}
+                key={option.value}
+                onToggle={toggle}
+                option={option}
+              />
+            ))}
           </Menu.Group>
           {selected.size > 0 ? (
             <>
@@ -207,7 +238,9 @@ function DataTableFacetedFilter({
               <Menu.Group>
                 <DropdownMenuItem
                   className="justify-center text-center"
-                  onClick={() => onSelectedValuesChange([])}
+                  onClick={() => {
+                    onSelectedValuesChange([]);
+                  }}
                 >
                   Clear filter
                 </DropdownMenuItem>
@@ -218,12 +251,7 @@ function DataTableFacetedFilter({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-  return showSearch ? (
-    <Menu.FilterProvider autoHighlight>{menu}</Menu.FilterProvider>
-  ) : (
-    menu
-  );
+  return <FacetSearchScope enabled={showSearch}>{menu}</FacetSearchScope>;
 }
 
-export type { FacetedFilterOption };
 export { DataTableFacetedFilter };

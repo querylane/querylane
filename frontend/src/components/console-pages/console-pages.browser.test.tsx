@@ -1,5 +1,4 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import * as actualRouter from "@tanstack/react-router" with {
   rstest: "importActual",
@@ -7,6 +6,7 @@ import * as actualRouter from "@tanstack/react-router" with {
 import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { InstanceRolesPage } from "@/components/console-pages/instance-roles-page";
 import { RoleDetailPage } from "@/components/console-pages/role-detail-page";
 import { DatabaseService } from "@/protogen/querylane/console/v1alpha1/database_pb";

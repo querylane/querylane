@@ -1048,7 +1048,7 @@ describe("database query insights resilience", () => {
       name: "Search queries…",
     });
     const filterBar = searchInput.closest(
-      '[data-slot="query-insights-filter-bar"]'
+      '[data-querylane-slot="query-insights-filter-bar"]'
     );
     if (!(filterBar instanceof HTMLElement)) {
       throw new TypeError("Missing query insights filter bar");

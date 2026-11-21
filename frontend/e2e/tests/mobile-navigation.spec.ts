@@ -21,9 +21,9 @@ test("mobile navigation dismisses by swiping and restores keyboard focus", async
   await checkAccessibility();
 
   await test.step("swipe the navigation header closed", async () => {
-    await page.mouse.move(bounds.x + bounds.width - 30, bounds.y + 12);
+    await page.mouse.move(bounds.x + bounds.width - 30, bounds.y + 4);
     await page.mouse.down();
-    await page.mouse.move(bounds.x + 10, bounds.y + 12, { steps: 8 });
+    await page.mouse.move(bounds.x + 10, bounds.y + 4, { steps: 8 });
     await page.mouse.up();
     await expect(drawer).toBeHidden();
   });
@@ -44,7 +44,7 @@ test("mobile navigation dismisses by swiping and restores keyboard focus", async
     try {
       await session.send("Input.dispatchTouchEvent", {
         type: "touchStart",
-        touchPoints: [{ x: 258, y: 12 }],
+        touchPoints: [{ x: 258, y: 4 }],
         timestamp,
       });
       // Gesture samples must reach Chromium in order, not in parallel.
@@ -53,7 +53,7 @@ test("mobile navigation dismisses by swiping and restores keyboard focus", async
           await previous;
           await session.send("Input.dispatchTouchEvent", {
             type: "touchMove",
-            touchPoints: [{ x, y: 12 }],
+            touchPoints: [{ x, y: 4 }],
             timestamp: timestamp + (index + 1) / 120,
           });
         },

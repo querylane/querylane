@@ -27,7 +27,7 @@ function Progress({
         density === "compact" ? "gap-0" : "gap-3",
         className
       )}
-      data-slot="progress"
+      data-querylane-slot="progress"
       value={value}
       {...props}
     >
@@ -51,7 +51,7 @@ function ProgressIndicator({
         progressIndicatorVariants[variant],
         className
       )}
-      data-slot="progress-indicator"
+      data-querylane-slot="progress-indicator"
       {...props}
     />
   );

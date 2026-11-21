@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { beforeEach, expect, rs, test } from "@rstest/core";
 import type { AnchorHTMLAttributes, ReactNode, Ref } from "react";
+import { render } from "@/__tests__/render-ui";
 import { AdminHeader } from "@/components/admin-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DatabaseLayout } from "@/components/database-layout";
@@ -11,7 +11,6 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/querylane-ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSetupStore } from "@/stores/setup-store";
 import {
@@ -229,36 +228,34 @@ function renderAdminShell(options?: { configManaged?: boolean }) {
       defaultTheme="dark"
       storageKey="querylane-admin-shell-browser-test-theme"
     >
-      <TooltipProvider>
-        <div
-          className="dark h-[760px] w-[1100px] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
-          data-testid="admin-shell-visual-root"
-        >
-          <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <KeyboardShortcutsProvider>
-              <CommandPaletteProvider>
-                <SidebarProvider className="h-full max-h-full">
-                  <AppSidebar />
-                  <SidebarInset className="min-w-0">
-                    <AdminHeader />
-                    <main className="p-6">
-                      <div className="rounded-xl border border-border bg-card p-6">
-                        <h1 className="text-2xl font-semibold">
-                          Database overview
-                        </h1>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Main content remains visible while the header and
-                          sidebar expose the active instance/database path.
-                        </p>
-                      </div>
-                    </main>
-                  </SidebarInset>
-                </SidebarProvider>
-              </CommandPaletteProvider>
-            </KeyboardShortcutsProvider>
-          </div>
+      <div
+        className="dark h-[760px] w-[1100px] overflow-hidden rounded-2xl border border-border bg-background text-foreground"
+        data-testid="admin-shell-visual-root"
+      >
+        <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
+          <KeyboardShortcutsProvider>
+            <CommandPaletteProvider>
+              <SidebarProvider className="h-full max-h-full">
+                <AppSidebar />
+                <SidebarInset className="min-w-0">
+                  <AdminHeader />
+                  <main className="p-6">
+                    <div className="rounded-xl border border-border bg-card p-6">
+                      <h1 className="text-2xl font-semibold">
+                        Database overview
+                      </h1>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Main content remains visible while the header and
+                        sidebar expose the active instance/database path.
+                      </p>
+                    </div>
+                  </main>
+                </SidebarInset>
+              </SidebarProvider>
+            </CommandPaletteProvider>
+          </KeyboardShortcutsProvider>
         </div>
-      </TooltipProvider>
+      </div>
     </ThemeProvider>,
     options
   );
@@ -284,32 +281,32 @@ function renderDatabaseLayout({
       defaultTheme={visualTheme}
       storageKey="querylane-admin-shell-browser-test-theme-layout"
     >
-      <TooltipProvider>
-        <div
-          className={cn(
-            visualTheme,
-            "h-[760px] w-[1100px] overflow-hidden rounded-lg border border-border bg-background text-foreground"
-          )}
-          data-testid="admin-shell-visual-root"
-        >
-          <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
-            <DatabaseLayout page={layoutPage}>
-              <div className="rounded-xl border border-border bg-card p-6">
-                <h1 className="text-2xl font-semibold">{title}</h1>
-              </div>
-            </DatabaseLayout>
-          </div>
+      <div
+        className={cn(
+          visualTheme,
+          "h-[760px] w-[1100px] overflow-hidden rounded-lg border border-border bg-background text-foreground"
+        )}
+        data-testid="admin-shell-visual-root"
+      >
+        <div className="h-full [--sidebar-width-icon:3rem] [--sidebar-width:16rem]">
+          <DatabaseLayout page={layoutPage}>
+            <div className="rounded-xl border border-border bg-card p-6">
+              <h1 className="text-2xl font-semibold">{title}</h1>
+            </div>
+          </DatabaseLayout>
         </div>
-      </TooltipProvider>
+      </div>
     </ThemeProvider>
   );
 }
 
 test("sidebar database combobox exposes the selection and switches with Enter", async () => {
   await renderAdminShell();
-  const trigger = page.getByRole("combobox", {
-    name: `Database: ${LONG_DATABASE_NAME}`,
-  });
+  const trigger = page
+    .getByRole("navigation", { name: "Workspace" })
+    .getByRole("combobox", {
+      name: `Database: ${LONG_DATABASE_NAME}`,
+    });
   await expect.element(trigger).toBeVisible();
   await trigger.click();
   await expect
@@ -381,7 +378,9 @@ test("degraded mode banner starts after the desktop sidebar", async () => {
   const banner = [...document.querySelectorAll("output")].find((item) =>
     item.textContent.includes("Meta database unavailable")
   )?.parentElement;
-  const sidebar = document.querySelector('[data-slot="sidebar-container"]');
+  const sidebar = document.querySelector(
+    '[data-querylane-slot="sidebar-container"]'
+  );
 
   if (!(banner instanceof HTMLDivElement)) {
     throw new TypeError("Expected degraded banner element to be mounted");
@@ -423,11 +422,20 @@ test("admin shell shows selected instance, database, scoped navigation, and acti
   await expect
     .element(page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }))
     .toBeVisible();
-  await expect.element(page.getByText(LONG_INSTANCE_NAME)).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: `Instance: ${LONG_INSTANCE_NAME}`,
+        exact: true,
+      })
+    )
+    .toBeVisible();
   await expect
     .element(page.getByText(LONG_DATABASE_NAME).first())
     .toBeVisible();
-  await expect.element(page.getByText("Database overview")).toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: "Database overview" }))
+    .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "Collapse sidebar" }))
     .toBeVisible();
@@ -456,7 +464,9 @@ test("admin header truncates a long instance name without wrapping and exposes t
   const instanceSelector = page.getByRole("button", {
     name: `Instance: ${longInstanceName}`,
   });
-  const instanceName = instanceSelector.getByText(longInstanceName);
+  const instanceName = instanceSelector
+    .locator('[data-querylane-slot="tooltip-trigger"]')
+    .filter({ hasText: longInstanceName });
   const rolesBreadcrumb = page
     .getByRole("navigation", { name: "Breadcrumb" })
     .getByText("Roles");
@@ -479,14 +489,16 @@ test("admin header truncates a long instance name without wrapping and exposes t
     rolesElement.getBoundingClientRect().left
   );
   expect(
-    instanceNameElement.closest('[data-slot="tooltip-trigger"]')
+    instanceNameElement.closest('[data-querylane-slot="tooltip-trigger"]')
   ).toBeInstanceOf(HTMLElement);
 
   await instanceName.hover();
   await expect.element(page.getByText(longInstanceName)).toHaveCount(2);
   await expect
     .element(
-      page.locator('[data-slot="tooltip-content"]').getByText(longInstanceName)
+      page
+        .locator('[data-querylane-slot="tooltip-content"]')
+        .getByText(longInstanceName)
     )
     .toBeVisible();
 });
@@ -495,6 +507,12 @@ test("command palette opens over the layout and restores focus on dismissal", as
   await renderAdminShell();
 
   const trigger = page.getByRole("button", { name: "Search or jump to" });
+  await expect
+    .element(trigger)
+    .toHaveAttribute(
+      "aria-keyshortcuts",
+      navigator.platform.startsWith("Mac") ? "Meta+K" : "Control+K"
+    );
   await trigger.click();
 
   const dialog = page.getByRole("dialog", { name: "Search or jump to" });
@@ -550,7 +568,9 @@ test("admin header instance selector uses a rich empty state with a create actio
   await expect
     .element(page.getByRole("link", { name: "Create instance" }))
     .toBeVisible();
-  expect(document.querySelector('[data-slot="empty"]')).not.toBeNull();
+  expect(
+    document.querySelector('[data-querylane-slot="empty"]')
+  ).not.toBeNull();
 });
 
 test("admin header routes unreadable credentials to credential recovery", async () => {
@@ -581,7 +601,7 @@ test("admin header keeps the disabled register instance tooltip open while hover
 
   await page.getByRole("button", { name: INSTANCE_SELECTOR_NAME }).click();
   const registerInstanceItem = page
-    .locator('[data-slot="command-item"]')
+    .locator('[data-querylane-slot="command-item"]')
     .filter({ hasText: "Register instance" });
   await expect
     .element(registerInstanceItem)
@@ -591,7 +611,7 @@ test("admin header keeps the disabled register instance tooltip open while hover
     .toHaveAttribute("aria-selected", "false");
 
   const tooltipTrigger = page
-    .locator("[data-base-ui-tooltip-trigger]")
+    .locator("[data-querylane-slot=tooltip-trigger]")
     .filter({ hasText: "Register instance" });
   await expect.element(tooltipTrigger).toBeAttached();
   await tooltipTrigger.hover();
@@ -606,4 +626,37 @@ test("admin header keeps the disabled register instance tooltip open while hover
   });
 
   await expect.element(tooltip).toBeVisible();
+});
+
+test("the real command palette opens and closes with its platform shortcut", async () => {
+  await renderAdminShell();
+  const trigger = page.getByRole("button", { name: "Search or jump to" });
+  const shortcut = navigator.platform.startsWith("Mac")
+    ? "Meta+k"
+    : "Control+k";
+  await trigger.focus();
+  await trigger.press(shortcut);
+  const palette = page.getByRole("dialog", { name: "Search or jump to" });
+  await expect.element(palette).toBeVisible();
+  await palette
+    .getByRole("combobox", {
+      name: "Search tables, screens, roles, or saved queries",
+    })
+    .press(shortcut);
+  await expect.element(palette).not.toBeVisible();
+  await expect.element(trigger).toBeFocused();
+});
+
+test("an unrelated modal pauses the palette opener", async () => {
+  await renderAdminShell();
+  await page.locator("body").press("Shift+?");
+  const help = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  await expect.element(help).toBeVisible();
+  await page
+    .locator("body")
+    .press(navigator.platform.startsWith("Mac") ? "Meta+k" : "Control+k");
+  await expect.element(help).toBeVisible();
+  await expect
+    .element(page.getByRole("dialog", { name: "Search or jump to" }))
+    .not.toBeVisible();
 });

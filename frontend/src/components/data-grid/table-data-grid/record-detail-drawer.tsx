@@ -1,5 +1,6 @@
+import { parseNumber } from "@ui-sdk/core/number";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type { ChangeEvent, KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 import { RecordField } from "@/components/data-grid/table-data-grid/record-field";
 import {
   InputGroup,
@@ -22,16 +23,11 @@ import type {
   TableResultColumn,
 } from "@/protogen/querylane/console/v1alpha1/table_data_pb";
 
+const DIGITS_PATTERN = /^\p{Decimal_Number}*$/u;
+
 function clampRowNumber(rowNumber: number, rowCount: number) {
   const maxRowNumber = Math.max(rowCount, 1);
   return Math.min(Math.max(rowNumber, 1), maxRowNumber);
-}
-
-function keepDigitsOnly(event: ChangeEvent<HTMLInputElement>) {
-  const digitsOnly = event.currentTarget.value.replaceAll(/\D/gu, "");
-  if (event.currentTarget.value !== digitsOnly) {
-    event.currentTarget.value = digitsOnly;
-  }
 }
 
 function RowNumberNavigator({
@@ -63,8 +59,11 @@ function RowNumberNavigator({
   }
 
   function commitDraftRowNumber(input: HTMLInputElement) {
-    const parsed = Number.parseInt(input.value, 10);
-    if (Number.isNaN(parsed)) {
+    const locale = input.ownerDocument.defaultView?.navigator.language;
+    const parsed = DIGITS_PATTERN.test(input.value)
+      ? parseNumber(input.value, locale)
+      : null;
+    if (parsed === null || !Number.isSafeInteger(parsed)) {
       input.value = currentRowNumber;
       return;
     }
@@ -108,9 +107,12 @@ function RowNumberNavigator({
         onBlur={(event) => {
           commitDraftRowNumber(event.currentTarget);
         }}
-        onChange={keepDigitsOnly}
         onKeyDown={handleRowNumberKeyDown}
-        pattern="[0-9]*"
+        onValueChange={(value, details) => {
+          if (!DIGITS_PATTERN.test(value)) {
+            details.cancel();
+          }
+        }}
         presentation="identifier"
         type="text"
       />
@@ -182,11 +184,10 @@ function RecordDetailDrawer({
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
         className="flex flex-col"
+        data-agent-hidden={true}
         presentation="detail"
         side="right"
-        // Registry sheets cap at sm:max-w-sm; record details need a wide
-        // drawer, and `ui/` must stay native shadcn output, so the width
-        // override lives here.
+        // Record details use the app-owned wide sheet variant.
         width="detail"
       >
         <SheetHeader presentation="record-drawer">

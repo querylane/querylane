@@ -1,5 +1,6 @@
 "use client";
 
+import { useShortcutHint } from "@ui-sdk/react/shortcuts";
 import { useEffect, useRef, useState } from "react";
 import {
   Sheet,
@@ -9,16 +10,13 @@ import {
   SheetTitle,
 } from "@/components/querylane-ui/sheet";
 import { KeyboardShortcutRegistrationContext } from "@/hooks/use-keyboard-shortcut";
+import { useUiShortcut as useShortcut } from "@/hooks/use-ui-shortcut";
 import {
   KEYBOARD_SHORTCUTS,
-  type KeyboardShortcutBinding,
-  type KeyboardShortcutDefinition,
   type KeyboardShortcutGroup,
-  type KeyboardShortcutId,
   type KeyboardShortcutScope,
-  type KeyboardShortcutStroke,
+  keyboardShortcutBindingKey,
 } from "@/lib/keyboard-shortcut-registry";
-import { isNonEmptyString } from "@/lib/value-guards";
 
 const SHORTCUT_GROUPS: readonly KeyboardShortcutGroup[] = [
   "General",
@@ -27,19 +25,6 @@ const SHORTCUT_GROUPS: readonly KeyboardShortcutGroup[] = [
   "Data grid",
 ];
 const KEYBOARD_SHORTCUT_CHORD_TIMEOUT_MS = 1000;
-
-function isTextEntryTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) {
-    return false;
-  }
-  const contentEditable = target.closest("[contenteditable]");
-  return Boolean(
-    isNonEmptyString(target.closest("input, textarea, select"))
-      ? target.closest("input, textarea, select")
-      : contentEditable &&
-          contentEditable.getAttribute("contenteditable") !== "false"
-  );
-}
 
 function resolveKeyboardShortcutScope(
   target: EventTarget | null
@@ -53,189 +38,51 @@ function resolveKeyboardShortcutScope(
   return scope === "editor" || scope === "grid" ? scope : "global";
 }
 
-interface KeyboardShortcutInput {
-  alt: boolean;
-  key: string;
-  primary: boolean;
-  shift: boolean;
-}
+// The SDK owns key matching, input/IME guards, modal-layer priority and cleanup.
+// Only the app's two-stroke navigation sequence needs a small adapter.
+const CHORD_PREFIXES = [
+  ...new Set(
+    KEYBOARD_SHORTCUTS.flatMap((shortcut) => {
+      const prefixes: string[] = [];
+      if (shortcut.kind === "handled") {
+        for (const binding of shortcut.bindings) {
+          if (binding.length > 1) {
+            prefixes.push(keyboardShortcutBindingKey(binding.slice(0, -1)));
+          }
+        }
+      }
+      return prefixes;
+    })
+  ),
+];
 
-function keyboardShortcutInputFromEvent(
-  event: KeyboardEvent
-): KeyboardShortcutInput {
-  return {
-    alt: event.altKey,
-    key: event.key,
-    primary: event.metaKey || event.ctrlKey,
-    shift: event.shiftKey,
-  };
-}
-
-function matchesKeyboardShortcutStroke(
-  input: KeyboardShortcutInput,
-  stroke: KeyboardShortcutStroke
-): boolean {
-  return (
-    input.key.toLowerCase() === stroke.key.toLowerCase() &&
-    input.primary === Boolean(stroke.primary) &&
-    input.shift === Boolean(stroke.shift) &&
-    !input.alt
-  );
-}
-
-function bindingMatchesPrefix(
-  binding: KeyboardShortcutBinding,
-  inputs: readonly KeyboardShortcutInput[]
-): boolean {
-  if (binding.length < inputs.length) {
-    return false;
-  }
-  return inputs.every((input, index) => {
-    const stroke = binding[index];
-    return stroke ? matchesKeyboardShortcutStroke(input, stroke) : false;
-  });
-}
-
-type HandledKeyboardShortcut = Extract<
-  (typeof KEYBOARD_SHORTCUTS)[number],
-  { kind: "handled" }
->;
-
-type KeyboardShortcutResolution =
-  | { shortcut: HandledKeyboardShortcut; status: "exact" }
-  | { status: "prefix" }
-  | null;
-
-interface PendingKeyboardShortcut {
+interface PendingChord {
+  event: KeyboardEvent;
   expiresAt: number;
-  inputs: readonly KeyboardShortcutInput[];
+  prefix: string;
 }
 
-type KeyboardShortcutEventResolution =
-  | { pending: PendingKeyboardShortcut; status: "prefix" }
-  | { shortcut: HandledKeyboardShortcut; status: "exact" }
-  | { status: "none" };
-
-function shortcutIsAvailableAtScope(
-  shortcut: KeyboardShortcutDefinition,
-  scope: KeyboardShortcutScope
-): boolean {
-  return shortcut.scope === "global" || shortcut.scope === scope;
-}
-
-function availableKeyboardShortcuts(
-  handlers: ReadonlyMap<KeyboardShortcutId, () => void>,
-  scope: KeyboardShortcutScope
-): HandledKeyboardShortcut[] {
-  return KEYBOARD_SHORTCUTS.filter(
-    (shortcut): shortcut is HandledKeyboardShortcut =>
-      shortcut.kind === "handled" &&
-      shortcutIsAvailableAtScope(shortcut, scope) &&
-      (shortcut.id === "help.open" || handlers.has(shortcut.id))
-  );
-}
-
-function resolveKeyboardShortcut(
-  inputs: readonly KeyboardShortcutInput[],
-  shortcuts: readonly HandledKeyboardShortcut[]
-): KeyboardShortcutResolution {
-  for (const shortcut of shortcuts) {
-    const exactBinding = shortcut.bindings.find(
-      (binding) =>
-        binding.length === inputs.length &&
-        bindingMatchesPrefix(binding, inputs)
-    );
-    if (exactBinding) {
-      return { shortcut, status: "exact" };
-    }
-  }
-  const hasPrefix = shortcuts.some((shortcut) =>
-    shortcut.bindings.some(
-      (binding) =>
-        binding.length > inputs.length && bindingMatchesPrefix(binding, inputs)
-    )
-  );
-  return hasPrefix ? { status: "prefix" } : null;
-}
-
-function activePendingInputs(
-  pending: PendingKeyboardShortcut | undefined
-): readonly KeyboardShortcutInput[] {
-  if (!pending) {
-    return [];
-  }
-  return pending.expiresAt >= Date.now() ? pending.inputs : [];
-}
-
-function resolveKeyboardShortcutEvent({
-  event,
-  handlers,
-  pending,
+function ChordPrefix({
+  active,
+  onStart,
+  prefix,
 }: {
-  event: KeyboardEvent;
-  handlers: ReadonlyMap<KeyboardShortcutId, () => void>;
-  pending: PendingKeyboardShortcut | undefined;
-}): KeyboardShortcutEventResolution {
-  if (event.isComposing || event.repeat) {
-    return { status: "none" };
-  }
-  const input = keyboardShortcutInputFromEvent(event);
-  if (isTextEntryTarget(event.target) && !input.primary) {
-    return { status: "none" };
-  }
-
-  const availableShortcuts = availableKeyboardShortcuts(
-    handlers,
-    resolveKeyboardShortcutScope(event.target)
-  );
-  const pendingInputs = activePendingInputs(pending);
-  const sequence = [...pendingInputs, input];
-  const sequenceResolution = resolveKeyboardShortcut(
-    sequence,
-    availableShortcuts
-  );
-  const resolution =
-    sequenceResolution ?? resolveKeyboardShortcut([input], availableShortcuts);
-  if (!resolution) {
-    return { status: "none" };
-  }
-  if (resolution.status === "prefix") {
-    return {
-      pending: {
-        expiresAt: Date.now() + KEYBOARD_SHORTCUT_CHORD_TIMEOUT_MS,
-        inputs: sequenceResolution ? sequence : [input],
-      },
-      status: "prefix",
-    };
-  }
-  return resolution;
-}
-
-function pendingAfterResolution(
-  resolution: KeyboardShortcutEventResolution
-): PendingKeyboardShortcut | undefined {
-  return resolution.status === "prefix" ? resolution.pending : undefined;
-}
-
-function executeKeyboardShortcut({
-  event,
-  handlers,
-  onOpenHelp,
-  shortcut,
-}: {
-  event: KeyboardEvent;
-  handlers: ReadonlyMap<KeyboardShortcutId, () => void>;
-  onOpenHelp: (scope: KeyboardShortcutScope) => void;
-  shortcut: HandledKeyboardShortcut;
+  active: () => boolean;
+  onStart: (event: KeyboardEvent, prefix: string) => void;
+  prefix: string;
 }) {
-  if (shortcut.id === "help.open") {
-    onOpenHelp(resolveKeyboardShortcutScope(event.target));
-    return;
-  }
-  handlers.get(shortcut.id)?.();
+  useShortcut(
+    prefix,
+    (event) => {
+      onStart(event, prefix);
+    },
+    { when: active }
+  );
+  return null;
 }
 
 function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
+  const modifier = useShortcutHint("mod");
   return (
     <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
       {keys.map((key) => (
@@ -243,7 +90,7 @@ function KeyboardShortcutKeys({ keys }: { keys: readonly string[] }) {
           className="flex min-w-6 items-center justify-center rounded-md border bg-muted px-1.5 py-1 font-mono text-(length:--text-label-sm) text-muted-foreground shadow-xs"
           key={key}
         >
-          {key}
+          {key === "⌘/Ctrl" ? modifier.text : key}
         </kbd>
       ))}
     </span>
@@ -316,58 +163,72 @@ function KeyboardShortcutsProvider({
 }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpScope, setHelpScope] = useState<KeyboardShortcutScope>("global");
-  const handlersRef = useRef(new Map<KeyboardShortcutId, () => void>());
+  const prefixesRef = useRef(new Map<string, number>());
+  const pendingRef = useRef<PendingChord | undefined>(undefined);
 
-  function register(id: KeyboardShortcutId, handler: () => void) {
-    handlersRef.current.set(id, handler);
+  function registerPrefix(prefix: string) {
+    prefixesRef.current.set(prefix, (prefixesRef.current.get(prefix) ?? 0) + 1);
     return () => {
-      if (handlersRef.current.get(id) === handler) {
-        handlersRef.current.delete(id);
+      const remaining = (prefixesRef.current.get(prefix) ?? 1) - 1;
+      if (remaining > 0) {
+        prefixesRef.current.set(prefix, remaining);
+      } else {
+        prefixesRef.current.delete(prefix);
+        pendingRef.current = undefined;
       }
     };
   }
 
-  useEffect(function listenForKeyboardShortcuts() {
-    const shortcutState: { pending: PendingKeyboardShortcut | undefined } = {
-      pending: undefined,
+  function isChordPending(prefix: string) {
+    return (
+      pendingRef.current?.prefix === prefix &&
+      pendingRef.current.expiresAt >= Date.now()
+    );
+  }
+
+  function startChord(event: KeyboardEvent, prefix: string) {
+    pendingRef.current = {
+      event,
+      prefix,
+      expiresAt: Date.now() + KEYBOARD_SHORTCUT_CHORD_TIMEOUT_MS,
     };
+  }
 
-    function openHelp(scope: KeyboardShortcutScope) {
-      setHelpScope(scope);
+  useShortcut(
+    "shift+?",
+    (event) => {
+      setHelpScope(resolveKeyboardShortcutScope(event.target));
       setHelpOpen(true);
-    }
+    },
+    { description: "Show keyboard shortcuts" }
+  );
 
-    function handleKeyDown(event: KeyboardEvent) {
-      const resolution = resolveKeyboardShortcutEvent({
-        event,
-        handlers: handlersRef.current,
-        pending: shortcutState.pending,
-      });
-      shortcutState.pending = pendingAfterResolution(resolution);
-      if (resolution.status === "none") {
-        return;
+  useEffect(function resetChordAfterNextStroke() {
+    function reset(event: KeyboardEvent) {
+      // SDK handlers run on document before this window listener. A second
+      // stroke consumes the prefix even when no command matched.
+      if (event !== pendingRef.current?.event) {
+        pendingRef.current = undefined;
       }
-
-      event.preventDefault();
-      if (resolution.status === "prefix") {
-        return;
-      }
-      executeKeyboardShortcut({
-        event,
-        handlers: handlersRef.current,
-        onOpenHelp: openHelp,
-        shortcut: resolution.shortcut,
-      });
     }
-
-    globalThis.window.addEventListener("keydown", handleKeyDown);
+    globalThis.window.addEventListener("keydown", reset);
     return () => {
-      globalThis.window.removeEventListener("keydown", handleKeyDown);
+      globalThis.window.removeEventListener("keydown", reset);
     };
   }, []);
 
   return (
-    <KeyboardShortcutRegistrationContext value={register}>
+    <KeyboardShortcutRegistrationContext
+      value={{ registerPrefix, isChordPending }}
+    >
+      {CHORD_PREFIXES.map((prefix) => (
+        <ChordPrefix
+          active={() => prefixesRef.current.has(prefix)}
+          key={prefix}
+          onStart={startChord}
+          prefix={prefix}
+        />
+      ))}
       {children}
       <KeyboardShortcutHelpSheet
         activeScope={helpScope}

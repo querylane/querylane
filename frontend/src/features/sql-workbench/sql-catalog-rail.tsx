@@ -526,8 +526,8 @@ function SqlCatalogRail(actions: CatalogRailActions) {
           <Input
             aria-label="Filter tables and views"
             className="h-7"
-            onChange={(event) => {
-              setQuery(event.target.value);
+            onValueChange={(value) => {
+              setQuery(value);
             }}
             placeholder="Filter…"
             presentation="search-clearable"

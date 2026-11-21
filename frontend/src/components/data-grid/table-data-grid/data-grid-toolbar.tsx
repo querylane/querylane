@@ -189,7 +189,7 @@ function DataGridToolbar({
         "@container/data-grid-toolbar relative flex min-h-9 flex-col justify-center gap-2",
         className
       )}
-      data-slot="data-grid-popover-boundary"
+      data-querylane-slot="data-grid-popover-boundary"
       ref={setPopoverBoundary}
     >
       <div className="flex flex-wrap items-center gap-2">

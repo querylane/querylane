@@ -29,7 +29,7 @@ export function ChartRangePicker({
   return (
     <div
       className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5"
-      data-slot="button-group"
+      data-querylane-slot="button-group"
     >
       {options.map((option) => {
         const isActive = option.hours === range.hours;

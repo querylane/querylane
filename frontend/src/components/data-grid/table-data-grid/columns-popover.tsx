@@ -169,6 +169,7 @@ function ColumnsPopover({
                 {isLastVisible ? (
                   <Tooltip>
                     <TooltipTrigger
+                      aria-label={`${column.columnName} must remain visible`}
                       render={
                         <span className="flex min-w-0 flex-1 cursor-not-allowed" />
                       }

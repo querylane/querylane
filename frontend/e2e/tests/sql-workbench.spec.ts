@@ -1,6 +1,9 @@
-import { toJson } from "@bufbuild/protobuf";
+import { fromJsonString, toJson } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { SchemaService } from "../../src/protogen/querylane/console/v1alpha1/schema_pb";
 import {
+  type ExecuteQueryRequest,
+  ExecuteQueryRequestSchema,
   ExecuteQueryResponseSchema,
   SQLService,
 } from "../../src/protogen/querylane/console/v1alpha1/sql_pb";
@@ -13,10 +16,13 @@ import {
 import { connectStreamBody } from "../visual/serve-service";
 import { expect, softScreenshot, test } from "./base";
 import { mockRpc } from "./helpers";
+import { readRpcRequestBody } from "./read-rpc-request-body";
 
 const SHIPMENTS_NODE_NAME = /^(?:Inspect )?Seq Scan\b.*\bshipments\b/u;
 
+const CONNECT_ENVELOPE_HEADER_BYTES = 5;
 const RUN_BUTTON_NAME_RE = /^Run/u;
+const DEFAULT_SCHEMA_NAME_RE = /^Default schema/u;
 
 test("storage quota keeps rejected SQL work intact and warns that new drafts are in memory", async ({
   page,
@@ -89,9 +95,20 @@ for (const routeName of ["workbench", "sql"]) {
   }) => {
     await mockConsoleResources(page);
     await mockRpc(page, "SQLService/ValidateQuery", {});
+    const executions: ExecuteQueryRequest[] = [];
     await page.route(
       `**/${SQLService.typeName}/${SQLService.method.executeQuery.name}`,
       async (route) => {
+        const body = route.request().postDataBuffer();
+        if (!body) {
+          throw new Error("Expected a framed SQL execution request");
+        }
+        executions.push(
+          fromJsonString(
+            ExecuteQueryRequestSchema,
+            body.subarray(CONNECT_ENVELOPE_HEADER_BYTES).toString("utf8")
+          )
+        );
         await route.fulfill({
           body: connectStreamBody(
             workbenchQueryResponses().map((message) =>
@@ -104,6 +121,15 @@ for (const routeName of ["workbench", "sql"]) {
     );
     const url = `${DATABASE_URL}/${routeName}`;
     await page.goto(url);
+    const limit = page.getByRole("combobox", {
+      name: "Row limit",
+      exact: true,
+    });
+    await expect(limit).toContainText("1,000 rows");
+    await limit.click();
+    await page.getByRole("option", { name: "5,000 rows", exact: true }).click();
+    await expect(limit).toContainText("5,000 rows");
+    await expect(limit).toBeFocused();
     const editor = page.getByRole("textbox", { name: "SQL editor" });
     await editor.fill("SELECT ref, carrier, eta FROM shipping.shipments;");
     // Unlike the retired editor, the shipped workbench exposes its working
@@ -122,6 +148,7 @@ for (const routeName of ["workbench", "sql"]) {
       page.getByText("ML-2026-048292", { exact: true })
     ).toBeVisible();
     await expect(page.getByText("2 rows", { exact: true })).toBeVisible();
+    expect(executions).toEqual([expect.objectContaining({ rowLimit: 5000 })]);
     await expect(page).toHaveURL(url);
     await softScreenshot(page, `${routeName}-current-workbench`);
   });
@@ -319,4 +346,77 @@ test("phone navigation dismisses the sidebar and plan focus restores keyboard fo
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Focus plan" })).toBeFocused();
+});
+
+test("schema search retries its failed query and applies context without executing SQL", async ({
+  page,
+  checkAccessibility,
+}) => {
+  await mockConsoleResources(page);
+  const filters: string[] = [];
+  let executions = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/ExecuteQuery")) {
+      executions += 1;
+    }
+  });
+  await page.route(
+    `**/${SchemaService.typeName}/${SchemaService.method.listSchemas.name}`,
+    async (route) => {
+      const request = readRpcRequestBody(route.request().postDataJSON());
+      if (request["pageSize"] !== 50) {
+        await route.fallback();
+        return;
+      }
+      const filter =
+        typeof request["filter"] === "string" ? request["filter"] : "";
+      filters.push(filter);
+      if (filters.length === 2) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            code: "unavailable",
+            message: "Schema search temporarily unavailable",
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          schemas: [
+            {
+              name: `${DATABASE_URL.slice(1)}/schemas/public`,
+              displayName: "public",
+              isSystemSchema: false,
+            },
+          ],
+        }),
+      });
+    }
+  );
+  await page.goto(`${DATABASE_URL}/workbench`);
+  const trigger = page.getByRole("button", { name: DEFAULT_SCHEMA_NAME_RE });
+  await trigger.click();
+  const search = page.getByRole("combobox", { name: "Search schemas…" });
+  const popup = page.getByRole("dialog").filter({ has: search });
+  await expect(
+    popup.getByRole("option", { name: "public", exact: true })
+  ).toBeVisible();
+  await search.fill("public");
+  await expect(
+    popup.getByRole("status", { name: "Schema search status" })
+  ).toHaveText("Couldn't load schemas.");
+  await popup.getByRole("button", { name: "Retry schema search" }).click();
+  await expect(
+    popup.getByRole("status", { name: "Schema search status" })
+  ).toHaveText("1 schema loaded.");
+  await checkAccessibility();
+  await popup.getByRole("option", { name: "public", exact: true }).click();
+  await expect(popup).not.toBeVisible();
+  await expect(trigger).toContainText("public");
+  await expect(trigger).toBeFocused();
+  expect(filters).toEqual(["", 'name:"public"', 'name:"public"']);
+  expect(executions).toBe(0);
 });

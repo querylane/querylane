@@ -51,7 +51,7 @@ function EmptyStatePanel({
   return (
     <Empty
       className={cn("min-h-44", className)}
-      data-slot="empty-state-panel"
+      data-querylane-slot="empty-state-panel"
       presentation={presentation}
       {...props}
     >

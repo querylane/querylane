@@ -20,7 +20,7 @@ function TextPreview({
   raw,
   rawType,
 }: TextPreviewProps) {
-  const { onOpenChange, open, openDialog } = useDataValueDialogState();
+  const { mounted, onOpenChange, open, openDialog } = useDataValueDialogState();
   const preview = truncateForAttribute(
     raw.replaceAll(/\s+/gu, " "),
     TEXT_PREVIEW_MAX_LENGTH
@@ -53,12 +53,13 @@ function TextPreview({
       >
         <Maximize2 className="size-3" />
       </Button>
-      {open ? (
+      {mounted ? (
         <DataValuePreviewDialog
           columnName={columnName}
           format="text"
           isTruncated={isTruncated}
           onOpenChange={onOpenChange}
+          open={open}
           raw={raw}
           rawType={rawType}
         >

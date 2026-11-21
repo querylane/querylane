@@ -1,6 +1,5 @@
-"use client";
-
 import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "@ui-sdk/react/toast";
 import {
   ChevronRight,
   Database,
@@ -15,7 +14,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { toast } from "sonner";
 import { AppInlineError } from "@/components/app-error-view";
 import { AsyncSectionState } from "@/components/async-section-state";
 import { ConfigManagedNotice } from "@/components/config-managed-notice";
@@ -43,16 +41,12 @@ import { StatCell, StatStrip } from "@/components/console-pages/stat-strip";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/querylane-ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DataTable,
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
-import {
-  type DataTableFilterFacet,
-  DataTableFilterToolbar,
-} from "@/components/ui/data-table-filter-toolbar";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { DataTable, SortableHeader } from "@/components/ui/data-table";
+import { DataTableFilterToolbar } from "@/components/ui/data-table-filter-toolbar";
+import type { DataTableFilterFacet } from "@/components/ui/data-table-filter-toolbar-types";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useIsConfigManagedInstances } from "@/hooks/api/console";
 import {

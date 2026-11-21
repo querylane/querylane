@@ -381,9 +381,9 @@ export default defineConfig({
       },
     },
     {
-      // Querylane's owned variants compose the unmodified registry components.
+      // Both primitive layers are authored UI; consumers cannot redefine appearance.
       // Consumers still get every rule; authors may define appearance here.
-      files: ["src/components/querylane-ui/**"],
+      files: ["src/components/querylane-ui/**", "src/components/ui/**"],
       rules: {
         "shadcn/no-restyle": "off",
         "shadcn/require-static-classes": "off",
@@ -400,7 +400,6 @@ export default defineConfig({
     "playwright-report/**",
     "test-results/**",
     "src/protogen/**",
-    "src/components/ui/**",
     "**/*.gen.ts",
     "**/*.gen.tsx",
   ],

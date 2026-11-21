@@ -1,9 +1,9 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { beforeEach, expect, rs, test } from "@rstest/core";
 import { screen } from "@testing-library/dom";
 import type { ReactNode } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { BackendDatabaseExtensionsPage } from "@/components/console-pages/database-extensions-page";
 import { BackendDatabasePage } from "@/components/console-pages/database-page";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
@@ -201,7 +201,7 @@ const extensionsPage = (
 );
 
 function cardRect(label: string) {
-  const card = screen.getByText(label).closest('[data-slot="card"]');
+  const card = screen.getByText(label).closest('[data-querylane-slot="card"]');
   if (!(card instanceof HTMLElement)) {
     throw new TypeError(`Expected ${label} card`);
   }
@@ -580,10 +580,7 @@ test("disabled Insights explains why statistics are unavailable", async () => {
 
   const button = page.getByRole("button", { name: "Insights", exact: true });
   await expect.element(button).toBeDisabled();
-  await page
-    .locator("[data-base-ui-tooltip-trigger]")
-    .filter({ has: button })
-    .hover();
+  await button.hover();
   await expect
     .element(
       page.getByText(
@@ -643,7 +640,7 @@ test("partial query insights use the full drawer content width", async () => {
 
   const topQueriesCard = screen
     .getByText("Top queries by total time")
-    .closest('[data-slot="card"]');
+    .closest('[data-querylane-slot="card"]');
   if (!(topQueriesCard instanceof HTMLElement)) {
     throw new TypeError("Expected top queries card");
   }

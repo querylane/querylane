@@ -9,7 +9,12 @@ import {
 } from "@rstest/core";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createAgent } from "@ui-sdk/react/agent";
 import { ViewDetail } from "@/features/data-explorer/explorer-view-detail";
+import {
+  requestAgentApproval,
+  useAgentAccessStore,
+} from "@/features/user-settings/agent-access";
 import {
   ListTableColumnsResponseSchema,
   ListTableConstraintsResponseSchema,
@@ -398,3 +403,43 @@ function MockTableDataGrid({
     ? children({ grid, lastFetchedLabel: "Last fetched just now" })
     : grid;
 }
+
+test("both materialized-view refresh modes remain human-operated", async () => {
+  const user = userEvent.setup();
+  const agent = createAgent({
+    allow: (action, { signal }) => requestAgentApproval(action, signal),
+  });
+  useAgentAccessStore.getState().setEnabled(true);
+  try {
+    render(
+      <ViewDetail
+        databaseId="app"
+        instanceId="prod"
+        schemaName="public"
+        view={createProto(ViewSchema, {
+          name: "instances/prod/databases/app/schemas/public/views/daily_revenue",
+          displayName: "daily_revenue",
+          isPopulated: true,
+          viewType: View_ViewType.MATERIALIZED,
+        })}
+        viewName="daily_revenue"
+      />
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Refresh materialized view" })
+    );
+    await Promise.all(
+      ["Refresh normally", "Refresh concurrently"].map(async (label) => {
+        expect(screen.getByRole("button", { name: label })).toBeTruthy();
+        const result = await agent.act({
+          steps: [{ ref: label, action: "press" }],
+        });
+        expect(result.ok).toBe(false);
+      })
+    );
+    expect(viewApi.refresh.mutateAsync).not.toHaveBeenCalled();
+    expect(useAgentAccessStore.getState().approval).toBeNull();
+  } finally {
+    useAgentAccessStore.getState().setEnabled(false);
+  }
+});

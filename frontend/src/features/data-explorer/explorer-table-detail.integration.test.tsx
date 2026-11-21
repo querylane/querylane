@@ -415,7 +415,9 @@ function getTableRowFor(text: string) {
 }
 
 function getIndexSummaryStrip() {
-  const strip = document.querySelector('[data-slot="index-summary-strip"]');
+  const strip = document.querySelector(
+    '[data-querylane-slot="index-summary-strip"]'
+  );
   if (!strip) {
     throw new Error("Expected the index summary strip to render.");
   }
@@ -423,7 +425,9 @@ function getIndexSummaryStrip() {
 }
 
 function getSearchEmptyState() {
-  const emptyState = document.querySelector('[data-slot="search-empty-state"]');
+  const emptyState = document.querySelector(
+    '[data-querylane-slot="search-empty-state"]'
+  );
   if (!emptyState) {
     throw new Error("Expected the filtered-empty state to render.");
   }
@@ -590,8 +594,9 @@ describe("table detail definition document", () => {
     const reproduceHeading = screen.getByRole("heading", {
       name: "Reproduce locally",
     });
-    const reproduceCard =
-      reproduceHeading.closest<HTMLElement>('[data-slot="card"]');
+    const reproduceCard = reproduceHeading.closest<HTMLElement>(
+      '[data-querylane-slot="card"]'
+    );
     if (!reproduceCard) {
       throw new Error("Expected the reproduce locally card to render.");
     }
@@ -612,7 +617,7 @@ describe("table detail definition document", () => {
     });
     expect(
       reproduceHeading
-        .closest('[data-slot="card-header"]')
+        .closest('[data-querylane-slot="card-header"]')
         ?.contains(copyAllSteps)
     ).toBe(true);
     const highlightedCommands = [
@@ -758,8 +763,8 @@ describe("table detail tab routing", () => {
     expect(
       screen
         .getByRole("tab", { name: COLUMNS_TAB_RE })
-        .hasAttribute("data-active")
-    ).toBe(true);
+        .getAttribute("aria-selected")
+    ).toBe("true");
 
     await user.click(screen.getByRole("tab", { name: INDEXES_TAB_RE }));
 

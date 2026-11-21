@@ -18,6 +18,7 @@ function useDataValueDialogState() {
   const setOpenDialogId = useContext(DataValueDialogSetterContext);
   const dialogId = useId();
   const [localOpen, setLocalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const open = setOpenDialogId ? openDialogId === dialogId : localOpen;
 
   useEffect(
@@ -34,6 +35,9 @@ function useDataValueDialogState() {
   );
 
   function openDialog() {
+    // Create SDK dialogs lazily, but keep an opened controller mounted while
+    // it closes so the SDK can restore focus. Unvisited cells stay lightweight.
+    setMounted(true);
     if (!setOpenDialogId) {
       setLocalOpen(true);
       return;
@@ -56,7 +60,7 @@ function useDataValueDialogState() {
     setOpenDialogId((current) => (current === dialogId ? null : current));
   }
 
-  return { onOpenChange, open, openDialog };
+  return { mounted, onOpenChange, open, openDialog };
 }
 
 export {

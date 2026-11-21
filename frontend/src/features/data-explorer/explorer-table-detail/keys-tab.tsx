@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/querylane-ui/badge";
-import {
-  type DataTableColumnDef,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { SortableHeader } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import {
   TABLE_KEY_KIND_LABELS,
   type TableKeyRow,

@@ -4,8 +4,8 @@ import {
   SectionCard,
   SummaryCard,
 } from "@/components/console-pages/console-layout";
-import type { DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import { useGetMetricsStorageStatsQuery } from "@/hooks/api/admin";
 import { formatRelativeTimestamp } from "@/lib/admin-ops";
 import { formatBytes } from "@/lib/console-resources";

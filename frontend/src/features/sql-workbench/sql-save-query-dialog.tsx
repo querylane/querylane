@@ -56,8 +56,8 @@ function SqlSaveQueryDialog({
               <Input
                 autoFocus={true}
                 id={nameId}
-                onChange={(event) => {
-                  setName(event.target.value);
+                onValueChange={(value) => {
+                  setName(value);
                 }}
                 placeholder="Slow orders by customer"
                 value={name}

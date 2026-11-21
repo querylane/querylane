@@ -1,16 +1,16 @@
-"use client"
+import type { ComponentProps, ReactNode } from "react";
 
-import type { ComponentProps } from "react"
-
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
-interface DisabledReasonButtonProps extends ComponentProps<typeof Button> {
-  disabledReason?: string | null
+interface DisabledReasonButtonProps
+  extends Omit<ComponentProps<typeof Button>, "children"> {
+  children?: ReactNode;
+  disabledReason?: string | null;
 }
 
 function DisabledReasonButton({
@@ -19,31 +19,26 @@ function DisabledReasonButton({
   disabledReason = null,
   ...props
 }: DisabledReasonButtonProps) {
-  if (!disabledReason) {
+  if (disabledReason === null || disabledReason === "") {
     return (
       <Button disabled={disabled} {...props}>
         {children}
       </Button>
-    )
+    );
   }
 
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          // Focusable wrapper: the inner button is disabled (not focusable), so
-          // tabIndex here lets keyboard users focus it to reveal the reason
-          // tooltip (base-ui wires aria-describedby to the trigger).
-          <span className="inline-flex cursor-not-allowed" tabIndex={0} />
+          <Button disabled={true} focusableWhenDisabled={true} {...props} />
         }
       >
-        <Button disabled {...props}>
-          {children}
-        </Button>
+        {children}
       </TooltipTrigger>
       <TooltipContent>{disabledReason}</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
-export { DisabledReasonButton }
+export { DisabledReasonButton };

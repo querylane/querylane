@@ -22,7 +22,10 @@ export function WizardPage({
   titleBadge,
 }: WizardPageProps) {
   return (
-    <div className={cn("flex flex-1 flex-col", className)}>
+    <div
+      className={cn("flex flex-1 flex-col", className)}
+      data-agent-hidden={true}
+    >
       <header className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">

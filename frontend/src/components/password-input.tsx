@@ -13,8 +13,9 @@ function PasswordInput({
   return (
     <div className="relative w-full min-w-0">
       <Input
-        className={className}
-        disabled={disabled}
+        className={className ?? ""}
+        data-agent-secret={true}
+        disabled={disabled ?? false}
         trailingAction={true}
         type={isVisible ? "text" : "password"}
         {...props}
@@ -23,7 +24,7 @@ function PasswordInput({
         aria-label={isVisible ? "Hide password" : "Show password"}
         aria-pressed={isVisible}
         className="absolute top-1/2 right-2 size-8 -translate-y-1/2"
-        disabled={disabled}
+        disabled={disabled ?? false}
         onClick={() => {
           setIsVisible((current) => !current);
         }}

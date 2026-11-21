@@ -284,9 +284,11 @@ test.describe("triggers", () => {
       table: "shipment_event",
     });
 
-    const footer = page.locator('[data-slot="pagination-footer"]').filter({
-      has: page.getByRole("combobox", { name: "Triggers per page" }),
-    });
+    const footer = page
+      .locator('[data-querylane-slot="pagination-footer"]')
+      .filter({
+        has: page.getByRole("combobox", { name: "Triggers per page" }),
+      });
     await expect(footer.getByText("Page 1 of 2")).toBeVisible();
     await expect(footer).toHaveScreenshot("table-trigger-pagination.png");
   });
@@ -325,7 +327,7 @@ test.describe("definition", () => {
     });
 
     const reproduceCard = page
-      .locator('[data-slot="card"]')
+      .locator('[data-querylane-slot="card"]')
       .filter({
         has: page.getByRole("heading", { name: "Reproduce locally" }),
       })

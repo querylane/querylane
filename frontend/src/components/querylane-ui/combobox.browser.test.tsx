@@ -1,8 +1,8 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { getByRole } from "@testing-library/dom";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import {
   Combobox,
   ComboboxContent,
@@ -12,6 +12,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/querylane-ui/combobox";
+
 import { createComboboxItems } from "@/components/querylane-ui/combobox-items";
 
 interface DatabaseOption {
@@ -27,16 +28,12 @@ function AsyncDatabasePicker({
   onValueChange: (id: string | null) => void;
 }) {
   const items = createComboboxItems(options, {
-    getLabel: (database) => database.name,
-    getValue: (database) => database.id,
+    getLabel: (option) => option.name,
+    getValue: (option) => option.id,
   });
   return (
     <ScreenshotFrame>
-      <Combobox
-        autoHighlight={true}
-        items={items}
-        onValueChange={onValueChange}
-      >
+      <Combobox items={items} onValueChange={onValueChange}>
         <ComboboxTrigger aria-label="Pick database">
           Pick database
         </ComboboxTrigger>
@@ -45,7 +42,11 @@ function AsyncDatabasePicker({
           <ComboboxEmpty>No databases found</ComboboxEmpty>
           <ComboboxList>
             {(database: DatabaseOption) => (
-              <ComboboxItem key={database.id} value={database.id}>
+              <ComboboxItem
+                key={database.id}
+                label={database.name}
+                value={database.id}
+              >
                 {database.name}
               </ComboboxItem>
             )}
@@ -61,6 +62,9 @@ test("async results highlight after typing and duplicate labels retain distinct 
   const { rerender } = await render(
     <AsyncDatabasePicker onValueChange={onValueChange} options={[]} />
   );
+  await expect
+    .element(page.getByRole("combobox", { name: "Pick database" }))
+    .toHaveAttribute("aria-haspopup", "dialog");
   await page.getByRole("combobox", { name: "Pick database" }).click();
   const input = page.getByRole("combobox", { name: "Search databases" });
   await input.fill("reports");

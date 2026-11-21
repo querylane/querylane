@@ -1,6 +1,7 @@
 import { page } from "@rstest/browser";
-import { cleanup, render } from "@rstest/browser-react";
+import { cleanup } from "@rstest/browser-react";
 import { afterEach, expect, test } from "@rstest/core";
+import { render } from "@/__tests__/render-ui";
 import { Button } from "@/components/ui/button";
 import { SqlCodeBlock } from "./sql-code-block";
 

@@ -191,7 +191,7 @@ function seedOnboardingState() {
 }
 
 function setFieldValue(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), {
+  fireEvent.input(screen.getByLabelText(label), {
     target: { value },
   });
 }

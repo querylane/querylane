@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { DataTable } from "@/components/querylane-ui/data-table";
-import {
-  type DataTableColumnDef,
-  DataTableFilter,
-  SortableHeader,
-} from "@/components/ui/data-table";
+import { DataTableFilter, SortableHeader } from "@/components/ui/data-table";
+import type { DataTableColumnDef } from "@/components/ui/data-table-model";
 import {
   type ColumnRow,
   deriveColumnRows,

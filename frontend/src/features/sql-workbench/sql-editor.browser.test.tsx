@@ -1,7 +1,7 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import userEvent from "@testing-library/user-event";
+import { render } from "@/__tests__/render-ui";
 import { SqlEditor } from "@/features/sql-workbench/sql-editor";
 
 test.each([

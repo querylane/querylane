@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { AgentAccessIntegration } from "@/components/agent-access";
 import { AppErrorRedirectController } from "@/components/app-error-redirect-controller";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { BootGate } from "@/components/boot-gate";
@@ -8,15 +9,11 @@ import { UrlListColumnsProvider } from "@/components/list-columns-provider";
 import { NotFoundState } from "@/components/not-found-state";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { RouteErrorView } from "@/components/route-error-view";
+import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { initializeUiObservation } from "@/features/agent-drafts/ui-observation";
 import { DbProvider } from "@/lib/db-context";
 import { ThemeProvider } from "@/theme-provider";
-
-const Toaster = lazy(() =>
-  import("@/components/querylane-ui/sonner").then((module) => ({
-    default: module.Toaster,
-  }))
-);
 
 const LazyDatabaseLayout = lazy(() =>
   import("@/components/database-layout").then((module) => ({
@@ -24,32 +21,14 @@ const LazyDatabaseLayout = lazy(() =>
   }))
 );
 
-function DeferredToaster() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(function deferToasterMount() {
-    const timeout = globalThis.setTimeout(() => {
-      setMounted(true);
-    }, 0);
-    return () => {
-      globalThis.clearTimeout(timeout);
-    };
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
-  return (
-    <Suspense fallback={null}>
-      <Toaster />
-    </Suspense>
-  );
-}
-
 export function RootComponent() {
+  useEffect(function observeUiChanges() {
+    return initializeUiObservation();
+  }, []);
   return (
     <ThemeProvider defaultTheme="system">
       <TooltipProvider>
+        <AgentAccessIntegration />
         <RouteAnnouncer />
         <AppErrorRedirectController />
         <UrlListColumnsProvider>
@@ -59,7 +38,7 @@ export function RootComponent() {
             </DbProvider>
           </BootGate>
         </UrlListColumnsProvider>
-        <DeferredToaster />
+        <Toaster />
       </TooltipProvider>
     </ThemeProvider>
   );

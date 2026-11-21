@@ -14779,7 +14779,7 @@
     ],
     "oxlint": [
       {
-        "scope": ["src/components/querylane-ui/**"],
+        "scope": ["src/components/querylane-ui/**", "src/components/ui/**"],
         "rules": ["shadcn/no-restyle", "shadcn/require-static-classes"]
       }
     ]

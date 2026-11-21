@@ -53,7 +53,10 @@ function OrdinaryRoleTabs(props: RoleDetailViewProps) {
   return (
     <Tabs
       className="min-w-0"
-      onValueChange={(value: string) => {
+      onValueChange={(value: string | null) => {
+        if (value === null) {
+          return;
+        }
         if (isSection(value)) {
           setSection(value);
         }

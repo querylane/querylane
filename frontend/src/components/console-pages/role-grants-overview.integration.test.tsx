@@ -53,10 +53,14 @@ test("renders no-direct-grants prose as one description", () => {
 
   const panel = screen
     .getByText("No direct grants")
-    .closest("[data-slot='empty-state-panel']");
-  const description = panel?.querySelector("[data-slot='empty-description']");
+    .closest("[data-querylane-slot='empty-state-panel']");
+  const description = panel?.querySelector(
+    "[data-querylane-slot='empty-description']"
+  );
 
-  expect(panel?.querySelector("[data-slot='empty-content']")).toBeNull();
+  expect(
+    panel?.querySelector("[data-querylane-slot='empty-content']")
+  ).toBeNull();
   expect(description?.textContent?.replaceAll(/\s+/gu, " ").trim()).toBe(
     "This role has no explicit GRANTs on demo_ecommerce. It may still be reachable via the indirect paths below."
   );

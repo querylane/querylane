@@ -6,6 +6,7 @@ import {
   useLocation,
   useRouter,
 } from "@tanstack/react-router";
+import { useShortcutHint } from "@ui-sdk/react/shortcuts";
 import {
   ArrowLeftIcon,
   ChevronsUpDown,
@@ -438,6 +439,8 @@ function ExplorerRailContent({
           <SidebarMenuItem>
             <SidebarMenuButton
               disabled={!backLink}
+              nativeButton={!backLink}
+              role={backLink ? "link" : undefined}
               {...(backLink ? { render: renderNavLink(backLink, router) } : {})}
               variant="subtle"
             >
@@ -479,6 +482,8 @@ function renderSidebarNavigationItem({
     <SidebarMenuItem key={item.key}>
       <SidebarMenuButton
         disabled={item.isDisabled === true || !itemLinkProps}
+        nativeButton={!itemLinkProps}
+        role={itemLinkProps ? "link" : undefined}
         {...activeProps}
         {...renderProps}
         tooltip={`${sectionTitle} ${item.label}`}
@@ -659,9 +664,10 @@ function SidebarNavigationContent({
 }
 function SidebarSearchButton() {
   const { openPalette } = useCommandPalette();
+  const shortcut = useShortcutHint("mod+k");
   return (
     <Button
-      aria-keyshortcuts="Meta+K Control+K"
+      aria-keyshortcuts={shortcut.ariaKeyshortcuts}
       className="h-8 w-full justify-start"
       onClick={openPalette}
       presentation="sidebar-action"

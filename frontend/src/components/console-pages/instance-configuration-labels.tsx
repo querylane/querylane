@@ -1,5 +1,6 @@
 "use client";
 
+import type { ChangeSource } from "@ui-sdk/core";
 import { Plus } from "lucide-react";
 
 import { useId } from "react";
@@ -24,7 +25,7 @@ export function InstanceConfigurationLabels({
   rowErrors?: Record<string, string[]> | undefined;
   isConfigManaged: boolean;
   labels: InstanceLabelEntry[];
-  onChange: (labels: InstanceLabelEntry[]) => void;
+  onChange: (labels: InstanceLabelEntry[], source?: ChangeSource) => unknown;
 }) {
   const errorId = useId();
   const generalMessages = unassignedLabelMessages(error, rowErrors);
@@ -32,7 +33,7 @@ export function InstanceConfigurationLabels({
     <div className="mt-6 space-y-3 border-t pt-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-medium">Labels</h4>
+          <h2 className="text-sm font-medium">Labels</h2>
           <p className="text-xs text-muted-foreground">
             Key-value pairs for organizing and filtering instances.
           </p>
@@ -42,8 +43,8 @@ export function InstanceConfigurationLabels({
             data-instance-config-field={
               labels.length === 0 ? "labels" : undefined
             }
-            onClick={() => {
-              onChange([...labels, createLabelEntry()]);
+            onClick={(_event, details) => {
+              onChange([...labels, createLabelEntry()], details.source);
             }}
             size="sm"
             type="button"
@@ -65,18 +66,22 @@ export function InstanceConfigurationLabels({
               key={label.id}
               label={label}
               messages={rowErrors[label.id]}
-              onChange={(updated) => {
+              onChange={(updated, source) =>
                 onChange(
                   labels.map((entry) =>
                     entry.id === label.id ? updated : entry
-                  )
-                );
-              }}
+                  ),
+                  source
+                )
+              }
               onRemove={
                 isConfigManaged
                   ? undefined
-                  : () => {
-                      onChange(labels.filter((entry) => entry.id !== label.id));
+                  : (source) => {
+                      onChange(
+                        labels.filter((entry) => entry.id !== label.id),
+                        source
+                      );
                     }
               }
             />

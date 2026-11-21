@@ -15,14 +15,16 @@ import * as reactQueryActual from "@tanstack/react-query" with {
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "@ui-sdk/react/toast";
 import type { ReactNode } from "react";
 import { BackendInstancePage } from "@/components/console-pages/instance-page";
+import { Toaster } from "@/components/ui/toast";
 import type {
   PostgresDatabase,
   PostgresInstance,
@@ -606,8 +608,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  toast.dismiss();
   cleanup();
 });
+
+function render(ui: ReactNode) {
+  return renderReact(
+    <>
+      {ui}
+      <Toaster />
+    </>
+  );
+}
 
 async function renderInstanceConfiguration() {
   const result = render(
@@ -660,7 +672,7 @@ function metaDatabaseUnavailableError() {
 }
 
 function setFieldValue(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.input(screen.getByLabelText(label), { target: { value } });
 }
 
 describe("backend instance configuration save", () => {
@@ -768,7 +780,11 @@ describe("backend instance danger zone", () => {
       }),
       "instances/prod"
     );
-    await user.click(screen.getByRole("button", { name: "Delete instance" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Delete instance",
+      })
+    );
 
     await waitFor(() => {
       expect(state.deleteInstance).toHaveBeenCalledWith({
@@ -894,7 +910,14 @@ describe("backend instance overview redesign", () => {
 
     renderInstanceOverview();
 
-    const alert = screen.getByRole("alert");
+    const alert = screen
+      .getAllByRole("alert")
+      .find((element) =>
+        within(element).queryByText("Server info unavailable")
+      );
+    if (!alert) {
+      throw new Error("Expected the server info alert");
+    }
     expect(within(alert).getByText("Server info unavailable")).toBeTruthy();
     expect(
       within(alert).getByText(

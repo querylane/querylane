@@ -312,8 +312,8 @@ function SqlHistorySheet({
           <Input
             aria-label="Filter queries"
             className="h-8 flex-1"
-            onChange={(event) => {
-              setSearch(event.target.value);
+            onValueChange={(value) => {
+              setSearch(value);
             }}
             placeholder="Filter…"
             presentation="compact"

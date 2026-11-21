@@ -12,7 +12,6 @@ export default defineConfig({
       "playwright-report/**",
       "test-results/**",
       ".rstest/**",
-      "src/components/ui/**",
       "src/protogen/**",
       "**/*.gen.ts",
       "**/*.gen.tsx",

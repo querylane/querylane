@@ -53,7 +53,7 @@ function DangerZoneSection({
                 </p>
               </div>
               <DisabledReasonButton
-                disabled={action.disabled}
+                disabled={action.disabled ?? false}
                 disabledReason={disabledReason}
                 onClick={action.handleClick}
                 size="sm"

@@ -41,8 +41,9 @@ describe("instance configuration labels", () => {
     }
     await user.click(secondRemoveButton);
 
-    expect(onChange).toHaveBeenCalledWith([
-      { id: "env", key: "env", value: "prod" },
-    ]);
+    expect(onChange).toHaveBeenCalledWith(
+      [{ id: "env", key: "env", value: "prod" }],
+      "programmatic"
+    );
   });
 });

@@ -44,7 +44,7 @@ export function PaginationFooter({
         presentation === "inset" && "px-3 py-2 sm:px-4",
         className
       )}
-      data-slot="pagination-footer"
+      data-querylane-slot="pagination-footer"
     >
       <div className="flex items-center gap-2">
         <span className="text-(length:--text-label-sm)">{pageSizeLabel}</span>

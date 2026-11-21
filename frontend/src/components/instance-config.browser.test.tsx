@@ -1,10 +1,10 @@
 import { create as createProto } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { expect, rs, test } from "@rstest/core";
 import { type ReactNode, useState } from "react";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { InstanceConfigurationSection } from "@/components/console-pages/instance-configuration-section";
 import { InstanceDangerZoneSection } from "@/components/console-pages/instance-danger-zone-section";
 import { InstanceDeleteDialog } from "@/components/console-pages/instance-delete-dialog";
@@ -220,4 +220,22 @@ test("invalid label values stay visible, prevent saving, and focus their row", a
     .element(page.getByRole("textbox", { name: "Label key 2" }))
     .toBeFocused();
   expect(onSave).not.toHaveBeenCalled();
+});
+
+test("clearing a numeric port leaves a blank field that can be edited again", async () => {
+  await renderInstanceConfigSurface(
+    <InstanceConfigurationSection
+      formNotice={null}
+      instance={createInstance()}
+      isConfigManaged={false}
+      onInvalidSave={rs.fn()}
+      onSave={rs.fn()}
+      pending={false}
+    />
+  );
+  const port = page.getByLabel("Port");
+  await port.fill("");
+  await expect.element(port).toHaveAttribute("value", "");
+  await port.fill("6432");
+  await expect.element(port).toHaveValue("6432");
 });

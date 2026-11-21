@@ -27,7 +27,7 @@ function SearchEmptyState({
   return (
     <Empty
       className={cn("min-h-24", className)}
-      data-slot="search-empty-state"
+      data-querylane-slot="search-empty-state"
       presentation={presentation}
     >
       <EmptyHeader>

@@ -10,6 +10,7 @@ import {
   CommandList as BaseCommandList,
   CommandSeparator as BaseCommandSeparator,
   CommandShortcut as BaseCommandShortcut,
+  CommandStatus as BaseCommandStatus,
 } from "@/components/ui/command";
 import {
   Dialog,
@@ -98,8 +99,8 @@ function CommandDialog({
   showCloseButton = false,
   ...props
 }: ComponentProps<typeof BaseCommandDialog>) {
-  // Keep naming content inside the portal: the registry implementation renders
-  // it beside the dialog, exposing a closed palette's text to screen readers.
+  // Keep the title and description in the SDK content so they name only
+  // the open palette.
   return (
     <Dialog {...props}>
       <DialogContent
@@ -131,6 +132,10 @@ function CommandShortcut(props: ComponentProps<typeof BaseCommandShortcut>) {
   return <BaseCommandShortcut {...props} />;
 }
 
+function CommandStatus(props: ComponentProps<typeof BaseCommandStatus>) {
+  return <BaseCommandStatus {...props} />;
+}
+
 export {
   Command,
   CommandDialog,
@@ -141,4 +146,5 @@ export {
   CommandList,
   CommandSeparator,
   CommandShortcut,
+  CommandStatus,
 };

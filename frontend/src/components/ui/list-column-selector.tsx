@@ -2,11 +2,11 @@ import { Columns3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ListColumnOption } from "@/lib/list-columns";
 
@@ -28,9 +28,9 @@ function ListColumnSelector({
         render={
           <Button
             aria-label="Columns"
+            size="icon-sm"
             title="Columns"
             variant="outline"
-            size="icon-sm"
           />
         }
       >
@@ -39,21 +39,21 @@ function ListColumnSelector({
       <DropdownMenuContent align="end" className="min-w-48">
         {columns.map((column) => (
           <DropdownMenuCheckboxItem
-            key={column.id}
             checked={visible.has(column.id)}
+            closeOnClick={false}
             disabled={
               column.required === true ||
               (visible.size === 1 && visible.has(column.id))
             }
-            closeOnClick={false}
+            key={column.id}
             onCheckedChange={(checked) => {
-              const next = columns
-                .filter((candidate) =>
+              const next = columns.flatMap((candidate) => {
+                const included =
                   candidate.id === column.id
                     ? checked
-                    : visible.has(candidate.id)
-                )
-                .map((candidate) => candidate.id);
+                    : visible.has(candidate.id);
+                return included ? [candidate.id] : [];
+              });
               setSelection(next.length === columns.length ? undefined : next);
             }}
           >
@@ -61,14 +61,20 @@ function ListColumnSelector({
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => {
-          if (resetColumns) resetColumns();
-          else setSelection(undefined);
-        }}>
+        <DropdownMenuItem
+          onClick={() => {
+            if (resetColumns) {
+              resetColumns();
+            } else {
+              setSelection(undefined);
+            }
+          }}
+        >
           Reset columns
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
+
 export { ListColumnSelector };

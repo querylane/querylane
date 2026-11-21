@@ -1,8 +1,8 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { afterEach, beforeEach, expect, rs, test } from "@rstest/core";
 import { ScreenshotFrame } from "@/__tests__/browser-test-utils";
+import { render } from "@/__tests__/render-ui";
 import { BootGate } from "@/components/boot-gate";
 import { normalizeAppUiError } from "@/lib/ui-error";
 import { useSetupStore } from "@/stores/setup-store";

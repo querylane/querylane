@@ -1,8 +1,6 @@
-"use client";
-
 import type * as React from "react";
-import { cn } from "@/lib/utils";
 import type { DbConnectionStatus } from "@/lib/console-resources";
+import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<DbConnectionStatus, string> = {
   connected: "bg-success",

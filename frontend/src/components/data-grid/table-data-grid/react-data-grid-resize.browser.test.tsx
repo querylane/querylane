@@ -1,8 +1,8 @@
 import { page } from "@rstest/browser";
-import { render } from "@rstest/browser-react";
 import { afterEach, expect, rs, test } from "@rstest/core";
 import { Profiler } from "react";
 import type { Column } from "react-data-grid";
+import { render } from "@/__tests__/render-ui";
 
 import "react-data-grid/lib/styles.css";
 

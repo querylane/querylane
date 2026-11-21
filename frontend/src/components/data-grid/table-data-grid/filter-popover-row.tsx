@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useEffectEvent, useId, useState } from "react";
+import { FilterTokenInput } from "@/components/data-grid/table-data-grid/filter-token-input";
 import { Button } from "@/components/querylane-ui/button";
 import { Input } from "@/components/querylane-ui/input";
 import { SelectContent, SelectTrigger } from "@/components/querylane-ui/select";
@@ -42,9 +43,6 @@ function getValuePlaceholder(
   rule: TableFilterRule,
   column: TableResultColumn | undefined
 ): string {
-  if (FILTER_OPERATOR_META[rule.operator].valueCount === "list") {
-    return "pending, failed";
-  }
   if (rule.operator === "like" || rule.operator === "ilike") {
     return "%@acme.com";
   }
@@ -148,9 +146,8 @@ function FilterRow({
   );
   const operatorMeta = FILTER_OPERATOR_META[rule.operator];
   const operators = getOperatorsForColumn(column);
-  // Base UI's <Select.Value> only renders the item label (e.g. "!=") when the
-  // root is given an `items` map; otherwise it falls back to the raw value
-  // (e.g. "ne"). The SelectItem `label` prop only drives keyboard typeahead.
+  // Supply labels before popup items mount so the trigger never falls back
+  // to an internal operator key such as "ne".
   const operatorItems = operators.map((operator) => ({
     label: FILTER_OPERATOR_META[operator].label,
     value: operator,
@@ -226,6 +223,23 @@ function FilterRow({
   }
 
   function renderValueEditor() {
+    if (operatorMeta.valueCount === "list") {
+      return (
+        <FilterTokenInput
+          key={valueResetKey}
+          onApply={(value) => {
+            setDraftValue(value);
+            onChange({ value });
+            onApplyRequest();
+          }}
+          onBlur={commitValueDraft}
+          onChange={setDraftValue}
+          value={draftValue}
+          {...invalidInputProps}
+        />
+      );
+    }
+
     if (operatorMeta.valueCount === 0) {
       return (
         <div className="col-start-1 flex h-8 items-center rounded-md border border-dashed px-2 text-xs text-muted-foreground @lg/filter-popover:col-start-auto">
@@ -255,11 +269,11 @@ function FilterRow({
           aria-label="Filter value"
           className="h-8 min-w-0"
           onBlur={commitValueDraft}
-          onChange={(event) => {
-            setDraftValue(event.target.value);
-          }}
           onKeyDown={(event) => {
             applyOnEnter(event, commitValueDraft);
+          }}
+          onValueChange={(value) => {
+            setDraftValue(value);
           }}
           placeholder={getValuePlaceholder(rule, column)}
           presentation="identifier"
@@ -271,11 +285,11 @@ function FilterRow({
             aria-label="Filter end value"
             className="h-8 min-w-0"
             onBlur={commitValue2Draft}
-            onChange={(event) => {
-              setDraftValue2(event.target.value);
-            }}
             onKeyDown={(event) => {
               applyOnEnter(event, commitValue2Draft);
+            }}
+            onValueChange={(value) => {
+              setDraftValue2(value);
             }}
             placeholder="And"
             presentation="identifier"
@@ -322,7 +336,10 @@ function FilterRow({
           </SelectContent>
         </Select>
 
-        <div className="col-span-2 flex min-w-0 items-center gap-1 @lg/filter-popover:col-span-1">
+        <div
+          className="col-span-2 flex min-w-0 items-center gap-1 data-[list=true]:col-span-1 @lg/filter-popover:col-span-1 @lg/filter-popover:data-[list=true]:col-span-2"
+          data-list={operatorMeta.valueCount === "list"}
+        >
           <Button
             aria-label="Negate filter"
             aria-pressed={rule.negated ?? false}
@@ -366,6 +383,8 @@ function FilterRow({
 
         <Button
           aria-label="Remove filter"
+          className="data-[list=true]:col-end-[-1] data-[list=true]:row-start-2 @lg/filter-popover:data-[list=true]:row-start-1"
+          data-list={operatorMeta.valueCount === "list"}
           onClick={onRemove}
           size="icon-sm"
           type="button"

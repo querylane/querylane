@@ -61,8 +61,8 @@ export function InstanceDeleteDialog({
             autoComplete="off"
             disabled={pending}
             id={confirmationInputId}
-            onChange={(event) => {
-              setConfirmationName(event.target.value);
+            onValueChange={(value) => {
+              setConfirmationName(value);
             }}
             value={confirmationName}
           />
