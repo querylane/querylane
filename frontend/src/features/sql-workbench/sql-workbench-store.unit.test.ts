@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, rs, test } from "@rstest/core";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  rs,
+  test,
+} from "@rstest/core";
+import { toast } from "sonner";
 import {
   MAX_HISTORY_ENTRIES,
   scopeKey,
@@ -137,6 +145,99 @@ describe("saved queries", () => {
       store().workspaces[SCOPE]?.tabs.find((t) => t.id === tabId)?.savedQueryId
     ).toBeUndefined();
   });
+});
+
+describe("ordinary SQL persistence failures", () => {
+  beforeEach(() => {
+    globalThis.dispatchEvent(new Event("pagehide"));
+    rs.useFakeTimers();
+  });
+
+  afterEach(() => {
+    rs.restoreAllMocks();
+    globalThis.dispatchEvent(new Event("pagehide"));
+    rs.useRealTimers();
+  });
+
+  test.each(["debounce", "pagehide"] as const)(
+    "warns on %s write failure and saves the latest work when writes recover",
+    async (trigger) => {
+      const key = "querylane.sql-workbench.v1";
+      const tabId = store().addTab(SCOPE);
+      store().updateTabText(SCOPE, tabId, "select 1");
+      const otherScope = scopeKey("local", "analytics");
+      const otherTab = store().addTab(otherScope, { text: "select 10" });
+      globalThis.dispatchEvent(new Event("pagehide"));
+      const previousBytes = localStorage.getItem(key);
+      expect(previousBytes).not.toBeNull();
+
+      const notify = rs.spyOn(toast, "error");
+      const dismiss = rs.spyOn(toast, "dismiss");
+      const write = localStorage.setItem.bind(localStorage);
+      const storageWrite = rs
+        .spyOn(localStorage, "setItem")
+        .mockImplementation((name, value) => {
+          if (name === key) {
+            throw new DOMException(
+              "Storage quota exceeded",
+              "QuotaExceededError"
+            );
+          }
+          write(name, value);
+        });
+
+      try {
+        store().updateTabText(SCOPE, tabId, "select 2");
+        store().saveQuery(SCOPE, {
+          name: "Draft",
+          statement: "select 2",
+          tabId,
+        });
+
+        expect(() => {
+          if (trigger === "debounce") {
+            rs.advanceTimersByTime(250);
+          } else {
+            globalThis.dispatchEvent(new Event("pagehide"));
+          }
+        }).not.toThrow();
+        expect(notify).toHaveBeenCalledWith(
+          "SQL changes are only stored in memory",
+          expect.objectContaining({
+            duration: Number.POSITIVE_INFINITY,
+            id: "sql-workbench-write-failed",
+          })
+        );
+        expect(localStorage.getItem(key)).toBe(previousBytes);
+        expect(
+          store().workspaces[SCOPE]?.tabs.find((tab) => tab.id === tabId)?.text
+        ).toBe("select 2");
+
+        storageWrite.mockRestore();
+        globalThis.dispatchEvent(new Event("pagehide"));
+        expect(dismiss).toHaveBeenCalledWith("sql-workbench-write-failed");
+        await useSqlWorkbenchStore.persist.rehydrate();
+        expect(
+          store().workspaces[SCOPE]?.tabs.find((tab) => tab.id === tabId)?.text
+        ).toBe("select 2");
+
+        store().updateTabText(SCOPE, tabId, "select 3");
+        globalThis.dispatchEvent(new Event("pagehide"));
+        await useSqlWorkbenchStore.persist.rehydrate();
+        expect(
+          store().workspaces[SCOPE]?.tabs.find((tab) => tab.id === tabId)?.text
+        ).toBe("select 3");
+        expect(store().savedQueries[SCOPE]?.[0]?.statement).toBe("select 2");
+        expect(
+          store().workspaces[otherScope]?.tabs.find(
+            (tab) => tab.id === otherTab
+          )?.text
+        ).toBe("select 10");
+      } finally {
+        storageWrite.mockRestore();
+      }
+    }
+  );
 });
 
 describe("persisted workbench validation", () => {
