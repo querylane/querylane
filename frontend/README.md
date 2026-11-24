@@ -9,6 +9,21 @@ React + TypeScript app bundled with Rsbuild.
 - Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
 - `react-doctor` runs lint/dead-code checks.
 
+## Optional: global store for local worktrees
+
+`bun install --frozen-lockfile` remains the default, including in CI. In a fresh
+local worktree, a warm [Bun global store](https://bun.sh/docs/pm/global-store) can
+speed up the frontend install. From the repository root:
+
+```sh
+cd frontend
+BUN_INSTALL_GLOBAL_STORE=1 bun install --frozen-lockfile --linker isolated
+```
+
+Use the opt-in command for each install that should use the store. To switch
+layouts, remove only that worktree's `frontend/node_modules` before reinstalling.
+If you clear Bun's shared cache, reinstall to restore the links.
+
 ## Scripts
 
 - `bun run dev` - start dev server

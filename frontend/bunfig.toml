@@ -1,6 +1,2 @@
 [test]
 preload = ["./test/setup-globals.ts"]
-
-[install]
-linker = "isolated"
-globalStore = true
