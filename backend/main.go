@@ -6,6 +6,7 @@ import (
 	"github.com/querylane/querylane/backend/cmd/migrate"
 	"github.com/querylane/querylane/backend/cmd/server"
 	"github.com/querylane/querylane/backend/config"
+	"github.com/querylane/querylane/backend/service/console"
 )
 
 type CLI struct {
@@ -19,11 +20,11 @@ func main() {
 	cli := CLI{}
 	ctx := kong.Parse(&cli,
 		kong.Name("querylane"),
-		kong.Description("AI-augmented, open-source, collaborative SQL workspace for devs & analysts."),
+		kong.Description("PostgreSQL admin UI for managing multiple servers."),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: false}),
 		kong.Vars{
-			"version": "0.0.1",
+			"version": console.Version,
 		},
 	)
 	err := ctx.Run(&cli.Globals)
