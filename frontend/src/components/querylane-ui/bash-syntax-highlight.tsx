@@ -1,23 +1,22 @@
 "use client";
 
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
+import { OptionalHighlight, PlaintextCode } from "./plaintext-code";
+
+function UnavailableBash({ code }: { code: string }) {
+  return <PlaintextCode failed={true} language="bash" source={code} />;
+}
 
 const HighlightedBash = lazy(() =>
-  import("./bash-syntax-highlight-content").then((module) => ({
-    default: module.BashSyntaxHighlight,
-  }))
+  import("./bash-syntax-highlight-content")
+    .then((module) => ({ default: module.BashSyntaxHighlight }))
+    .catch(() => ({ default: UnavailableBash }))
 );
 
 export function BashSyntaxHighlight({ code }: { code: string }) {
   return (
-    <Suspense
-      fallback={
-        <code className="language-bash" data-language="bash">
-          {code}
-        </code>
-      }
-    >
+    <OptionalHighlight language="bash" source={code}>
       <HighlightedBash code={code} />
-    </Suspense>
+    </OptionalHighlight>
   );
 }
