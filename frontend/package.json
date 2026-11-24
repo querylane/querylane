@@ -149,5 +149,12 @@
   "packageManager": "bun@1.4.4",
   "engines": {
     "node": ">=26.13.0"
+  },
+  "packageExtensions": {
+    "@shikijs/themes@4.6.0": {
+      "dependencies": {
+        "@shikijs/core": "4.6.0"
+      }
+    }
   }
 }
