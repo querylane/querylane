@@ -35,7 +35,9 @@ test("connection columns hide matching headers, values and totals", async () => 
     />
   );
   await user.click(screen.getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitemcheckbox", { name: "Active" }));
+  await user.click(
+    await screen.findByRole("menuitemcheckbox", { name: "Active" })
+  );
   await user.keyboard("{Escape}");
   const table = screen.getByRole("table");
   expect(
@@ -44,7 +46,9 @@ test("connection columns hide matching headers, values and totals", async () => 
   expect(within(table).queryAllByRole("cell", { name: "5" })).toHaveLength(0);
   expect(within(table).getByRole("cell", { name: "api" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitem", { name: "Reset columns" }));
+  await user.click(
+    await screen.findByRole("menuitem", { name: "Reset columns" })
+  );
   expect(
     within(table).getByRole("columnheader", { name: "Active" })
   ).toBeTruthy();

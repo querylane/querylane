@@ -840,7 +840,7 @@ describe("backend database overview", () => {
 
     await user.click(within(drawer).getByRole("button", { name: "Type" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+      await screen.findByRole("menuitemcheckbox", { name: "Write queries" })
     );
     expect(
       within(drawer).queryByRole("button", {
@@ -964,10 +964,10 @@ describe("backend database query insights drawer", () => {
     );
 
     await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    await user.click(screen.getByRole("option", { name: "25" }));
+    await user.click(await screen.findByRole("option", { name: "25" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+      await screen.findByRole("menuitemcheckbox", { name: "Write queries" })
     );
 
     expect(
@@ -1003,7 +1003,7 @@ describe("backend database query insights drawer", () => {
     await user.click(screen.getByRole("button", { name: "Clear all" }));
     await user.click(screen.getByRole("button", { name: "Type" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Read queries" })
+      await screen.findByRole("menuitemcheckbox", { name: "Read queries" })
     );
 
     expect(
@@ -1080,7 +1080,7 @@ describe("database query insights resilience", () => {
 
     await user.click(within(filterBar).getByRole("button", { name: "Type" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Write queries" })
+      await screen.findByRole("menuitemcheckbox", { name: "Write queries" })
     );
 
     expect(
@@ -1102,7 +1102,7 @@ describe("database query insights resilience", () => {
     ).toBeTruthy();
     await user.click(within(filterBar).getByRole("button", { name: "Mean" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Mean > 30 ms" })
+      await screen.findByRole("menuitemcheckbox", { name: "Mean > 30 ms" })
     );
 
     expect(

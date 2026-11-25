@@ -79,7 +79,7 @@ test("selections stay in the current URL, survive reload, preserve filters and i
   render(<RouterProvider router={router} />);
   const first = await screen.findByRole("region", { name: "First" });
   await user.click(within(first).getByRole("button", { name: "Columns" }));
-  const menu = screen.getByRole("menu");
+  const menu = await screen.findByRole("menu");
   expect(within(menu).getAllByRole("menuitemcheckbox")).toHaveLength(2);
   expect(within(menu).queryByRole("button")).toBeNull();
   await user.click(
@@ -87,9 +87,11 @@ test("selections stay in the current URL, survive reload, preserve filters and i
   );
   expect(screen.getByRole("menu")).toBeTruthy();
   await user.keyboard("{Escape}");
-  expect(within(first).getByRole("button", { name: "Columns" })).toBe(
-    document.activeElement
-  );
+  await waitFor(() => {
+    expect(within(first).getByRole("button", { name: "Columns" })).toBe(
+      document.activeElement
+    );
+  });
   await waitFor(() => {
     expect(router.state.location.search).toEqual({
       q: "analytics",
@@ -174,7 +176,9 @@ test("row sorting and column order survive reload, preserve filters and isolate 
       .map((header) => header.textContent)
   ).toEqual(["Name", "Owner"]);
   await user.click(within(restored).getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitem", { name: "Reset columns" }));
+  await user.click(
+    await screen.findByRole("menuitem", { name: "Reset columns" })
+  );
   await waitFor(() => {
     expect(restoredRouter.state.location.search).toEqual({
       q: "analytics",

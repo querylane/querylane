@@ -81,7 +81,6 @@ test("select preserves rich option content", async () => {
   await userEvent
     .setup()
     .click(screen.getByRole("combobox", { name: "Fruit" }));
-  expect(
-    screen.getByRole("option", { name: APPLE_NAME }).textContent
-  ).toContain("Apple description");
+  const appleOption = await screen.findByRole("option", { name: APPLE_NAME });
+  expect(appleOption.textContent).toContain("Apple description");
 });

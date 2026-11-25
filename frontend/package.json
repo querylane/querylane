@@ -117,6 +117,7 @@
     "@changesets/cli": "3.0.3",
     "@cloudflare/oxlint-config": "0.1.0",
     "@lhci/cli": "0.16.0",
+    "@miaskiewicz/turbo-dom": "0.8.6",
     "@rsbuild/core": "2.3.1",
     "@rsbuild/plugin-react": "2.1.1",
     "@rsbuild/plugin-tailwindcss": "2.0.3",
@@ -133,7 +134,6 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "expect-type": "1.4.0",
-    "happy-dom": "21.0.4",
     "oxlint": "1.94.0",
     "playwright": "1.64.1",
     "playwright-core": "1.64.1",
@@ -156,5 +156,8 @@
         "@shikijs/core": "4.6.0"
       }
     }
+  },
+  "patchedDependencies": {
+    "@miaskiewicz/turbo-dom@0.8.6": "patches/@miaskiewicz%2Fturbo-dom@0.8.6.patch"
   }
 }

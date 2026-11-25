@@ -92,7 +92,8 @@ function formatUnexpectedConsoleIssues(
 }
 
 function installUnexpectedConsoleIssueGuard(
-  registerAfterEach: RegisterAfterEach
+  registerAfterEach: RegisterAfterEach,
+  registerAfterAll: RegisterAfterEach
 ) {
   const state = getConsoleIssueGuardState();
 
@@ -114,13 +115,23 @@ function installUnexpectedConsoleIssueGuard(
   }
 
   state.afterEachInstalled = true;
-  registerAfterEach(function assertNoUnexpectedConsoleIssues() {
+  function assertNoUnexpectedConsoleIssues() {
     const issues = state.issues.splice(0);
     if (issues.length > 0) {
       throw new Error(formatUnexpectedConsoleIssues(issues));
     }
-  });
+  }
+  registerAfterEach(assertNoUnexpectedConsoleIssues);
+  registerAfterAll(assertNoUnexpectedConsoleIssues);
+}
+
+function reportTestRuntimeError(error: unknown) {
+  getTestConsole().error(error);
 }
 
 export type { RegisterAfterEach, UnexpectedConsoleIssue };
-export { formatUnexpectedConsoleIssues, installUnexpectedConsoleIssueGuard };
+export {
+  formatUnexpectedConsoleIssues,
+  installUnexpectedConsoleIssueGuard,
+  reportTestRuntimeError,
+};

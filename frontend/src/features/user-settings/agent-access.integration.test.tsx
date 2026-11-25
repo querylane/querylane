@@ -204,18 +204,22 @@ test("aborting permission clears the prompt and cannot apply a late approval", a
 
 test("an approval cannot follow the agent onto another route", async () => {
   useAgentAccessStore.getState().setEnabled(true);
-  const location = globalThis.location.href;
+  const originalHref = globalThis.location.href;
+  const routeHref = rs.spyOn(globalThis.location, "href", "get");
   try {
     const result = requestAgentApproval(
       { ref: "name", component: "input", action: "setValue", args: ["Stale"] },
       new AbortController().signal
     );
-    globalThis.history.replaceState(null, "", "/another-instance");
-    useAgentAccessStore.getState().approval?.decide(true);
+    const { approval } = useAgentAccessStore.getState();
+    expect(approval).not.toBeNull();
+    routeHref.mockReturnValue(new URL("/another-instance", originalHref).href);
+    expect(globalThis.location.href).not.toBe(originalHref);
+    approval?.decide(true);
     expect(await result).toBe(false);
     expect(useAgentAccessStore.getState().approval).toBeNull();
   } finally {
-    globalThis.history.replaceState(null, "", location);
+    routeHref.mockRestore();
   }
 });
 

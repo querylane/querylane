@@ -27,7 +27,9 @@ test("column selection hides headers and cells without removing rows", async () 
   const columnControl = screen.getByRole("button", { name: "Columns" });
   expect(columnControl.textContent).toBe("");
   await user.click(columnControl);
-  await user.click(screen.getByRole("menuitemcheckbox", { name: "Owner" }));
+  await user.click(
+    await screen.findByRole("menuitemcheckbox", { name: "Owner" })
+  );
   expect(screen.queryByRole("columnheader", { name: "Owner" })).toBeNull();
   expect(within(screen.getByRole("table")).queryByText("postgres")).toBeNull();
   expect(screen.getByRole("cell", { name: "analytics" })).toBeTruthy();
@@ -43,7 +45,9 @@ test("last visible column stays available and reset restores defaults", async ()
     />
   );
   await user.click(screen.getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitemcheckbox", { name: "Owner" }));
+  await user.click(
+    await screen.findByRole("menuitemcheckbox", { name: "Owner" })
+  );
   expect(
     screen
       .getByRole("menuitemcheckbox", { name: "Name" })

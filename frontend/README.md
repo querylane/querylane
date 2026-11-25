@@ -6,8 +6,15 @@ React + TypeScript app bundled with Rsbuild.
 
 - Frontend scripts use the Bun runtime by default.
 - Run frontend workflows through `bun run <script>` so local `node_modules/.bin` tools are used consistently.
-- Rstest runs unit, integration, and browser behavior tests. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
+- Rstest runs unit and integration tests with the turbo-dom emulator (`@miaskiewicz/turbo-dom`). Browser behavior tests use real Chromium. Playwright owns E2E and visual regression (`e2e/visual`). See `docs/testing/browser-visual-regression.md`.
 - `react-doctor` runs lint/dead-code checks.
+
+Rstest's Node worker installs turbo-dom before loading the shared test setup.
+The DOM suites keep browser export resolution and dependency bundling, while the
+turbo-dom runtime stays external so its native parser and WASM fallback resolve
+their package assets. Node's fetch, timers, performance and object URLs remain
+intact. See [the pinned compatibility patch](patches/README.md) for the two
+upstream DOM fixes required by the accessibility and agent-adapter tests.
 
 ## Optional: global store for local worktrees
 
@@ -36,8 +43,8 @@ If you clear Bun's shared cache, reinstall to restore the links.
 - `bun run doctor` - run React Doctor against the whole frontend
 - `bun run doctor:full` - run React Doctor against the whole frontend
 - `bun run doctor:audit` - run full React Doctor with inline suppressions ignored
-- `bun run test:unit` - run unit tests with Rstest and happy-dom
-- `bun run test:integration` - run integration tests with Rstest and happy-dom
+- `bun run test:unit` - run unit tests with Rstest and turbo-dom
+- `bun run test:integration` - run integration tests with Rstest and turbo-dom
 - `bun run test:unit:watch` - run unit tests in Rstest watch mode
 - `bun run test:integration:watch` - run integration tests in Rstest watch mode
 - `bun run test:browser` - run Rstest browser behavior tests in Chromium (light and dark)

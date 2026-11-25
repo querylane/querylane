@@ -171,7 +171,9 @@ test("extension list columns can be selected without losing extension actions", 
     />
   );
   await user.click(screen.getByRole("button", { name: "Columns" }));
-  await user.click(screen.getByRole("menuitemcheckbox", { name: "Version" }));
+  await user.click(
+    await screen.findByRole("menuitemcheckbox", { name: "Version" })
+  );
   expect(screen.queryByRole("columnheader", { name: "Version" })).toBeNull();
   await user.keyboard("{Escape}");
   expect(screen.getByRole("button", { name: "pg_trgm" })).toBeTruthy();

@@ -1,10 +1,10 @@
-import { afterEach, rs } from "@rstest/core";
+import { afterAll, afterEach, rs } from "@rstest/core";
 import { cleanup } from "@testing-library/react";
 import { installUnexpectedConsoleIssueGuard } from "./test.console-guard";
 
 const restoreRealTimers = rs.useRealTimers;
 
-installUnexpectedConsoleIssueGuard(afterEach);
+installUnexpectedConsoleIssueGuard(afterEach, afterAll);
 
 afterEach(async function resetSharedDomTestEnvironment() {
   cleanup();

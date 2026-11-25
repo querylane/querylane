@@ -1,5 +1,11 @@
 import { afterEach, expect, test } from "@rstest/core";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ExplainPlanView } from "@/features/query-plan/explain-plan-view";
 import { EXPLAIN_ANALYZE_FIXTURE } from "@/test/fixtures/explain-plan-fixture";
@@ -61,7 +67,7 @@ test("findings reveal their operator even inside a collapsed branch", async () =
   );
   await user.click(screen.getByRole("button", { name: "Plan findings" }));
   await user.click(
-    screen.getByRole("menuitem", {
+    await screen.findByRole("menuitem", {
       name: "100× more rows Seq Scan on shipments",
     })
   );
@@ -103,7 +109,9 @@ test("self-work selection keeps small operations reachable through a menu", asyn
     screen.getByRole("button", { name: "Inspect self work distribution" })
   );
   await user.click(
-    screen.getByRole("menuitemradio", { name: "Inspect work for Hash: 15 ms" })
+    await screen.findByRole("menuitemradio", {
+      name: "Inspect work for Hash: 15 ms",
+    })
   );
   expect(
     within(
@@ -146,7 +154,9 @@ test("inspects a hotspot, changes metrics, collapses branches and preserves raw 
   expect(within(inspector).getByText("100× more rows")).not.toBeNull();
 
   await user.click(screen.getByRole("combobox", { name: "Plan metric" }));
-  await user.click(screen.getByRole("option", { name: "Shared buffers" }));
+  await user.click(
+    await screen.findByRole("option", { name: "Shared buffers" })
+  );
   expect(
     screen.getByRole("columnheader", { name: "Shared blocks" })
   ).not.toBeNull();
@@ -216,11 +226,10 @@ test("a new plan resets selection, metric availability and JSON fallback", async
   expect(screen.getByRole("heading", { name: "Result" })).not.toBeNull();
   expect(screen.queryByText("(status = 'customs_hold'::text)")).toBeNull();
   await user.click(screen.getByRole("combobox", { name: "Plan metric" }));
-  expect(
-    screen
-      .getByRole("option", { name: "Self time" })
-      .getAttribute("aria-disabled")
-  ).toBe("true");
+  const selfTimeOption = await screen.findByRole("option", {
+    name: "Self time",
+  });
+  expect(selfTimeOption.getAttribute("aria-disabled")).toBe("true");
   await user.keyboard("{Escape}");
   view.rerender(
     <ExplainPlanView analyze={false} rawPlan="unrecognized plan output" />
@@ -260,12 +269,18 @@ test("starts with expensive work and keeps map, operators and focus selection li
       .getAttribute("aria-pressed")
   ).toBe("true");
   await user.click(screen.getByRole("button", { name: "Focus plan" }));
-  expect(screen.getByRole("dialog", { name: "Query plan" })).not.toBeNull();
+  const dialog = screen.getByRole("dialog", { name: "Query plan" });
+  expect(dialog).not.toBeNull();
   expect(
     within(inspector()).getByRole("heading", { name: "Index Scan" })
   ).not.toBeNull();
+  await waitFor(() => {
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
   await user.keyboard("{Escape}");
-  expect(screen.queryByRole("dialog")).toBeNull();
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Focus plan" })
   );
@@ -332,18 +347,19 @@ test("keeps large plans readable and never attributes parallel work to self time
   ).not.toBeNull();
   await user.click(screen.getByRole("tab", { name: "Operators" }));
   await user.click(screen.getByRole("combobox", { name: "Plan metric" }));
-  expect(
-    screen
-      .getByRole("option", { name: "Self time" })
-      .getAttribute("aria-disabled")
-  ).toBe("true");
+  const selfTimeOption = await screen.findByRole("option", {
+    name: "Self time",
+  });
+  expect(selfTimeOption.getAttribute("aria-disabled")).toBe("true");
 });
 
 test("hotspot navigation follows the active metric rather than always selecting the slowest scan", async () => {
   const user = userEvent.setup();
   render(<ExplainPlanView analyze={true} rawPlan={EXPLAIN_ANALYZE_FIXTURE} />);
   await user.click(screen.getByRole("combobox", { name: "Plan metric" }));
-  await user.click(screen.getByRole("option", { name: "Shared buffers" }));
+  await user.click(
+    await screen.findByRole("option", { name: "Shared buffers" })
+  );
   await user.click(screen.getByRole("button", { name: "Find hotspot" }));
   expect(
     within(

@@ -186,6 +186,8 @@ describe("transport error interceptor", () => {
 
   test("passes unexpected failures through without blockers", async () => {
     const failure = new Error("rpc failed");
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const { blockingErrors, getSetupRequiredCalls, interceptor } =
       createTestInterceptor();
 
@@ -197,6 +199,7 @@ describe("transport error interceptor", () => {
 
     expect(blockingErrors).toHaveLength(0);
     expect(getSetupRequiredCalls()).toBe(0);
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure);
   });
 
   test("does not globally report expected connection-test failures", async () => {
@@ -245,6 +248,8 @@ describe("transport error interceptor", () => {
 
   test("routes unauthenticated failures", async () => {
     const failure = new ConnectError("login required", Code.Unauthenticated);
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const { blockingErrors, getSetupRequiredCalls, interceptor } =
       createTestInterceptor();
 
@@ -256,5 +261,6 @@ describe("transport error interceptor", () => {
 
     expect(getSetupRequiredCalls()).toBe(0);
     expect(blockingErrors[0]?.error.blockingReason).toBe("unauthenticated");
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure);
   });
 });

@@ -1016,7 +1016,9 @@ describe("backend instance activity", () => {
 
     await user.click(nextPage);
     await user.click(within(activity).getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "active" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "active" })
+    );
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).getByText("4302")).toBeTruthy();
@@ -1027,14 +1029,14 @@ describe("backend instance activity", () => {
     );
 
     await user.click(pageSize);
-    await user.click(screen.getByRole("option", { name: "25" }));
+    await user.click(await screen.findByRole("option", { name: "25" }));
 
     expect(within(activity).getByText("Page 1 of 1")).toBeTruthy();
     expect(within(table).getByText("5000")).toBeTruthy();
     expect(nextPage).toHaveProperty("disabled", true);
 
     await user.click(pageSize);
-    await user.click(screen.getByRole("option", { name: "10" }));
+    await user.click(await screen.findByRole("option", { name: "10" }));
 
     expect(within(activity).getByText("Page 1 of 2")).toBeTruthy();
     expect(within(table).queryByText("5000")).toBeNull();
@@ -1212,7 +1214,9 @@ describe("backend instance database list", () => {
 
     await user.clear(search);
     await user.click(screen.getByRole("button", { name: "Kind" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "System" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "System" })
+    );
 
     expect(
       await screen.findByRole("button", {
