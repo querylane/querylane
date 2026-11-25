@@ -159,11 +159,12 @@ function applyLocalizedDetails(
   context: ConnectErrorContext
 ) {
   for (const localized of error.findDetails(LocalizedMessageSchema)) {
-    if (localized.message) {
-      context.message = localized.message;
-      if (localized.locale) {
-        context.messageLocale = localized.locale;
-      }
+    if (!localized.message) {
+      continue;
+    }
+    context.message = localized.message;
+    if (localized.locale) {
+      context.messageLocale = localized.locale;
     }
   }
 }
@@ -221,11 +222,12 @@ function applyRequestMetadata(
   }
 
   for (const retry of error.findDetails(RetryInfoSchema)) {
-    if (retry.retryDelay) {
-      const { nanos, seconds: retrySeconds } = retry.retryDelay;
-      const seconds = Number(retrySeconds);
-      context.retryAfterSeconds = seconds + nanos / NANOSECONDS_PER_SECOND;
+    if (!retry.retryDelay) {
+      continue;
     }
+    const { nanos, seconds: retrySeconds } = retry.retryDelay;
+    const seconds = Number(retrySeconds);
+    context.retryAfterSeconds = seconds + nanos / NANOSECONDS_PER_SECOND;
   }
 
   for (const dbg of error.findDetails(DebugInfoSchema)) {

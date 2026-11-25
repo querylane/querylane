@@ -811,7 +811,7 @@ describe("backend database overview", () => {
 
     // Insights load with the page: slow-query rows render without opening
     // the drawer.
-    expect(state.queryInsightsHook).toHaveBeenCalled();
+    expect(state.queryInsightsHook).toHaveBeenCalledWith();
     expect(screen.getByText("Slowest queries")).toBeTruthy();
     expect(
       screen.getByText("SELECT * FROM events WHERE account_id = $1")
@@ -1196,6 +1196,6 @@ describe("database query insights resilience", () => {
     await user.click(
       screen.getByRole("button", { name: "Retry query statistics" })
     );
-    expect(refetch).toHaveBeenCalledOnce();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

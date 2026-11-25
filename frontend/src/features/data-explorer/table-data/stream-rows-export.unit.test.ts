@@ -227,7 +227,7 @@ describe("buildStreamRowsExportPayload", () => {
     expect(
       fileSink.write.mock.calls.some(([chunks]) => chunks.length === 0)
     ).toBe(false);
-    expect(fileSink.close).toHaveBeenCalledOnce();
+    expect(fileSink.close).toHaveBeenCalledTimes(1);
   });
 
   test("preserves the export error when file sink abort also fails", async () => {
@@ -256,7 +256,7 @@ describe("buildStreamRowsExportPayload", () => {
       })
     ).rejects.toThrow("write failed");
 
-    expect(fileSink.abort).toHaveBeenCalledOnce();
+    expect(fileSink.abort).toHaveBeenCalledTimes(1);
     expect(fileSink.close).not.toHaveBeenCalled();
   });
 });

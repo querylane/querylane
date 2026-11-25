@@ -101,10 +101,11 @@ function finiteSeriesStats(series: MetricSeries): {
   let finiteCount = 0;
   let firstMs: number | null = null;
   for (const point of decodePoints(series.points)) {
-    if (point.value !== null) {
-      finiteCount += 1;
-      firstMs = firstMs === null ? point.time : Math.min(firstMs, point.time);
+    if (point.value === null) {
+      continue;
     }
+    finiteCount += 1;
+    firstMs = firstMs === null ? point.time : Math.min(firstMs, point.time);
   }
   return { finiteCount, firstMs };
 }
@@ -434,11 +435,12 @@ export function hasRenderableSpan(rows: ChartRow[]): boolean {
       ([key, value]) =>
         key !== "time" && typeof value === "number" && Number.isFinite(value)
     );
-    if (hasFiniteValue) {
-      finiteRows += 1;
-      if (finiteRows >= MIN_RENDERABLE_ROWS) {
-        return true;
-      }
+    if (!hasFiniteValue) {
+      continue;
+    }
+    finiteRows += 1;
+    if (finiteRows >= MIN_RENDERABLE_ROWS) {
+      return true;
     }
   }
 
@@ -724,11 +726,12 @@ export function shiftMetricPoints(
 export function hasDrawablePoints(points: MetricPoint[]): boolean {
   let finiteCount = 0;
   for (const point of points) {
-    if (point.value !== null) {
-      finiteCount += 1;
-      if (finiteCount >= MIN_RENDERABLE_ROWS) {
-        return true;
-      }
+    if (point.value === null) {
+      continue;
+    }
+    finiteCount += 1;
+    if (finiteCount >= MIN_RENDERABLE_ROWS) {
+      return true;
     }
   }
 

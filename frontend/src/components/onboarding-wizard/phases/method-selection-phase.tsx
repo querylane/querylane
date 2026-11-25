@@ -91,7 +91,7 @@ function MethodOption({
       </span>
       <span className="min-w-0 flex-1 space-y-1 overflow-hidden">
         <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-          <span className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] wrap-break-word text-white md:text-base">
+          <span className="min-w-0 text-sm font-semibold wrap-break-word text-white md:text-base">
             {getMethodLabel(method)}
           </span>
           {isNonEmptyString(content.badge) ? (
@@ -104,7 +104,7 @@ function MethodOption({
             </Badge>
           ) : null}
         </span>
-        <span className="block max-w-3xl text-xs leading-5 [overflow-wrap:anywhere] wrap-break-word text-white/58">
+        <span className="block max-w-3xl text-xs leading-5 wrap-break-word text-white/58">
           {content.description}
         </span>
       </span>

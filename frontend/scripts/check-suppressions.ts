@@ -25,8 +25,6 @@ const TEXT_EXTENSIONS = new Set([
   ".cjs",
   ".css",
   ".scss",
-  ".yaml",
-  ".yml",
   ".graphql",
   ".gql",
   ".cts",
@@ -35,9 +33,11 @@ const TEXT_EXTENSIONS = new Set([
   ".json",
   ".jsonc",
   ".jsx",
+  ".markdown",
+  ".md",
+  ".mdx",
   ".mjs",
   ".mts",
-  ".mdx",
   ".svg",
   ".ts",
   ".tsx",
@@ -114,7 +114,9 @@ interface SuppressionViolation {
 }
 
 function hasTextExtension(path: string) {
-  return TEXT_EXTENSIONS.has(EXTENSION_PATTERN.exec(path)?.[0] ?? "");
+  return TEXT_EXTENSIONS.has(
+    EXTENSION_PATTERN.exec(path)?.[0]?.toLowerCase() ?? ""
+  );
 }
 
 function allowsSuppression(path: string) {

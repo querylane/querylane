@@ -35,7 +35,6 @@ const toolExclusions = new Set([
   "**/*.gen.ts",
   "**/*.gen.tsx",
 ]);
-const disabledEngineRoles = new Set(["markdown.linter", "markdown.formatter"]);
 const MINIMUM_BIOME_MAX_SIZE = 1_048_576;
 const engines = ["linter", "formatter", "assist"] as const;
 const languages = [
@@ -230,11 +229,7 @@ function assertEngine(
   role: string,
   generated: boolean
 ): void {
-  if (
-    settings["enabled"] === false &&
-    !generated &&
-    !disabledEngineRoles.has(role)
-  ) {
+  if (settings["enabled"] === false && !generated) {
     throw new Error(`Quality engine cannot be disabled: ${role}`);
   }
   if (settings["includes"] !== undefined) {

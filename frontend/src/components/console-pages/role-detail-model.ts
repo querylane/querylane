@@ -426,14 +426,15 @@ function deriveBuiltinParents(role: Role): {
   const names: string[] = [];
   const details: BuiltinParent[] = [];
   for (const membership of role.memberOf) {
-    if (isPredefinedRoleName(membership.roleName)) {
-      names.push(membership.roleName);
-      details.push({
-        roleId: parseResourceLeafId(membership.role),
-        roleName: membership.roleName,
-        summary: predefinedRoleInfo(membership.roleName)?.summary ?? null,
-      });
+    if (!isPredefinedRoleName(membership.roleName)) {
+      continue;
     }
+    names.push(membership.roleName);
+    details.push({
+      roleId: parseResourceLeafId(membership.role),
+      roleName: membership.roleName,
+      summary: predefinedRoleInfo(membership.roleName)?.summary ?? null,
+    });
   }
   return { details, names };
 }

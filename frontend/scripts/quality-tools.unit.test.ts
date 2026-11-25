@@ -13,6 +13,7 @@ import { describe, expect, test } from "@rstest/core";
 import { z } from "zod";
 
 const root = resolve(import.meta.dirname, "..");
+const playwrightImports = 'import { expect, test } from "playwright/test";\n';
 const compilers = ["tsrs", "tsc"];
 const DEBUGGER_RULE_PATTERN = /noDebugger|no-debugger/u;
 const NODE_VERSION_PATTERN =
@@ -101,7 +102,119 @@ test("rejects oversized authored files instead of passing a skipped scan", () =>
   }
 });
 
+test("formats authored Markdown without changing inline text or task markers", () => {
+  const content = `---
+title: Example
+---
+
+A literal [ ] stays visible beside \`inline code\` and prose.
+
+- [ ] A pending task
+
+`;
+  const result = spawnSync(
+    join(root, "node_modules/.bin/biome"),
+    ["format", "--error-on-warnings", "--stdin-file-path=quality/probe.md"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      input: `${content}| Name | Value |
+|---|---|
+| a | b |
+`,
+    }
+  );
+  expect(result.status, result.stdout + result.stderr).toBe(0);
+  expect(result.stdout).toBe(`${content}| Name | Value |
+| ---- | ----- |
+| a    | b     |
+`);
+});
+
 test.each([
+  {
+    name: "direct initialization",
+    rule: "noImmediateMutation",
+    suffix: "ts",
+    invalid:
+      'export function statuses() { const values = ["ready"]; values.push("waiting"); return values; }\n',
+    valid: 'export function statuses() { return ["ready", "waiting"]; }\n',
+  },
+  {
+    name: "early guards for multi-statement loops",
+    rule: "useEarlyContinue",
+    suffix: "ts",
+    invalid:
+      "export function sum(values: readonly number[]) { let total = 0; let count = 0; for (const value of values) { if (value > 0) { total += value; count += 1; } } return { count, total }; }\n",
+    valid:
+      "export function sum(values: readonly number[]) { let total = 0; let count = 0; for (const value of values) { if (value <= 0) { continue; } total += value; count += 1; } return { count, total }; }\n",
+  },
+  {
+    name: "explicit test API imports",
+    rule: "noTestGlobals",
+    suffix: "unit.test.ts",
+    invalid:
+      'import { test } from "@rstest/core"; test("starts ready", () => { expect("ready").toBe("ready"); });\n',
+    valid:
+      'import { expect, test } from "@rstest/core"; test("starts ready", () => { expect("ready").toBe("ready"); });\n',
+  },
+  {
+    name: "exact mock call counts",
+    rule: "noExpectToHaveBeenCalledOnce",
+    suffix: "unit.test.ts",
+    invalid:
+      'import { expect, rs, test } from "@rstest/core"; test("invokes the action once", () => { const action = rs.fn(); action(); expect(action).toHaveBeenCalledOnce(); });\n',
+    valid:
+      'import { expect, rs, test } from "@rstest/core"; test("invokes the action once", () => { const action = rs.fn(); action(); expect(action).toHaveBeenCalledTimes(1); });\n',
+  },
+  {
+    name: "mock call occurrence without pinning arguments",
+    rule: "useExpectToHaveBeenCalled",
+    suffix: "unit.test.ts",
+    invalid:
+      'import { expect, rs, test } from "@rstest/core"; test("invokes the action", () => { const action = rs.fn(); action(); expect(action).not.toHaveBeenCalledTimes(0); });\n',
+    valid:
+      'import { expect, rs, test } from "@rstest/core"; test("invokes the action", () => { const action = rs.fn(); action(); expect(action).toHaveBeenCalled(); });\n',
+  },
+  {
+    name: "one Tailwind wrapping utility per variant",
+    rule: "noTailwindConflictingClasses",
+    suffix: "tsx",
+    invalid:
+      'export const label = <span className="[overflow-wrap:anywhere] wrap-break-word">Name</span>;\n',
+    valid:
+      'export const label = <span className="wrap-break-word sm:wrap-anywhere">Name</span>;\n',
+  },
+  {
+    name: "canonical Tailwind wrapping utilities",
+    rule: "noTailwindRestrictedClasses",
+    suffix: "tsx",
+    invalid:
+      'export const label = <span className="sm:break-words">Name</span>;\n',
+    valid:
+      'export const label = <span className="sm:wrap-break-word">Name</span>;\n',
+  },
+  {
+    name: "explicit YAML values",
+    rule: "noYamlEmptyMapValues",
+    suffix: "yaml",
+    invalid: "connection:\n",
+    valid: "connection: null\n",
+  },
+  {
+    name: "explicit YAML sequence entries",
+    rule: "noYamlEmptySequenceEntries",
+    suffix: "yaml",
+    invalid: "targets:\n  -\n",
+    valid: 'targets:\n  - ""\n',
+  },
+  {
+    name: "Markdown fence language",
+    rule: "useFencedCodeLanguage",
+    suffix: "md",
+    invalid: "# Examples\n\n```\nSELECT 1;\n```\n",
+    valid: "# Examples\n\n```sql\nSELECT 1;\n```\n",
+  },
   {
     name: "named iterable selection",
     rule: "noUnreadableForOfExpression",
@@ -403,10 +516,8 @@ test.each([
     name: "Playwright browser isolation",
     rule: "noPlaywrightUnsafeReferences",
     suffix: "spec.ts",
-    invalid:
-      'const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate(() => label); expect(result).toBe(label); });\n',
-    valid:
-      'const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate((value) => value, label); expect(result).toBe(label); });\n',
+    invalid: `${playwrightImports}const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate(() => label); expect(result).toBe(label); });\n`,
+    valid: `${playwrightImports}const label = "ready"; test("reads the page", async ({ page }) => { const result = await page.evaluate((value) => value, label); expect(result).toBe(label); });\n`,
   },
   {
     name: "TanStack query return values",
@@ -734,29 +845,25 @@ test.each([
     name: "missing Playwright await",
     suffix: "spec.ts",
     rule: "noPlaywrightMissingAwait",
-    source:
-      'test("shows content", ({ page }) => { expect(page.getByRole("heading")).toBeVisible(); });\n',
+    source: `${playwrightImports}test("shows content", ({ page }) => { expect(page.getByRole("heading")).toBeVisible(); });\n`,
   },
   {
     name: "brittle Playwright timeout",
     suffix: "spec.ts",
     rule: "noPlaywrightWaitForTimeout",
-    source:
-      'test("shows content", async ({ page }) => { await page.waitForTimeout(1000); await expect(page.getByRole("heading")).toBeVisible(); });\n',
+    source: `${playwrightImports}test("shows content", async ({ page }) => { await page.waitForTimeout(1000); await expect(page.getByRole("heading")).toBeVisible(); });\n`,
   },
   {
     name: "empty Playwright fixture pattern",
     suffix: "spec.ts",
     rule: "noEmptyPattern",
-    source:
-      'test("reads the browser", ({}) => { expect(globalThis).toBeDefined(); });\n',
+    source: `${playwrightImports}test("reads the browser", ({}) => { expect(globalThis).toBeDefined(); });\n`,
   },
   {
     name: "condition-based Playwright assertion",
     suffix: "spec.ts",
     rule: null,
-    source:
-      'test("shows content", async ({ page }) => { await expect(page.getByRole("heading")).toBeVisible(); });\n',
+    source: `${playwrightImports}test("shows content", async ({ page }) => { await expect(page.getByRole("heading")).toBeVisible(); });\n`,
   },
 ])("biome checks $name", ({ rule, source, suffix }) => {
   const directory = mkdtempSync(join(root, "src", "quality-probe-"));

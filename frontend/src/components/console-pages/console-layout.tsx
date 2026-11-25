@@ -194,7 +194,7 @@ export function PageHeader({
         {eyebrow}
       </p>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] wrap-break-word sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight wrap-break-word sm:text-3xl">
           {title}
         </h1>
         {isNonEmptyString(description) ? (
@@ -247,9 +247,7 @@ export function MetadataCard({
               <dt className="text-xs tracking-wide text-muted-foreground uppercase">
                 {item.label}
               </dt>
-              <dd className="min-w-0 text-sm [overflow-wrap:anywhere] wrap-break-word">
-                {item.value}
-              </dd>
+              <dd className="min-w-0 text-sm wrap-break-word">{item.value}</dd>
             </div>
           ))}
         </dl>

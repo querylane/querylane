@@ -1,7 +1,7 @@
 {
   "versions": {
-    "@biomejs/biome": "2.6.7",
-    "ultracite": "8.1.1",
+    "@biomejs/biome": "2.6.9",
+    "ultracite": "8.3.1",
     "oxlint": "1.94.0",
     "@shadcn/lint": "0.2.5",
     "react-doctor": "0.9.23",
@@ -1758,8 +1758,8 @@
     },
     {
       "rule": "nursery/useConsistentHeadingLevel",
-      "decision": "inapplicable",
-      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "decision": "error",
+      "reason": "Markdown heading levels must not skip a level.",
       "docs": "https://biomejs.dev/linter/rules/use-consistent-heading-level/"
     },
     {
@@ -1806,8 +1806,8 @@
     },
     {
       "rule": "nursery/useFencedCodeLanguage",
-      "decision": "inapplicable",
-      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "decision": "error",
+      "reason": "Declare fenced code languages so rendered examples have the correct highlighting.",
       "docs": "https://biomejs.dev/linter/rules/use-fenced-code-language/"
     },
     {
@@ -1916,8 +1916,8 @@
     },
     {
       "rule": "nursery/useSingleTopLevelHeading",
-      "decision": "inapplicable",
-      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "decision": "error",
+      "reason": "Keep at most one top-level heading per frontend Markdown document.",
       "docs": "https://biomejs.dev/linter/rules/use-single-top-level-heading/"
     },
     {
@@ -1987,7 +1987,7 @@
     {
       "rule": "nursery/useTopLevelHeading",
       "decision": "inapplicable",
-      "reason": "Blume owns documentation; this UI gate retains upstream Markdown exclusion and does not claim Markdown coverage.",
+      "reason": "Changesets summaries, agent instruction fragments, and Claude import stubs legitimately omit a top-level heading.",
       "docs": "https://biomejs.dev/linter/rules/use-top-level-heading/"
     },
     {
@@ -4817,6 +4817,352 @@
       "decision": "error",
       "reason": "Disallow comparing a single character with a string that has more than one character.",
       "docs": "https://biomejs.dev/linter/rules/use-valid-character-comparison/"
+    },
+    {
+      "rule": "nursery/noArrayDelete",
+      "decision": "delegated",
+      "reason": "Typed Oxlint already rejects sparse holes created by deleting array elements.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-array-delete"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-array-delete/"
+    },
+    {
+      "rule": "nursery/noAstroComponentDefaultExport",
+      "decision": "inapplicable",
+      "reason": "Querylane uses React TSX and Blume docs, not Astro components.",
+      "docs": "https://biomejs.dev/linter/rules/no-astro-component-default-export/"
+    },
+    {
+      "rule": "nursery/noBufferConstructor",
+      "decision": "error",
+      "reason": "Reject Buffer constructors and calls, including node:buffer import aliases in Node tooling.",
+      "docs": "https://biomejs.dev/linter/rules/no-buffer-constructor/"
+    },
+    {
+      "rule": "nursery/noCanvasToImage",
+      "decision": "error",
+      "reason": "Avoid unnecessary serialization when a canvas can be used as an image source directly.",
+      "docs": "https://biomejs.dev/linter/rules/no-canvas-to-image/"
+    },
+    {
+      "rule": "nursery/noConfusingArraySplice",
+      "decision": "error",
+      "reason": "Require explicit intent where splice replaces or inserts an element; retain splice for genuine removal and grid reordering.",
+      "docs": "https://biomejs.dev/linter/rules/no-confusing-array-splice/"
+    },
+    {
+      "rule": "nursery/noDrizzleDbObjectInsideTransaction",
+      "decision": "inapplicable",
+      "reason": "Querylane uses ConnectRPC and PostgreSQL, not Drizzle transactions.",
+      "docs": "https://biomejs.dev/linter/rules/no-drizzle-db-object-inside-transaction/"
+    },
+    {
+      "rule": "nursery/noDynamicRequire",
+      "decision": "delegated",
+      "reason": "Oxlint already rejects dynamic CommonJS require; the bundler still supports ESM import() for lazy chunks.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "import/no-dynamic-require"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-dynamic-require/"
+    },
+    {
+      "rule": "nursery/noExpectToHaveBeenCalledOnce",
+      "decision": "error",
+      "reason": "Use an explicit count matcher for Rstest call cardinality.",
+      "docs": "https://biomejs.dev/linter/rules/no-expect-to-have-been-called-once/"
+    },
+    {
+      "rule": "nursery/noImmediateMutation",
+      "decision": "error",
+      "reason": "Initialize objects, arrays, sets, maps, and variables directly when a separate immediate write adds nothing.",
+      "docs": "https://biomejs.dev/linter/rules/no-immediate-mutation/"
+    },
+    {
+      "rule": "nursery/noJasmineGlobals",
+      "decision": "error",
+      "reason": "Reject accidental Jasmine globals in tests using explicit Rstest and Playwright APIs.",
+      "docs": "https://biomejs.dev/linter/rules/no-jasmine-globals/"
+    },
+    {
+      "rule": "nursery/noLateCurrentTargetAccess",
+      "decision": "error",
+      "reason": "Capture the event target synchronously, before the browser clears currentTarget after dispatch.",
+      "docs": "https://biomejs.dev/linter/rules/no-late-current-target-access/"
+    },
+    {
+      "rule": "nursery/noMisusedSpread",
+      "decision": "delegated",
+      "reason": "Typed Oxlint owns spread checks with compiler-backed resolution of imported and RPC types.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/no-misused-spread"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-misused-spread/"
+    },
+    {
+      "rule": "nursery/noReturnInTest",
+      "decision": "error",
+      "reason": "Await async test work directly instead of returning assertions or arbitrary values from test bodies.",
+      "docs": "https://biomejs.dev/linter/rules/no-return-in-test/"
+    },
+    {
+      "rule": "nursery/noTailwindConflictingClasses",
+      "decision": "error",
+      "reason": "Reject same-variant utilities that write the same CSS properties on the same element.",
+      "docs": "https://biomejs.dev/linter/rules/no-tailwind-conflicting-classes/"
+    },
+    {
+      "rule": "nursery/noTailwindRestrictedClasses",
+      "decision": "error",
+      "reason": "Reject the legacy break-words alias; its canonical Tailwind v4 replacement preserves the generated declaration.",
+      "docs": "https://biomejs.dev/linter/rules/no-tailwind-restricted-classes/"
+    },
+    {
+      "rule": "nursery/noTestGlobals",
+      "decision": "error",
+      "reason": "Require explicit test API imports; do not apply the unsafe Jest/Vitest import fix to Rstest or Playwright.",
+      "docs": "https://biomejs.dev/linter/rules/no-test-globals/"
+    },
+    {
+      "rule": "nursery/noTestHooks",
+      "decision": "inapplicable",
+      "reason": "Playwright beforeEach fixtures establish routes and page state; Rstest root teardown restores mocks, timers, and the DOM.",
+      "docs": "https://biomejs.dev/linter/rules/no-test-hooks/"
+    },
+    {
+      "rule": "nursery/noTripleSlashReference",
+      "decision": "delegated",
+      "reason": "Oxlint enforces the same allowed lib, no path, and prefer import rules in authored TypeScript declarations.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/triple-slash-reference"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-triple-slash-reference/"
+    },
+    {
+      "rule": "nursery/noUnsafeSqliteInterpolation",
+      "decision": "inapplicable",
+      "reason": "This check only recognizes node:sqlite, which the PostgreSQL UI does not use.",
+      "docs": "https://biomejs.dev/linter/rules/no-unsafe-sqlite-interpolation/"
+    },
+    {
+      "rule": "nursery/noUselessBind",
+      "decision": "delegated",
+      "reason": "Oxlint already rejects redundant receiver binding on function literals.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "eslint/no-extra-bind"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-useless-bind/"
+    },
+    {
+      "rule": "nursery/noUselessDefaultAssignment",
+      "decision": "error",
+      "reason": "Reject default assignments that can never take effect, while keeping meaningful defaults for optional values.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-default-assignment/"
+    },
+    {
+      "rule": "nursery/noUselessNestedTernary",
+      "decision": "delegated",
+      "reason": "The existing Biome rule rejects nested ternaries, including the subset with mergeable branches.",
+      "owner": {
+        "tool": "biome",
+        "rule": "style/noNestedTernary"
+      },
+      "docs": "https://biomejs.dev/linter/rules/no-useless-nested-ternary/"
+    },
+    {
+      "rule": "nursery/noUselessSetConstruction",
+      "decision": "error",
+      "reason": "Reject temporary Sets around nonmutating Set operations when the Set algebra result already creates a new collection.",
+      "docs": "https://biomejs.dev/linter/rules/no-useless-set-construction/"
+    },
+    {
+      "rule": "nursery/noVueAsyncComputed",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-async-computed/"
+    },
+    {
+      "rule": "nursery/noVueDefineModelDefault",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-define-model-default/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedFilter",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-filter/"
+    },
+    {
+      "rule": "nursery/noVueDeprecatedVIs",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-deprecated-vis/"
+    },
+    {
+      "rule": "nursery/noVueDuplicateVElseIf",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-duplicate-velse-if/"
+    },
+    {
+      "rule": "nursery/noVueExportInScriptSetup",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-export-in-script-setup/"
+    },
+    {
+      "rule": "nursery/noVueNegationElse",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/no-vue-negation-else/"
+    },
+    {
+      "rule": "nursery/noYamlEmptyMapKeys",
+      "decision": "error",
+      "reason": "Require explicit YAML mapping keys.",
+      "docs": "https://biomejs.dev/linter/rules/no-yaml-empty-map-keys/"
+    },
+    {
+      "rule": "nursery/noYamlEmptyMapValues",
+      "decision": "error",
+      "reason": "Require deliberate values instead of omitted YAML mapping values; explicit null is valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-yaml-empty-map-values/"
+    },
+    {
+      "rule": "nursery/noYamlEmptySequenceEntries",
+      "decision": "error",
+      "reason": "Require deliberate YAML list items; explicit null and quoted empty strings remain valid.",
+      "docs": "https://biomejs.dev/linter/rules/no-yaml-empty-sequence-entries/"
+    },
+    {
+      "rule": "nursery/useBiomeKindSets",
+      "decision": "inapplicable",
+      "reason": "No authored Biome JavaScript plugins use @biomejs/runtime/plugin. This rule can also flag ordinary kind comparisons without a runtime import.",
+      "docs": "https://biomejs.dev/linter/rules/use-biome-kind-sets/"
+    },
+    {
+      "rule": "nursery/useBiomeTopLevelTypes",
+      "decision": "inapplicable",
+      "reason": "No authored Biome JavaScript plugins build kind sets or unions; the Querylane lint plugin runs in Oxlint.",
+      "docs": "https://biomejs.dev/linter/rules/use-biome-top-level-types/"
+    },
+    {
+      "rule": "nursery/useCalledWith",
+      "decision": "inapplicable",
+      "reason": "An occurrence check can intentionally leave arguments unspecified. This rule rejects the positive matcher produced by the safe useExpectToHaveBeenCalled fix.",
+      "docs": "https://biomejs.dev/linter/rules/use-called-with/"
+    },
+    {
+      "rule": "nursery/useConsistentIndexedObjectStyle",
+      "decision": "delegated",
+      "reason": "Oxlint already enforces Record over equivalent index signatures.",
+      "owner": {
+        "tool": "oxlint",
+        "rule": "typescript/consistent-indexed-object-style"
+      },
+      "docs": "https://biomejs.dev/linter/rules/use-consistent-indexed-object-style/"
+    },
+    {
+      "rule": "nursery/useDescribeFunctionTitle",
+      "decision": "inapplicable",
+      "reason": "The rule only recognizes Jest and Vitest APIs, not Querylane's Rstest or Playwright suites.",
+      "docs": "https://biomejs.dev/linter/rules/use-describe-function-title/"
+    },
+    {
+      "rule": "nursery/useEarlyContinue",
+      "decision": "error",
+      "reason": "Use an early loop guard for multi-statement work to cut nesting without banning single-statement conditions.",
+      "docs": "https://biomejs.dev/linter/rules/use-early-continue/"
+    },
+    {
+      "rule": "nursery/useExpectEqualityMatcher",
+      "decision": "error",
+      "reason": "Use direct comparison matchers so test failures show the actual operands.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-equality-matcher/"
+    },
+    {
+      "rule": "nursery/useExpectToHaveBeenCalled",
+      "decision": "error",
+      "reason": "Use the positive or negative Rstest call matcher instead of testing a zero call count.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-have-been-called/"
+    },
+    {
+      "rule": "nursery/useExpectToHaveBeenCalledTimes",
+      "decision": "error",
+      "reason": "Use the Rstest call count matcher instead of asserting the mock call log length.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-have-been-called-times/"
+    },
+    {
+      "rule": "nursery/useExpectToHaveLength",
+      "decision": "error",
+      "reason": "Use the shared test length matcher rather than comparing .length directly.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-have-length/"
+    },
+    {
+      "rule": "nursery/useExpectToStrictEqual",
+      "decision": "inapplicable",
+      "reason": "Structural equality and exact prototype, sparse-slot, and property-presence equality are distinct test contracts. Existing Rstest suites use both.",
+      "docs": "https://biomejs.dev/linter/rules/use-expect-to-strict-equal/"
+    },
+    {
+      "rule": "nursery/usePackageJsonValidLicense",
+      "decision": "error",
+      "reason": "Validate declared package licenses as SPDX or another supported package license value.",
+      "docs": "https://biomejs.dev/linter/rules/use-package-json-valid-license/"
+    },
+    {
+      "rule": "nursery/useSpyOn",
+      "decision": "inapplicable",
+      "reason": "The rule recognizes jest.fn and vi.fn, not Rstest rs.fn. Tests use rs.spyOn and restore mocks in shared teardown.",
+      "docs": "https://biomejs.dev/linter/rules/use-spy-on/"
+    },
+    {
+      "rule": "nursery/useTanstackQueryExhaustiveDependencies",
+      "decision": "inapplicable",
+      "reason": "Connect query factories already key by normalized resource inputs. The rule asks to add equivalent raw inputs and transport or executor functions to serializable keys.",
+      "docs": "https://biomejs.dev/linter/rules/use-tanstack-query-exhaustive-dependencies/"
+    },
+    {
+      "rule": "nursery/useTanstackQueryMutationPropertyOrder",
+      "decision": "error",
+      "reason": "Keep TanStack mutation option order predictable for TypeScript contextual inference.",
+      "docs": "https://biomejs.dev/linter/rules/use-tanstack-query-mutation-property-order/"
+    },
+    {
+      "rule": "nursery/useTopLevelDescribe",
+      "decision": "inapplicable",
+      "reason": "Rstest setup hooks intentionally have root scope and flat tests are valid. Mandatory wrapping changes hook scope and Playwright test title paths.",
+      "docs": "https://biomejs.dev/linter/rules/use-top-level-describe/"
+    },
+    {
+      "rule": "nursery/useTopLevelRequire",
+      "decision": "error",
+      "reason": "Keep statically analyzable literal requires at module scope in CommonJS tooling such as lighthouserc.cjs.",
+      "docs": "https://biomejs.dev/linter/rules/use-top-level-require/"
+    },
+    {
+      "rule": "nursery/useValidNamespaceImports",
+      "decision": "error",
+      "reason": "Validate namespace uses through re-exports and bindings that native Oxlint import/namespace does not follow.",
+      "docs": "https://biomejs.dev/linter/rules/use-valid-namespace-imports/"
+    },
+    {
+      "rule": "nursery/useVueConsistentVOnHandlerStyle",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-consistent-von-handler-style/"
+    },
+    {
+      "rule": "nursery/useVueRegisteredComponentNameCasing",
+      "decision": "inapplicable",
+      "reason": "Querylane uses web React, not Vue.",
+      "docs": "https://biomejs.dev/linter/rules/use-vue-registered-component-name-casing/"
     }
   ],
   "oxlint": [

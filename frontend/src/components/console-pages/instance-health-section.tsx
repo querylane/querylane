@@ -90,7 +90,7 @@ function InstanceHealthRow({ row }: { row: HealthRowModel }) {
                 <dt className="text-xs text-muted-foreground group-data-[tone=error]/health-check:text-destructive/80">
                   {entry.label}
                 </dt>
-                <dd className="min-w-0 [overflow-wrap:anywhere] wrap-break-word text-(length:--text-caption) text-foreground tabular-nums group-data-[tone=error]/health-check:text-destructive">
+                <dd className="min-w-0 wrap-break-word text-(length:--text-caption) text-foreground tabular-nums group-data-[tone=error]/health-check:text-destructive">
                   {entry.value}
                 </dd>
               </div>

@@ -310,10 +310,11 @@ function formatRefreshDuration(intervalMs: number): string {
       continue;
     }
     const value = Math.floor(remainingMs / unit.ms);
-    if (value > 0) {
-      parts.push(pluralizeDurationPart(value, unit.label));
-      remainingMs %= unit.ms;
+    if (!(value > 0)) {
+      continue;
     }
+    parts.push(pluralizeDurationPart(value, unit.label));
+    remainingMs %= unit.ms;
   }
   return parts.join(" ") || pluralizeDurationPart(1, "second");
 }

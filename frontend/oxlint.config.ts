@@ -42,6 +42,11 @@ export default defineConfig({
     ...core.rules,
     ...react.rules,
     ...shadcn.rules,
+    // Keep Querylane's stricter defaults over the newer preset options.
+    "no-negated-condition": "error",
+    "no-unused-vars": "error",
+    "jsx-a11y/aria-role": "error",
+    "typescript/consistent-type-imports": "error",
     // Adopt the reviewed anti-slop checks without importing preset-wide policy.
     "quality/no-chained-type-assertions": "error",
     "quality/no-reduce-accumulator-copy": "error",
