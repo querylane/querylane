@@ -878,7 +878,9 @@ describe("table data grid foreign key references", () => {
     expect(
       screen.queryByRole("dialog", { name: "public.carriers" })
     ).toBeNull();
-    expect(document.activeElement).toBe(trigger);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger);
+    });
   });
 });
 
@@ -1519,13 +1521,17 @@ describe("table data grid column layout", () => {
     await user.click(screen.getByRole("combobox", { name: "Filter column" }));
     // The filter column picker labels each option with its raw type.
     expect(
-      screen.getByRole("option", { name: "measurement double precision" })
+      await screen.findByRole("option", {
+        name: "measurement double precision",
+      })
     ).toBeTruthy();
     await user.keyboard("{Escape}{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Sort" }));
     await user.click(screen.getByRole("combobox", { name: "Add sort column" }));
-    expect(screen.getByRole("option", { name: "measurement" })).toBeTruthy();
+    expect(
+      await screen.findByRole("option", { name: "measurement" })
+    ).toBeTruthy();
   });
 
   test("keeps actions frozen and restores a data column's frozen state after hide and show", async () => {
@@ -1541,9 +1547,13 @@ describe("table data grid column layout", () => {
         })
       );
     await openMeasurementOptions();
-    await user.click(screen.getByRole("menuitem", { name: "Freeze column" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Freeze column" })
+    );
     await openMeasurementOptions();
-    await user.click(screen.getByRole("menuitem", { name: "Hide column" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Hide column" })
+    );
 
     // The action region (select → expand) is always pinned left so the row
     // checkbox and expand affordance stay reachable while data columns scroll.
@@ -1641,7 +1651,7 @@ describe("table data grid local state", () => {
     );
     await user.click(screen.getByRole("button", { name: "Sort" }));
     await user.click(screen.getByRole("combobox", { name: "Add sort column" }));
-    await user.click(screen.getByRole("option", { name: "email" }));
+    await user.click(await screen.findByRole("option", { name: "email" }));
 
     await waitFor(() => {
       const request = tableDataApi.useReadRowsQuery.mock.calls.at(-1)?.[0];

@@ -855,7 +855,9 @@ describe("table detail constraints tab", () => {
     expect(screen.queryByText("customers_status_check")).toBeNull();
 
     await user.click(kindFilter);
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "CHECK" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "CHECK" })
+    );
 
     expect(getSearchEmptyState().textContent).toContain("No results found");
 
@@ -1020,7 +1022,7 @@ describe("table detail columns tab", () => {
 
     await user.click(screen.getByRole("button", { name: "Nullability" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Nullable" })
+      await screen.findByRole("menuitemcheckbox", { name: "Nullable" })
     );
     await waitFor(() => {
       expect(screen.queryByText("Surrogate key")).toBeNull();
@@ -1228,7 +1230,9 @@ describe("table detail triggers tab", () => {
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "State" }));
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "Enabled" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "Enabled" })
+    );
     expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("trg_event_10")).toHaveLength(0);
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
@@ -1243,7 +1247,7 @@ describe("table detail triggers tab", () => {
     await user.click(
       screen.getByRole("combobox", { name: "Triggers per page" })
     );
-    await user.click(screen.getByRole("option", { name: "25" }));
+    await user.click(await screen.findByRole("option", { name: "25" }));
     expect(screen.getAllByText("trg_event_00").length).toBeGreaterThan(0);
     expect(screen.getAllByText("trg_event_11").length).toBeGreaterThan(0);
     expect(screen.getByText("Page 1 of 1")).toBeTruthy();
@@ -1479,7 +1483,7 @@ describe("table detail policies tab pagination", () => {
     );
     await user.click(screen.getByRole("button", { name: "Mode" }));
     await user.click(
-      screen.getByRole("menuitemcheckbox", { name: "Restrictive" })
+      await screen.findByRole("menuitemcheckbox", { name: "Restrictive" })
     );
     await user.click(screen.getByRole("menuitem", { name: "Clear filter" }));
 
@@ -1521,7 +1525,7 @@ describe("table detail policies tab", () => {
     );
 
     await user.click(screen.getByRole("combobox", { name: "Policy command" }));
-    await user.click(screen.getByRole("option", { name: "UPDATE" }));
+    await user.click(await screen.findByRole("option", { name: "UPDATE" }));
 
     const sqlExpressions = Array.from(
       container.querySelectorAll(

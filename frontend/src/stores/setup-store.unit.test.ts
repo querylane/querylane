@@ -59,12 +59,16 @@ function createInterleavedTestStore() {
 describe("setup-store bootstrap flow", () => {
   test("bootstrap routes to boot_error on network failure", async () => {
     const failure = new Error("network down");
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));
 
     await useSetupStore.getState().bootstrap();
 
     expect(useSetupStore.getState().status).toBe("boot_error");
     expect(useSetupStore.getState().bootError?.message).toBe("network down");
+    expect(report).toHaveBeenCalledWith(failure);
+    expect(report).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -99,12 +103,16 @@ describe("setup-store setup-required transition", () => {
 describe("setup-store verify flow", () => {
   test("verifyAfterSetup routes to boot_error on failure", async () => {
     const failure = new Error("verify failed");
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const { useSetupStore } = createTestStore(() => Promise.reject(failure));
 
     await useSetupStore.getState().verifyAfterSetup();
 
     expect(useSetupStore.getState().status).toBe("boot_error");
     expect(useSetupStore.getState().bootError?.message).toBe("verify failed");
+    expect(report).toHaveBeenCalledWith(failure);
+    expect(report).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -209,6 +217,9 @@ test("records warning codes for inconsistent configured state", async () => {
 });
 
 test("setSetupRequired swallows async refresh rejections", async () => {
+  const failure = new Error("refresh failed");
+  const report = rs.fn();
+  rs.stubGlobal("reportError", report);
   const { useSetupStore } = createTestStore(() =>
     Promise.resolve(
       buildOnboardingState({
@@ -218,7 +229,7 @@ test("setSetupRequired swallows async refresh rejections", async () => {
     )
   );
   useSetupStore.setState({
-    refreshOnboardingState: () => Promise.reject(new Error("refresh failed")),
+    refreshOnboardingState: () => Promise.reject(failure),
   });
 
   expect(() => {
@@ -227,4 +238,5 @@ test("setSetupRequired swallows async refresh rejections", async () => {
   await Promise.resolve();
 
   expect(useSetupStore.getState().status).toBe("onboarding");
+  expect(report).toHaveBeenCalledExactlyOnceWith(failure);
 });

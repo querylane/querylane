@@ -38,14 +38,24 @@ function dispatchPointerMove(
 }
 
 function stubSidebarBounds(sidebarPanel: HTMLElement) {
-  rs.spyOn(sidebarPanel, "getBoundingClientRect").mockReturnValue(
-    DOMRect.fromRect({
-      height: 720,
-      width: 256,
-      x: 0,
-      y: 56,
-    })
-  );
+  const geometry = {
+    bottom: 776,
+    height: 720,
+    left: 0,
+    right: 256,
+    top: 56,
+    width: 256,
+    x: 0,
+    y: 56,
+  };
+  const domRectSerializer = "toJSON" satisfies keyof DOMRect;
+  const bounds: DOMRect = {
+    ...geometry,
+    [domRectSerializer]() {
+      return geometry;
+    },
+  };
+  rs.spyOn(sidebarPanel, "getBoundingClientRect").mockReturnValue(bounds);
 }
 
 function renderCollapsedOffcanvasSidebar() {

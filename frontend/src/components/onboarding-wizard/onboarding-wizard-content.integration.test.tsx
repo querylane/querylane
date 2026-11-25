@@ -375,11 +375,13 @@ describe("onboarding wizard setup progression", () => {
     );
     await user.click(screen.getByRole("combobox", { name: "SSL mode" }));
     await user.click(
-      screen.getByRole("option", { name: REQUIRE_SSL_MODE_OPTION_RE })
+      await screen.findByRole("option", { name: REQUIRE_SSL_MODE_OPTION_RE })
     );
     await user.click(screen.getByRole("combobox", { name: "SSL negotiation" }));
     await user.click(
-      screen.getByRole("option", { name: DIRECT_SSL_NEGOTIATION_OPTION_RE })
+      await screen.findByRole("option", {
+        name: DIRECT_SSL_NEGOTIATION_OPTION_RE,
+      })
     );
     await user.click(screen.getByRole("button", { name: "Test connection" }));
 

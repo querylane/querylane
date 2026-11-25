@@ -1,0 +1,64 @@
+diff --git a/src/runtime/dom.mjs b/src/runtime/dom.mjs
+index 1ef7caf53a68eab94584a7ff340a019751bb440d..6d7affc364bed989ac24b30e3381165bc7f26c89 100644
+--- a/src/runtime/dom.mjs
++++ b/src/runtime/dom.mjs
+@@ -9,7 +9,7 @@
+ import { getParser } from './parser.mjs';
+ import {
+   EventTarget, Event, CustomEvent,
+-  UIEvent, MouseEvent, KeyboardEvent, FocusEvent,
++  UIEvent, MouseEvent, PointerEvent, KeyboardEvent, FocusEvent,
+ } from './events.mjs';
+ import { liveNodeList, liveHTMLCollection, liveNamedNodeMap } from './collections.mjs';
+ import { matchesSelector, querySelector as qsel, querySelectorAll as qselAll } from './selectors.mjs';
+@@ -570,6 +570,8 @@ class ClassList {
+   [Symbol.iterator]() { return this.__list()[Symbol.iterator](); }
+ }
+
++const attributeNodes = new WeakMap();
++
+ export class Element extends Node {
+   constructor(ownerDocument, localName, namespace = '') {
+     // HTMLElement (=== Element here) as a custom element constructor: `new C()` / an
+@@ -967,7 +969,13 @@ export class Element extends Node {
+     // a no-op, which breaks the otherwise-infinite re-entrancy.
+     if (this.__clickInProgress) return;
+     this.__clickInProgress = true;
+-    try { this.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); }
++    try {
++      this.dispatchEvent(new PointerEvent('click', {
++        bubbles: true, cancelable: true, composed: true,
++        detail: 0, pointerId: -1, pointerType: '',
++        view: this.ownerDocument?.defaultView ?? null,
++      }));
++    }
+     finally { this.__clickInProgress = false; }
+   }
+   // pre-click activation (runs BEFORE click listeners; undone if preventDefault)
+@@ -1048,7 +1056,25 @@ export class Element extends Node {
+   setAttributeNS(_ns, name, value) { this.setAttribute(name, value); }
+   hasAttributeNS(_ns, name) { return this.hasAttribute(name); }
+   removeAttributeNS(_ns, name) { this.removeAttribute(name); }
+-  getAttributeNode(name) { const a = (this.__attrs ?? (this.__attrs = this.__buildAttrs())).find((x) => x.name === name); return a ? { name: a.name, value: a.value, ownerElement: this } : null; }
++  getAttributeNode(name) {
++    const a = (this.__attrs ?? (this.__attrs = this.__buildAttrs())).find((x) => x.name === name);
++    if (!a) return null;
++    let node = attributeNodes.get(a);
++    if (!node) {
++      const element = this;
++      node = {
++        name: a.name,
++        get value() { return a.value; },
++        set value(value) {
++          if (this.ownerElement) element.setAttribute(a.name, value);
++          else a.value = String(value);
++        },
++        get ownerElement() { return element.__attrs.includes(a) ? element : null; },
++      };
++      attributeNodes.set(a, node);
++    }
++    return node;
++  }
+   getAttributeNodeNS(_ns, name) { return this.getAttributeNode(name); }
+   // Attr-node methods are thin shims over the name-based API (no real Attr class).
+   // node.attributes is a LIVE NamedNodeMap (see the getter), so React 19's

@@ -1,10 +1,10 @@
 import "./browser-test.setup.css";
-import { afterEach, rs } from "@rstest/core";
+import { afterAll, afterEach, rs } from "@rstest/core";
 import { installUnexpectedConsoleIssueGuard } from "./test.console-guard";
 
 const restoreRealTimers = rs.useRealTimers;
 
-installUnexpectedConsoleIssueGuard(afterEach);
+installUnexpectedConsoleIssueGuard(afterEach, afterAll);
 
 afterEach(async function resetSharedBrowserTestEnvironment() {
   rs.restoreAllMocks();

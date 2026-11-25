@@ -141,6 +141,12 @@ describe("saved queries", () => {
 
 describe("persisted workbench validation", () => {
   test("does not overwrite rejected work if its recovery copy exceeds storage quota", async () => {
+    const failure = new DOMException(
+      "Storage quota exceeded",
+      "QuotaExceededError"
+    );
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const key = "querylane.sql-workbench.v1";
     const raw = JSON.stringify({ version: 0, state: { workspaces: "broken" } });
     localStorage.setItem(key, raw);
@@ -149,10 +155,7 @@ describe("persisted workbench validation", () => {
       .spyOn(localStorage, "setItem")
       .mockImplementation((name, value) => {
         if (name.endsWith(".recovery")) {
-          throw new DOMException(
-            "Storage quota exceeded",
-            "QuotaExceededError"
-          );
+          throw failure;
         }
         write(name, value);
       });
@@ -166,8 +169,11 @@ describe("persisted workbench validation", () => {
       localStorage.clear();
       await useSqlWorkbenchStore.persist.rehydrate();
     }
+    expect(report).toHaveBeenCalledExactlyOnceWith(failure);
   });
   test("rejects malformed stored data without replacing drafts or deleting recovery bytes", async () => {
+    const report = rs.fn();
+    rs.stubGlobal("reportError", report);
     const tabId = store().addTab(SCOPE);
     store().updateTabText(SCOPE, tabId, "SELECT 'keep this draft'");
     const before = store().workspaces;
@@ -181,5 +187,16 @@ describe("persisted workbench validation", () => {
 
     expect(store().workspaces).toEqual(before);
     expect(localStorage.getItem("querylane.sql-workbench.v1")).toBe(raw);
+    expect(report).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        issues: [
+          expect.objectContaining({
+            code: "invalid_type",
+            path: ["state", "workspaces"],
+          }),
+        ],
+        name: "ZodError",
+      })
+    );
   });
 });
