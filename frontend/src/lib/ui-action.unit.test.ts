@@ -46,6 +46,8 @@ describe("handleAsyncAction", () => {
       throw error;
     })();
     expect(mocks.capture).toHaveBeenCalledWith(error);
-    expect(mocks.toast).toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith("Request failed", {
+      description: "Action failed before starting",
+    });
   });
 });

@@ -649,7 +649,10 @@ describe("error routing and reporting", () => {
       original,
       expect.any(Object)
     );
-    expect(dependencies.logger.error).toHaveBeenCalled();
+    expect(dependencies.logger.error).toHaveBeenCalledWith(
+      "disk is full",
+      expect.objectContaining({ title: "Request failed" })
+    );
     expect(dependencies.toast.error).toHaveBeenCalledWith(
       "Request failed",
       expect.objectContaining({

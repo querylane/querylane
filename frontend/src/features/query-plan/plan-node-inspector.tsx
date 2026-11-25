@@ -130,7 +130,7 @@ function PlanNodeInspector({
           {predicates.map((detail) => (
             <div key={detail.label}>
               <dt className="mb-2 font-medium">{detail.label}</dt>
-              <dd className="rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
+              <dd className="rounded-md bg-muted/60 p-2.5 font-mono text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">
                 {detail.value}
               </dd>
             </div>
@@ -186,7 +186,7 @@ function PlanNodeInspector({
         {otherDetails.map((detail) => (
           <div key={detail.label}>
             <dt className="mb-1 text-muted-foreground">{detail.label}</dt>
-            <dd className="font-mono text-xs [overflow-wrap:anywhere] wrap-break-word whitespace-pre-wrap">
+            <dd className="font-mono text-xs wrap-break-word whitespace-pre-wrap">
               {detail.value}
             </dd>
           </div>

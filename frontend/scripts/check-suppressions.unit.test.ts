@@ -137,6 +137,36 @@ describe("suppression guard", () => {
 });
 
 describe("suppression check file coverage", () => {
+  test.each(["md", "markdown", "MD"])(
+    "rejects Biome directives in .%s files",
+    (extension) => {
+      const root = mkdtempSync(join(tmpdir(), "querylane-markdown-policy-"));
+      const name = `probe.${extension}`;
+      const path = join(root, name);
+      const check = () =>
+        spawnSync("bun", [join(import.meta.dirname, "check-suppressions.ts")], {
+          cwd: root,
+          encoding: "utf-8",
+        });
+      const content = "# Example\n\nThe text follows the heading.\n";
+      const directive = ["biome", "ignore", "all"].join("-");
+      try {
+        writeFileSync(
+          path,
+          `<!-- ${directive} format: fixture -->\n${content}`
+        );
+        const rejected = check();
+        expect(rejected.status).toBe(1);
+        expect(rejected.stderr).toContain(`${name}:1`);
+
+        writeFileSync(path, content);
+        expect(check().status).toBe(0);
+      } finally {
+        rmSync(root, { recursive: true });
+      }
+    }
+  );
+
   test.each(["yaml", "yml"])(
     "rejects suppressions in .%s files while accepting valid YAML keys",
     (extension) => {

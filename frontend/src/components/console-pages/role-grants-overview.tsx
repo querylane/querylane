@@ -109,10 +109,11 @@ function publicPrivilegeSummary(objects: GrantedObject[]): string {
   const seen = new Set<string>();
   for (const object of objects) {
     for (const privilege of object.privileges) {
-      if (!seen.has(privilege.name)) {
-        seen.add(privilege.name);
-        names.push(privilege.name);
+      if (seen.has(privilege.name)) {
+        continue;
       }
+      seen.add(privilege.name);
+      names.push(privilege.name);
     }
   }
   if (names.length === 0) {

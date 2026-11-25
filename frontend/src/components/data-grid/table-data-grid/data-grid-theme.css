@@ -265,8 +265,6 @@
   transition: opacity 0.1s ease-out;
 }
 
-.rdg .rdg-row:hover .rdg-expand-button,
-.rdg .rdg-row[aria-selected="true"] .rdg-expand-button,
 .rdg .rdg-expand-button:focus-visible,
 .rdg .rdg-expand-button[aria-expanded="true"] {
   opacity: 1;
@@ -279,6 +277,11 @@
 .rdg .rdg-expand-button:hover,
 .rdg .rdg-expand-button[aria-expanded="true"] {
   background-color: var(--muted);
+}
+
+.rdg .rdg-row:hover .rdg-expand-button,
+.rdg .rdg-row[aria-selected="true"] .rdg-expand-button {
+  opacity: 1;
 }
 
 .rdg .rdg-cell.rdg-cell-frozen:nth-last-child(1 of .rdg-cell-frozen) {

@@ -37,10 +37,11 @@ function collectPolicyRoles(policies: TablePolicy[]) {
   const seen = new Set<string>();
   for (const policy of policies) {
     for (const role of policyRoles(policy)) {
-      if (!seen.has(role)) {
-        seen.add(role);
-        roles.push(role);
+      if (seen.has(role)) {
+        continue;
       }
+      seen.add(role);
+      roles.push(role);
     }
   }
   return roles.length > 0 ? roles : ["public"];

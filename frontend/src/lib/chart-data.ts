@@ -5,10 +5,11 @@ function averageBucket(bucket: ChartRow[], seriesKey: string): number | null {
   let finiteCount = 0;
   for (const row of bucket) {
     const value = row[seriesKey];
-    if (typeof value === "number" && Number.isFinite(value)) {
-      sum += value;
-      finiteCount += 1;
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      continue;
     }
+    sum += value;
+    finiteCount += 1;
   }
   return finiteCount > 0 ? sum / finiteCount : null;
 }

@@ -1,4 +1,5 @@
 ## Quality checks
+
 For every frontend change, make sure you run formatter, linter, type checker, build, and tests, before you commit.
 
 <!-- opensrc:start -->
@@ -37,6 +38,7 @@ bunx opensrc <owner>/<repo>      # GitHub repository, for example: bunx opensrc 
 ## Commit format
 
 All commits must follow: `type(scope): description`
+
 - **Types**: feat, fix, refactor, style, test, docs, chore, perf, ci, build, revert
 - **Scope** required, for example: `feat(frontend):` or `fix(frontend):`
 - Description: lowercase first letter, no trailing period, 5-72 chars

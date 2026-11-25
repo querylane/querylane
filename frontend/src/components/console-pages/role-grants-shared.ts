@@ -120,10 +120,11 @@ function schemaScopeBreakdownLabel(group: SchemaGrantGroup): string {
   const parts: string[] = [];
   for (const type of BREAKDOWN_ORDER) {
     const count = group.byType.get(type)?.length ?? 0;
-    if (count > 0) {
-      const unit = TYPE_UNIT[type] ?? "object";
-      parts.push(`${count.toLocaleString()} ${unit}${count === 1 ? "" : "s"}`);
+    if (count === 0) {
+      continue;
     }
+    const unit = TYPE_UNIT[type] ?? "object";
+    parts.push(`${count.toLocaleString()} ${unit}${count === 1 ? "" : "s"}`);
   }
   if (group.byType.has(GrantObjectType.SCHEMA)) {
     parts.push("schema-level grant");
@@ -229,10 +230,11 @@ export function aggregateGrants(grants: ObjectGrant[]): GrantedObject[] {
       name: grant.privilege,
     });
     const grantors = grantorsByObject.get(key);
-    if (grant.grantor && grantors && !grantors.has(grant.grantor)) {
-      grantors.add(grant.grantor);
-      object.grantors.push(grant.grantor);
+    if (!(grant.grantor && grantors) || grantors.has(grant.grantor)) {
+      continue;
     }
+    grantors.add(grant.grantor);
+    object.grantors.push(grant.grantor);
   }
   return [...objects.values()];
 }
@@ -540,10 +542,11 @@ export function columnsFor(
   const columnSet = new Set(columns);
   for (const object of objects) {
     for (const privilege of object.privileges) {
-      if (!columnSet.has(privilege.name)) {
-        columnSet.add(privilege.name);
-        columns.push(privilege.name);
+      if (columnSet.has(privilege.name)) {
+        continue;
       }
+      columnSet.add(privilege.name);
+      columns.push(privilege.name);
     }
   }
   return columns;

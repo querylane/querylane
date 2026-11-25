@@ -25,12 +25,13 @@ function renderProblem(problem: SqlProblem): Node {
   message.textContent = problem.message;
   root.append(message);
   for (const extra of [problem.detail, problem.hint]) {
-    if (extra) {
-      const line = document.createElement("div");
-      line.className = "cm-sqlDiagnosticExtra";
-      line.textContent = extra;
-      root.append(line);
+    if (!extra) {
+      continue;
     }
+    const line = document.createElement("div");
+    line.className = "cm-sqlDiagnosticExtra";
+    line.textContent = extra;
+    root.append(line);
   }
   return root;
 }

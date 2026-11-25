@@ -29,10 +29,11 @@ function finiteExtent(data: SparklineDatum[]): [number, number] {
   let minimum = Number.POSITIVE_INFINITY;
   let maximum = Number.NEGATIVE_INFINITY;
   for (const row of data) {
-    if (typeof row.value === "number" && Number.isFinite(row.value)) {
-      minimum = Math.min(minimum, row.value);
-      maximum = Math.max(maximum, row.value);
+    if (typeof row.value !== "number" || !Number.isFinite(row.value)) {
+      continue;
     }
+    minimum = Math.min(minimum, row.value);
+    maximum = Math.max(maximum, row.value);
   }
   if (!(Number.isFinite(minimum) && Number.isFinite(maximum))) {
     return [0, 1];

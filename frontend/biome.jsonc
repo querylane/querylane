@@ -36,20 +36,7 @@
       "semicolons": "always",
       "trailingCommas": "es5"
     },
-    "globals": [
-      "__API_BASE_URL__",
-      "describe",
-      "test",
-      "expect",
-      "beforeEach",
-      "afterEach",
-      "beforeAll",
-      "afterAll",
-      "it",
-      "jest",
-      "mock",
-      "spyOn"
-    ]
+    "globals": ["__API_BASE_URL__"]
   },
   "css": {
     "formatter": {
@@ -362,6 +349,69 @@
         "useVueValidVFor": "error"
       },
       "nursery": {
+        "noArrayDelete": "off",
+        "noAstroComponentDefaultExport": "off",
+        "noBufferConstructor": "error",
+        "noCanvasToImage": "error",
+        "noConfusingArraySplice": "error",
+        "noDrizzleDbObjectInsideTransaction": "off",
+        "noDynamicRequire": "off",
+        "noExpectToHaveBeenCalledOnce": "error",
+        "noImmediateMutation": "error",
+        "noJasmineGlobals": "error",
+        "noLateCurrentTargetAccess": "error",
+        "noMisusedSpread": "off",
+        "noReturnInTest": "error",
+        "noTailwindConflictingClasses": "error",
+        "noTailwindRestrictedClasses": {
+          "level": "error",
+          "options": {
+            "classes": {
+              "break-words": {
+                "message": "Use the canonical Tailwind v4 wrapping utility.",
+                "use": "wrap-break-word"
+              }
+            }
+          }
+        },
+        "noTestGlobals": "error",
+        "noTestHooks": "off",
+        "noTripleSlashReference": "off",
+        "noUnsafeSqliteInterpolation": "off",
+        "noUselessBind": "off",
+        "noUselessDefaultAssignment": "error",
+        "noUselessNestedTernary": "off",
+        "noUselessSetConstruction": "error",
+        "noVueAsyncComputed": "off",
+        "noVueDefineModelDefault": "off",
+        "noVueDeprecatedFilter": "off",
+        "noVueDeprecatedVIs": "off",
+        "noVueDuplicateVElseIf": "off",
+        "noVueExportInScriptSetup": "off",
+        "noVueNegationElse": "off",
+        "noYamlEmptyMapKeys": "error",
+        "noYamlEmptyMapValues": "error",
+        "noYamlEmptySequenceEntries": "error",
+        "useBiomeKindSets": "off",
+        "useBiomeTopLevelTypes": "off",
+        "useCalledWith": "off",
+        "useConsistentIndexedObjectStyle": "off",
+        "useDescribeFunctionTitle": "off",
+        "useEarlyContinue": "error",
+        "useExpectEqualityMatcher": "error",
+        "useExpectToHaveBeenCalled": "error",
+        "useExpectToHaveBeenCalledTimes": "error",
+        "useExpectToHaveLength": "error",
+        "useExpectToStrictEqual": "off",
+        "usePackageJsonValidLicense": "error",
+        "useSpyOn": "off",
+        "useTanstackQueryExhaustiveDependencies": "off",
+        "useTanstackQueryMutationPropertyOrder": "error",
+        "useTopLevelDescribe": "off",
+        "useTopLevelRequire": "error",
+        "useValidNamespaceImports": "error",
+        "useVueConsistentVOnHandlerStyle": "off",
+        "useVueRegisteredComponentNameCasing": "off",
         "noAsyncPromiseFinally": "error",
         "noDisabledAttribute": "off",
         "noDuplicateTypeConstituents": "error",
@@ -633,9 +683,9 @@
         "useBigintLiterals": "error",
         "useCapitalizedConstructors": "error",
         "useConsistentBlockLang": "error",
-        "useConsistentHeadingLevel": "off",
+        "useConsistentHeadingLevel": "error",
         "useConsistentJsonFileRead": "error",
-        "useFencedCodeLanguage": "off",
+        "useFencedCodeLanguage": "error",
         "useLowercaseTestTitle": {
           "level": "error",
           "options": {
@@ -655,7 +705,7 @@
         "useMatchingFunctionName": "error",
         "useNamedFunction": "error",
         "useSimplifiedBooleanReturn": "error",
-        "useSingleTopLevelHeading": "off",
+        "useSingleTopLevelHeading": "error",
         "useSvelteKitResolve": "error",
         "useSvelteReactiveClasses": "error",
         "useSvelteShorthandDirective": "error",
@@ -1252,10 +1302,10 @@
   },
   "markdown": {
     "formatter": {
-      "enabled": false
+      "enabled": true
     },
     "linter": {
-      "enabled": false
+      "enabled": true
     },
     "parser": {
       "frontmatter": true

@@ -36,11 +36,12 @@ function extractInstanceScopeKey(message: unknown): string | null {
 
   const fields = message as { name?: unknown; parent?: unknown };
   for (const value of [fields.name, fields.parent]) {
-    if (typeof value === "string") {
-      const match = INSTANCE_RESOURCE_NAME_PATTERN.exec(value);
-      if (match) {
-        return match[0];
-      }
+    if (typeof value !== "string") {
+      continue;
+    }
+    const match = INSTANCE_RESOURCE_NAME_PATTERN.exec(value);
+    if (match) {
+      return match[0];
     }
   }
 

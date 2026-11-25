@@ -1390,7 +1390,7 @@ describe("table data grid value dialogs", () => {
     fireEvent.click(tagsExpand);
 
     await waitFor(() => {
-      expect(screen.getAllByRole("dialog", { hidden: true }).length).toBe(2);
+      expect(screen.getAllByRole("dialog", { hidden: true })).toHaveLength(2);
     });
     expect(screen.queryByRole("dialog", { name: "tags array" })).toBeNull();
     expect(screen.getByRole("dialog", { name: "metadata JSON" })).toBeTruthy();

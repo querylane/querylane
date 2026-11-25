@@ -51,6 +51,13 @@ test.each([
   },
   {
     config: "biome.jsonc",
+    original: '"globals": ["__API_BASE_URL__"]',
+    replacement: '"globals": ["__API_BASE_URL__", "expect"]',
+    rule: "unreviewed JavaScript global",
+    message: "Reviewed quality options changed",
+  },
+  {
+    config: "biome.jsonc",
     original: '"includes": ["**/*.{js,jsx,mjs,cjs}"]',
     replacement: '"includes": ["**/*.mjs"]',
     rule: "narrowed JavaScript import validation",
@@ -312,6 +319,20 @@ test.each([
     replacement: '"javascript": { "linter": { "enabled": false },',
     rule: "disabled JavaScript linting",
     message: "Quality engine cannot be disabled",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"markdown": {\n    "formatter": {\n      "enabled": true',
+    replacement: '"markdown": {\n    "formatter": {\n      "enabled": false',
+    rule: "disabled Markdown formatter",
+    message: "Quality engine cannot be disabled: markdown.formatter",
+  },
+  {
+    config: "biome.jsonc",
+    original: '"linter": {\n      "enabled": true\n    },\n    "parser": {',
+    replacement: '"linter": {\n      "enabled": false\n    },\n    "parser": {',
+    rule: "disabled Markdown linting",
+    message: "Quality engine cannot be disabled: markdown.linter",
   },
   {
     config: "biome.jsonc",

@@ -46,18 +46,18 @@ bun run test:accessibility
 
 Current route-level coverage:
 
-| Lighthouse manual item | Querylane evidence |
-| --- | --- |
-| Interactive controls are keyboard focusable | `data explorer: Lighthouse route covers manual accessibility contracts` focuses key Data Explorer controls and walks tab focus. |
-| Interactive elements indicate their purpose and state | Axe plus role/name assertions cover buttons, comboboxes, selected tabs, and labels. |
-| The page has a logical tab order | The Data Explorer test starts in the object browser and proves tab focus can move through and out of that region. |
-| Visual order on the page follows DOM order | Manual visual review remains required for major layout changes; current route uses source order of app nav, object browser, then detail region. |
-| User focus is not accidentally trapped in a region | The Data Explorer test verifies focus leaves the object browser. |
-| The user's focus is directed to new content added to the page | Route and tab content changes are checked by visible headings, selected tab state, and focused controls. |
-| HTML5 landmark elements are used to improve navigation | The Data Explorer route has a single `main`, plus named complementary and detail regions. |
-| Offscreen content is hidden from assistive technology | Axe checks run against the exact mocked route; manual review remains required for new responsive drawers/popovers. |
-| Custom controls have associated labels | Role/name assertions cover custom select, tab, and toolbar controls. |
-| Custom controls have ARIA roles | Role assertions cover tabs, tablists, comboboxes, buttons, and complementary navigation. |
+| Lighthouse manual item                                        | Querylane evidence                                                                                                                              |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interactive controls are keyboard focusable                   | `data explorer: Lighthouse route covers manual accessibility contracts` focuses key Data Explorer controls and walks tab focus.                 |
+| Interactive elements indicate their purpose and state         | Axe plus role/name assertions cover buttons, comboboxes, selected tabs, and labels.                                                             |
+| The page has a logical tab order                              | The Data Explorer test starts in the object browser and proves tab focus can move through and out of that region.                               |
+| Visual order on the page follows DOM order                    | Manual visual review remains required for major layout changes; current route uses source order of app nav, object browser, then detail region. |
+| User focus is not accidentally trapped in a region            | The Data Explorer test verifies focus leaves the object browser.                                                                                |
+| The user's focus is directed to new content added to the page | Route and tab content changes are checked by visible headings, selected tab state, and focused controls.                                        |
+| HTML5 landmark elements are used to improve navigation        | The Data Explorer route has a single `main`, plus named complementary and detail regions.                                                       |
+| Offscreen content is hidden from assistive technology         | Axe checks run against the exact mocked route; manual review remains required for new responsive drawers/popovers.                              |
+| Custom controls have associated labels                        | Role/name assertions cover custom select, tab, and toolbar controls.                                                                            |
+| Custom controls have ARIA roles                               | Role assertions cover tabs, tablists, comboboxes, buttons, and complementary navigation.                                                        |
 
 ## Current local policy
 
@@ -70,26 +70,26 @@ The Lighthouse command uses 3 desktop runs and median assertions against a mocke
 
 ## Current thresholds
 
-| Metric | Initial policy |
-| --- | --- |
-| Initial gzip | Hard fail at 450 KiB |
-| Initial JavaScript gzip | Hard fail at 400 KiB |
-| Core gzip | Hard fail at 950 KiB |
-| Largest async JavaScript gzip | Hard fail at 130 KiB |
-| Deferred visualization gzip | Hard fail at 90 KiB |
-| Lighthouse performance | Hard fail below 100 |
-| Lighthouse accessibility | Hard fail below 100 |
-| Lighthouse best practices | Hard fail below 100 |
-| Lighthouse SEO | Hard fail below 100 |
-| First contentful paint | Hard fail above 0.5 s |
-| Largest contentful paint | Hard fail above 1.2 s |
-| Speed index | Hard fail above 0.7 s |
-| Total blocking time | Hard fail above 50 ms |
-| Time to interactive | Hard fail above 1.0 s |
-| Cumulative layout shift | Hard fail above 0.01 |
-| Data Explorer direct ready | Hard fail at 1200 ms in Playwright perf spec |
-| Data Explorer overview click | Hard fail at 1000 ms in Playwright perf spec |
-| Data Explorer cold payload | Hard fail at 160 KiB gzip in Playwright perf spec |
+| Metric                        | Initial policy                                    |
+| ----------------------------- | ------------------------------------------------- |
+| Initial gzip                  | Hard fail at 450 KiB                              |
+| Initial JavaScript gzip       | Hard fail at 400 KiB                              |
+| Core gzip                     | Hard fail at 950 KiB                              |
+| Largest async JavaScript gzip | Hard fail at 130 KiB                              |
+| Deferred visualization gzip   | Hard fail at 90 KiB                               |
+| Lighthouse performance        | Hard fail below 100                               |
+| Lighthouse accessibility      | Hard fail below 100                               |
+| Lighthouse best practices     | Hard fail below 100                               |
+| Lighthouse SEO                | Hard fail below 100                               |
+| First contentful paint        | Hard fail above 0.5 s                             |
+| Largest contentful paint      | Hard fail above 1.2 s                             |
+| Speed index                   | Hard fail above 0.7 s                             |
+| Total blocking time           | Hard fail above 50 ms                             |
+| Time to interactive           | Hard fail above 1.0 s                             |
+| Cumulative layout shift       | Hard fail above 0.01                              |
+| Data Explorer direct ready    | Hard fail at 1200 ms in Playwright perf spec      |
+| Data Explorer overview click  | Hard fail at 1000 ms in Playwright perf spec      |
+| Data Explorer cold payload    | Hard fail at 160 KiB gzip in Playwright perf spec |
 
 ## Next high-confidence upgrades
 

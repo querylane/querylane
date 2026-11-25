@@ -94,12 +94,13 @@ export const heavyPackagesStayDeferred = defineRule(() => ({
         continue;
       }
       const key = `${chunk.id}:${packageName}`;
-      if (!reportedPackages.has(key)) {
-        reportedPackages.add(key);
-        context.report({
-          message: `Heavy module ${module.path} is in initial chunk ${chunk.id} (${chunk.name}). Keep its feature behind a dynamic import.`,
-        });
+      if (reportedPackages.has(key)) {
+        continue;
       }
+      reportedPackages.add(key);
+      context.report({
+        message: `Heavy module ${module.path} is in initial chunk ${chunk.id} (${chunk.name}). Keep its feature behind a dynamic import.`,
+      });
     }
   },
 }));
@@ -116,12 +117,13 @@ export const noShikiOniguruma = defineRule(() => ({
     const reported = new Set<string>();
     for (const { chunk, module } of emittedModules(chunkGraph)) {
       const path = module.path.replaceAll("\\", "/");
-      if (SHIKI_ONIGURUMA.test(path) && !reported.has(path)) {
-        reported.add(path);
-        context.report({
-          message: `Forbidden Shiki Oniguruma/WASM module ${module.path} in chunk ${chunk.id} (${chunk.name}). Use shiki/core with shiki/engine/javascript.`,
-        });
+      if (!SHIKI_ONIGURUMA.test(path) || reported.has(path)) {
+        continue;
       }
+      reported.add(path);
+      context.report({
+        message: `Forbidden Shiki Oniguruma/WASM module ${module.path} in chunk ${chunk.id} (${chunk.name}). Use shiki/core with shiki/engine/javascript.`,
+      });
     }
   },
 }));

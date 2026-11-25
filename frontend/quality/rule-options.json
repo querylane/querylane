@@ -1,6 +1,7 @@
 {
   "biome": {
     "root": true,
+    "javascriptGlobals": ["__API_BASE_URL__"],
     "rules": {
       "a11y/useValidAutocomplete": {
         "inputComponents": ["Input"]
@@ -45,6 +46,14 @@
         ],
         "peerDependencies": true,
         "optionalDependencies": true
+      },
+      "nursery/noTailwindRestrictedClasses": {
+        "classes": {
+          "break-words": {
+            "message": "Use the canonical Tailwind v4 wrapping utility.",
+            "use": "wrap-break-word"
+          }
+        }
       },
       "nursery/noExcessiveSelectorComplexity": {
         "maxIds": 1,
@@ -199,6 +208,12 @@
       "no-void": [
         {
           "allowAsStatement": true
+        }
+      ],
+      "no-warning-comments": [
+        {
+          "decoration": ["*"],
+          "terms": ["todo", "fixme", "xxx", "@todo"]
         }
       ],
       "one-var": ["never"],

@@ -9,28 +9,32 @@ import { createTestRouterTransport } from "@/test/router-transport";
 describe("native route preloading", () => {
   test.each([
     {
+      expectedRpc: "GetInstance",
       name: "instance",
       routeId: "/instances/$instanceId/",
       to: "/instances/$instanceId",
     },
     {
+      expectedRpc: "GetDatabase",
       name: "database overview",
       routeId: "/instances/$instanceId/databases/$databaseId/",
       to: "/instances/$instanceId/databases/$databaseId",
     },
     {
+      expectedRpc: "ListExtensions",
       name: "extensions",
       routeId: "/instances/$instanceId/databases/$databaseId/extensions",
       to: "/instances/$instanceId/databases/$databaseId/extensions",
     },
     {
+      expectedRpc: "ReadRows",
       name: "selected table",
       routeId: "/instances/$instanceId/databases/$databaseId/explorer",
       to: "/instances/$instanceId/databases/$databaseId/explorer",
     },
   ] as const)(
     "$name: code-only preload, data on navigation",
-    async ({ routeId, to }) => {
+    async ({ expectedRpc, routeId, to }) => {
       const queryClient = new QueryClient({
         defaultOptions: {
           queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
@@ -61,7 +65,9 @@ describe("native route preloading", () => {
         expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
 
         await router.navigate(target);
-        expect(unary).toHaveBeenCalled();
+        expect(unary.mock.calls.map(([method]) => method.name)).toContain(
+          expectedRpc
+        );
 
         // Active parent matches have different Router preload semantics.
         // Even with no Query cache, hovering a sibling must not refetch them.

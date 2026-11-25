@@ -51,7 +51,7 @@ test("ui sdk button invokes the application action", async () => {
     </Button>
   );
   await userEvent.setup().click(screen.getByRole("button", { name: "Apply" }));
-  expect(handlePress).toHaveBeenCalledOnce();
+  expect(handlePress).toHaveBeenCalledTimes(1);
 });
 
 test("disabled action stays named and keyboard focusable", () => {

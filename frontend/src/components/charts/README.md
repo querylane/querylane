@@ -40,17 +40,17 @@ navigation, gaps, same-colored series, resize, and teardown in both themes.
 
 ## Modules
 
-| Module | Role |
-|---|---|
-| `chart-context.ts` | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`) |
-| `chart-container.tsx` | Parent-sized mounting frame, app-owned legend, refresh dimming |
-| `responsive-chart.tsx` | CSS-sized host; TanStack observes parent-owned width and height |
-| `metric-time-chart.tsx` | The time-series chart (lazy-loaded; owns axes/grid/cursor/overlays) |
-| `sparkline-chart.tsx` | Bare trend glyph for stat tiles (lazy-loaded) |
-| `metric-chart.tsx` | Lazy boundaries (`MetricChart`, `MetricSparkline`), the only eager imports |
-| `chart-range-picker.tsx` | Segmented trailing-window control (panel-level, never per-chart) |
-| `@/lib/chart-scale.ts` | Y-tick engine: 1-2-5 decimal ladder + binary (1024) ladder, d3-style rounding, domain pinned to top tick |
-| `@/lib/chart-time.ts` | X-tick engine: local-calendar-aligned minute/hour/midnight ticks, range-adaptive labels |
+| Module                   | Role                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `chart-context.ts`       | Kit types (`ChartRow`, `ChartSeries`, `ChartThreshold`)                                                  |
+| `chart-container.tsx`    | Parent-sized mounting frame, app-owned legend, refresh dimming                                           |
+| `responsive-chart.tsx`   | CSS-sized host; TanStack observes parent-owned width and height                                          |
+| `metric-time-chart.tsx`  | The time-series chart (lazy-loaded; owns axes/grid/cursor/overlays)                                      |
+| `sparkline-chart.tsx`    | Bare trend glyph for stat tiles (lazy-loaded)                                                            |
+| `metric-chart.tsx`       | Lazy boundaries (`MetricChart`, `MetricSparkline`), the only eager imports                               |
+| `chart-range-picker.tsx` | Segmented trailing-window control (panel-level, never per-chart)                                         |
+| `@/lib/chart-scale.ts`   | Y-tick engine: 1-2-5 decimal ladder + binary (1024) ladder, d3-style rounding, domain pinned to top tick |
+| `@/lib/chart-time.ts`    | X-tick engine: local-calendar-aligned minute/hour/midnight ticks, range-adaptive labels                  |
 
 Portability rule: nothing in this directory (or the 2 `chart-*` libraries) may
 import app modules (`lib/metrics`, protogen, hooks). App code adapts its data
@@ -93,6 +93,7 @@ to a queried window), `yDomain` (fixed bounded scales like ratios),
 ## Backlog (researched, not yet built)
 
 Prioritized from the 2026-07 research pass (Grafana/Datadog/Axiom/d3 audits):
+
 1. Soft-min/soft-max axis bounds (fixes axes that stay at 0 and sparkline noise
    magnification).
 2. Value-bearing legend (min/max/avg/current per series) and click-to-isolate,

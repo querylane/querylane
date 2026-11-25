@@ -82,6 +82,7 @@ async function currentOptions(root: string): Promise<unknown> {
   const snapshot = {
     biome: {
       root: biome["root"],
+      javascriptGlobals: record(biome["javascript"])["globals"],
       rules: biomeOptions(biome),
       overrides: overrides(biome, true),
       assist: biome["assist"],

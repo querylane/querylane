@@ -27,16 +27,16 @@ Owned files -> Biome + typed Oxlint + shadcn + suppression guard
 
 Versions are pinned in [package.json](../package.json), its lockfile, and [the inventory](rule-inventory.json).
 
-| Tool | Contract |
-| --- | --- |
-| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin. |
-| Biome / Ultracite | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries. |
-| Oxlint / tsrs-lint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings. |
-| shadcn lint | Token colors, known utilities, component styling, static classes, and inline-style contracts. |
-| React Doctor | Full-project selected security, bugs, accessibility, performance and graph checks. Test/story/design findings block. Retired/capability-gated IDs and fail-open Socket coverage are not counted as complete enforcement. |
-| tsrs / TypeScript | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS. |
-| React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan; bundle checks reject emitted Scan/bippy instrumentation. |
-| Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
+| Tool               | Contract                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Bun                | Installation, scripts, lockfile integrity. CI and Docker use the same pin.                                                                                                                                               |
+| Biome / Ultracite  | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries.                                                                                                                         |
+| Oxlint / tsrs-lint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings.                                                                                                                   |
+| shadcn lint        | Token colors, known utilities, component styling, static classes, and inline-style contracts.                                                                                                                            |
+| React Doctor       | Full-project selected security, bugs, accessibility, performance and graph checks. Test/story/design findings block. Retired/capability-gated IDs and fail-open Socket coverage are not counted as complete enforcement. |
+| tsrs / TypeScript  | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS.                                                                                                                              |
+| React Scan         | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan; bundle checks reject emitted Scan/bippy instrumentation.                                                                            |
+| Blume              | Root documentation-tool dependency, upgraded without changing UI runtime behavior.                                                                                                                                       |
 
 Biome's formatting settings are materialized from Ultracite. Its configuration explicitly extends `ultracite/biome/playwright` and restores `noEmptyPattern` for tests instead of accepting the preset's fixture waiver. Oxlint copies preset rules, not preset overrides. Upstream test/declaration waivers and broad generated-file globs cannot silently weaken coverage.
 
@@ -60,7 +60,7 @@ The canonical Playwright container owns its dependency and `dist` volumes. A con
 
 The other 23 additions stay off: 22 require unused Vue or Svelte frameworks, and `noNull` would replace valid DOM, React-ref, and external JSON/RPC sentinels with a different value. A positive nullable-contract probe protects that decision. This patch does not change Markdown ownership or re-enable its formatter. No rule waivers, authored-source exclusions, or production bundle-cap increases accompany the patch.
 
-Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. YAML and SCSS use Biome's formatter when present. Markdown formatting remains disabled because Biome 2.6.3 can change whitespace around inline code; Blume owns documentation. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled.
+Tailwind sorting reads the project stylesheet and recognizes merge functions plus `cva`/`tv` variant objects. Sorting classes requires an explicit unsafe fix. Biome formats frontend Markdown, YAML, and SCSS; Blume continues to own the root documentation site. Querylane does not use Astro, React Native, Drizzle, or GraphQL, so their presets and GraphQL selection-set sorting are not enabled.
 
 The CLI regression tests exercise `ultracite fix --hook` with missing, malformed, empty, and valid path payloads. Invalid payloads leave all files unchanged; a valid payload formats only its named file. The tests also exercise Tailwind variant sorting through the actual Biome binary.
 
@@ -190,3 +190,15 @@ unparsed RPC/JSON boundary values, runtime guards, and optional property constru
 The existing checks and file coverage still apply. Oxlint stays on 1.94; tsrs moves
 to 0.25.0-ts7.1.0-beta to satisfy the preset's peer minimum. The separate TypeScript
 nightly cross-check is unchanged.
+
+### Biome 2.6.9 and Ultracite 8.3.1
+
+[Biome 2.6.8](https://biomejs.dev/internals/changelog/version/2-6-8/) and [2.6.9](https://biomejs.dev/internals/changelog/version/2-6-9/) expose 53 new rules in their installed schemas (25 and 28). The 844-rule inventory enables 25 additions as errors, delegates seven to already-fatal checks, and records why the other 21 do not apply. New errors cover async event targets, ineffective mutations, explicit test imports and assertions, CommonJS and namespace imports, YAML values and keys, conflicting Tailwind utilities, and mutation option ordering.
+
+The two Biome JavaScript plugin checks do not apply: Querylane's authored lint plugin runs in Oxlint, not in `@biomejs/runtime/plugin`. Playwright fixtures and Rstest cleanup keep their real hook scopes. Structural equality does not impose prototype or optional-property-presence equality. The TanStack query dependency check stays off because it would add normalized-equivalent values and transport or executor functions to serializable Connect cache keys.
+
+`useExpectToHaveBeenCalled` stays on; `useCalledWith` rejects its safe fix when an assertion needs to prove a call happened without constraining the arguments. A CLI probe verifies that the direct occurrence matcher stays valid.
+
+Frontend Markdown now runs both engines. Real CLI tests cover the previously unsafe formatter cases (literal brackets, inline-code spacing, and task markers) and reject disabled engines and Markdown suppression comments. Fenced examples require a language and heading levels must be consistent, but Changesets summaries and agent fragments may omit a title. Object-key and CSS declaration sorting remain off because reordering can change inference, serialized data, or the cascade.
+
+[Ultracite 8.3.1](https://www.ultracite.ai/changelog/ultracite-8-3-1) leaves its Playwright preset unchanged. The imported Oxlint rules pick up stricter warning-comment matching; Querylane explicitly preserves prior enforcement for unused variables, negated conditions, type imports, and ARIA roles. No source exclusions, inline waivers, or bundle-cap changes accompany the upgrade.

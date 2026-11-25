@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const DEFAULT_TOOLTIP_CLASS_NAME =
-  "max-w-lg whitespace-pre-wrap break-words [overflow-wrap:anywhere]";
+  "max-w-lg whitespace-pre-wrap wrap-break-word";
 
 function isElementOverflowing(element: HTMLElement) {
   const hasHorizontalOverflow = element.scrollWidth - element.clientWidth > 1;
