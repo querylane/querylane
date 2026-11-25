@@ -1,8 +1,4 @@
 import {
-  FieldBehavior,
-  field_behavior as fieldBehaviorExtension,
-} from "@buf/googleapis_googleapis.bufbuild_es/google/api/field_behavior_pb.js";
-import {
   create,
   type DescField,
   type DescMessage,
@@ -14,6 +10,10 @@ import {
   FieldMaskSchema,
   FieldOptionsSchema,
 } from "@bufbuild/protobuf/wkt";
+import {
+  FieldBehavior,
+  field_behavior as fieldBehaviorExtension,
+} from "@/protogen/google/api/field_behavior_pb";
 
 type FormRecord = Record<string, unknown>;
 

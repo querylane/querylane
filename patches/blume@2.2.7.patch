@@ -1,0 +1,11 @@
+diff --git a/src/components/openapi/playground-client.ts b/src/components/openapi/playground-client.ts
+index e56d1c0f0f64fc4618a79bc2d06eb107ed5521a3..97009064c300f4b107f76bd813b5c505ed3de38c 100644
+--- a/src/components/openapi/playground-client.ts
++++ b/src/components/openapi/playground-client.ts
+@@ -680,4 +680,6 @@ export const initPlayground = (root: HTMLElement): void => {
+   root.addEventListener("input", (event) => onEdit(event.target));
+   root.addEventListener("change", (event) => onEdit(event.target));
+   sendButton?.addEventListener("click", () => send());
++  // Capture native form edits made before the lazy client finished loading.
++  syncSamples();
+ };

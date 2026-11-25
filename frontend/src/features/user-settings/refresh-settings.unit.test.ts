@@ -63,6 +63,16 @@ describe("refresh settings", () => {
     );
   });
 
+  test("still parses English weekday names and times", async () => {
+    // Sunday at noon, until Monday at 9am, safely within the 24-hour cap.
+    const now = new Date(2026, 5, 14, 12);
+
+    expect(await parseRefreshIntervalInput("Monday at 9am", now)).toEqual({
+      intervalMs: 75_600_000,
+      ok: true,
+    });
+  });
+
   test("rejects stale, too fast, and too broad natural language intervals", async () => {
     const now = new Date("2026-06-14T10:00:00.000Z");
 

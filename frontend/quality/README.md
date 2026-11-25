@@ -29,14 +29,16 @@ Versions are pinned in [package.json](../package.json), its lockfile, and [the i
 
 | Tool | Contract |
 | --- | --- |
-| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin. |
+| Bun | Installation, scripts, lockfile integrity. CI and Docker use the same pin; `bun.lock` is the only maintained lockfile. |
 | Biome / Ultracite | Formatting, syntax, accessibility, test discipline, imports, complexity, and browser boundaries. |
 | Oxlint / tsrs-lint | All native categories, actual TypeScript unsafe-flow checks, React Compiler rules, and fatal warnings. |
 | shadcn lint | Token colors, known utilities, component styling, static classes, and inline-style contracts. |
 | React Doctor | Full-project selected security, bugs, accessibility, performance and graph checks. Test/story/design findings block. Retired/capability-gated IDs and fail-open Socket coverage are not counted as complete enforcement. |
 | tsrs / TypeScript | Native checking plus the independently pinned 7.1 nightly, including scripts and public JS. |
 | React Scan | Existing opt-in development mode: `bun run dev:scan`. Production builds reject Scan; bundle checks reject emitted Scan/bippy instrumentation. |
-| Blume | Root documentation-tool dependency, upgraded without changing UI runtime behavior. |
+| Blume | Builds the docs; deployment contains emitted SSR and its checked production dependency closure, not the framework's CLI/deploy tools. |
+
+Build-only Tailwind and the router plugin are devDependencies. Both TanStack devtools and the type-only Standard Schema re-export remain dependencies because the unchanged source-dependency rule requires their application-source imports there. This classification does not include devtools in production or add runtime code for erased types.
 
 Biome's formatting settings are materialized from Ultracite. Its configuration explicitly extends `ultracite/biome/playwright` and restores `noEmptyPattern` for tests instead of accepting the preset's fixture waiver. Oxlint copies preset rules, not preset overrides. Upstream test/declaration waivers and broad generated-file globs cannot silently weaken coverage.
 
@@ -71,6 +73,8 @@ The frontend requires Node 26.13 or later. Development, frontend CI, release CI,
 [Oxlint 1.94](https://github.com/oxc-project/oxc/releases/tag/oxlint_v1.94.0) retains the reviewed native rule catalog. All recommended `oxc` rules remain errors, with the newly recommended `misrefactored-assign-op` and `no-this-in-exported-function` made explicit. Typed lint now uses the existing `tsrs` package's `tsrs-lint` launcher through Oxlint's native discovery; the separate `oxlint-tsgolint` dependency is removed. Both compiler entrypoints and the TypeScript nightly canary are unchanged. SQL validation uses a separate rejection handler to satisfy the improved `promise/prefer-catch` check while retaining unknown results on failed checks.
 
 [React Doctor 0.9.23](https://github.com/millionco/react-doctor/releases/tag/react-doctor%400.9.23) updates both the CLI and its bundled `oxlint-plugin-react-doctor` to 0.9.23 without changing the reviewed rule catalog. It improves async timer cleanup detection, compiler-aware Table v9 analysis, explicit opt-in security scans, and false-positive handling. Existing full-project scans, fatal warnings, rule decisions, and coverage boundaries stay intact. Biome remains the sole formatter; no formatting tool is added.
+
+[Ultracite 8.2.1](https://github.com/haydenbleasel/ultracite/releases/tag/ultracite%408.2.1) fixes CLI initialization and configuration validation without a package patch. Explicit Oxlint settings preserve the reviewed unused-variable, warning-comment and custom-component ARIA checks instead of inheriting new preset exceptions. The rule-option snapshot, severities and source coverage remain unchanged. Its published `deepmerge` dependency still uses the scoped hardening adapter; a parent upgrade alone does not retire that exception.
 
 Some deliberate decisions:
 
@@ -121,11 +125,21 @@ No repository can make its own configuration immutable. A contributor can edit a
 
 The current frontend refresh aligns direct runtime dependencies and their coupled packages. It retains the separately pinned TypeScript canary rather than downgrading it to the stable compiler tag. Run `bun outdated` to inspect remaining direct updates.
 
-`bun audit --production --json` returned an empty report during this refresh. The Buf registry returned HTTP 404 for the audit request, so the generated Google APIs package was not audited. This is not complete vulnerability coverage.
+`bun audit --production --json` returns an empty report for the frontend graph. Google RPC details and field-behavior annotations now use the existing local generated schemas; the unaudited remote Google APIs package and its Buf npm registry configuration are removed. Package advisory coverage is not a complete source-security review.
 
-The development audit still reports advisories in `basic-ftp`, `deepmerge`, `extract-zip`, `tmp`, `uuid`, and a Zod 3 dependency. Lighthouse constrains the older major versions; current Ultracite and shadcn depend on the reported `deepmerge` release. The compatible transitive refresh updates `body-parser` to 1.20.9. Reproduce with `bun audit --json` and inspect parents with `bun why <package>`. No cross-major overrides or audit suppressions are added.
+The full frontend development audit is also clean. Supported Sentry/ESLint graph updates remove affected glob/minimatch versions. Version-qualified overrides move get-uri's FTP consumer to basic-ftp 6.2.6 and ts-morph's matcher to minimatch 11.0.8 after real-consumer compatibility and adverse-input tests. Three pinned shadcn/Ultracite consumers use the bounded, Fastify-backed [configuration-merge adapter](../scripts/config-merge) for returned-prototype hardening. The [CNA rejected CVE-2026-93753](https://github.com/CVEProject/cvelistV5/blob/main/cves/2026/93xxx/CVE-2026-93753.json), but npm and GitHub still report its advisory; do not describe it as an undisputed vulnerability. `scripts/dependency-consumers.unit.test.ts` exercises the real CLI/registry, matching, prototype protection and loopback FTP paths. No audit suppressions are added.
 
-These tools must not process untrusted archives, proxy configuration, or project input. Cross-major overrides without parent compatibility evidence are not a safe fix. No advisory is suppressed in the audit command.
+The frontend uses no package patch files. Upgrade supported parents first and remove an exception when their published dependencies satisfy the tested contract; do not substitute install-time source rewriting. The merge adapter supports the pinned consumers' merge, `all` and array-replacement calls, cloning and enumerable symbols, rejects prototype keys, and fails closed for unsupported options. Copy it before Docker dependency installation; after editing it, refresh installed copies with `bun install --frozen-lockfile --force` and replay the consumer tests. Basic-ftp 6 rejects separate passive-transfer hosts; normal same-host FTP/PAC remains supported.
+
+Rstest 0.12.6 still declares optional happy-dom `^20.8.3`; the tested 21.0.4 remains installed rather than downgrading the DOM implementation to satisfy that stale range. Deprecated transitive packages retained by current parents are not replaced through incompatible API aliases. Reproduce audits with `bun audit --json` and inspect ownership with `bun why <package>`.
+
+Run the root full audit separately for the docs build graph; its direct dependencies are dev-classified, so a production-only audit omits those tools. The supported Vercel adapter refresh removes nested vulnerable Zod. Version-qualified parent overrides select patched `path-to-regexp` 6.3.0 and `postcss-selector-parser` 6.1.5; real route/typography consumers and adverse inputs are covered by `scripts/docs-dependencies.test.ts`. The full root audit is clean. Custom routing regular expressions still require their own safety review.
+
+`bun run docs:package` assembles a fresh `.build/docs-runtime` from emitted server imports and their production dependencies, including installed optional dependencies, assets and license notices. An explicit output argument selects another fresh directory. Unselected optional peer integrations are excluded; selecting a new provider requires replaying the packaged runtime checks. `Dockerfile.docs` builds for the target platform and verifies Node 24 from `/runtime`, outside the build install, before copying only that closure to the nonroot final image. `DOCS_RUNTIME_ROOT` selects an isolated artifact for `docs:test:runtime`; use a directory without ancestor `node_modules` when verifying locally.
+
+The Bun patch for MIT-licensed Blume 2.2.7 synchronizes native form values when its lazy playground client initializes, preserving edits made before the download finishes. `frontend/e2e/docs/reader.spec.ts` delays that download to verify recovery. The docs builder consumes the pinned patch; the packaged artifact retains the modified output and notices. Remove it when an upstream release passes that regression; use `bun patch blume` and `bun patch --commit node_modules/blume` to regenerate it rather than editing installed cache files.
+
+Keep untrusted archives, proxy configuration and project input outside these build tools' trust boundary. Scoped security migrations require real-consumer compatibility and adverse-input evidence; a clean advisory report alone does not establish source security. No advisory is suppressed in the audit command.
 
 The approved dependency refresh raises the core gzip cap from 1027 to 1043 KiB, the lazy SQL editor cap from 203 to 205 KiB, and the deferred explorer-click payload cap from 160 to 164 KiB. Paired Bun 1.4.4 builds measured core at 1025.9 → 1040.7 KiB and the SQL editor at 199.3 → 203.5 KiB. On current main, the subsequent refresh measures 1043.3 KiB core gzip on macOS and Linux CI with Bun 1.4.4; its approved core cap is 1045 KiB. Initial-load, largest-async, and latency limits are unchanged. See the measured rationale beside the constants in [check-bundle-budget.ts](../scripts/check-bundle-budget.ts).
 
@@ -147,7 +161,7 @@ E2E's unmocked-request guard recognizes Connect POSTs by their protocol header, 
 
 The gate is safe to require repository-wide **after this workflow reaches main**. Requiring the new name while it exists only in this draft would strand unrelated PRs running the old workflow. Keep the existing zero-approval policy; do not invent human reviewers. Enforce resolved conversations, no administrator bypass, no force pushes, and no branch deletion with repository rules. A draft is not approval or merge authorization.
 
-GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit and its Buf-registry coverage limitation above remain explicit; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).
+GitHub's documented dependency-graph ecosystems do not include Bun lockfiles. The authenticated graph-comparison endpoint returned 403 during delivery, despite enabled vulnerability alerts. No dependency-review job is installed that could report success without inspecting the Bun graph. Bun audit remains the package-advisory check; full dependency-review coverage is not claimed. See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/dependency-graph-supported-package-ecosystems).
 
 ### Biome 2.6.5
 
